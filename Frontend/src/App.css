@@ -1,7 +1,7 @@
 .counter {
   font-size: 16px;
   padding: 6px 10px;
-  border-radius: 5px;
+  border-radius: 8px;
   color: var(--accent);
   background: var(--accent-bg);
   border: 2px solid transparent;
