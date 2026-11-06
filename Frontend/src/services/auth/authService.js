@@ -1,8 +1,7 @@
 /**
  * AgriConnect ERP - Authentication Service Layer
- * Prepared for Fetch API integration with backend services.
- * Features an automatic fallback for standalone frontend development/testing
- * so UI flows and route transitions can be previewed without blocking network errors.
+ * Uses Contact Number as primary identifier for login.
+ * Prepared for future backend API integration with standalone simulated fallback.
  */
 
 export const API_BASE_URL =
@@ -11,8 +10,8 @@ export const API_BASE_URL =
 export const AUTH_ENDPOINTS = {
   REGISTER: `${API_BASE_URL}/auth/register`,
   LOGIN: `${API_BASE_URL}/auth/login`,
-  SEND_OTP: `${API_BASE_URL}/auth/forgot-password/send-otp`,
-  VERIFY_OTP: `${API_BASE_URL}/auth/forgot-password/verify-otp`,
+  SEND_FORGOT_OTP: `${API_BASE_URL}/auth/forgot-password/send-otp`,
+  VERIFY_FORGOT_OTP: `${API_BASE_URL}/auth/forgot-password/verify-otp`,
   RESET_PASSWORD: `${API_BASE_URL}/auth/reset-password`,
 };
 
@@ -20,7 +19,6 @@ export const AUTH_ENDPOINTS = {
  * Fallback simulation for frontend-only testing when backend API is offline
  */
 const handleFrontendFallback = async (endpoint, payload) => {
-  // Realistic simulated network latency
   await new Promise((resolve) => setTimeout(resolve, 450));
 
   if (endpoint.includes('/auth/register')) {
@@ -29,7 +27,8 @@ const handleFrontendFallback = async (endpoint, payload) => {
       message: 'Account created successfully.',
       user: {
         fullName: payload.fullName,
-        email: payload.email,
+        role: payload.role,
+        email: payload.email || null,
         phone: payload.phone,
       },
     };
@@ -41,7 +40,7 @@ const handleFrontendFallback = async (endpoint, payload) => {
       message: 'Welcome back! Signed in successfully.',
       token: `demo-token-${Date.now()}`,
       user: {
-        identifier: payload.identifier,
+        contactNumber: payload.contactNumber,
       },
     };
   }
@@ -113,7 +112,6 @@ const apiRequest = async (url, options = {}) => {
 
     return data;
   } catch (error) {
-    // If backend is offline or unreachable in local frontend-only testing
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
       if (import.meta.env.VITE_STRICT_API === 'true') {
         const netErr = new Error(
@@ -123,7 +121,6 @@ const apiRequest = async (url, options = {}) => {
         throw netErr;
       }
 
-      // Standalone preview fallback
       let parsedBody = {};
       if (options.body) {
         try {
@@ -140,12 +137,13 @@ const apiRequest = async (url, options = {}) => {
 
 /**
  * Register a new user
- * @param {Object} data - { fullName, email, phone, password }
+ * @param {Object} data - { fullName, role, email, phone, password }
  */
-export const register = async ({ fullName, email, phone, password }) => {
+export const register = async ({ fullName, role, email, phone, password }) => {
   const payload = {
     fullName: fullName.trim(),
-    email: email.trim().toLowerCase(),
+    role: role.trim(),
+    email: email && email.trim() ? email.trim().toLowerCase() : null,
     phone: String(phone).replace(/\D/g, ''),
     password,
   };
@@ -157,13 +155,14 @@ export const register = async ({ fullName, email, phone, password }) => {
 };
 
 /**
- * Authenticate existing user with phone or email
- * @param {Object} credentials - { identifier, password }
+ * Authenticate existing user with Contact Number only
+ * @param {Object} credentials - { contactNumber, password, rememberMe }
  */
-export const login = async ({ identifier, password }) => {
+export const login = async ({ contactNumber, password, rememberMe }) => {
   const payload = {
-    identifier: identifier.trim(),
+    contactNumber: String(contactNumber).replace(/\D/g, ''),
     password,
+    rememberMe: Boolean(rememberMe),
   };
 
   return await apiRequest(AUTH_ENDPOINTS.LOGIN, {
@@ -181,7 +180,7 @@ export const sendForgotPasswordOTP = async ({ phone }) => {
     phone: String(phone).replace(/\D/g, ''),
   };
 
-  return await apiRequest(AUTH_ENDPOINTS.SEND_OTP, {
+  return await apiRequest(AUTH_ENDPOINTS.SEND_FORGOT_OTP, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -197,7 +196,7 @@ export const verifyForgotPasswordOTP = async ({ phone, otp }) => {
     otp: String(otp).trim(),
   };
 
-  return await apiRequest(AUTH_ENDPOINTS.VERIFY_OTP, {
+  return await apiRequest(AUTH_ENDPOINTS.VERIFY_FORGOT_OTP, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -227,4 +226,3 @@ export default {
   verifyForgotPasswordOTP,
   resetPassword,
 };
-

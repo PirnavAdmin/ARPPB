@@ -1,11 +1,13 @@
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
-import AuthRoutes from './routes/AuthRoutes';
+import AppRoutes from './routes/AppRoutes';
+import './pages/Authentication/styles/authentication.css';
+import './pages/Middleman/styles/middleman.css';
 
 function App() {
   return (
     <BrowserRouter>
-      <AuthRoutes />
+      <AppRoutes />
     </BrowserRouter>
   );
 }
