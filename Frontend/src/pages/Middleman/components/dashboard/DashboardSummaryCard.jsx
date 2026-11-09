@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react';
 
 export const DashboardSummaryCard = ({
   title,
@@ -8,56 +8,74 @@ export const DashboardSummaryCard = ({
   description,
   trend = null, // { value: '+12%', isPositive: true }
   trendLabel = 'vs last month',
-  accentColor = 'teal',
+  onClick = null,
   className = '',
 }) => {
+  const Wrapper = onClick ? 'button' : 'div';
+
   return (
-    <div
-      className={`bg-white rounded-2xl border border-[#E2E8F0] p-4 sm:p-5 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between ${className}`}
+    <Wrapper
+      type={onClick ? 'button' : undefined}
+      onClick={onClick || undefined}
+      className={`group w-full h-[148px] text-left rounded-2xl bg-white border border-[#E2E8F0] p-5 shadow-xs flex flex-col justify-between transition-all duration-200 ${
+        onClick
+          ? 'hover:border-[#14B8A6] hover:shadow-md hover:-translate-y-0.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20'
+          : 'hover:border-[#14B8A6] hover:shadow-md'
+      } ${className}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <span className="text-xs font-semibold text-[#64748B] tracking-tight">{title}</span>
-        <div
-          className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-            accentColor === 'amber'
-              ? 'bg-amber-50 text-[#D97706]'
-              : accentColor === 'emerald'
-              ? 'bg-emerald-50 text-[#15803D]'
-              : accentColor === 'blue'
-              ? 'bg-blue-50 text-[#2563EB]'
-              : 'bg-teal-50 text-[#0F766E]'
-          }`}
-        >
-          <Icon className="w-5 h-5" />
-        </div>
+      {/* Top Section: KPI Title on Left, Uniform Icon Container on Right */}
+      <div className="flex items-center justify-between gap-2.5 w-full">
+        <span className="text-xs font-bold uppercase tracking-wide text-[#64748B] leading-snug">
+          {title}
+        </span>
+
+        {Icon && (
+          <div className="w-10 h-10 min-w-[2.5rem] min-h-[2.5rem] rounded-xl bg-[#CCFBF1] text-[#0F766E] border border-[#14B8A6]/25 flex items-center justify-center shrink-0 group-hover:bg-[#0F766E] group-hover:text-white transition-colors duration-200">
+            <Icon className="w-5 h-5 stroke-[2] shrink-0" />
+          </div>
+        )}
       </div>
 
-      <div className="mt-2.5">
-        <div className="text-xl sm:text-2xl font-extrabold text-[#1F2937] tracking-tight truncate">
+      {/* Middle Section: Full-Width Large KPI Value */}
+      <div className="my-1 w-full">
+        <p className="text-xl xl:text-[21px] 2xl:text-2xl font-extrabold text-[#0F766E] tracking-tight leading-tight whitespace-nowrap truncate">
           {value}
-        </div>
+        </p>
+      </div>
 
-        <div className="flex items-center gap-2 mt-1.5 text-xs">
-          {trend && (
+      {/* Bottom Section: Supporting Info, Trend Pill & Optional Directional Arrow */}
+      <div className="pt-2.5 border-t border-[#E2E8F0] flex items-center justify-between gap-2 w-full">
+        <span className="text-xs font-medium text-[#64748B] truncate">
+          {description || trendLabel}
+        </span>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          {trend && trend.value ? (
             <span
-              className={`inline-flex items-center text-[11px] font-bold ${
-                trend.isPositive ? 'text-[#15803D]' : 'text-[#DC2626]'
+              className={`inline-flex items-center gap-0.5 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                trend.isPositive === false || trend.direction === 'down'
+                  ? 'bg-red-50 text-red-600'
+                  : 'bg-[#DCFCE7] text-[#16A34A]'
               }`}
             >
-              {trend.isPositive ? (
-                <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />
+              {trend.isPositive === false || trend.direction === 'down' ? (
+                <TrendingDown className="w-3 h-3 shrink-0" />
               ) : (
-                <ArrowDownRight className="w-3.5 h-3.5 mr-0.5" />
+                <TrendingUp className="w-3 h-3 shrink-0" />
               )}
               {trend.value}
             </span>
+          ) : null}
+
+          {onClick && (
+            <ArrowUpRight className="w-3.5 h-3.5 text-[#64748B] group-hover:text-[#0F766E] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-200 shrink-0" />
           )}
-          <span className="text-[11px] text-[#64748B] truncate">{description || trendLabel}</span>
         </div>
       </div>
-    </div>
+    </Wrapper>
   );
 };
 
 export default DashboardSummaryCard;
+
 

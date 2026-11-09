@@ -7,7 +7,6 @@ import {
   KeyRound,
   RefreshCw,
   History,
-  Send,
 } from 'lucide-react';
 import { useVendor } from '../../../hooks/useVendor';
 import { useDebounce } from '../../../hooks/useDebounce';

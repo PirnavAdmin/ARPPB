@@ -11,9 +11,9 @@ export const PurchaseSalesChart = ({ className = '' }) => {
   );
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`flex flex-col flex-1 min-h-0 justify-between gap-4 ${className}`}>
       {/* Chart Legend */}
-      <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-[#64748B]">
+      <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-[#64748B] shrink-0">
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-md bg-[#0F766E]" />
           <span>Farmer Purchases</span>
@@ -29,7 +29,7 @@ export const PurchaseSalesChart = ({ className = '' }) => {
       </div>
 
       {/* Responsive Bar Chart Container */}
-      <div className="h-64 pt-6 flex items-end justify-between gap-2 sm:gap-4 border-b border-[#E2E8F0] relative">
+      <div className="flex-1 min-h-0 h-64 pt-6 flex items-end justify-between gap-2 sm:gap-4 border-b border-[#E2E8F0] relative">
         {series.map((item, index) => {
           const purchaseHeight = (item.purchases / maxValue) * 100;
           const vendorHeight = (item.vendorSales / maxValue) * 100;

@@ -6,9 +6,8 @@ export function VendorStatCard({
   description = '',
   subtitle = '',
   icon: Icon,
-  trend = null, // { value: '+8.4%', direction: 'up' | 'down' } or null when comparison data is unavailable
+  trend = null, // { value: '+8.4%', direction: 'up' | 'down' } or null
   onClick = null,
-  highlight = false,
 }) {
   const Wrapper = onClick ? 'button' : 'div';
   const subText = description || subtitle;
@@ -17,55 +16,57 @@ export function VendorStatCard({
     <Wrapper
       type={onClick ? 'button' : undefined}
       onClick={onClick || undefined}
-      className={`group w-full text-left rounded-xl border p-4 transition-all duration-200 flex flex-col justify-between ${
-        highlight
-          ? 'bg-brand-light/45 border-brand-secondary/40 shadow-xs'
-          : 'bg-brand-surface border-brand-border shadow-2xs'
-      } ${
+      className={`group w-full h-[148px] text-left rounded-2xl bg-white border border-[#E2E8F0] p-5 shadow-xs flex flex-col justify-between transition-all duration-200 ${
         onClick
-          ? 'hover:border-brand-secondary hover:shadow-md hover:-translate-y-0.5 cursor-pointer'
+          ? 'hover:border-[#14B8A6] hover:shadow-md hover:-translate-y-0.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20'
           : ''
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-brand-muted uppercase tracking-wider truncate">
-            {title}
-          </p>
-          <p className="text-xl sm:text-2xl font-bold text-brand-primary mt-1.5 tracking-tight">
-            {value}
-          </p>
-        </div>
+      {/* Top Section: KPI Title on Left, Uniform Icon Container on Right */}
+      <div className="flex items-center justify-between gap-2.5 w-full">
+        <span className="text-xs font-bold uppercase tracking-wide text-[#64748B] leading-snug">
+          {title}
+        </span>
 
         {Icon && (
-          <div className="w-10 h-10 rounded-xl bg-brand-light text-brand-primary flex items-center justify-center shrink-0 group-hover:bg-brand-primary group-hover:text-white transition-colors">
-            <Icon className="w-5 h-5" />
+          <div className="w-10 h-10 min-w-[2.5rem] min-h-[2.5rem] rounded-xl bg-[#CCFBF1] text-[#0F766E] border border-[#14B8A6]/25 flex items-center justify-center shrink-0 group-hover:bg-[#0F766E] group-hover:text-white transition-colors duration-200">
+            <Icon className="w-5 h-5 stroke-[2] shrink-0" />
           </div>
         )}
       </div>
 
-      <div className="mt-3 pt-2.5 border-t border-brand-border/60 flex items-center justify-between gap-2">
-        <span className="text-xs text-brand-muted truncate">{subText}</span>
+      {/* Middle Section: Full-Width Large KPI Value */}
+      <div className="my-1 w-full">
+        <p className="text-xl xl:text-[21px] 2xl:text-2xl font-extrabold text-[#0F766E] tracking-tight leading-tight whitespace-nowrap truncate">
+          {value}
+        </p>
+      </div>
+
+      {/* Bottom Section: Supporting Info, Growth Indicator & Directional Arrow */}
+      <div className="pt-2.5 border-t border-[#E2E8F0] flex items-center justify-between gap-2 w-full">
+        <span className="text-xs font-medium text-[#64748B] truncate">
+          {subText}
+        </span>
 
         <div className="flex items-center gap-1.5 shrink-0">
           {trend && trend.value ? (
             <span
-              className={`inline-flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-md ${
+              className={`inline-flex items-center gap-0.5 text-[11px] font-bold px-2 py-0.5 rounded-full ${
                 trend.direction === 'down'
-                  ? 'bg-brand-error-light text-brand-error'
-                  : 'bg-brand-success-light text-brand-success'
+                  ? 'bg-red-50 text-red-600'
+                  : 'bg-[#DCFCE7] text-[#16A34A]'
               }`}
             >
               {trend.direction === 'down' ? (
-                <TrendingDown className="w-3 h-3" />
+                <TrendingDown className="w-3 h-3 shrink-0" />
               ) : (
-                <TrendingUp className="w-3 h-3" />
+                <TrendingUp className="w-3 h-3 shrink-0" />
               )}
               {trend.value}
             </span>
           ) : null}
           {onClick && (
-            <ArrowUpRight className="w-3.5 h-3.5 text-brand-muted group-hover:text-brand-primary transition-colors" />
+            <ArrowUpRight className="w-3.5 h-3.5 text-[#64748B] group-hover:text-[#0F766E] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-200 shrink-0" />
           )}
         </div>
       </div>

@@ -8,10 +8,12 @@ import { PasswordInput } from '../components/PasswordInput';
 import { AuthButton } from '../components/AuthButton';
 import { validateIndianPhone, sanitizePhone } from '../../../utils/validation/phoneValidation';
 import { login } from '../../../services/auth/authService';
+import { useAuth } from '../../../hooks/useAuth';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { login: setAuthSession } = useAuth();
 
   const [formData, setFormData] = useState({
     contactNumber: location.state?.contactNumber || '',
@@ -74,10 +76,17 @@ export const LoginPage = () => {
         rememberMe: formData.rememberMe,
       });
 
+      setAuthSession(
+        response?.user || {
+          contactNumber: formData.contactNumber,
+        }
+      );
+
       setSuccessMessage(response.message || 'Signed in successfully! Redirecting...');
+      const redirectTarget = location.state?.from?.pathname || '/dashboard';
       setTimeout(() => {
-        navigate('/dashboard');
-      }, 1000);
+        navigate(redirectTarget, { replace: true });
+      }, 800);
     } catch (err) {
       setSubmitError(err.message || 'Invalid credentials. Please verify your contact number and password.');
     } finally {

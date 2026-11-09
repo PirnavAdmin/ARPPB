@@ -1,4 +1,4 @@
-import { Printer, FileText, Calendar, UserCheck, Scale } from 'lucide-react';
+import { Printer, Calendar, UserCheck, Scale } from 'lucide-react';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { formatDate } from '../../../utils/formatDate';
 import { printDocumentSummary } from '../../../utils/exportUtils';

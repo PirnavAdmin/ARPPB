@@ -15,7 +15,6 @@ import {
   Layers,
   CheckCircle2,
   MapPin,
-  CreditCard,
 } from 'lucide-react';
 import { useVendor } from '../../../hooks/useVendor';
 import { formatCurrency, formatQuantity } from '../../../utils/formatCurrency';

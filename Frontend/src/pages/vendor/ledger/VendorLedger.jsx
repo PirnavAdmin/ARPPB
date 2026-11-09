@@ -4,7 +4,6 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Calendar,
-  BookOpen,
 } from 'lucide-react';
 import { useVendor } from '../../../hooks/useVendor';
 import { useDebounce } from '../../../hooks/useDebounce';

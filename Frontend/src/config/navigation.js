@@ -1,6 +1,6 @@
 /**
  * Centralized Navigation Configuration for Vendor Portal
- * All 17 navigation routes mapped with Lucide icon identifiers and grouping.
+ * All navigation routes mapped with Lucide icon identifiers and grouping.
  */
 export const VENDOR_NAVIGATION = [
   {
@@ -34,33 +34,6 @@ export const VENDOR_NAVIGATION = [
     icon: 'Users',
     group: 'Partners & Directory',
     description: 'Manage wholesale buyers, retail chains, and individual customers.',
-  },
-  {
-    id: 'purchase-farmers',
-    label: 'Purchase from Farmers',
-    path: '/vendor/purchases/farmers',
-    icon: 'Tractor',
-    group: 'Procurement',
-    submenuGroup: 'Purchases',
-    description: 'Record raw material purchases directly from registered farmers with OTP verification.',
-  },
-  {
-    id: 'purchase-middlemen',
-    label: 'Purchase from Middlemen',
-    path: '/vendor/purchases/middlemen',
-    icon: 'Handshake',
-    group: 'Procurement',
-    submenuGroup: 'Purchases',
-    description: 'Record bulk raw material procurement from registered middlemen and traders.',
-  },
-  {
-    id: 'purchase-history',
-    label: 'Purchase History',
-    path: '/vendor/purchases/history',
-    icon: 'FileSpreadsheet',
-    group: 'Procurement',
-    submenuGroup: 'Purchases',
-    description: 'Complete audit log of farmer and middleman raw material purchases.',
   },
   {
     id: 'inventory',

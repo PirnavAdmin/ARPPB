@@ -4,9 +4,6 @@ import VendorDashboard from '../pages/vendor/dashboard/VendorDashboard';
 import Farmers from '../pages/vendor/farmers/Farmers';
 import Middlemen from '../pages/vendor/middlemen/Middlemen';
 import Customers from '../pages/vendor/customers/Customers';
-import PurchaseFromFarmers from '../pages/vendor/purchases/PurchaseFromFarmers';
-import PurchaseFromMiddlemen from '../pages/vendor/purchases/PurchaseFromMiddlemen';
-import PurchaseHistory from '../pages/vendor/purchases/PurchaseHistory';
 import RawMaterialInventory from '../pages/vendor/inventory/RawMaterialInventory';
 import ProductProcessing from '../pages/vendor/processing/ProductProcessing';
 import FinishedProducts from '../pages/vendor/finished-products/FinishedProducts';
@@ -27,9 +24,6 @@ export default function VendorRoutes() {
         <Route path="farmers" element={<Farmers />} />
         <Route path="middlemen" element={<Middlemen />} />
         <Route path="customers" element={<Customers />} />
-        <Route path="purchases/farmers" element={<PurchaseFromFarmers />} />
-        <Route path="purchases/middlemen" element={<PurchaseFromMiddlemen />} />
-        <Route path="purchases/history" element={<PurchaseHistory />} />
         <Route path="inventory" element={<RawMaterialInventory />} />
         <Route path="processing" element={<ProductProcessing />} />
         <Route path="finished-products" element={<FinishedProducts />} />

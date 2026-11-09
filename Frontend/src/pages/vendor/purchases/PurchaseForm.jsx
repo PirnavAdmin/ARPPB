@@ -37,11 +37,17 @@ const EMPTY_ITEM = {
   qualityGrade: 'Grade A (Export / Premium)',
 };
 
-export function PurchaseForm({ supplierCategory = 'Farmer' }) {
+export function PurchaseForm({
+  supplierCategory = 'Farmer',
+  initialSupplierId = '',
+  onSuccess = null,
+  onCancel = null,
+}) {
   const isFarmer = supplierCategory === 'Farmer';
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const preselectedId = searchParams.get(isFarmer ? 'farmerId' : 'middlemanId') || '';
+  const preselectedId =
+    initialSupplierId || searchParams.get(isFarmer ? 'farmerId' : 'middlemanId') || '';
 
   const {
     farmers,
@@ -230,11 +236,17 @@ export function PurchaseForm({ supplierCategory = 'Farmer' }) {
     };
   };
 
+  const directoryPath = isFarmer ? '/vendor/farmers' : '/vendor/middlemen';
+
   const handleSaveDraft = () => {
     const payload = validateAndBuildPayload();
     if (!payload) return;
-    createPurchase(payload, true);
-    navigate('/vendor/purchases/history');
+    const res = createPurchase(payload, true);
+    if (onSuccess) {
+      onSuccess(res?.purchase);
+    } else {
+      navigate(directoryPath);
+    }
   };
 
   const handleSubmitPurchase = (e) => {
@@ -253,9 +265,13 @@ export function PurchaseForm({ supplierCategory = 'Farmer' }) {
     if (!submittedResult) return;
     const res = verifyTransactionOtp(submittedResult.otpId, enteredOtp);
     if (res.success) {
-      const targetId = submittedResult.purchase.id;
+      const createdPurchase = submittedResult.purchase;
       setSubmittedResult(null);
-      navigate(`/vendor/purchases/history?purchaseId=${targetId}`);
+      if (onSuccess) {
+        onSuccess(createdPurchase);
+      } else {
+        navigate(`${directoryPath}?purchaseId=${createdPurchase.id}`);
+      }
     }
   };
 
@@ -853,7 +869,13 @@ export function PurchaseForm({ supplierCategory = 'Farmer' }) {
               </button>
               <button
                 type="button"
-                onClick={() => navigate('/vendor/purchases/history')}
+                onClick={() => {
+                  if (onCancel) {
+                    onCancel();
+                  } else {
+                    navigate(directoryPath);
+                  }
+                }}
                 className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-brand-background border border-brand-border text-brand-muted hover:text-brand-text transition-colors cursor-pointer"
               >
                 Cancel
@@ -897,9 +919,13 @@ export function PurchaseForm({ supplierCategory = 'Farmer' }) {
       <VendorModal
         isOpen={Boolean(submittedResult)}
         onClose={() => {
-          const targetId = submittedResult?.purchase?.id;
+          const createdPurchase = submittedResult?.purchase;
           setSubmittedResult(null);
-          if (targetId) navigate(`/vendor/purchases/history?purchaseId=${targetId}`);
+          if (onSuccess) {
+            onSuccess(createdPurchase);
+          } else if (createdPurchase?.id) {
+            navigate(`${directoryPath}?purchaseId=${createdPurchase.id}`);
+          }
         }}
         title={`OTP Confirmation – ${submittedResult?.purchase?.id || ''}`}
         subtitle={`${supplierCategory} Purchase recorded. Verify OTP to confirm stock & ledger entry.`}
@@ -969,9 +995,13 @@ export function PurchaseForm({ supplierCategory = 'Farmer' }) {
                   <button
                     type="button"
                     onClick={() => {
-                      const targetId = submittedResult.purchase.id;
+                      const createdPurchase = submittedResult.purchase;
                       setSubmittedResult(null);
-                      navigate(`/vendor/purchases/history?purchaseId=${targetId}`);
+                      if (onSuccess) {
+                        onSuccess(createdPurchase);
+                      } else if (createdPurchase?.id) {
+                        navigate(`${directoryPath}?purchaseId=${createdPurchase.id}`);
+                      }
                     }}
                     className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-brand-background border border-brand-border text-brand-text hover:bg-brand-light transition-colors cursor-pointer"
                   >

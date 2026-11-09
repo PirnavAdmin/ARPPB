@@ -77,7 +77,7 @@ export const INITIAL_NOTIFICATIONS = [
     date: '2026-11-02 04:09 PM',
     isRead: true,
     priority: 'Medium',
-    targetPath: '/vendor/purchases/history',
+    targetPath: '/vendor/farmers?purchaseId=PUR-F-0007',
   },
   {
     id: 'NTF-0008',

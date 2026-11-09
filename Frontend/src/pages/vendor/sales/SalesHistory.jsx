@@ -8,7 +8,6 @@ import {
   Wallet,
   Plus,
   Eye,
-  Printer,
   ShieldCheck,
   TrendingUp,
 } from 'lucide-react';

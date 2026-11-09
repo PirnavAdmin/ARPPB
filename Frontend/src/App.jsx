@@ -4,6 +4,8 @@ import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { VendorProvider } from './context/VendorContext';
 import AppRoutes from './routes/AppRoutes';
+import './pages/Authentication/styles/authentication.css';
+import './pages/Middleman/styles/middleman.css';
 
 export default function App() {
   return (

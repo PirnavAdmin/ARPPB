@@ -1,13 +1,10 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Sprout,
   Briefcase,
   Users,
-  Tractor,
-  Handshake,
-  FileSpreadsheet,
   Warehouse,
   Factory,
   PackageCheck,
@@ -34,9 +31,6 @@ const ICON_MAP = {
   Sprout,
   Briefcase,
   Users,
-  Tractor,
-  Handshake,
-  FileSpreadsheet,
   Warehouse,
   Factory,
   PackageCheck,
@@ -52,7 +46,6 @@ const ICON_MAP = {
 const GROUPS = [
   'Overview',
   'Partners & Directory',
-  'Procurement',
   'Inventory & Processing',
   'Sales & Orders',
   'Finance & Compliance',
@@ -66,13 +59,13 @@ export function VendorSidebar({
   onCloseMobile,
 }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { vendorUser, logout } = useAuth();
   const { unreadNotificationsCount, pendingConfirmationsCount } = useVendor();
 
   const [expandedGroups, setExpandedGroups] = useState({
     Overview: true,
     'Partners & Directory': true,
-    Procurement: true,
     'Inventory & Processing': true,
     'Sales & Orders': true,
     'Finance & Compliance': true,
@@ -236,6 +229,7 @@ export function VendorSidebar({
             onClick={() => {
               if (mobileView && onCloseMobile) onCloseMobile();
               logout();
+              navigate('/login');
             }}
             title={collapsed ? 'Logout' : undefined}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-brand-light hover:bg-brand-secondary hover:text-white transition-colors cursor-pointer ${

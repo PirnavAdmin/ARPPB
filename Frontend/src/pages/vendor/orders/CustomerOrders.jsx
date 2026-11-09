@@ -1,11 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ClipboardList,
   Plus,
   Eye,
   ArrowRight,
-  ShieldCheck,
   Truck,
   CheckCircle2,
   Clock,
@@ -428,19 +426,17 @@ export default function CustomerOrders() {
                 setActiveTab(tab);
                 pagination.goToPage(1);
               }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                active
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${active
                   ? 'bg-brand-primary text-white shadow-xs'
                   : 'text-brand-muted hover:bg-brand-light/50 hover:text-brand-primary'
-              }`}
+                }`}
             >
               <span>{tab}</span>
               <span
-                className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                  active
+                className={`px-1.5 py-0.5 rounded-full text-[10px] ${active
                     ? 'bg-white/20 text-white'
                     : 'bg-brand-background text-brand-text'
-                }`}
+                  }`}
               >
                 {statusCounts[tab] || 0}
               </span>

@@ -1,4 +1,4 @@
-import { ShieldCheck, RotateCcw, Building, Award, MapPin } from 'lucide-react';
+import { ShieldCheck, RotateCcw, Building, MapPin } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useVendor } from '../../../hooks/useVendor';
 import { formatDate } from '../../../utils/formatDate';

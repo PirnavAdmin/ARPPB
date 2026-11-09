@@ -3,24 +3,49 @@ import { INITIAL_VENDOR_PROFILE } from '../data/mockNotifications';
 import { STORAGE_KEYS } from '../utils/constants';
 import { readStorage, writeStorage } from '../services/api';
 
+const AUTH_SESSION_KEY = 'arppb_auth_session_v1';
+
 export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [authSession, setAuthSession] = useState(() =>
+    readStorage(AUTH_SESSION_KEY, {
+      isAuthenticated: true,
+      user: {
+        contactNumber: INITIAL_VENDOR_PROFILE.mobileNumber,
+        role: 'Vendor',
+        fullName: INITIAL_VENDOR_PROFILE.ownerName,
+      },
+    })
+  );
+
   const [vendorUser, setVendorUser] = useState(() =>
     readStorage(STORAGE_KEYS.VENDOR_PROFILE, INITIAL_VENDOR_PROFILE)
   );
 
-  const login = useCallback((customProfile = null) => {
-    if (customProfile) {
-      setVendorUser(customProfile);
-      writeStorage(STORAGE_KEYS.VENDOR_PROFILE, customProfile);
-    }
-    setIsAuthenticated(true);
+  const isAuthenticated = Boolean(authSession?.isAuthenticated);
+  const currentUser = authSession?.user || null;
+
+  const login = useCallback((userData = null) => {
+    const nextSession = {
+      isAuthenticated: true,
+      user: userData || {
+        contactNumber: INITIAL_VENDOR_PROFILE.mobileNumber,
+        role: 'Vendor',
+        fullName: INITIAL_VENDOR_PROFILE.ownerName,
+      },
+    };
+    setAuthSession(nextSession);
+    writeStorage(AUTH_SESSION_KEY, nextSession);
   }, []);
 
   const logout = useCallback(() => {
-    setIsAuthenticated(false);
+    const nextSession = {
+      isAuthenticated: false,
+      user: null,
+    };
+    setAuthSession(nextSession);
+    writeStorage(AUTH_SESSION_KEY, nextSession);
   }, []);
 
   const updateVendorProfile = useCallback((updates) => {
@@ -41,16 +66,16 @@ export function AuthProvider({ children }) {
   const value = useMemo(
     () => ({
       isAuthenticated,
+      user: currentUser,
       vendorUser,
       login,
       logout,
       updateVendorProfile,
     }),
-    [isAuthenticated, vendorUser, login, logout, updateVendorProfile]
+    [isAuthenticated, currentUser, vendorUser, login, logout, updateVendorProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export default AuthProvider;
-

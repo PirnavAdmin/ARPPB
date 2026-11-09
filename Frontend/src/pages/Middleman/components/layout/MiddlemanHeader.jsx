@@ -8,12 +8,15 @@ import {
   CheckCheck,
   ChevronDown,
   Building,
+  LayoutGrid,
 } from 'lucide-react';
 import { MiddlemanBreadcrumb } from './MiddlemanBreadcrumb';
 import { useMiddleman } from '../../../../context/middleman';
+import { useAuth } from '../../../../hooks/useAuth';
 
 export const MiddlemanHeader = ({ onOpenMobileMenu }) => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const { profile, notifications, markAllNotificationsAsRead, resetToDemoData } = useMiddleman();
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -40,6 +43,8 @@ export const MiddlemanHeader = ({ onOpenMobileMenu }) => {
   }, []);
 
   const handleSignOut = () => {
+    setIsProfileOpen(false);
+    logout();
     navigate('/login');
   };
 
@@ -186,6 +191,15 @@ export const MiddlemanHeader = ({ onOpenMobileMenu }) => {
                   >
                     <Building className="w-4 h-4 text-[#64748B]" />
                     <span>Business Profile</span>
+                  </Link>
+
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setIsProfileOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-[#0F766E] hover:bg-teal-50 transition-colors"
+                  >
+                    <LayoutGrid className="w-4 h-4 text-[#0F766E]" />
+                    <span>Workspace Portal Hub</span>
                   </Link>
 
                   <button

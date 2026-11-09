@@ -36,7 +36,10 @@ export function RecentTransactions({ purchases = [], sales = [], processingRecor
         otpStatus: p.otpStatus,
         expectedPaymentDate: p.expectedPaymentDate,
         status: p.status,
-        targetPath: '/vendor/purchases/history',
+        targetPath:
+          p.supplierCategory === 'Farmer'
+            ? `/vendor/farmers?purchaseId=${p.id}`
+            : `/vendor/middlemen?purchaseId=${p.id}`,
         raw: p,
       });
     });

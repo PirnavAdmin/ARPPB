@@ -430,6 +430,18 @@ export function VendorNavbar({ onOpenMobileSidebar, onToggleDesktopSidebar }) {
                   type="button"
                   onClick={() => {
                     setIsProfileOpen(false);
+                    navigate('/dashboard');
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-brand-primary hover:bg-brand-light transition-colors cursor-pointer"
+                >
+                  <ShieldCheck className="w-4 h-4 text-brand-primary" />
+                  <span>Workspace Portal Hub</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileOpen(false);
                     resetDemoData();
                   }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-brand-text hover:bg-brand-light hover:text-brand-primary transition-colors cursor-pointer"
@@ -445,6 +457,7 @@ export function VendorNavbar({ onOpenMobileSidebar, onToggleDesktopSidebar }) {
                   onClick={() => {
                     setIsProfileOpen(false);
                     logout();
+                    navigate('/login');
                   }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-brand-error hover:bg-brand-error-light transition-colors cursor-pointer"
                 >

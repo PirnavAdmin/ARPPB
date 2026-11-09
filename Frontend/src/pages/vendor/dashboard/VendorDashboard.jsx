@@ -220,7 +220,7 @@ export function VendorDashboard() {
         icon={LayoutDashboard}
         showBreadcrumb={false}
         actions={
-          <>
+          <div className="flex flex-wrap items-center gap-2.5">
             <VendorDatePicker
               preset={datePreset}
               onPresetChange={setDatePreset}
@@ -232,40 +232,62 @@ export function VendorDashboard() {
             <button
               type="button"
               onClick={handleRefresh}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-brand-light text-brand-primary hover:bg-brand-secondary hover:text-white transition-colors cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-xl text-xs font-semibold bg-[#CCFBF1] text-[#0F766E] border border-[#14B8A6]/30 hover:bg-[#115E59] hover:text-white transition-all duration-200 cursor-pointer shadow-2xs"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
+              <RefreshCw className="w-3.5 h-3.5 stroke-[2] shrink-0" />
               <span>Refresh</span>
             </button>
             <button
               type="button"
               onClick={handleExportReport}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-brand-primary text-white hover:bg-brand-secondary transition-colors cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-xl text-xs font-semibold bg-[#0F766E] text-white hover:bg-[#115E59] transition-all duration-200 cursor-pointer shadow-xs"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-3.5 h-3.5 stroke-[2] shrink-0" />
               <span>Export Report</span>
             </button>
-          </>
+          </div>
         }
       />
 
       {/* Business & Branch Info Bar */}
-      <div className="bg-brand-surface rounded-xl border border-brand-border px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs text-brand-muted shadow-2xs">
-        <div className="flex flex-wrap items-center gap-4">
-          <span className="inline-flex items-center gap-1.5 font-bold text-brand-primary">
-            <Building2 className="w-4 h-4 text-brand-secondary" />
-            {vendorUser?.businessName}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-brand-primary" />
-            Branch: <strong className="text-brand-text">{vendorUser?.branchName}</strong>
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-brand-primary" />
-            Current Date: <strong className="text-brand-text">{formatDate(referenceDate)}</strong>
-          </span>
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] px-5 py-3.5 flex flex-wrap items-center justify-between gap-4 text-xs text-[#64748B] shadow-xs">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-5">
+          <div className="inline-flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-[#CCFBF1] text-[#0F766E] flex items-center justify-center shrink-0">
+              <Building2 className="w-4 h-4 stroke-[2]" />
+            </span>
+            <span className="font-bold text-sm text-[#0F766E]">
+              {vendorUser?.businessName}
+            </span>
+          </div>
+
+          <span className="hidden sm:inline-block h-4 w-px bg-[#E2E8F0]" aria-hidden="true" />
+
+          <div className="inline-flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-[#F5FAF8] text-[#0F766E] border border-[#E2E8F0] flex items-center justify-center shrink-0">
+              <MapPin className="w-3.5 h-3.5 stroke-[2]" />
+            </span>
+            <span>
+              Branch: <strong className="font-semibold text-[#172B29]">{vendorUser?.branchName}</strong>
+            </span>
+          </div>
+
+          <span className="hidden sm:inline-block h-4 w-px bg-[#E2E8F0]" aria-hidden="true" />
+
+          <div className="inline-flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-[#F5FAF8] text-[#0F766E] border border-[#E2E8F0] flex items-center justify-center shrink-0">
+              <Calendar className="w-3.5 h-3.5 stroke-[2]" />
+            </span>
+            <span>
+              Current Date: <strong className="font-semibold text-[#172B29]">{formatDate(referenceDate)}</strong>
+            </span>
+          </div>
         </div>
-        <span>Last synced: {lastRefreshed.toLocaleTimeString('en-IN')}</span>
+
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F5FAF8] border border-[#E2E8F0] text-xs font-medium text-[#64748B]">
+          <span className="w-2 h-2 rounded-full bg-[#16A34A]" aria-hidden="true" />
+          <span>Last synced: {lastRefreshed.toLocaleTimeString('en-IN')}</span>
+        </div>
       </div>
 
       {/* 6.2 10 Summary KPI Cards */}

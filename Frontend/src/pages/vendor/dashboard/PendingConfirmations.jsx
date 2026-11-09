@@ -33,15 +33,17 @@ export function PendingConfirmations() {
   };
 
   return (
-    <div className="bg-brand-surface rounded-2xl border border-brand-border p-5 shadow-2xs">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-brand-light text-brand-primary flex items-center justify-center">
-            <ShieldCheck className="w-5 h-5" />
+    <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 sm:p-6 shadow-xs">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 min-w-[2.5rem] min-h-[2.5rem] rounded-xl bg-[#CCFBF1] text-[#0F766E] border border-[#14B8A6]/25 flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-5 h-5 stroke-[2] shrink-0" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-brand-primary">Pending OTP Confirmations</h3>
-            <p className="text-xs text-brand-muted">
+            <h3 className="text-base font-bold text-[#0F766E] leading-snug">
+              Pending OTP Confirmations
+            </h3>
+            <p className="text-xs text-[#64748B] mt-0.5">
               Awaiting OTP confirmation from Farmers, Middlemen, and Customers
             </p>
           </div>
@@ -50,19 +52,21 @@ export function PendingConfirmations() {
         <button
           type="button"
           onClick={() => navigate('/vendor/confirmations')}
-          className="px-3.5 py-1.5 rounded-xl bg-brand-light text-brand-primary hover:bg-brand-secondary hover:text-white text-xs font-semibold transition-colors cursor-pointer"
+          className="inline-flex items-center justify-center h-9 px-4 rounded-xl bg-[#CCFBF1] text-[#0F766E] border border-[#14B8A6]/30 hover:bg-[#0F766E] hover:text-white text-xs font-semibold transition-all duration-200 cursor-pointer shrink-0"
         >
           View All Confirmations ({pendingList.length} Pending)
         </button>
       </div>
 
       {pendingList.length === 0 ? (
-        <div className="p-6 rounded-xl bg-brand-light/30 border border-brand-secondary/30 text-center">
-          <CheckCircle2 className="w-8 h-8 text-brand-success mx-auto mb-2" />
-          <p className="text-sm font-semibold text-brand-text">
+        <div className="py-8 px-6 rounded-2xl bg-[#F5FAF8] border border-[#14B8A6]/25 text-center">
+          <div className="w-12 h-12 rounded-full bg-[#DCFCE7] text-[#16A34A] border border-[#16A34A]/20 flex items-center justify-center mx-auto mb-3 shadow-2xs">
+            <CheckCircle2 className="w-6 h-6 stroke-[2]" />
+          </div>
+          <p className="text-sm font-bold text-[#172B29]">
             All Farmer, Middleman, and Customer transactions are verified!
           </p>
-          <p className="text-xs text-brand-muted mt-0.5">
+          <p className="text-xs text-[#64748B] mt-1 max-w-md mx-auto">
             New purchases and sales orders requiring OTP confirmation will appear here immediately.
           </p>
         </div>

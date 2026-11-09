@@ -10,6 +10,8 @@ import {
   TrendingUp,
   RotateCw,
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMiddleman } from '../../../context/middleman';
@@ -17,8 +19,6 @@ import { formatINR, formatIndianNumber } from '../../../utils/middleman/formatte
 import { DashboardSummaryCard } from '../components/dashboard/DashboardSummaryCard';
 import { PurchaseSalesChart } from '../components/dashboard/PurchaseSalesChart';
 import { CropInventoryChart } from '../components/dashboard/CropInventoryChart';
-import { ProfitOverviewChart } from '../components/dashboard/ProfitOverviewChart';
-import { SalesDistributionChart } from '../components/dashboard/SalesDistributionChart';
 import { RecentTransactionsTable } from '../components/dashboard/RecentTransactionsTable';
 import { PendingConfirmations } from '../components/dashboard/PendingConfirmations';
 import { SectionCard } from '../components/common/SectionCard';
@@ -30,11 +30,111 @@ export const MiddlemanDashboard = () => {
 
   const [dateFilter, setDateFilter] = useState('This Month');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  // 0 = First Group (Primary Metrics 1/2), 1 = Second Group (Additional Metrics 2/2)
+  const [activeKpiGroup, setActiveKpiGroup] = useState(0);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => setIsRefreshing(false), 500);
   };
+
+  // First Group – 5 Primary KPI Cards
+  const primaryKpiCards = [
+    {
+      id: 'total-farmers',
+      title: 'Total Farmers',
+      value: formatIndianNumber(dashboardMetrics.totalFarmers),
+      icon: Users,
+      description: 'Registered suppliers',
+      trend: { value: '+2', isPositive: true },
+      onClick: () => navigate('/middleman/farmers'),
+    },
+    {
+      id: 'total-vendors',
+      title: 'Total Vendors',
+      value: formatIndianNumber(dashboardMetrics.totalVendors),
+      icon: Building2,
+      description: 'Wholesale buyers & mills',
+      trend: { value: '+1', isPositive: true },
+      onClick: () => navigate('/middleman/vendors'),
+    },
+    {
+      id: 'total-customers',
+      title: 'Total Customers',
+      value: formatIndianNumber(dashboardMetrics.totalCustomers),
+      icon: ShoppingBag,
+      description: 'Retail & local stores',
+      trend: { value: 'Active', isPositive: true },
+      onClick: () => navigate('/middleman/customers'),
+    },
+    {
+      id: 'total-purchases',
+      title: 'Total Purchases',
+      value: formatIndianNumber(dashboardMetrics.totalPurchasesCount),
+      icon: ShoppingCart,
+      description: 'Confirmed transactions',
+      trend: { value: '+15%', isPositive: true },
+      onClick: () => navigate('/middleman/purchase-history'),
+    },
+    {
+      id: 'total-sales',
+      title: 'Total Sales',
+      value: formatIndianNumber(dashboardMetrics.totalSalesCount),
+      icon: BadgePercent,
+      description: 'Completed orders',
+      trend: { value: '+18%', isPositive: true },
+      onClick: () => navigate('/middleman/sales-history'),
+    },
+  ];
+
+  // Second Group – 5 Additional KPI Cards
+  const secondaryKpiCards = [
+    {
+      id: 'available-inventory',
+      title: 'Available Inventory',
+      value: `${formatIndianNumber(dashboardMetrics.availableInventory)} Qtl`,
+      icon: Boxes,
+      description: 'Across 6 active crops',
+      trend: { value: 'Healthy', isPositive: true },
+      onClick: () => navigate('/middleman/inventory'),
+    },
+    {
+      id: 'total-purchase-value',
+      title: 'Total Purchase Value',
+      value: formatINR(dashboardMetrics.totalPurchaseValue),
+      icon: TrendingDown,
+      description: 'Farmer purchases',
+      trend: { value: 'Inflow', isPositive: true },
+      onClick: () => navigate('/middleman/purchase-history'),
+    },
+    {
+      id: 'total-sales-value',
+      title: 'Total Sales Value',
+      value: formatINR(dashboardMetrics.totalSalesValue),
+      icon: TrendingUp,
+      description: 'Revenue generated',
+      trend: { value: '+22%', isPositive: true },
+      onClick: () => navigate('/middleman/sales-history'),
+    },
+    {
+      id: 'expected-receivables',
+      title: 'Expected Receivables',
+      value: formatINR(dashboardMetrics.expectedReceivables),
+      icon: TrendingUp,
+      description: 'Due from buyers',
+      trend: { value: 'Receivable', isPositive: true },
+      onClick: () => navigate('/middleman/ledger'),
+    },
+    {
+      id: 'expected-payables',
+      title: 'Expected Payables',
+      value: formatINR(dashboardMetrics.expectedPayables),
+      icon: TrendingDown,
+      description: 'Obligation to farmers',
+      trend: { value: 'Payable', isPositive: false },
+      onClick: () => navigate('/middleman/ledger'),
+    },
+  ];
 
   // Combine recent purchases and sales for recent transactions
   const allRecentTransactions = [
@@ -76,131 +176,117 @@ export const MiddlemanDashboard = () => {
         </div>
       </div>
 
-      {/* 6.3 All Ten Dashboard Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
-        {/* 1. Total Farmers */}
-        <DashboardSummaryCard
-          title="Total Farmers"
-          value={formatIndianNumber(dashboardMetrics.totalFarmers)}
-          icon={Users}
-          description="Registered suppliers"
-          trend={{ value: '+2', isPositive: true }}
-          accentColor="teal"
-        />
+      {/* 6.3 Horizontal Sliding KPI Cards Carousel (10 KPI Cards in 2 Landscape Slides) */}
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-3">
+          {/* Left Arrow Button – Visible when Second Group (Additional Metrics) is active */}
+          {activeKpiGroup === 1 && (
+            <button
+              type="button"
+              onClick={() => setActiveKpiGroup(0)}
+              aria-label="Back to primary metrics"
+              title="Back to primary metrics"
+              className="group shrink-0 w-10 h-10 rounded-full border border-[#E2E8F0] bg-white text-[#0F766E] hover:bg-[#CCFBF1] hover:border-[#14B8A6] shadow-xs hover:shadow-md flex items-center justify-center transition-all duration-200 cursor-pointer"
+            >
+              <ChevronLeft className="w-5 h-5 stroke-[2.2] transition-transform duration-200 group-hover:-translate-x-0.5" />
+            </button>
+          )}
 
-        {/* 2. Total Vendors */}
-        <DashboardSummaryCard
-          title="Total Vendors"
-          value={formatIndianNumber(dashboardMetrics.totalVendors)}
-          icon={Building2}
-          description="Wholesale buyers & mills"
-          trend={{ value: '+1', isPositive: true }}
-          accentColor="teal"
-        />
+          {/* Horizontal Sliding Viewport */}
+          <div className="flex-1 min-w-0 overflow-hidden py-1 -my-1 px-0.5 -mx-0.5">
+            <div
+              className={`flex w-[200%] transition-transform duration-500 ease-in-out ${
+                activeKpiGroup === 0 ? 'translate-x-0' : '-translate-x-1/2'
+              }`}
+            >
+              {/* Slide 1: First Group – 5 Primary KPI Cards in Landscape Row */}
+              <div
+                aria-hidden={activeKpiGroup !== 0}
+                className="w-1/2 shrink-0 pr-2"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-stretch">
+                  {primaryKpiCards.map((card) => (
+                    <DashboardSummaryCard key={card.id} {...card} />
+                  ))}
+                </div>
+              </div>
 
-        {/* 3. Total Customers */}
-        <DashboardSummaryCard
-          title="Total Customers"
-          value={formatIndianNumber(dashboardMetrics.totalCustomers)}
-          icon={ShoppingBag}
-          description="Retail & local stores"
-          trend={{ value: 'Active', isPositive: true }}
-          accentColor="teal"
-        />
+              {/* Slide 2: Second Group – 5 Additional KPI Cards in Landscape Row */}
+              <div
+                aria-hidden={activeKpiGroup !== 1}
+                className="w-1/2 shrink-0 pl-2"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-stretch">
+                  {secondaryKpiCards.map((card) => (
+                    <DashboardSummaryCard key={card.id} {...card} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
 
-        {/* 4. Total Purchases */}
-        <DashboardSummaryCard
-          title="Total Purchases"
-          value={formatIndianNumber(dashboardMetrics.totalPurchasesCount)}
-          icon={ShoppingCart}
-          description="Confirmed transactions"
-          trend={{ value: '+15%', isPositive: true }}
-          accentColor="teal"
-        />
-
-        {/* 5. Total Sales */}
-        <DashboardSummaryCard
-          title="Total Sales"
-          value={formatIndianNumber(dashboardMetrics.totalSalesCount)}
-          icon={BadgePercent}
-          description="Completed orders"
-          trend={{ value: '+18%', isPositive: true }}
-          accentColor="emerald"
-        />
-
-        {/* 6. Available Inventory */}
-        <DashboardSummaryCard
-          title="Available Inventory"
-          value={`${formatIndianNumber(dashboardMetrics.availableInventory)} Qtl`}
-          icon={Boxes}
-          description="Across 6 active crops"
-          trend={{ value: 'Healthy', isPositive: true }}
-          accentColor="teal"
-        />
-
-        {/* 7. Total Purchase Value */}
-        <DashboardSummaryCard
-          title="Total Purchase Value"
-          value={formatINR(dashboardMetrics.totalPurchaseValue)}
-          icon={TrendingDown}
-          description="Farmer purchases"
-          trend={{ value: 'Inflow', isPositive: true }}
-          accentColor="teal"
-        />
-
-        {/* 8. Total Sales Value */}
-        <DashboardSummaryCard
-          title="Total Sales Value"
-          value={formatINR(dashboardMetrics.totalSalesValue)}
-          icon={TrendingUp}
-          description="Revenue generated"
-          trend={{ value: '+22%', isPositive: true }}
-          accentColor="emerald"
-        />
-
-        {/* 9. Expected Receivables */}
-        <DashboardSummaryCard
-          title="Expected Receivables"
-          value={formatINR(dashboardMetrics.expectedReceivables)}
-          icon={TrendingUp}
-          description="Due from buyers"
-          trend={{ value: 'Receivable', isPositive: true }}
-          accentColor="amber"
-        />
-
-        {/* 10. Expected Payables */}
-        <DashboardSummaryCard
-          title="Expected Payables"
-          value={formatINR(dashboardMetrics.expectedPayables)}
-          icon={TrendingDown}
-          description="Obligation to farmers"
-          trend={{ value: 'Payable', isPositive: false }}
-          accentColor="amber"
-        />
-      </div>
-
-      {/* Main Analytical Grid: Purchase vs Sales & Crop-wise Inventory */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Purchase vs Sales Chart (Spans 2 columns) */}
-        <div className="lg:col-span-2">
-          <SectionCard
-            title="Purchase vs Sales Comparison"
-            subtitle="Monthly breakdown of Farmer Purchases vs Vendor and Customer Sales (in INR)"
-          >
-            <PurchaseSalesChart />
-          </SectionCard>
+          {/* Right Arrow Button – Visible when First Group (Primary Metrics) is active */}
+          {activeKpiGroup === 0 && (
+            <button
+              type="button"
+              onClick={() => setActiveKpiGroup(1)}
+              aria-label="View additional metrics"
+              title="View additional metrics"
+              className="group shrink-0 w-10 h-10 rounded-full border border-[#E2E8F0] bg-white text-[#0F766E] hover:bg-[#CCFBF1] hover:border-[#14B8A6] shadow-xs hover:shadow-md flex items-center justify-center transition-all duration-200 cursor-pointer"
+            >
+              <ChevronRight className="w-5 h-5 stroke-[2.2] transition-transform duration-200 group-hover:translate-x-0.5" />
+            </button>
+          )}
         </div>
 
-        {/* Crop-wise Inventory Distribution (Spans 1 column) */}
-        <div>
+        {/* Subtle Carousel Pagination Indicator */}
+        <div className="flex items-center justify-end gap-2.5 px-1">
+          <span className="text-[11px] font-semibold text-[#64748B]">
+            {activeKpiGroup === 0
+              ? 'Primary Metrics – 1/2'
+              : 'Additional Metrics – 2/2'}
+          </span>
+          <div className="inline-flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setActiveKpiGroup(0)}
+              aria-label="Show Primary Metrics (1/2)"
+              title="Primary Metrics – 1/2"
+              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                activeKpiGroup === 0
+                  ? 'w-5 bg-[#0F766E]'
+                  : 'w-2 bg-[#CBD5E1] hover:bg-[#14B8A6]'
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => setActiveKpiGroup(1)}
+              aria-label="Show Additional Metrics (2/2)"
+              title="Additional Metrics – 2/2"
+              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                activeKpiGroup === 1
+                  ? 'w-5 bg-[#0F766E]'
+                  : 'w-2 bg-[#CBD5E1] hover:bg-[#14B8A6]'
+              }`}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Analytical Grid: Cropwise Inventory & Purchase vs Sales Comparison */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+        {/* Cropwise Inventory (Spans 1 column, equal height with internal scrolling) */}
+        <div className="lg:col-span-1 flex">
           <SectionCard
-            title="Crop-wise Inventory"
+            title="Cropwise Inventory"
             subtitle="Current stock across active crop batches"
+            className="w-full h-[420px] flex flex-col"
+            bodyClassName="p-5 sm:p-6 flex-1 min-h-0 flex flex-col overflow-hidden"
             action={
               <button
                 type="button"
                 onClick={() => navigate('/middleman/inventory')}
-                className="text-xs font-semibold text-[#0F766E] hover:underline"
+                className="text-xs font-semibold text-[#0F766E] hover:underline cursor-pointer shrink-0"
               >
                 View Batches &rarr;
               </button>
@@ -209,25 +295,18 @@ export const MiddlemanDashboard = () => {
             <CropInventoryChart />
           </SectionCard>
         </div>
-      </div>
 
-      {/* Secondary Analytical Grid: Profit Overview & Sales Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 6.6 Profit Overview */}
-        <SectionCard
-          title="Profitability & Landed Cost Breakdown"
-          subtitle="Accrued from confirmed sales against batch-allocated FIFO Cost of Goods Sold"
-        >
-          <ProfitOverviewChart />
-        </SectionCard>
-
-        {/* 6.7 Sales Distribution */}
-        <SectionCard
-          title="Sales Channel Distribution"
-          subtitle="Comparison between Wholesale Vendors and Direct Customer buyers"
-        >
-          <SalesDistributionChart />
-        </SectionCard>
+        {/* Purchase vs Sales Comparison (Spans 2 columns, equal height) */}
+        <div className="lg:col-span-2 flex">
+          <SectionCard
+            title="Purchase vs Sales Comparison"
+            subtitle="Monthly breakdown of Farmer Purchases vs Vendor and Customer Sales (in INR)"
+            className="w-full h-[420px] flex flex-col"
+            bodyClassName="p-5 sm:p-6 flex-1 min-h-0 flex flex-col"
+          >
+            <PurchaseSalesChart />
+          </SectionCard>
+        </div>
       </div>
 
       {/* 6.9 Pending Confirmations Section */}
@@ -244,7 +323,7 @@ export const MiddlemanDashboard = () => {
             <button
               type="button"
               onClick={() => navigate('/middleman/confirmations')}
-              className="inline-flex items-center gap-1 text-xs font-bold text-[#0F766E] hover:underline"
+              className="inline-flex items-center gap-1 text-xs font-bold text-[#0F766E] hover:underline cursor-pointer"
             >
               <span>Manage All</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -264,7 +343,7 @@ export const MiddlemanDashboard = () => {
             <button
               type="button"
               onClick={() => navigate('/middleman/purchase-history')}
-              className="text-xs font-semibold text-[#0F766E] hover:underline"
+              className="text-xs font-semibold text-[#0F766E] hover:underline cursor-pointer"
             >
               Purchases &rarr;
             </button>
@@ -272,7 +351,7 @@ export const MiddlemanDashboard = () => {
             <button
               type="button"
               onClick={() => navigate('/middleman/sales-history')}
-              className="text-xs font-semibold text-[#0F766E] hover:underline"
+              className="text-xs font-semibold text-[#0F766E] hover:underline cursor-pointer"
             >
               Sales &rarr;
             </button>
@@ -286,3 +365,4 @@ export const MiddlemanDashboard = () => {
 };
 
 export default MiddlemanDashboard;
+

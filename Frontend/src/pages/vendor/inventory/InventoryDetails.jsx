@@ -111,7 +111,11 @@ export function InventoryDetails({
                 type="button"
                 onClick={() => {
                   onClose();
-                  navigate(`/vendor/purchases/history?purchaseId=${stock.purchaseId}`);
+                  navigate(
+                    stock.supplierCategory === 'Middleman'
+                      ? `/vendor/middlemen?purchaseId=${stock.purchaseId}`
+                      : `/vendor/farmers?purchaseId=${stock.purchaseId}`
+                  );
                 }}
                 className="inline-flex items-center gap-1 font-mono font-bold text-brand-primary hover:underline cursor-pointer"
               >
