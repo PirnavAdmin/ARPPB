@@ -1,7 +1,7 @@
-import Dashboard from "./components/Dashboard";
+import FarmerApp from "./farmer/FarmerApp";
 
 function App() {
-  return <Dashboard />;
+  return <FarmerApp />;
 }
 
 export default App;
