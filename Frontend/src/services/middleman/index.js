@@ -41,6 +41,11 @@ export const inventoryService = {
   getBatches: async () => ({ success: true }),
 };
 
+export const ledgerService = {
+  getEntries: async () => ({ success: true }),
+  settle: async (id, amount) => ({ success: true, id, amount }),
+};
+
 export const confirmationService = {
   confirmOTP: async (id) => ({ success: true, id }),
   rejectOTP: async (id, reason) => ({ success: true, id, reason }),
@@ -55,3 +60,4 @@ export const profileService = {
   getProfile: async () => ({ success: true }),
   updateProfile: async (data) => ({ success: true, data }),
 };
+

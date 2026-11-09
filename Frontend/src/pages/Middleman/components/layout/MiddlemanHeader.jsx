@@ -49,7 +49,7 @@ export const MiddlemanHeader = ({ onOpenMobileMenu }) => {
   };
 
   const handleReset = () => {
-    if (window.confirm('Reset all demonstration data (purchases, sales, and inventory) to defaults?')) {
+    if (window.confirm('Reset all demonstration data (purchases, sales, inventory, ledger) to defaults?')) {
       resetToDemoData();
       setIsProfileOpen(false);
     }

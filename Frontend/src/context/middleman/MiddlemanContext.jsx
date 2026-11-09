@@ -421,7 +421,7 @@ export const MiddlemanProvider = ({ children }) => {
       )
     );
 
-    // 2. Handle Farmer Purchase Confirmation -> Adds stock to Inventory
+    // 2. Handle Farmer Purchase Confirmation -> Adds stock to Inventory & records in Ledger
     if (confItem.transactionType === 'Farmer Purchase') {
       const purchase = purchases.find((p) => p.purchaseId === confItem.transactionId);
       if (purchase) {
@@ -472,7 +472,7 @@ export const MiddlemanProvider = ({ children }) => {
           )
         );
 
-        // Record the farmer payable
+        // Add Ledger entry (Payable to Farmer)
         const newLedger = {
           ledgerId: generateId('LED'),
           date: purchase.purchaseDate || now.slice(0, 10),
@@ -502,7 +502,7 @@ export const MiddlemanProvider = ({ children }) => {
       }
     }
 
-    // 3. Handle Vendor Sale Confirmation -> Deducts stock via FIFO
+    // 3. Handle Vendor Sale Confirmation -> Deducts stock via FIFO & records in Ledger
     if (confItem.transactionType === 'Vendor Sale') {
       const sale = vendorSales.find((s) => s.saleId === confItem.transactionId);
       if (sale) {
@@ -557,7 +557,7 @@ export const MiddlemanProvider = ({ children }) => {
           )
         );
 
-        // Record the vendor receivable
+        // Add Ledger entry (Receivable from Vendor)
         const newLedger = {
           ledgerId: generateId('LED'),
           date: sale.salesDate || now.slice(0, 10),
@@ -587,7 +587,7 @@ export const MiddlemanProvider = ({ children }) => {
       }
     }
 
-    // 4. Handle Customer Sale Confirmation -> Deducts stock
+    // 4. Handle Customer Sale Confirmation -> Deducts stock & records in Ledger
     if (confItem.transactionType === 'Customer Sale') {
       const sale = customerSales.find((s) => s.saleId === confItem.transactionId);
       if (sale) {
@@ -718,7 +718,7 @@ export const MiddlemanProvider = ({ children }) => {
     });
   }, [confirmations, addNotification]);
 
-  // Settle an outstanding payment
+  // Settle Ledger Entry
   const settleLedgerEntry = useCallback((ledgerId, settledAmount) => {
     setLedger((prev) =>
       prev.map((item) => {

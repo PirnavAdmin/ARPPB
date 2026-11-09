@@ -115,7 +115,7 @@ export function ProcessingSummary({ selectedBatch, metrics, outputs = [] }) {
           <strong>Traceability Guarantee:</strong> Saving as Draft will NOT alter stock. Completing
           processing deducts input quantity from{' '}
           <strong>{selectedBatch?.id || 'the selected batch'}</strong> once, creates traceable
-          finished product batch(es), and records processing expenses.
+          finished product batch(es), and posts processing expenses to the Vendor Ledger.
         </span>
       </div>
 
@@ -133,3 +133,4 @@ export function ProcessingSummary({ selectedBatch, metrics, outputs = [] }) {
 }
 
 export default ProcessingSummary;
+

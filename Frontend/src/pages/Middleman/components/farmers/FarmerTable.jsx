@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, Edit2, ShoppingCart } from 'lucide-react';
+import { Eye, Edit2, ShoppingCart, BookOpen } from 'lucide-react';
 import { StatusBadge } from '../common/StatusBadge';
 import { formatIndianNumber } from '../../../../utils/middleman/formatters';
 
@@ -8,6 +8,7 @@ export const FarmerTable = ({
   onView,
   onEdit,
   onViewPurchases,
+  onViewLedger,
 }) => {
   return (
     <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0] bg-white">
@@ -77,6 +78,14 @@ export const FarmerTable = ({
                   >
                     <ShoppingCart className="w-3.5 h-3.5" />
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => onViewLedger(farmer)}
+                    className="p-1 rounded-lg hover:bg-slate-100 text-[#D97706] cursor-pointer"
+                    title="Farmer Ledger"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </td>
             </tr>
@@ -88,3 +97,4 @@ export const FarmerTable = ({
 };
 
 export default FarmerTable;
+

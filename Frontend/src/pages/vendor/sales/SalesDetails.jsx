@@ -456,7 +456,7 @@ export default function SalesDetails({ sale, isOpen, onClose }) {
                 type="submit"
                 className="w-full py-2 rounded-lg bg-brand-primary text-white font-bold hover:bg-brand-secondary transition-colors cursor-pointer"
               >
-                Record Customer Receipt
+                Post Customer Receipt to Ledger
               </button>
             </form>
           ) : (
@@ -478,3 +478,4 @@ export default function SalesDetails({ sale, isOpen, onClose }) {
     </VendorModal>
   );
 }
+

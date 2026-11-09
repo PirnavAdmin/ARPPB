@@ -137,7 +137,7 @@ export function PurchaseSummary({
         <span>
           <strong>OTP Safeguard:</strong> Submitting this purchase generates a unique Transaction ID
           and sends a simulated 6-digit OTP to the {supplierCategory.toLowerCase()}. Inventory and
-          payment obligations are updated only after OTP confirmation.
+          ledger payables are updated only after OTP confirmation.
         </span>
       </div>
     </div>
@@ -145,3 +145,4 @@ export function PurchaseSummary({
 }
 
 export default PurchaseSummary;
+

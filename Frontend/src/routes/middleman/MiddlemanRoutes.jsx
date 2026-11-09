@@ -13,6 +13,7 @@ import {
   InventoryPage,
   SalesHistoryPage,
   OTPConfirmationsPage,
+  LedgerPage,
   NotificationsPage,
   MiddlemanProfilePage,
 } from '../../pages/Middleman';
@@ -37,6 +38,7 @@ export const MiddlemanRoutes = () => {
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="sales-history" element={<SalesHistoryPage />} />
           <Route path="confirmations" element={<OTPConfirmationsPage />} />
+          <Route path="ledger" element={<LedgerPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="profile" element={<MiddlemanProfilePage />} />
           <Route path="*" element={<Navigate to="dashboard" replace />} />
@@ -47,3 +49,4 @@ export const MiddlemanRoutes = () => {
 };
 
 export default MiddlemanRoutes;
+

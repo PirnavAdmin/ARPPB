@@ -180,6 +180,7 @@ export function DashboardStats({ stats }) {
       description: 'Outstanding customer dues to collect',
       icon: Wallet,
       trend: null,
+      onClick: () => navigate('/vendor/ledger?tab=receivables'),
     },
     {
       id: 'expected-payables',
@@ -188,6 +189,7 @@ export function DashboardStats({ stats }) {
       description: 'Outstanding farmer & middleman dues',
       icon: ArrowUpRight,
       trend: null,
+      onClick: () => navigate('/vendor/ledger?tab=payables'),
     },
   ];
 

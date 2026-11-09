@@ -132,7 +132,7 @@ export const INITIAL_NOTIFICATIONS = [
     date: '2026-11-03 10:00 AM',
     isRead: true,
     priority: 'Medium',
-    targetPath: '/vendor/sales/history',
+    targetPath: '/vendor/ledger',
   },
   {
     id: 'NTF-0013',
@@ -143,7 +143,7 @@ export const INITIAL_NOTIFICATIONS = [
     date: '2026-11-04 11:00 AM',
     isRead: false,
     priority: 'High',
-    targetPath: '/vendor/farmers',
+    targetPath: '/vendor/ledger',
   },
 ];
 
@@ -174,3 +174,4 @@ export const INITIAL_VENDOR_PROFILE = {
 };
 
 export default INITIAL_NOTIFICATIONS;
+

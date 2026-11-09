@@ -12,5 +12,7 @@ export { default as SalesToCustomersPage } from './SalesToCustomers/SalesToCusto
 export { default as InventoryPage } from './Inventory/InventoryPage';
 export { default as SalesHistoryPage } from './SalesHistory/SalesHistoryPage';
 export { default as OTPConfirmationsPage } from './OTPConfirmations/OTPConfirmationsPage';
+export { default as LedgerPage } from './Ledger/LedgerPage';
 export { default as NotificationsPage } from './Notifications/NotificationsPage';
 export { default as MiddlemanProfilePage } from './Profile/MiddlemanProfilePage';
+

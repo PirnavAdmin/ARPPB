@@ -114,6 +114,7 @@ export const MiddlemanDashboard = () => {
       icon: TrendingUp,
       description: 'Due from buyers',
       trend: { value: 'Receivable', isPositive: true },
+      onClick: () => navigate('/middleman/ledger'),
     },
     {
       id: 'expected-payables',
@@ -122,6 +123,7 @@ export const MiddlemanDashboard = () => {
       icon: TrendingDown,
       description: 'Obligation to farmers',
       trend: { value: 'Payable', isPositive: false },
+      onClick: () => navigate('/middleman/ledger'),
     },
   ];
 
@@ -340,3 +342,4 @@ export const MiddlemanDashboard = () => {
 };
 
 export default MiddlemanDashboard;
+

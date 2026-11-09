@@ -11,6 +11,7 @@ import SellProducts from '../pages/vendor/sales/SellProducts';
 import CustomerOrders from '../pages/vendor/orders/CustomerOrders';
 import SalesHistory from '../pages/vendor/sales/SalesHistory';
 import OTPConfirmations from '../pages/vendor/confirmations/OTPConfirmations';
+import VendorLedger from '../pages/vendor/ledger/VendorLedger';
 import Notifications from '../pages/vendor/notifications/Notifications';
 import VendorProfile from '../pages/vendor/profile/VendorProfile';
 
@@ -30,6 +31,7 @@ export default function VendorRoutes() {
         <Route path="sales/history" element={<SalesHistory />} />
         <Route path="orders" element={<CustomerOrders />} />
         <Route path="confirmations" element={<OTPConfirmations />} />
+        <Route path="ledger" element={<VendorLedger />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="profile" element={<VendorProfile />} />
         <Route path="*" element={<Navigate to="dashboard" replace />} />
@@ -37,3 +39,4 @@ export default function VendorRoutes() {
     </Routes>
   );
 }
+

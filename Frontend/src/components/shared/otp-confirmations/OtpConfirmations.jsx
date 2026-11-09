@@ -120,7 +120,7 @@ export default function OtpConfirmations({
                       status: otpStatus,
                       note:
                         item.notes ||
-                        `Transaction ${transactionId} ${otpStatus.toLowerCase()} and synced with inventory.`,
+                        `Transaction ${transactionId} ${otpStatus.toLowerCase()} and synced with inventory & ledger.`,
                     },
                   ]
                 : item.notes
@@ -303,10 +303,10 @@ export default function OtpConfirmations({
     } else {
       setFeedbackMsg({
         success: true,
-        message: `Transaction ${verifyingRecord.transactionId} verified and synced with inventory.`,
+        message: `Transaction ${verifyingRecord.transactionId} verified & synced with inventory and ledger.`,
       });
       showToast(
-        `Transaction ${verifyingRecord.transactionId} authorized! Stock records updated.`
+        `Transaction ${verifyingRecord.transactionId} authorized! Stock & ledger records updated.`
       );
     }
   };
@@ -648,7 +648,7 @@ export default function OtpConfirmations({
         <VendorStatCard
           title="Verified Transactions"
           value={stats.verified}
-          subtitle="Confirmed & posted to inventory"
+          subtitle="Confirmed & posted to inventory/ledger"
           icon={CheckCircle2}
         />
         <VendorStatCard
@@ -929,7 +929,7 @@ export default function OtpConfirmations({
                   OTP for <strong>{verifyingRecord.transactionId}</strong> was
                   verified on{' '}
                   <strong>{verifyingRecord.confirmationDate}</strong>. Inventory
-                  has been updated automatically.
+                  and Financial Ledger have been updated automatically.
                 </p>
                 <div className="flex justify-end pt-2">
                   <button
@@ -1049,3 +1049,4 @@ export default function OtpConfirmations({
     </div>
   );
 }
+

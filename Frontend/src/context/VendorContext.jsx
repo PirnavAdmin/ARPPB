@@ -671,7 +671,7 @@ export function VendorProvider({ children }) {
           return { success: true, message: 'OTP verified.' };
         }
 
-        // Strict guard: never add stock or payment record twice!
+        // Strict guard: never add stock or ledger entry twice!
         if (purchase.inventoryUpdated || purchase.status === 'Confirmed') {
           toast.info(`Purchase ${purchase.id} is already confirmed in inventory.`);
           return { success: true, alreadyVerified: true, message: 'Already confirmed.' };
@@ -760,7 +760,7 @@ export function VendorProvider({ children }) {
         writeStorage(STORAGE_KEYS.STOCK_MOVEMENTS, currentMovs);
         setStockMovements(currentMovs);
 
-        // Record the confirmed purchase payable
+        // Create Ledger Entry for confirmed purchase payable
         let newLedgerId = null;
         updateStateAndStorage(setLedger, STORAGE_KEYS.LEDGER, (prevLedger) => {
           newLedgerId = generateNextId('LDG-', prevLedger, 'id', 4);
@@ -810,7 +810,7 @@ export function VendorProvider({ children }) {
         });
 
         toast.success(`OTP Verified! Purchase ${purchase.id} is now Confirmed.`, {
-          description: `Raw Material Batch ${primaryStockId} (${purchase.quantity} ${purchase.unit}) added to inventory.`,
+          description: `Raw Material Batch ${primaryStockId} (${purchase.quantity} ${purchase.unit}) added to inventory & ledger updated.`,
         });
 
         return {
@@ -892,7 +892,7 @@ export function VendorProvider({ children }) {
         pushNotification({
           category: 'Customer Order Confirmed',
           title: `Customer Order Confirmed – ${sale.orderId}`,
-          description: `${sale.customerName} verified OTP for ${sale.id} (₹${sale.totalAmount.toLocaleString('en-IN')}). Payment is now due.`,
+          description: `${sale.customerName} verified OTP for ${sale.id} (₹${sale.totalAmount.toLocaleString('en-IN')}). Receivable recorded in Ledger.`,
           transactionId: sale.orderId,
           priority: 'Medium',
           targetPath: '/vendor/orders',
@@ -903,7 +903,7 @@ export function VendorProvider({ children }) {
           success: true,
           transactionId: sale.id,
           orderId: sale.orderId,
-          message: 'Customer sale confirmed successfully.',
+          message: 'Customer sale confirmed and ledger updated.',
         };
       }
 
@@ -1176,7 +1176,7 @@ export function VendorProvider({ children }) {
         ];
       });
 
-      // Record processing expenses
+      // Record Processing Expenses in Vendor Ledger
       let newLedgerId = null;
       if (metrics.totalProcessingExpenses > 0) {
         updateStateAndStorage(setLedger, STORAGE_KEYS.LEDGER, (prevLedger) => {
@@ -1735,7 +1735,7 @@ export function VendorProvider({ children }) {
           );
         }
 
-        // If a payment record exists, record a credit adjustment reversal
+        // If sale was already in ledger, record a credit adjustment reversal
         if (sale?.ledgerEntryId) {
           updateStateAndStorage(setLedger, STORAGE_KEYS.LEDGER, (prevLedger) => {
             const revId = generateNextId('LDG-', prevLedger, 'id', 4);
@@ -1935,7 +1935,7 @@ export function VendorProvider({ children }) {
       }
 
       toast.success(
-        `${isSupplier ? 'Supplier payment' : 'Customer receipt'} of ₹${numAmount.toLocaleString('en-IN')} recorded successfully.`
+        `${isSupplier ? 'Supplier payment' : 'Customer receipt'} of ₹${numAmount.toLocaleString('en-IN')} recorded in Ledger.`
       );
       return { success: true };
     },
@@ -2233,3 +2233,4 @@ export function VendorProvider({ children }) {
 }
 
 export default VendorProvider;
+
