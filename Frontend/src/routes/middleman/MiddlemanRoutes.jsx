@@ -11,7 +11,6 @@ import {
   SalesToVendorsPage,
   SalesToCustomersPage,
   InventoryPage,
-  PurchaseHistoryPage,
   SalesHistoryPage,
   OTPConfirmationsPage,
   LedgerPage,
@@ -37,7 +36,6 @@ export const MiddlemanRoutes = () => {
           <Route path="sales/vendors" element={<SalesToVendorsPage />} />
           <Route path="sales/customers" element={<SalesToCustomersPage />} />
           <Route path="inventory" element={<InventoryPage />} />
-          <Route path="purchase-history" element={<PurchaseHistoryPage />} />
           <Route path="sales-history" element={<SalesHistoryPage />} />
           <Route path="confirmations" element={<OTPConfirmationsPage />} />
           <Route path="ledger" element={<LedgerPage />} />

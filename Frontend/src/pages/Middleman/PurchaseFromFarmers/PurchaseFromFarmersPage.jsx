@@ -30,7 +30,7 @@ export const PurchaseFromFarmersPage = () => {
         actions={
           <button
             type="button"
-            onClick={() => navigate('/middleman/purchase-history')}
+            onClick={() => navigate('/middleman/sales-history', { state: { activeTab: 'farmer' } })}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border border-[#E2E8F0] bg-white hover:bg-slate-50 text-[#1F2937] shadow-2xs transition-all"
           >
             <History className="w-3.5 h-3.5 text-[#0F766E]" />

@@ -10,7 +10,6 @@ import {
   ArrowUpRight,
   Store,
   Boxes,
-  History,
   BadgePercent,
   ShieldCheck,
   BookOpen,
@@ -102,11 +101,6 @@ const SIDEBAR_NAVIGATION = [
     label: 'Transaction History',
     icon: FileSpreadsheet,
     children: [
-      {
-        path: '/middleman/purchase-history',
-        label: 'Purchase History',
-        icon: History,
-      },
       {
         path: '/middleman/sales-history',
         label: 'Sales History',
