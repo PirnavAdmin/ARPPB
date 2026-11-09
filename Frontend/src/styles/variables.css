@@ -1,0 +1,75 @@
+:root {
+    /* Fresh Green Theme */
+
+    --primary: #15803D;
+    --primary-light: #22C55E;
+    --primary-soft: #DCFCE7;
+    --primary-dark: #166534;
+
+    --background: #F0FDF4;
+    --surface: #FFFFFF;
+
+    --text-primary: #163B26;
+    --text-secondary: #52705C;
+    --text-muted: #8A9C90;
+
+    --border: #E2EFE5;
+
+    --success: #15803D;
+    --warning: #D97706;
+    --danger: #DC2626;
+    --info: #2563EB;
+
+    --sidebar-width: 260px;
+    --header-height: 74px;
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+
+    --shadow-sm: 0 2px 8px rgba(22, 101, 52, 0.04);
+    --shadow-md: 0 8px 25px rgba(22, 101, 52, 0.07);
+}
+
+:root {
+    /* Warm Orange */
+    --orange-dark: #C2410C;
+    --orange-main: #F97316;
+    --orange-light: #FFEDD5;
+    --orange-bg: #FFF7ED;
+
+    /* Teal */
+    --teal-dark: #0F766E;
+    --teal-main: #14B8A6;
+    --teal-light: #CCFBF1;
+    --teal-bg: #F0FDFA;
+
+    /* Fresh Green */
+    --green-dark: #15803D;
+    --green-main: #22C55E;
+    --green-light: #DCFCE7;
+    --green-bg: #F0FDF4;
+
+    /* Sky Blue */
+    --blue-dark: #1D4ED8;
+    --blue-main: #3B82F6;
+    --blue-light: #DBEAFE;
+    --blue-bg: #EFF6FF;
+
+    /* Common */
+    --white: #FFFFFF;
+    --text-primary: #1E293B;
+    --text-secondary: #64748B;
+    --border-color: #E2E8F0;
+    --page-bg: #F8FAFC;
+
+    /* Design */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+
+    --shadow-card:
+        0 2px 8px rgba(15, 23, 42, 0.05);
+
+    --transition: 0.25s ease;
+}
