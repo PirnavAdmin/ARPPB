@@ -317,7 +317,7 @@ export default function CustomerOrders() {
         const nextStep = allowedNext.find((s) => s !== 'Cancelled') || null;
 
         return (
-          <div className="flex items-center justify-end gap-1.5">
+          <div className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
             {nextStep && (
               <button
                 type="button"
@@ -332,21 +332,21 @@ export default function CustomerOrders() {
                     );
                   }
                 }}
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-primary text-white hover:bg-brand-secondary transition-colors cursor-pointer"
+                className="h-8 inline-flex items-center gap-1 px-2.5 text-xs font-bold rounded-lg bg-brand-primary text-white hover:bg-brand-secondary transition-colors cursor-pointer shrink-0"
                 title={`Advance to ${nextStep}`}
               >
                 <span>{nextStep}</span>
-                <ArrowRight className="w-3 h-3" />
+                <ArrowRight className="w-3.5 h-3.5 shrink-0 !max-w-none" />
               </button>
             )}
             <button
               type="button"
               onClick={() => setSelectedOrderId(row.id)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-brand-light text-brand-primary hover:bg-brand-primary hover:text-white transition-colors cursor-pointer"
+              className="h-8 inline-flex items-center gap-1.5 px-2.5 text-xs font-semibold rounded-lg bg-brand-light text-brand-primary border border-brand-secondary/30 hover:bg-brand-primary hover:text-white transition-colors cursor-pointer shrink-0"
               title="View Order Details & Timeline"
             >
-              <Eye className="w-3.5 h-3.5" />
-              Manage
+              <Eye className="w-3.5 h-3.5 shrink-0 !max-w-none" />
+              <span>Manage</span>
             </button>
           </div>
         );

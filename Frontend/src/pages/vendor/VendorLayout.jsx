@@ -8,7 +8,7 @@ export function VendorLayout() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-brand-background text-brand-text flex">
+    <div className="min-h-screen bg-brand-background text-brand-text flex [&_svg]:!max-w-none [&_svg]:shrink-0 [&_.text-\[10px\]]:!text-[10px] [&_.text-\[11px\]]:!text-[11px] [&_.text-xs]:!text-xs [&_.text-sm]:!text-sm [&_.text-base]:!text-base [&_.text-lg]:!text-lg [&_.text-xl]:!text-xl [&_.sm\:text-sm]:sm:!text-sm [&_.font-normal]:!font-normal [&_.font-medium]:!font-medium [&_.font-semibold]:!font-semibold [&_.font-bold]:!font-bold [&_.font-extrabold]:!font-extrabold">
       <VendorSidebar
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
@@ -17,8 +17,8 @@ export function VendorLayout() {
       />
 
       <div
-        className={`flex-1 flex flex-col min-w-0 transition-all duration-200 ${
-          isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-68'
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
+          isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'
         }`}
       >
         <VendorNavbar

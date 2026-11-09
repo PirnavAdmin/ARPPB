@@ -184,14 +184,16 @@ export function RecentTransactions({ purchases = [], sales = [], processingRecor
       header: 'Actions',
       align: 'right',
       render: (row) => (
-        <button
-          type="button"
-          onClick={() => setSelectedTxn(row)}
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-light text-brand-primary hover:bg-brand-secondary hover:text-white transition-colors cursor-pointer"
-        >
-          <Eye className="w-3.5 h-3.5" />
-          View
-        </button>
+        <div className="inline-flex items-center justify-end whitespace-nowrap">
+          <button
+            type="button"
+            onClick={() => setSelectedTxn(row)}
+            className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg text-xs font-semibold bg-brand-light text-brand-primary border border-brand-secondary/30 hover:bg-brand-secondary hover:text-white transition-colors cursor-pointer shrink-0"
+          >
+            <Eye className="w-3.5 h-3.5 shrink-0 !max-w-none" />
+            <span>View</span>
+          </button>
+        </div>
       ),
     },
   ];

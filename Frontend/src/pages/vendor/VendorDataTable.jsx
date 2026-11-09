@@ -115,15 +115,15 @@ export function VendorDataTable({
                   >
                     <span>{col.header || col.label}</span>
                     {col.sortable && (
-                      <span className="text-brand-primary/70">
+                      <span className="text-brand-primary/70 shrink-0">
                         {sortConfig.key === col.key ? (
                           sortConfig.direction === 'asc' ? (
-                            <ArrowUp className="w-3.5 h-3.5" />
+                            <ArrowUp className="w-3.5 h-3.5 shrink-0" />
                           ) : (
-                            <ArrowDown className="w-3.5 h-3.5" />
+                            <ArrowDown className="w-3.5 h-3.5 shrink-0" />
                           )
                         ) : (
-                          <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
+                          <ArrowUpDown className="w-3.5 h-3.5 opacity-50 shrink-0" />
                         )}
                       </span>
                     )}
@@ -153,7 +153,7 @@ export function VendorDataTable({
                           : col.align === 'center'
                           ? 'text-center'
                           : 'text-left'
-                      } ${col.className || ''}`}
+                      } ${col.key === 'actions' ? 'whitespace-nowrap' : ''} ${col.className || ''}`}
                     >
                       {typeof col.render === 'function'
                         ? col.render(row)

@@ -375,25 +375,25 @@ export default function SalesHistory() {
       label: 'Actions',
       align: 'right',
       render: (row) => (
-        <div className="flex items-center justify-end gap-1.5">
+        <div className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
           <button
             type="button"
             onClick={() => setSelectedSaleId(row.id)}
-            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-brand-light text-brand-primary hover:bg-brand-primary hover:text-white transition-colors cursor-pointer"
+            className="h-8 inline-flex items-center gap-1.5 px-2.5 text-xs font-semibold rounded-lg bg-brand-light text-brand-primary border border-brand-secondary/30 hover:bg-brand-primary hover:text-white transition-colors cursor-pointer shrink-0"
             title="View Sales Details & Invoice"
           >
-            <Eye className="w-3.5 h-3.5" />
-            Details
+            <Eye className="w-3.5 h-3.5 shrink-0 !max-w-none" />
+            <span>Details</span>
           </button>
           {row.confirmationStatus !== 'Verified' && (
             <button
               type="button"
               onClick={() => navigate('/vendor/confirmations')}
-              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border border-brand-primary text-brand-primary hover:bg-brand-light/50 transition-colors cursor-pointer"
+              className="h-8 inline-flex items-center gap-1 px-2.5 text-xs font-semibold rounded-lg border border-brand-primary text-brand-primary hover:bg-brand-light/50 transition-colors cursor-pointer shrink-0"
               title="Verify Customer OTP"
             >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              OTP
+              <ShieldCheck className="w-3.5 h-3.5 shrink-0 !max-w-none" />
+              <span>OTP</span>
             </button>
           )}
         </div>

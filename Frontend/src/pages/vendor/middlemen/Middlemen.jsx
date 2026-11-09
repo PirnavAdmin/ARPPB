@@ -286,22 +286,22 @@ export function Middlemen() {
       header: 'Actions',
       align: 'right',
       render: (row) => (
-        <div className="inline-flex items-center gap-1.5">
+        <div className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
           <button
             type="button"
             onClick={() => openProfile(row.id)}
             title="View Complete Middleman Profile & Procurement Transactions"
-            className="p-1.5 rounded-lg bg-[#CCFBF1] text-[#0F766E] hover:bg-[#0F766E] hover:text-white transition-colors cursor-pointer"
+            className="w-8 h-8 inline-flex items-center justify-center shrink-0 rounded-lg border border-[#14B8A6]/30 bg-[#CCFBF1] text-[#0F766E] hover:bg-[#0F766E] hover:text-white transition-colors cursor-pointer"
           >
-            <Eye className="w-4 h-4" />
+            <Eye className="w-4 h-4 shrink-0 !max-w-none" />
           </button>
           <button
             type="button"
             onClick={() => openProfile(row.id, 'new-purchase')}
             title="Record Purchase from this Middleman"
-            className="p-1.5 rounded-lg bg-[#F5FAF8] border border-[#E2E8F0] text-[#0F766E] hover:bg-[#CCFBF1] transition-colors cursor-pointer"
+            className="w-8 h-8 inline-flex items-center justify-center shrink-0 rounded-lg bg-[#F5FAF8] border border-[#E2E8F0] text-[#0F766E] hover:bg-[#CCFBF1] transition-colors cursor-pointer"
           >
-            <Handshake className="w-4 h-4" />
+            <Handshake className="w-4 h-4 shrink-0 !max-w-none" />
           </button>
           <button
             type="button"
@@ -310,9 +310,9 @@ export function Middlemen() {
               setIsFormOpen(true);
             }}
             title="Edit Middleman"
-            className="p-1.5 rounded-lg bg-[#F5FAF8] border border-[#E2E8F0] text-[#172B29] hover:bg-[#CCFBF1] hover:text-[#0F766E] transition-colors cursor-pointer"
+            className="w-8 h-8 inline-flex items-center justify-center shrink-0 rounded-lg bg-[#F5FAF8] border border-[#E2E8F0] text-[#172B29] hover:bg-[#CCFBF1] hover:text-[#0F766E] transition-colors cursor-pointer"
           >
-            <Edit3 className="w-4 h-4" />
+            <Edit3 className="w-4 h-4 shrink-0 !max-w-none" />
           </button>
           <button
             type="button"
@@ -322,13 +322,13 @@ export function Middlemen() {
                 ? 'Deactivate Middleman'
                 : 'Activate Middleman'
             }
-            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+            className={`w-8 h-8 inline-flex items-center justify-center shrink-0 rounded-lg border transition-colors cursor-pointer ${
               row.status === 'Active'
                 ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-600 hover:text-white'
                 : 'bg-[#DCFCE7] border-[#16A34A]/20 text-[#16A34A] hover:bg-[#16A34A] hover:text-white'
             }`}
           >
-            <Power className="w-4 h-4" />
+            <Power className="w-4 h-4 shrink-0 !max-w-none" />
           </button>
         </div>
       ),

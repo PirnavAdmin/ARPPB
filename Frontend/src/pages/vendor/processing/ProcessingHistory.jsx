@@ -119,15 +119,15 @@ export function ProcessingHistory({
       header: 'Actions',
       align: 'right',
       render: (row) => (
-        <div className="inline-flex items-center gap-1">
+        <div className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
           <button
             type="button"
             onClick={() => onViewDetails(row)}
             title="View Processing Details"
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-light text-brand-primary hover:bg-brand-secondary hover:text-white transition-colors cursor-pointer"
+            className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg text-xs font-semibold bg-brand-light text-brand-primary border border-brand-secondary/30 hover:bg-brand-secondary hover:text-white transition-colors cursor-pointer shrink-0"
           >
-            <Eye className="w-3.5 h-3.5" />
-            Details
+            <Eye className="w-3.5 h-3.5 shrink-0 !max-w-none" />
+            <span>Details</span>
           </button>
           {row.status === 'Draft' && onEditDraft && (
             <>
@@ -135,18 +135,18 @@ export function ProcessingHistory({
                 type="button"
                 onClick={() => onEditDraft(row)}
                 title="Resume & Complete Draft"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-primary text-white hover:bg-brand-secondary transition-colors cursor-pointer"
+                className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg text-xs font-semibold bg-brand-primary text-white hover:bg-brand-secondary transition-colors cursor-pointer shrink-0"
               >
-                <Play className="w-3.5 h-3.5" />
-                Complete
+                <Play className="w-3.5 h-3.5 shrink-0 !max-w-none" />
+                <span>Complete</span>
               </button>
               <button
                 type="button"
                 onClick={() => onCancelDraft(row.id)}
                 title="Cancel Draft"
-                className="p-1.5 rounded-lg bg-brand-error-light text-brand-error hover:bg-brand-error hover:text-white transition-colors cursor-pointer"
+                className="w-8 h-8 inline-flex items-center justify-center shrink-0 rounded-lg bg-brand-error-light border border-brand-error/20 text-brand-error hover:bg-brand-error hover:text-white transition-colors cursor-pointer"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-4 h-4 shrink-0 !max-w-none" />
               </button>
             </>
           )}

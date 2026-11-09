@@ -135,24 +135,24 @@ export function InventoryTable({ inventory = [], onSelectBatch, onResetFilters }
       header: 'Actions',
       align: 'right',
       render: (row) => (
-        <div className="inline-flex items-center gap-1">
+        <div className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
           <button
             type="button"
             onClick={() => onSelectBatch(row)}
             title="View Batch Traceability Details"
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-light text-brand-primary hover:bg-brand-secondary hover:text-white transition-colors cursor-pointer"
+            className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg text-xs font-semibold bg-brand-light text-brand-primary border border-brand-secondary/30 hover:bg-brand-secondary hover:text-white transition-colors cursor-pointer shrink-0"
           >
-            <Eye className="w-3.5 h-3.5" />
-            Details
+            <Eye className="w-3.5 h-3.5 shrink-0 !max-w-none" />
+            <span>Details</span>
           </button>
           {row.availableQuantity > 0 && (
             <button
               type="button"
               onClick={() => navigate(`/vendor/processing?stockId=${row.id}`)}
               title="Process Batch"
-              className="p-1.5 rounded-lg bg-brand-primary text-white hover:bg-brand-secondary transition-colors cursor-pointer"
+              className="w-8 h-8 inline-flex items-center justify-center shrink-0 rounded-lg bg-brand-primary text-white hover:bg-brand-secondary transition-colors cursor-pointer"
             >
-              <Factory className="w-3.5 h-3.5" />
+              <Factory className="w-4 h-4 shrink-0 !max-w-none" />
             </button>
           )}
         </div>

@@ -117,26 +117,26 @@ export function PendingConfirmations() {
                 <button
                   type="button"
                   onClick={() => handleOpenVerify(item)}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-primary text-white hover:bg-brand-secondary transition-colors cursor-pointer"
+                  className="flex-1 h-8 inline-flex items-center justify-center gap-1.5 px-3 rounded-lg text-xs font-semibold bg-brand-primary text-white hover:bg-brand-secondary transition-colors cursor-pointer shrink-0"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Verify OTP
+                  <ShieldCheck className="w-3.5 h-3.5 shrink-0 !max-w-none" />
+                  <span>Verify OTP</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => resendTransactionOtp(item.id)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-brand-light text-brand-primary hover:bg-brand-secondary hover:text-white transition-colors cursor-pointer"
+                  className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg text-xs font-semibold bg-brand-light text-brand-primary hover:bg-brand-secondary hover:text-white transition-colors cursor-pointer shrink-0"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  Resend
+                  <RefreshCw className="w-3.5 h-3.5 shrink-0 !max-w-none" />
+                  <span>Resend</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => navigate('/vendor/confirmations')}
-                  className="p-1.5 rounded-lg border border-brand-border bg-brand-surface text-brand-muted hover:text-brand-primary cursor-pointer"
+                  className="w-8 h-8 inline-flex items-center justify-center shrink-0 rounded-lg border border-brand-border bg-brand-surface text-brand-muted hover:bg-brand-light hover:text-brand-primary transition-colors cursor-pointer"
                   title="View Confirmation Details"
                 >
-                  <Eye className="w-3.5 h-3.5" />
+                  <Eye className="w-4 h-4 shrink-0 !max-w-none" />
                 </button>
               </div>
             </div>

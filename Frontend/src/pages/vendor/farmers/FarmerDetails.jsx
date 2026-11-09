@@ -208,15 +208,15 @@ export function FarmerDetails({
       header: 'Actions',
       align: 'right',
       render: (row) => (
-        <div className="inline-flex items-center gap-1.5">
+        <div className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
           <button
             type="button"
             onClick={() => setSelectedPurchaseId(row.id)}
             title="View Complete Purchase Details"
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#CCFBF1] text-[#0F766E] hover:bg-[#0F766E] hover:text-white transition-colors cursor-pointer"
+            className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg text-xs font-semibold bg-[#CCFBF1] text-[#0F766E] border border-[#14B8A6]/30 hover:bg-[#0F766E] hover:text-white transition-colors cursor-pointer shrink-0"
           >
-            <Eye className="w-3.5 h-3.5" />
-            Details
+            <Eye className="w-3.5 h-3.5 shrink-0 !max-w-none" />
+            <span>Details</span>
           </button>
           <button
             type="button"
@@ -241,9 +241,9 @@ export function FarmerDetails({
               )
             }
             title="Print Purchase Voucher"
-            className="p-1.5 rounded-lg border border-[#E2E8F0] bg-white text-[#64748B] hover:text-[#0F766E] cursor-pointer"
+            className="w-8 h-8 inline-flex items-center justify-center shrink-0 rounded-lg border border-[#E2E8F0] bg-white text-[#64748B] hover:bg-[#CCFBF1] hover:text-[#0F766E] transition-colors cursor-pointer"
           >
-            <Printer className="w-3.5 h-3.5" />
+            <Printer className="w-4 h-4 shrink-0 !max-w-none" />
           </button>
         </div>
       ),
