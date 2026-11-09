@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Phone,
   Mail,
@@ -36,9 +35,7 @@ export function CustomerDetails({
   onEdit,
   onClose,
 }) {
-  const navigate = useNavigate();
   const {
-    ledger,
     confirmations,
     verifyTransactionOtp,
     resendTransactionOtp,
@@ -60,11 +57,6 @@ export function CustomerDetails({
     if (!customer) return [];
     return orders.filter((o) => o.customerId === customer.id);
   }, [orders, customer]);
-
-  const custLedger = useMemo(() => {
-    if (!customer) return [];
-    return ledger.filter((l) => l.partyId === customer.id);
-  }, [ledger, customer]);
 
   const custConfirmations = useMemo(() => {
     if (!customer) return [];
@@ -233,77 +225,6 @@ export function CustomerDetails({
     },
   ];
 
-  const ledgerColumns = [
-    {
-      key: 'id',
-      header: 'Voucher ID',
-      sortable: true,
-      render: (row) => (
-        <span className="font-mono font-bold text-[#0F766E]">{row.id}</span>
-      ),
-    },
-    {
-      key: 'date',
-      header: 'Date',
-      sortable: true,
-      render: (row) => formatDate(row.date),
-    },
-    {
-      key: 'transactionType',
-      header: 'Transaction Type',
-      render: (row) => (
-        <span className="px-2 py-0.5 rounded-md bg-[#CCFBF1]/70 text-[#0F766E] text-xs font-semibold">
-          {row.transactionType}
-        </span>
-      ),
-    },
-    {
-      key: 'referenceId',
-      header: 'Reference ID',
-      render: (row) => (
-        <span className="font-mono text-xs font-semibold text-[#172B29]">
-          {row.referenceId}
-        </span>
-      ),
-    },
-    {
-      key: 'debit',
-      header: 'Invoice Receivable (Dr)',
-      align: 'right',
-      render: (row) =>
-        row.debit > 0 ? (
-          <span className="font-bold text-[#172B29]">
-            {formatCurrency(row.debit)}
-          </span>
-        ) : (
-          '—'
-        ),
-    },
-    {
-      key: 'credit',
-      header: 'Payment Received (Cr)',
-      align: 'right',
-      render: (row) =>
-        row.credit > 0 ? (
-          <span className="font-bold text-[#16A34A]">
-            {formatCurrency(row.credit)}
-          </span>
-        ) : (
-          '—'
-        ),
-    },
-    {
-      key: 'paymentMode',
-      header: 'Payment Mode',
-      render: (row) => row.paymentMode || '—',
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (row) => <VendorStatusBadge status={row.status} size="xs" />,
-    },
-  ];
-
   const handleRecordCustomerReceipt = (e) => {
     e.preventDefault();
     const targetSale = custSales.find(
@@ -438,7 +359,7 @@ export function CustomerDetails({
           },
           {
             id: 'payments',
-            label: `Payments & Receivables (${custLedger.length})`,
+            label: 'Payments',
             icon: Landmark,
           },
           {
@@ -600,7 +521,7 @@ export function CustomerDetails({
                 </h4>
                 <p className="text-[#64748B] mt-0.5">
                   Record customer payment receipt for {customer.customerName} (
-                  {customer.id}) and update the vendor ledger.
+                  {customer.id}).
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2.5">
@@ -634,12 +555,6 @@ export function CustomerDetails({
             </form>
           )}
 
-          <VendorDataTable
-            columns={ledgerColumns}
-            data={custLedger}
-            initialPageSize={8}
-            emptyTitle="No financial ledger entries for this customer"
-          />
         </div>
       )}
 

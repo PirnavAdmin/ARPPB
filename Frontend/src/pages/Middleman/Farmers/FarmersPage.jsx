@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useMiddleman } from '../../../context/middleman';
 import { MiddlemanPageHeader } from '../components/layout/MiddlemanPageHeader';
@@ -14,7 +13,6 @@ import { SectionCard } from '../components/common/SectionCard';
 import { CROP_LIST } from '../../../utils/middleman/transactionHelpers';
 
 export const FarmersPage = () => {
-  const navigate = useNavigate();
   const { farmers, addFarmer, updateFarmer, purchases } = useMiddleman();
 
   // Search & Filters state
@@ -150,7 +148,6 @@ export const FarmersPage = () => {
             setIsFormOpen(true);
           }}
           onViewPurchases={(f) => setHistoryFarmer(f)}
-          onViewLedger={(f) => navigate('/middleman/ledger', { state: { partyFilter: f.farmerId } })}
         />
 
         <Pagination

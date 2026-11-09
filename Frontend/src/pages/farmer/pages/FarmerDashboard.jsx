@@ -10,7 +10,6 @@ function FarmerDashboard() {
     crops,
     sales,
     otpRequests,
-    ledger,
     searchQuery,
     navigateTo,
     setSelectedTransaction,
@@ -194,13 +193,6 @@ function FarmerDashboard() {
           >
             Details
           </button>
-          <button
-            type="button"
-            className="farmer-btn farmer-btn-secondary farmer-btn-sm"
-            onClick={() => navigateTo('ledger')}
-          >
-            Ledger
-          </button>
         </div>
       ),
     },
@@ -364,7 +356,7 @@ function FarmerDashboard() {
           trend="Due in 3 Days"
           tone="warning"
           description="Awaiting bank settlement after OTP"
-          onClick={() => navigateTo('ledger')}
+          onClick={() => navigateTo('sales')}
           icon={
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -534,13 +526,6 @@ function FarmerDashboard() {
               <h4>Expected Payments & Cashflow</h4>
               <span>Settlement timeline status for farm accounts</span>
             </div>
-            <button
-              type="button"
-              className="farmer-btn farmer-btn-outline farmer-btn-sm"
-              onClick={() => navigateTo('ledger')}
-            >
-              Open Ledger →
-            </button>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>

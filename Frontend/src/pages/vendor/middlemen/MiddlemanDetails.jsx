@@ -33,7 +33,6 @@ import { printDocumentSummary } from '../../../utils/exportUtils';
 export function MiddlemanDetails({
   middleman,
   purchases = [],
-  ledger = [],
   initialTab = 'overview',
   initialPurchaseId = '',
   onEdit,
@@ -66,11 +65,6 @@ export function MiddlemanDetails({
     () => midPurchases.filter((p) => p.status === 'Confirmed'),
     [midPurchases]
   );
-
-  const midLedger = useMemo(() => {
-    if (!middleman) return [];
-    return ledger.filter((l) => l.partyId === middleman.id);
-  }, [ledger, middleman]);
 
   const midConfirmations = useMemo(() => {
     if (!middleman) return [];
@@ -255,77 +249,6 @@ export function MiddlemanDetails({
     },
   ];
 
-  const ledgerColumns = [
-    {
-      key: 'id',
-      header: 'Voucher ID',
-      sortable: true,
-      render: (row) => (
-        <span className="font-mono font-bold text-[#0F766E]">{row.id}</span>
-      ),
-    },
-    {
-      key: 'date',
-      header: 'Date',
-      sortable: true,
-      render: (row) => formatDate(row.date),
-    },
-    {
-      key: 'transactionType',
-      header: 'Transaction Type',
-      render: (row) => (
-        <span className="px-2 py-0.5 rounded-md bg-[#CCFBF1]/70 text-[#0F766E] text-xs font-semibold">
-          {row.transactionType}
-        </span>
-      ),
-    },
-    {
-      key: 'referenceId',
-      header: 'Reference ID',
-      render: (row) => (
-        <span className="font-mono text-xs font-semibold text-[#172B29]">
-          {row.referenceId}
-        </span>
-      ),
-    },
-    {
-      key: 'credit',
-      header: 'Payable (Cr)',
-      align: 'right',
-      render: (row) =>
-        row.credit > 0 ? (
-          <span className="font-bold text-[#172B29]">
-            {formatCurrency(row.credit)}
-          </span>
-        ) : (
-          '—'
-        ),
-    },
-    {
-      key: 'debit',
-      header: 'Settled (Dr)',
-      align: 'right',
-      render: (row) =>
-        row.debit > 0 ? (
-          <span className="font-bold text-[#16A34A]">
-            {formatCurrency(row.debit)}
-          </span>
-        ) : (
-          '—'
-        ),
-    },
-    {
-      key: 'paymentMode',
-      header: 'Payment Mode',
-      render: (row) => row.paymentMode || '—',
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (row) => <VendorStatusBadge status={row.status} size="xs" />,
-    },
-  ];
-
   const handleSettlePayable = (e) => {
     e.preventDefault();
     const targetPurchase = confirmedPurchases.find(
@@ -459,7 +382,7 @@ export function MiddlemanDetails({
           },
           {
             id: 'payments',
-            label: `Payments & Ledger (${midLedger.length})`,
+            label: 'Payments',
             icon: Landmark,
           },
           {
@@ -574,9 +497,6 @@ export function MiddlemanDetails({
                   <FileText className="w-3.5 h-3.5 text-[#0F766E]" />
                   Registered on {formatDate(middleman.createdAt)}
                 </span>
-                <span>
-                  Linked Vouchers: <strong className="text-[#172B29]">{midLedger.length}</strong>
-                </span>
               </div>
             </div>
           </div>
@@ -649,7 +569,7 @@ export function MiddlemanDetails({
                   Settle Outstanding Middleman Payable ({formatCurrency(outstandingPayables)})
                 </h4>
                 <p className="text-[#64748B] mt-0.5">
-                  Record bank/RTGS payment to {middleman.businessName} ({middleman.id}) and update the vendor ledger.
+                  Record bank/RTGS payment to {middleman.businessName} ({middleman.id}).
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2.5">
@@ -683,12 +603,6 @@ export function MiddlemanDetails({
             </form>
           )}
 
-          <VendorDataTable
-            columns={ledgerColumns}
-            data={midLedger}
-            initialPageSize={8}
-            emptyTitle="No financial ledger entries for this middleman"
-          />
         </div>
       )}
 

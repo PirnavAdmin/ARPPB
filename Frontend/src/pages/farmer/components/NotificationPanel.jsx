@@ -14,7 +14,7 @@ function NotificationPanel({ items = [], showHeader = true }) {
     }
 
     if (item.targetPage) {
-      const target = item.targetPage === 'sales' || item.targetPage === 'ledger' || item.targetPage === 'otp' || item.targetPage === 'stock' || item.targetPage === 'purchases' || item.targetPage === 'profile' || item.targetPage === 'prices' || item.targetPage === 'dashboard' || item.targetPage === 'sell' || item.targetPage === 'notifications' || item.targetPage === 'crops' ? item.targetPage : 'dashboard';
+      const target = item.targetPage === 'sales' || item.targetPage === 'otp' || item.targetPage === 'stock' || item.targetPage === 'purchases' || item.targetPage === 'profile' || item.targetPage === 'prices' || item.targetPage === 'dashboard' || item.targetPage === 'sell' || item.targetPage === 'notifications' || item.targetPage === 'crops' ? item.targetPage : 'dashboard';
       navigateTo(target);
     }
   };

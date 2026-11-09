@@ -928,7 +928,7 @@ export function PurchaseForm({
           }
         }}
         title={`OTP Confirmation – ${submittedResult?.purchase?.id || ''}`}
-        subtitle={`${supplierCategory} Purchase recorded. Verify OTP to confirm stock & ledger entry.`}
+        subtitle={`${supplierCategory} Purchase recorded. Verify OTP to confirm stock and payment status.`}
         size="md"
       >
         {submittedResult && (
@@ -1025,4 +1025,3 @@ export function PurchaseForm({
 }
 
 export default PurchaseForm;
-

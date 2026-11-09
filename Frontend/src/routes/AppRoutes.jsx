@@ -47,11 +47,11 @@ function WorkspacePortalHub() {
   const portals = [
     {
       roleKey: 'vendor',
-      badge: 'Vendor Module • 17 Screens',
+      badge: 'Vendor Module • 16 Screens',
       title: 'Vendor Portal',
       description: `${
         vendorUser?.businessName || 'Sri Rayalaseema Agri Commodities'
-      } — Manage farmer & middleman purchases, OTP verification, raw material inventory, batch processing, finished products, customer orders, sales, and ledger.`,
+      } — Manage farmer & middleman purchases, OTP verification, raw material inventory, batch processing, finished products, customer orders, and sales.`,
       path: '/vendor/dashboard',
       buttonLabel: 'Launch Vendor Portal',
       icon: Wheat,
@@ -59,10 +59,10 @@ function WorkspacePortalHub() {
     },
     {
       roleKey: 'middleman',
-      badge: 'Middleman Module • 14 Screens',
+      badge: 'Middleman Module • 13 Screens',
       title: 'Middleman Portal',
       description:
-        'Access farmer procurement, inventory batches, sales to vendors & customers, purchase/sales histories, OTP confirmations, notifications, and middleman ledger.',
+        'Access farmer procurement, inventory batches, sales to vendors & customers, purchase/sales histories, OTP confirmations, and notifications.',
       path: '/middleman/dashboard',
       buttonLabel: 'Launch Middleman Portal',
       icon: Handshake,
@@ -70,7 +70,7 @@ function WorkspacePortalHub() {
     },
     {
       roleKey: 'farmer',
-      badge: 'Farmer Module • 8 Screens',
+      badge: 'Farmer Module • 7 Screens',
       title: 'Farmer Portal',
       description:
         'Manage harvested crops, live mandi market prices, product sales to vendors & middlemen, OTP buyer confirmations, notifications, and farmer profile.',

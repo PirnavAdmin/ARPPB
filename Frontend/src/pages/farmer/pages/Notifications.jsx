@@ -10,7 +10,7 @@ function Notifications() {
     searchQuery,
   } = useFarmer();
 
-  const [filterCategory, setFilterCategory] = useState('All'); // 'All' | 'Unread' | 'otp' | 'sales' | 'stock' | 'ledger'
+  const [filterCategory, setFilterCategory] = useState('All');
 
   const filteredNotifications = useMemo(() => {
     return notifications.filter((item) => {
@@ -60,7 +60,7 @@ function Notifications() {
           { key: 'Unread', label: `Unread (${unreadNotificationsCount})` },
           { key: 'otp', label: 'OTP & Requests' },
           { key: 'sales', label: 'Sales & Orders' },
-          { key: 'ledger', label: 'Payments & Ledger' },
+          { key: 'payments', label: 'Payments' },
           { key: 'stock', label: 'Stock & Yield' },
         ].map((tab) => (
           <button

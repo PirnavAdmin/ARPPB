@@ -37,7 +37,6 @@ export function ProcessingDetails({ record, onEditDraft, onClose }) {
             ['Total Processing Expenses', formatCurrency(record.totalProcessingExpenses)],
             ['Total Batch Cost', formatCurrency(record.totalBatchCost)],
             ['Finished Product Cost / Unit', `${formatCurrency(record.costPerUnit)} / ${record.outputUnit}`],
-            ['Ledger Voucher Ref', record.ledgerEntryId || 'Draft (Not posted)'],
           ],
         },
       ]
@@ -128,16 +127,13 @@ export function ProcessingDetails({ record, onEditDraft, onClose }) {
         <div className="p-3.5 rounded-xl bg-brand-background border border-brand-border space-y-1">
           <span className="inline-flex items-center gap-1 font-bold text-brand-primary uppercase">
             <Landmark className="w-3.5 h-3.5" />
-            3. Costing &amp; Ledger Reference
+            3. Cost Summary
           </span>
           <p className="font-bold text-brand-primary text-sm">
             Unit Cost: {formatCurrency(record.costPerUnit)} / {record.outputUnit}
           </p>
           <p className="text-brand-muted">
             Total Batch Cost: <strong>{formatCurrency(record.totalBatchCost)}</strong>
-          </p>
-          <p className="text-brand-muted">
-            Ledger Entry: <strong>{record.ledgerEntryId || 'Not posted (Draft)'}</strong>
           </p>
         </div>
       </div>
@@ -212,4 +208,3 @@ export function ProcessingDetails({ record, onEditDraft, onClose }) {
 }
 
 export default ProcessingDetails;
-

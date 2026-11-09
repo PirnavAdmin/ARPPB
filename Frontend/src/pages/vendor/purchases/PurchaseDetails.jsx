@@ -4,7 +4,6 @@ import {
   Download,
   ShieldCheck,
   Warehouse,
-  Landmark,
   CheckCircle2,
   Send,
   IndianRupee,
@@ -63,12 +62,11 @@ export function PurchaseDetails({ purchase, onClose }) {
           ],
         },
         {
-          heading: 'OTP, Inventory & Ledger Traceability',
+          heading: 'OTP & Inventory Traceability',
           rows: [
             ['OTP Status', `${purchase.otpStatus} (${purchase.otpId || 'N/A'})`],
             ['Purchase Status', purchase.status],
             ['Raw Material Batch', purchase.stockBatchId || 'Not yet added'],
-            ['Ledger Voucher Ref', purchase.ledgerEntryId || 'Not yet posted'],
             ['Expected Payment Date', formatDate(purchase.expectedPaymentDate)],
           ],
         },
@@ -95,7 +93,6 @@ export function PurchaseDetails({ purchase, onClose }) {
         { key: 'otpStatus', header: 'OTP Status' },
         { key: 'status', header: 'Status' },
         { key: 'stockBatchId', header: 'Inventory Batch ID' },
-        { key: 'ledgerEntryId', header: 'Ledger Ref' },
       ],
       `${purchase.id}_summary.csv`
     );
@@ -250,13 +247,6 @@ export function PurchaseDetails({ purchase, onClose }) {
                 {purchase.inventoryUpdated
                   ? `Added (${purchase.stockBatchId})`
                   : 'Awaiting Confirmation'}
-              </span>
-            </div>
-            <div>
-              <span className="text-brand-muted block">Ledger Reference</span>
-              <span className="inline-flex items-center gap-1 font-bold text-brand-text">
-                <Landmark className="w-3.5 h-3.5 text-brand-primary" />
-                {purchase.ledgerEntryId || 'Not yet posted'}
               </span>
             </div>
             <div>
@@ -416,4 +406,3 @@ export function PurchaseDetails({ purchase, onClose }) {
 }
 
 export default PurchaseDetails;
-

@@ -12,7 +12,6 @@ import {
   Boxes,
   BadgePercent,
   ShieldCheck,
-  BookOpen,
   Bell,
   UserCheck,
   ChevronLeft,
@@ -24,7 +23,7 @@ import { useMiddleman } from '../../../../context/middleman';
 
 /**
  * Category-Based Navigation Structure for Middleman Portal
- * Preserves all 14 original navigation items and route paths.
+ * Category-based navigation for the middleman portal.
  */
 const SIDEBAR_NAVIGATION = [
   {
@@ -115,13 +114,6 @@ const SIDEBAR_NAVIGATION = [
     label: 'OTP Confirmations',
     icon: ShieldCheck,
     hasBadge: 'confirmations',
-  },
-  {
-    id: 'my-ledger',
-    type: 'item',
-    path: '/middleman/ledger',
-    label: 'My Ledger',
-    icon: BookOpen,
   },
   {
     id: 'notifications',
@@ -404,4 +396,3 @@ export const MiddlemanSidebar = ({
 };
 
 export default MiddlemanSidebar;
-

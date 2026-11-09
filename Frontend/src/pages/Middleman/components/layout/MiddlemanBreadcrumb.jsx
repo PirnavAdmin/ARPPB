@@ -14,7 +14,6 @@ const ROUTE_LABELS = {
   'purchase-history': 'Purchase History',
   'sales-history': 'Sales History',
   confirmations: 'OTP Confirmations',
-  ledger: 'My Ledger',
   notifications: 'Notifications',
   profile: 'My Profile',
 };
@@ -56,4 +55,3 @@ export const MiddlemanBreadcrumb = () => {
 };
 
 export default MiddlemanBreadcrumb;
-

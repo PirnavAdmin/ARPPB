@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useFarmer } from '../context/FarmerContext';
 import DataTable from '../components/DataTable';
-import StatusBadge from '../components/StatusBadge';
 import { formatCurrency, formatDate, buyerCategoryStyles } from '../utils/farmerHelpers';
 
 function MySales() {
@@ -189,13 +188,6 @@ function MySales() {
               </button>
             )}
 
-            <button
-              type="button"
-              className="farmer-btn farmer-btn-secondary farmer-btn-sm"
-              onClick={() => navigateTo('ledger')}
-            >
-              Ledger
-            </button>
           </div>
         );
       },

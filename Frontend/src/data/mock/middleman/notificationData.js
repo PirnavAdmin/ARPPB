@@ -61,7 +61,7 @@ export const INITIAL_NOTIFICATIONS = [
     timestamp: '2026-11-05 07:00',
     isRead: false,
     priority: 'high',
-    actionUrl: '/middleman/ledger',
+    actionUrl: '/middleman/purchases',
   },
   {
     id: 'NOT-005',
@@ -109,7 +109,6 @@ export const INITIAL_NOTIFICATIONS = [
     timestamp: '2026-10-31 16:30',
     isRead: true,
     priority: 'medium',
-    actionUrl: '/middleman/ledger',
+    actionUrl: '/middleman/sales-history',
   },
 ];
-

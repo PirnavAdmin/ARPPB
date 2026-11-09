@@ -1,6 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Eye, BookOpen } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { StatusBadge } from '../common/StatusBadge';
 import { formatINR, formatDate, formatQuantity } from '../../../../utils/middleman/formatters';
 
@@ -8,8 +7,6 @@ export const PurchaseHistoryTable = ({
   purchases = [],
   onViewDetails,
 }) => {
-  const navigate = useNavigate();
-
   return (
     <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0] bg-white">
       <table className="w-full text-left border-collapse min-w-[900px]">
@@ -57,14 +54,6 @@ export const PurchaseHistoryTable = ({
                     title="View Full Details"
                   >
                     <Eye className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/middleman/ledger', { state: { partyFilter: p.farmerId } })}
-                    className="p-1 rounded-lg hover:bg-slate-100 text-[#D97706] cursor-pointer"
-                    title="View Related Ledger"
-                  >
-                    <BookOpen className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </td>

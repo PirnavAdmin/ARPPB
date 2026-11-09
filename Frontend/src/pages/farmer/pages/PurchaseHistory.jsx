@@ -162,7 +162,7 @@ function PurchaseHistory() {
           <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--farmer-danger)', margin: '4px 0 2px' }}>
             {formatCurrency(totalSpent)}
           </div>
-          <small style={{ color: 'var(--farmer-secondary)' }}>Debited in farm ledger</small>
+          <small style={{ color: 'var(--farmer-secondary)' }}>Recorded purchase spend</small>
         </div>
       </div>
 
@@ -342,7 +342,7 @@ function PurchaseHistory() {
                   Cancel
                 </button>
                 <button type="submit" className="farmer-btn farmer-btn-primary">
-                  Save & Update Ledger
+                  Save Purchase
                 </button>
               </div>
             </form>

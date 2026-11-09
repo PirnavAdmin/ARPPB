@@ -96,14 +96,6 @@ export const VENDOR_NAVIGATION = [
     description: 'Manage and verify OTP confirmations for farmer purchases, middleman purchases, and customer sales.',
   },
   {
-    id: 'ledger',
-    label: 'My Ledger',
-    path: '/vendor/ledger',
-    icon: 'Landmark',
-    group: 'Finance & Compliance',
-    description: 'Comprehensive financial ledger tracking payables, receivables, processing expenses, and settlements.',
-  },
-  {
     id: 'notifications',
     label: 'Notifications',
     path: '/vendor/notifications',
@@ -123,4 +115,3 @@ export const VENDOR_NAVIGATION = [
 ];
 
 export default VENDOR_NAVIGATION;
-

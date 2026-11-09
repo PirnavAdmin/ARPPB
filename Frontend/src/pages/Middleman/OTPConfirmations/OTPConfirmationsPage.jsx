@@ -18,7 +18,7 @@ export const OTPConfirmationsPage = () => {
     confirmTransaction(otpId);
     return {
       success: true,
-      message: 'Transaction authorized! Stock & ledger records updated.',
+      message: 'Transaction authorized! Inventory and transaction records updated.',
     };
   };
 

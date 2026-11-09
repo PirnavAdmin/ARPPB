@@ -7,7 +7,6 @@ import {
   initialPurchases,
   initialStockRecords,
   initialOTPRequests,
-  initialLedgerEntries,
   initialNotifications,
 } from '../data/farmerData';
 import {
@@ -78,7 +77,6 @@ export function FarmerProvider({ children }) {
   const [purchases, setPurchases] = useState(() => persistedState?.purchases ?? initialPurchases);
   const [stockRecords, setStockRecords] = useState(() => persistedState?.stockRecords ?? initialStockRecords);
   const [otpRequests, setOtpRequests] = useState(() => persistedState?.otpRequests ?? initialOTPRequests);
-  const [ledger, setLedger] = useState(() => persistedState?.ledger ?? initialLedgerEntries);
   const [notifications, setNotifications] = useState(() => persistedState?.notifications ?? initialNotifications);
 
   useEffect(() => {
@@ -93,11 +91,10 @@ export function FarmerProvider({ children }) {
         purchases,
         stockRecords,
         otpRequests,
-        ledger,
         notifications,
       })
     );
-  }, [profile, crops, marketPrices, sales, purchases, stockRecords, otpRequests, ledger, notifications]);
+  }, [profile, crops, marketPrices, sales, purchases, stockRecords, otpRequests, notifications]);
 
   // Global Modals
   const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -522,25 +519,6 @@ export function FarmerProvider({ children }) {
       })
     );
 
-    const lastBalance = ledger.length > 0 ? ledger[0].runningBalance : 0;
-    const newBalance = lastBalance + otpReq.totalAmount;
-
-    const newLedgerEntry = {
-      id: `LED-${Date.now().toString().slice(-4)}`,
-      date: today,
-      transactionId: otpReq.transactionId,
-      description: `Sale of ${otpReq.quantity} ${otpReq.unit} ${otpReq.crop} to ${otpReq.buyerName}`,
-      partyName: otpReq.buyerName,
-      partyCategory: otpReq.buyerCategory,
-      debit: 0,
-      credit: otpReq.totalAmount,
-      runningBalance: newBalance,
-      expectedPaymentDate: expectedPayDate,
-      paymentStatus: 'Payment Expected',
-    };
-
-    setLedger((prev) => [newLedgerEntry, ...prev]);
-
     setNotifications((prev) => [
       {
         id: `NOTIF-${Date.now()}`,
@@ -565,7 +543,7 @@ export function FarmerProvider({ children }) {
 
     setActiveOtpRequest(null);
     return true;
-  }, [otpRequests, ledger, showToast]);
+  }, [otpRequests, showToast]);
 
   // Reject OTP Transaction Action
   const rejectOTP = useCallback((otpId, reason = 'Transaction rejected by user') => {
@@ -681,55 +659,8 @@ export function FarmerProvider({ children }) {
 
     setPurchases((prev) => [purchase, ...prev]);
 
-    const lastBalance = ledger.length > 0 ? ledger[0].runningBalance : 0;
-    const newBalance = lastBalance - total;
-
-    setLedger((prev) => [
-      {
-        id: `LED-${Date.now().toString().slice(-4)}`,
-        date: purchase.date,
-        transactionId: newId,
-        description: `Purchase: ${purchase.quantity} ${purchase.unit || ''} ${purchase.productName}`,
-        partyName: purchase.supplierName,
-        partyCategory: 'Supplier',
-        debit: total,
-        credit: 0,
-        runningBalance: newBalance,
-        expectedPaymentDate: purchase.expectedPaymentDate || purchase.date,
-        paymentStatus: 'Payment Expected',
-      },
-      ...prev,
-    ]);
-
     showToast(`Purchase ${newId} recorded. Payment remains pending until manually authorized.`, 'success');
-  }, [ledger, showToast]);
-
-  // Manual payment status update in ledger (authorized manual process only!)
-  const updatePaymentStatus = useCallback((ledgerId, newStatus) => {
-    setLedger((prev) =>
-      prev.map((entry) => {
-        if (entry.id === ledgerId) {
-          return { ...entry, paymentStatus: newStatus };
-        }
-        return entry;
-      })
-    );
-
-    // Also update corresponding sales transaction if linked
-    const ledgerEntry = ledger.find((e) => e.id === ledgerId);
-    if (ledgerEntry && ledgerEntry.transactionId) {
-      setSales((prev) =>
-        prev.map((s) => {
-          if (s.id === ledgerEntry.transactionId) {
-            return { ...s, paymentStatus: newStatus };
-          }
-          return s;
-        })
-      );
-    }
-
-    showToast(`Payment status updated to "${newStatus}" via authorized audit.`, 'info');
-  }, [ledger, showToast]);
+  }, [showToast]);
 
   const value = useMemo(
     () => ({
@@ -778,10 +709,6 @@ export function FarmerProvider({ children }) {
       resendOTP,
       pendingOtpCount,
 
-      // Ledger
-      ledger,
-      updatePaymentStatus,
-
       // Notifications
       notifications,
       unreadNotificationsCount,
@@ -822,8 +749,6 @@ export function FarmerProvider({ children }) {
       rejectOTP,
       resendOTP,
       pendingOtpCount,
-      ledger,
-      updatePaymentStatus,
       notifications,
       unreadNotificationsCount,
       markNotificationAsRead,

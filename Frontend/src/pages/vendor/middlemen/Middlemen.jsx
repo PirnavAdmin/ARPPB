@@ -42,7 +42,6 @@ export function Middlemen() {
   const {
     middlemen,
     purchases,
-    ledger,
     addMiddleman,
     updateMiddleman,
     toggleMiddlemanStatus,
@@ -463,7 +462,6 @@ export function Middlemen() {
             key={`${activeProfileMiddleman.id}-${profileInitialTab}-${queryPurchaseId}`}
             middleman={activeProfileMiddleman}
             purchases={purchases}
-            ledger={ledger}
             initialTab={profileInitialTab}
             initialPurchaseId={queryPurchaseId}
             onEdit={(m) => {
@@ -538,7 +536,7 @@ export function Middlemen() {
         }
         description={
           confirmDeactivate?.status === 'Active'
-            ? `Deactivating ${confirmDeactivate?.businessName} (${confirmDeactivate?.id}) will prevent new purchases from this middleman while preserving historical ledger and inventory records.`
+            ? `Deactivating ${confirmDeactivate?.businessName} (${confirmDeactivate?.id}) will prevent new purchases from this middleman while preserving historical purchase and inventory records.`
             : `Re-activating ${confirmDeactivate?.businessName} will enable new raw material purchases.`
         }
         confirmLabel={

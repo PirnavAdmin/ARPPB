@@ -61,8 +61,8 @@ function FarmerNavbar() {
       return;
     }
 
-    if (query.includes('ledger') || query.includes('payment') || query.includes('balance')) {
-      navigateTo('ledger');
+    if (query.includes('payment') || query.includes('balance')) {
+      navigateTo('sales');
       return;
     }
 
@@ -224,28 +224,6 @@ function FarmerNavbar() {
                   }}
                 >
                   👤 My Profile & Bank Details
-                </button>
-
-                <button
-                  type="button"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    width: '100%',
-                    padding: '9px 16px',
-                    border: 'none',
-                    background: 'transparent',
-                    textAlign: 'left',
-                    color: 'var(--farmer-text)',
-                    fontSize: '0.88rem',
-                  }}
-                  onClick={() => {
-                    navigateTo('ledger');
-                    setIsProfileMenuOpen(false);
-                  }}
-                >
-                  📑 Financial Ledger
                 </button>
 
                 <button

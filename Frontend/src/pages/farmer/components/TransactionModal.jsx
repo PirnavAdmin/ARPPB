@@ -3,7 +3,7 @@ import { formatCurrency, formatDate, buyerCategoryStyles } from '../utils/farmer
 import StatusBadge from './StatusBadge';
 
 function TransactionModal({ transaction, onClose }) {
-  const { otpRequests, setActiveOtpRequest, navigateTo } = useFarmer();
+  const { otpRequests, setActiveOtpRequest } = useFarmer();
 
   if (!transaction) return null;
 
@@ -22,11 +22,6 @@ function TransactionModal({ transaction, onClose }) {
       onClose();
       setActiveOtpRequest(linkedOtp);
     }
-  };
-
-  const handleGoToLedger = () => {
-    onClose();
-    navigateTo('ledger');
   };
 
   return (
@@ -204,14 +199,6 @@ function TransactionModal({ transaction, onClose }) {
               🔐 Enter OTP / Confirm Now
             </button>
           )}
-
-          <button
-            type="button"
-            className="farmer-btn farmer-btn-secondary"
-            onClick={handleGoToLedger}
-          >
-            📊 View in Ledger
-          </button>
 
           <button
             type="button"

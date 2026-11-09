@@ -42,7 +42,6 @@ export function Farmers() {
   const {
     farmers,
     purchases,
-    ledger,
     addFarmer,
     updateFarmer,
     toggleFarmerStatus,
@@ -472,7 +471,6 @@ export function Farmers() {
             key={`${activeProfileFarmer.id}-${profileInitialTab}-${queryPurchaseId}`}
             farmer={activeProfileFarmer}
             purchases={purchases}
-            ledger={ledger}
             initialTab={profileInitialTab}
             initialPurchaseId={queryPurchaseId}
             onEdit={(f) => {
@@ -547,7 +545,7 @@ export function Farmers() {
         }
         description={
           confirmDeactivate?.status === 'Active'
-            ? `Deactivating ${confirmDeactivate?.farmerName} will pause new raw material purchases from this farmer while preserving all historical purchase and ledger records.`
+            ? `Deactivating ${confirmDeactivate?.farmerName} will pause new raw material purchases from this farmer while preserving all historical purchase records.`
             : `Re-activating ${confirmDeactivate?.farmerName} will allow new raw material purchase transactions.`
         }
         confirmLabel={

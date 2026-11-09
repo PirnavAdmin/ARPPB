@@ -33,7 +33,6 @@ import { printDocumentSummary } from '../../../utils/exportUtils';
 export function FarmerDetails({
   farmer,
   purchases = [],
-  ledger = [],
   initialTab = 'overview',
   initialPurchaseId = '',
   onEdit,
@@ -64,11 +63,6 @@ export function FarmerDetails({
     () => farmerPurchases.filter((p) => p.status === 'Confirmed'),
     [farmerPurchases]
   );
-
-  const farmerLedger = useMemo(() => {
-    if (!farmer) return [];
-    return ledger.filter((l) => l.partyId === farmer.id);
-  }, [ledger, farmer]);
 
   const farmerConfirmations = useMemo(() => {
     if (!farmer) return [];
@@ -250,77 +244,6 @@ export function FarmerDetails({
     },
   ];
 
-  const ledgerColumns = [
-    {
-      key: 'id',
-      header: 'Voucher ID',
-      sortable: true,
-      render: (row) => (
-        <span className="font-mono font-bold text-[#0F766E]">{row.id}</span>
-      ),
-    },
-    {
-      key: 'date',
-      header: 'Date',
-      sortable: true,
-      render: (row) => formatDate(row.date),
-    },
-    {
-      key: 'transactionType',
-      header: 'Transaction Type',
-      render: (row) => (
-        <span className="px-2 py-0.5 rounded-md bg-[#CCFBF1]/70 text-[#0F766E] text-xs font-semibold">
-          {row.transactionType}
-        </span>
-      ),
-    },
-    {
-      key: 'referenceId',
-      header: 'Reference ID',
-      render: (row) => (
-        <span className="font-mono text-xs font-semibold text-[#172B29]">
-          {row.referenceId}
-        </span>
-      ),
-    },
-    {
-      key: 'credit',
-      header: 'Purchase Payable (Cr)',
-      align: 'right',
-      render: (row) =>
-        row.credit > 0 ? (
-          <span className="font-bold text-[#172B29]">
-            {formatCurrency(row.credit)}
-          </span>
-        ) : (
-          '—'
-        ),
-    },
-    {
-      key: 'debit',
-      header: 'Payment Settled (Dr)',
-      align: 'right',
-      render: (row) =>
-        row.debit > 0 ? (
-          <span className="font-bold text-[#16A34A]">
-            {formatCurrency(row.debit)}
-          </span>
-        ) : (
-          '—'
-        ),
-    },
-    {
-      key: 'paymentMode',
-      header: 'Mode',
-      render: (row) => row.paymentMode || '—',
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (row) => <VendorStatusBadge status={row.status} size="xs" />,
-    },
-  ];
-
   const handleSettlePayable = (e) => {
     e.preventDefault();
     const targetPurchase = confirmedPurchases.find(
@@ -456,7 +379,7 @@ export function FarmerDetails({
           },
           {
             id: 'payments',
-            label: `Payments & Ledger (${farmerLedger.length})`,
+            label: 'Payments',
             icon: Landmark,
           },
           {
@@ -582,12 +505,6 @@ export function FarmerDetails({
                       {farmer.ifscCode || '—'}
                     </strong>
                   </div>
-                  <div>
-                    <span className="text-[#64748B] block">Ledger Vouchers</span>
-                    <strong className="text-[#172B29]">
-                      {farmerLedger.length} entries
-                    </strong>
-                  </div>
                 </div>
               </div>
             </div>
@@ -663,7 +580,7 @@ export function FarmerDetails({
                   Settle Pending Farmer Payable ({formatCurrency(pendingPayableAmount)})
                 </h4>
                 <p className="text-[#64748B] mt-0.5">
-                  Record direct bank/cash settlement to {farmer.farmerName} ({farmer.id}) and update the vendor ledger.
+                  Record direct bank/cash settlement to {farmer.farmerName} ({farmer.id}).
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2.5">
@@ -697,12 +614,6 @@ export function FarmerDetails({
             </form>
           )}
 
-          <VendorDataTable
-            columns={ledgerColumns}
-            data={farmerLedger}
-            initialPageSize={8}
-            emptyTitle="No financial ledger entries for this farmer"
-          />
         </div>
       )}
 

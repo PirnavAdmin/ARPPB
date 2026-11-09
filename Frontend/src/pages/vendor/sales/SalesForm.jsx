@@ -1028,7 +1028,7 @@ export default function SalesForm({ preselectedProductId = '', preselectedCustom
                 </div>
                 <p className="text-xs">
                   Order <strong>{createdOrderResult.order.id}</strong> is now Confirmed and ready
-                  for Processing & Packing. Ledger receivable of{' '}
+                  for Processing & Packing. Outstanding payment of{' '}
                   <strong>{formatCurrency(createdOrderResult.sale.totalAmount)}</strong> has been
                   recorded.
                 </p>
@@ -1063,4 +1063,3 @@ export default function SalesForm({ preselectedProductId = '', preselectedCustom
     </div>
   );
 }
-
