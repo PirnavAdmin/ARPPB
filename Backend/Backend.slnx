@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Backend.csproj" />
+  <Project Path="AgriPurchaseBilling.Domain/AgriPurchaseBilling.Domain.csproj" />
+  <Project Path="AgriPurchaseBilling.Application/AgriPurchaseBilling.Application.csproj" />
+  <Project Path="AgriPurchaseBilling.Infrastructure/AgriPurchaseBilling.Infrastructure.csproj" />
+</Solution>

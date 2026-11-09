@@ -1,0 +1,39 @@
+
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Prevent Backend from compiling source files belonging to library projects -->
+  <ItemGroup>
+    <Compile Remove="AgriPurchaseBilling.Domain/**/*.cs" />
+    <Compile Remove="AgriPurchaseBilling.Application/**/*.cs" />
+    <Compile Remove="AgriPurchaseBilling.Infrastructure/**/*.cs" />
+  </ItemGroup>
+
+  <!-- Reference the separate projects -->
+  <ItemGroup>
+    <ProjectReference Include="AgriPurchaseBilling.Application/AgriPurchaseBilling.Application.csproj" />
+    <ProjectReference Include="AgriPurchaseBilling.Infrastructure/AgriPurchaseBilling.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
+
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.11">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+</Project>
