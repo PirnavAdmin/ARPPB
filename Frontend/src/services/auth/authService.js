@@ -15,6 +15,66 @@ export const AUTH_ENDPOINTS = {
   RESET_PASSWORD: `${API_BASE_URL}/auth/reset-password`,
 };
 
+const REGISTERED_USERS_STORAGE_KEY = 'arppb_registered_users_v1';
+
+const DEFAULT_DEMO_USERS = {
+  '9440112233': {
+    contactNumber: '9440112233',
+    phone: '9440112233',
+    role: 'vendor',
+    fullName: 'Venkateswara Rao',
+    email: 'vendor@agriconnect.in',
+  },
+  '9848022338': {
+    contactNumber: '9848022338',
+    phone: '9848022338',
+    role: 'middleman',
+    fullName: 'K. Harsha Vardhan',
+    email: 'middleman@agriconnect.in',
+  },
+  '9848123456': {
+    contactNumber: '9848123456',
+    phone: '9848123456',
+    role: 'farmer',
+    fullName: 'Ramesh Kumar Goud',
+    email: 'ramesh.goud.farms@gmail.com',
+  },
+  '9876543210': {
+    contactNumber: '9876543210',
+    phone: '9876543210',
+    role: 'customer',
+    fullName: 'Ravi Kumar',
+    email: 'ravikumar@greenharvest.in',
+  },
+};
+
+const getStoredUsers = () => {
+  try {
+    const raw = localStorage.getItem(REGISTERED_USERS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return { ...DEFAULT_DEMO_USERS, ...parsed };
+  } catch {
+    return { ...DEFAULT_DEMO_USERS };
+  }
+};
+
+const saveStoredUser = (userRecord) => {
+  try {
+    const current = getStoredUsers();
+    const key = String(userRecord.phone || userRecord.contactNumber || '').replace(/\D/g, '');
+    if (!key) return;
+    current[key] = {
+      ...current[key],
+      ...userRecord,
+      contactNumber: key,
+      phone: key,
+    };
+    localStorage.setItem(REGISTERED_USERS_STORAGE_KEY, JSON.stringify(current));
+  } catch {
+    // Ignore storage errors
+  }
+};
+
 /**
  * Fallback simulation for frontend-only testing when backend API is offline
  */
@@ -22,25 +82,33 @@ const handleFrontendFallback = async (endpoint, payload) => {
   await new Promise((resolve) => setTimeout(resolve, 450));
 
   if (endpoint.includes('/auth/register')) {
+    const userRecord = {
+      fullName: payload.fullName,
+      role: payload.role,
+      email: payload.email || null,
+      phone: payload.phone,
+      contactNumber: payload.phone,
+    };
+    saveStoredUser(userRecord);
     return {
       success: true,
       message: 'Account created successfully.',
-      user: {
-        fullName: payload.fullName,
-        role: payload.role,
-        email: payload.email || null,
-        phone: payload.phone,
-      },
+      user: userRecord,
     };
   }
 
   if (endpoint.includes('/auth/login')) {
+    const cleanPhone = String(payload.contactNumber || '').replace(/\D/g, '');
+    const storedUsers = getStoredUsers();
+    const matchedUser = storedUsers[cleanPhone];
+
     return {
       success: true,
       message: 'Welcome back! Signed in successfully.',
       token: `demo-token-${Date.now()}`,
-      user: {
-        contactNumber: payload.contactNumber,
+      user: matchedUser || {
+        contactNumber: cleanPhone,
+        role: payload.role || 'vendor',
       },
     };
   }

@@ -5,6 +5,27 @@ import { readStorage, writeStorage } from '../services/api';
 
 const AUTH_SESSION_KEY = 'arppb_auth_session_v1';
 
+export const PORTAL_HOME_PATHS = {
+  vendor: '/vendor/dashboard',
+  middleman: '/middleman/dashboard',
+  farmer: '/farmer',
+  customer: '/customer/dashboard',
+};
+
+/**
+ * Normalize role strings across Registration ('Farmer', 'Vendor', 'Middle Man', 'Customer'),
+ * Backend enums, and Portal route guards ('vendor', 'middleman', 'farmer', 'customer').
+ */
+export function normalizeRole(rawRole) {
+  if (!rawRole) return 'vendor';
+  const cleaned = String(rawRole).trim().toLowerCase().replace(/\s+/g, '');
+  if (cleaned === 'middleman' || cleaned === 'supplier') return 'middleman';
+  if (cleaned === 'farmer') return 'farmer';
+  if (cleaned === 'customer') return 'customer';
+  if (cleaned === 'vendor') return 'vendor';
+  return 'vendor';
+}
+
 export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -13,7 +34,7 @@ export function AuthProvider({ children }) {
       isAuthenticated: true,
       user: {
         contactNumber: INITIAL_VENDOR_PROFILE.mobileNumber,
-        role: 'Vendor',
+        role: 'vendor',
         fullName: INITIAL_VENDOR_PROFILE.ownerName,
       },
     })
@@ -24,19 +45,51 @@ export function AuthProvider({ children }) {
   );
 
   const isAuthenticated = Boolean(authSession?.isAuthenticated);
-  const currentUser = authSession?.user || null;
+  const currentUser = useMemo(() => {
+    if (!authSession?.user) return null;
+    return {
+      ...authSession.user,
+      role: normalizeRole(authSession.user.role),
+    };
+  }, [authSession]);
+
+  const role = currentUser?.role || null;
 
   const login = useCallback((userData = null) => {
+    const resolvedRole = normalizeRole(userData?.role || 'vendor');
     const nextSession = {
       isAuthenticated: true,
-      user: userData || {
-        contactNumber: INITIAL_VENDOR_PROFILE.mobileNumber,
-        role: 'Vendor',
-        fullName: INITIAL_VENDOR_PROFILE.ownerName,
-      },
+      user: userData
+        ? {
+            ...userData,
+            role: resolvedRole,
+          }
+        : {
+            contactNumber: INITIAL_VENDOR_PROFILE.mobileNumber,
+            role: 'vendor',
+            fullName: INITIAL_VENDOR_PROFILE.ownerName,
+          },
     };
     setAuthSession(nextSession);
     writeStorage(AUTH_SESSION_KEY, nextSession);
+  }, []);
+
+  const switchPortalRole = useCallback((targetRole) => {
+    const normalized = normalizeRole(targetRole);
+    setAuthSession((prev) => {
+      const nextSession = {
+        isAuthenticated: true,
+        user: {
+          ...(prev?.user || {
+            contactNumber: INITIAL_VENDOR_PROFILE.mobileNumber,
+            fullName: INITIAL_VENDOR_PROFILE.ownerName,
+          }),
+          role: normalized,
+        },
+      };
+      writeStorage(AUTH_SESSION_KEY, nextSession);
+      return nextSession;
+    });
   }, []);
 
   const logout = useCallback(() => {
@@ -67,12 +120,23 @@ export function AuthProvider({ children }) {
     () => ({
       isAuthenticated,
       user: currentUser,
+      role,
       vendorUser,
       login,
+      switchPortalRole,
       logout,
       updateVendorProfile,
     }),
-    [isAuthenticated, currentUser, vendorUser, login, logout, updateVendorProfile]
+    [
+      isAuthenticated,
+      currentUser,
+      role,
+      vendorUser,
+      login,
+      switchPortalRole,
+      logout,
+      updateVendorProfile,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

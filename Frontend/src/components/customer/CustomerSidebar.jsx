@@ -1,5 +1,5 @@
 
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -11,6 +11,7 @@ import {
   Sprout,
   LogOut,
 } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
 
 const menuItems = [
   {
@@ -45,10 +46,17 @@ const menuItems = [
   },
 ];
 
-function CustomerSidebar({ isOpen, onNavigate }) {
+function CustomerSidebar({ isOpen, onNavigate, onLogout }) {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
   const handleLogout = () => {
-    // Connect your existing logout function here.
-    console.log("Logout clicked");
+    if (onLogout) {
+      onLogout();
+      return;
+    }
+    logout();
+    navigate("/login");
   };
 
   return (

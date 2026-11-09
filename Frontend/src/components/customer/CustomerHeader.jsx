@@ -43,18 +43,22 @@ function CustomerHeader({
         navigate("/customer/profile");
     };
 
-    // Open Settings
+    // Open Settings / Portal Hub
     const handleSettings = () => {
         setShowProfile(false);
         setShowNotifications(false);
-        navigate("/customer/settings");
+        navigate("/dashboard");
     };
 
     // Logout
     const handleLogout = () => {
         setShowProfile(false);
         setShowNotifications(false);
-        onLogout?.();
+        if (onLogout) {
+            onLogout();
+        } else {
+            navigate("/login");
+        }
     };
 
     return (

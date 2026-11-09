@@ -1,7 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useFarmer, farmerNavItems } from '../context/FarmerContext';
+import { useAuth } from '../../../hooks/useAuth';
 
 function FarmerNavbar() {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const {
     activePage,
     navigateTo,
@@ -264,6 +268,53 @@ function FarmerNavbar() {
                   }}
                 >
                   📦 Stock & Inventory
+                </button>
+
+                <button
+                  type="button"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    width: '100%',
+                    padding: '9px 16px',
+                    border: 'none',
+                    background: 'transparent',
+                    textAlign: 'left',
+                    color: 'var(--farmer-primary)',
+                    fontWeight: 600,
+                    fontSize: '0.88rem',
+                  }}
+                  onClick={() => {
+                    setIsProfileMenuOpen(false);
+                    navigate('/dashboard');
+                  }}
+                >
+                  🌐 Workspace Portal Hub
+                </button>
+
+                <button
+                  type="button"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    width: '100%',
+                    padding: '9px 16px',
+                    border: 'none',
+                    background: 'transparent',
+                    textAlign: 'left',
+                    color: '#DC2626',
+                    fontWeight: 600,
+                    fontSize: '0.88rem',
+                  }}
+                  onClick={() => {
+                    setIsProfileMenuOpen(false);
+                    logout();
+                    navigate('/login');
+                  }}
+                >
+                  🚪 Sign Out
                 </button>
               </div>
 

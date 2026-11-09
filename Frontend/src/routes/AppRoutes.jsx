@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import {
   Sprout,
   LogOut,
@@ -6,6 +6,7 @@ import {
   ArrowRight,
   Wheat,
   Handshake,
+  ShoppingBag,
 } from 'lucide-react';
 import {
   LoginPage,
@@ -17,22 +18,79 @@ import MainLayout from '../layouts/MainLayout';
 import ProtectedRoute from './ProtectedRoute';
 import VendorRoutes from './VendorRoutes';
 import MiddlemanRoutes from './middleman/MiddlemanRoutes';
+import CustomerRoutes from './CustomerRoutes';
+import FarmerApp from '../pages/farmer/FarmerApp';
 import { useAuth } from '../hooks/useAuth';
-import FarmerApp from '../farmer/FarmerApp';
 
 /**
  * Unified Authenticated ERP Workspace Portal Hub (/dashboard)
- * Connects Authentication flow with both the Vendor Enterprise Portal (Pavan)
- * and the Middleman Enterprise Portal (Harsha).
+ * Connects the Authentication flow with all four portals:
+ * 1. Vendor Portal
+ * 2. Middleman Portal
+ * 3. Farmer Portal
+ * 4. Customer Portal
  */
 function WorkspacePortalHub() {
   const navigate = useNavigate();
-  const { user, vendorUser, logout } = useAuth();
+  const { user, role, vendorUser, switchPortalRole, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const handleLaunchPortal = (targetRole, targetPath) => {
+    switchPortalRole(targetRole);
+    navigate(targetPath);
+  };
+
+  const portals = [
+    {
+      roleKey: 'vendor',
+      badge: 'Vendor Module • 17 Screens',
+      title: 'Vendor Portal',
+      description: `${
+        vendorUser?.businessName || 'Sri Rayalaseema Agri Commodities'
+      } — Manage farmer & middleman purchases, OTP verification, raw material inventory, batch processing, finished products, customer orders, sales, and ledger.`,
+      path: '/vendor/dashboard',
+      buttonLabel: 'Launch Vendor Portal',
+      icon: Wheat,
+      iconBg: 'bg-[#0F766E]',
+    },
+    {
+      roleKey: 'middleman',
+      badge: 'Middleman Module • 14 Screens',
+      title: 'Middleman Portal',
+      description:
+        'Access farmer procurement, inventory batches, sales to vendors & customers, purchase/sales histories, OTP confirmations, notifications, and middleman ledger.',
+      path: '/middleman/dashboard',
+      buttonLabel: 'Launch Middleman Portal',
+      icon: Handshake,
+      iconBg: 'bg-[#14B8A6]',
+    },
+    {
+      roleKey: 'farmer',
+      badge: 'Farmer Module • 8 Screens',
+      title: 'Farmer Portal',
+      description:
+        'Manage harvested crops, live mandi market prices, product sales to vendors & middlemen, OTP buyer confirmations, notifications, and farmer profile.',
+      path: '/farmer',
+      buttonLabel: 'Launch Farmer Portal',
+      icon: Sprout,
+      iconBg: 'bg-[#0F766E]',
+    },
+    {
+      roleKey: 'customer',
+      badge: 'Customer Module • 6 Screens',
+      title: 'Customer Portal',
+      description:
+        'Browse agricultural products marketplace, place and track purchase orders, review billing invoices, monitor payment summaries, and manage customer profile.',
+      path: '/customer/dashboard',
+      buttonLabel: 'Launch Customer Portal',
+      icon: ShoppingBag,
+      iconBg: 'bg-[#14B8A6]',
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-[#F5FAF8] flex flex-col">
@@ -52,6 +110,11 @@ function WorkspacePortalHub() {
         </div>
 
         <div className="flex items-center gap-3">
+          {role && (
+            <span className="hidden md:inline-block px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#0F766E] text-xs font-bold capitalize">
+              Role: {role}
+            </span>
+          )}
           {user?.contactNumber && (
             <span className="hidden sm:inline-block px-3 py-1 rounded-full bg-[#CCFBF1] text-[#0F766E] text-xs font-bold">
               +91 {user.contactNumber}
@@ -68,7 +131,7 @@ function WorkspacePortalHub() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-5xl mx-auto w-full p-6 sm:p-10">
+      <main className="flex-1 max-w-6xl mx-auto w-full p-6 sm:p-10">
         <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 sm:p-8 shadow-xs space-y-6">
           <div>
             <div className="flex items-center gap-3 text-[#16A34A] mb-2">
@@ -78,99 +141,62 @@ function WorkspacePortalHub() {
               </h2>
             </div>
             <p className="text-sm text-[#64748B]">
-              Welcome to the unified AgriConnect ERP workspace. Launch either the{' '}
-              <strong>Vendor Portal</strong> or the <strong>Middleman Portal</strong> below.
+              Welcome to the unified AgriConnect ERP workspace. Launch the{' '}
+              <strong>Vendor Portal</strong>, <strong>Middleman Portal</strong>,{' '}
+              <strong>Farmer Portal</strong>, or <strong>Customer Portal</strong>{' '}
+              below.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {/* Vendor Enterprise Portal Card */}
-            <div className="p-6 rounded-2xl bg-teal-50/60 border border-teal-200 flex flex-col justify-between gap-5">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#0F766E] uppercase tracking-wider">
-                    Vendor Module • 17 Screens
-                  </span>
-                  <div className="p-2 rounded-xl bg-[#0F766E] text-white">
-                    <Wheat className="w-4 h-4" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {portals.map((portal) => {
+              const Icon = portal.icon;
+              const isCurrentRole = role === portal.roleKey;
+
+              return (
+                <div
+                  key={portal.roleKey}
+                  className={`p-6 rounded-2xl border flex flex-col justify-between gap-5 transition-all ${
+                    isCurrentRole
+                      ? 'bg-teal-50/90 border-[#0F766E] ring-1 ring-[#0F766E]/25'
+                      : 'bg-teal-50/60 border-teal-200'
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-[#0F766E] uppercase tracking-wider">
+                          {portal.badge}
+                        </span>
+                        {isCurrentRole && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0F766E] text-white">
+                            Active Role
+                          </span>
+                        )}
+                      </div>
+                      <div className={`p-2 rounded-xl ${portal.iconBg} text-white`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <h3 className="text-base font-extrabold text-[#1F2937]">
+                      {portal.title}
+                    </h3>
+                    <p className="text-xs text-[#64748B] leading-relaxed">
+                      {portal.description}
+                    </p>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleLaunchPortal(portal.roleKey, portal.path)}
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-[#0F766E] text-white hover:bg-[#115E59] shadow-md shadow-[#0F766E]/20 transition-all cursor-pointer"
+                  >
+                    <span>{portal.buttonLabel}</span>
+                    <ArrowRight className="w-4 h-4 text-[#CCFBF1]" />
+                  </button>
                 </div>
-                <h3 className="text-base font-extrabold text-[#1F2937]">
-                  Vendor Enterprise Portal
-                </h3>
-                <p className="text-xs text-[#64748B] leading-relaxed">
-                  {vendorUser?.businessName || 'Sri Rayalaseema Agri Commodities'} — Manage
-                  farmer &amp; middleman purchases, OTP verification, raw material inventory,
-                  batch processing, finished products, customer orders, sales, and ledger.
-                </p>
-              </div>
-
-              <Link
-                to="/vendor/dashboard"
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-[#0F766E] text-white hover:bg-[#115E59] shadow-md shadow-[#0F766E]/20 transition-all"
-              >
-                <span>Launch Vendor Portal</span>
-                <ArrowRight className="w-4 h-4 text-[#CCFBF1]" />
-              </Link>
-            </div>
-
-            {/* Middleman Enterprise Portal Card */}
-            <div className="p-6 rounded-2xl bg-teal-50/60 border border-teal-200 flex flex-col justify-between gap-5">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#0F766E] uppercase tracking-wider">
-                    Middleman Module • 14 Screens
-                  </span>
-                  <div className="p-2 rounded-xl bg-[#14B8A6] text-white">
-                    <Handshake className="w-4 h-4" />
-                  </div>
-                </div>
-                <h3 className="text-base font-extrabold text-[#1F2937]">
-                  Middleman Enterprise Portal
-                </h3>
-                <p className="text-xs text-[#64748B] leading-relaxed">
-                  Access farmer procurement, inventory batches, sales to vendors &amp;
-                  customers, purchase/sales histories, OTP confirmations, notifications, and
-                  middleman ledger.
-                </p>
-              </div>
-
-              <Link
-                to="/middleman/dashboard"
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-[#0F766E] text-white hover:bg-[#115E59] shadow-md shadow-[#0F766E]/20 transition-all"
-              >
-                <span>Launch Middleman Portal</span>
-                <ArrowRight className="w-4 h-4 text-[#CCFBF1]" />
-              </Link>
-            </div>
-
-            {/* Farmer Portal */}
-            <div className="p-6 rounded-2xl bg-teal-50/60 border border-teal-200 flex flex-col justify-between gap-5">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#0F766E] uppercase tracking-wider">
-                    Farmer Module
-                  </span>
-                  <div className="p-2 rounded-xl bg-[#0F766E] text-white">
-                    <Sprout className="w-4 h-4" />
-                  </div>
-                </div>
-                <h3 className="text-base font-extrabold text-[#1F2937]">
-                  Farmer Portal
-                </h3>
-                <p className="text-xs text-[#64748B] leading-relaxed">
-                  Manage crops, market prices, sales, buyer confirmations, notifications, and profile.
-                </p>
-              </div>
-
-              <Link
-                to="/farmer"
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-[#0F766E] text-white hover:bg-[#115E59] shadow-md shadow-[#0F766E]/20 transition-all"
-              >
-                <span>Launch Farmer Portal</span>
-                <ArrowRight className="w-4 h-4 text-[#CCFBF1]" />
-              </Link>
-            </div>
+              );
+            })}
           </div>
         </div>
       </main>
@@ -188,7 +214,7 @@ function RootRedirect() {
 
 /**
  * Centralized Application Routes
- * Integrates Authentication Routes, Vendor Portal Routes, and Middleman Portal Routes.
+ * Integrates Authentication Routes, Vendor Portal, Middleman Portal, Farmer Portal, and Customer Portal.
  */
 export function AppRoutes() {
   return (
@@ -196,7 +222,7 @@ export function AppRoutes() {
       {/* Root redirect based on authentication */}
       <Route path="/" element={<RootRedirect />} />
 
-      {/* Public Authentication Routes (Harsha) */}
+      {/* Public Authentication Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -213,31 +239,42 @@ export function AppRoutes() {
           }
         />
 
-        {/* Vendor Portal Routes (Pavan - 17 Screens) */}
+        {/* 1. Vendor Portal Routes */}
         <Route
           path="/vendor/*"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['vendor']}>
               <VendorRoutes />
             </ProtectedRoute>
           }
         />
 
-        {/* Middleman Portal Routes (Harsha - 14 Screens) */}
+        {/* 2. Middleman Portal Routes */}
         <Route
           path="/middleman/*"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['middleman']}>
               <MiddlemanRoutes />
             </ProtectedRoute>
           }
         />
 
+        {/* 3. Farmer Portal Routes */}
         <Route
           path="/farmer/*"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['farmer']}>
               <FarmerApp />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 4. Customer Portal Routes */}
+        <Route
+          path="/customer/*"
+          element={
+            <ProtectedRoute allowedRoles={['customer']}>
+              <CustomerRoutes />
             </ProtectedRoute>
           }
         />
