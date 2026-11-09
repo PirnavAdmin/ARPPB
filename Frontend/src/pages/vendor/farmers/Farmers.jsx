@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useMemo, useRef, useLayoutEffect } from 'react';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import {
   Sprout,
   Plus,
@@ -23,6 +23,7 @@ import VendorStatusBadge from '../VendorStatusBadge';
 import VendorModal from '../VendorModal';
 import VendorConfirmDialog from '../VendorConfirmDialog';
 import VendorExportMenu from '../VendorExportMenu';
+import VendorDetailPage from '../VendorDetailPage';
 import FarmerForm from './FarmerForm';
 import FarmerDetails from './FarmerDetails';
 import PurchaseForm from '../purchases/PurchaseForm';
@@ -31,9 +32,12 @@ import { formatCurrency, formatNumber } from '../../../utils/formatCurrency';
 import { generateNextId } from '../../../utils/generateTransactionId';
 
 export function Farmers() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryFarmerId = searchParams.get('farmerId') || '';
   const queryPurchaseId = searchParams.get('purchaseId') || '';
+  const profileInitialTab = searchParams.get('tab') || 'overview';
 
   const {
     farmers,
@@ -53,16 +57,11 @@ export function Farmers() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingFarmer, setEditingFarmer] = useState(null);
-  const [viewingFarmerId, setViewingFarmerId] = useState('');
-  const [profileInitialTab, setProfileInitialTab] = useState('overview');
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [confirmDeactivate, setConfirmDeactivate] = useState(null);
 
-  // Resolve active farmer for profile modal (either clicked or via URL query params)
+  // Resolve active farmer for the full-page profile view (driven by URL query params)
   const activeProfileFarmer = useMemo(() => {
-    if (viewingFarmerId) {
-      return farmers.find((f) => f.id === viewingFarmerId) || null;
-    }
     if (queryFarmerId) {
       return farmers.find((f) => f.id === queryFarmerId) || null;
     }
@@ -75,13 +74,33 @@ export function Farmers() {
       }
     }
     return null;
-  }, [farmers, purchases, viewingFarmerId, queryFarmerId, queryPurchaseId]);
+  }, [farmers, purchases, queryFarmerId, queryPurchaseId]);
 
+  const isProfileView = Boolean(activeProfileFarmer);
+  const listScrollRef = useRef(0);
+  const prevProfileViewRef = useRef(false);
+
+  // Scroll to top when opening the full-page profile; restore table scroll position on Back
+  useLayoutEffect(() => {
+    if (prevProfileViewRef.current === isProfileView) return;
+    prevProfileViewRef.current = isProfileView;
+    window.scrollTo(0, isProfileView ? 0 : listScrollRef.current);
+  }, [isProfileView]);
+
+  // Open the full-page Farmer profile (pushes a history entry so browser Back works)
+  const openProfile = (farmerId, tab = 'overview') => {
+    listScrollRef.current = window.scrollY;
+    const params = { farmerId };
+    if (tab && tab !== 'overview') params.tab = tab;
+    setSearchParams(params, { state: { fromDirectory: true } });
+  };
+
+  // Return to the Farmers table (search, filters, pagination and scroll are preserved)
   const handleCloseProfile = () => {
-    setViewingFarmerId('');
-    setProfileInitialTab('overview');
-    if (queryFarmerId || queryPurchaseId) {
-      setSearchParams({});
+    if (location.state?.fromDirectory) {
+      navigate(-1);
+    } else {
+      setSearchParams({}, { replace: true });
     }
   };
 
@@ -175,10 +194,7 @@ export function Farmers() {
       render: (row) => (
         <button
           type="button"
-          onClick={() => {
-            setProfileInitialTab('overview');
-            setViewingFarmerId(row.id);
-          }}
+          onClick={() => openProfile(row.id)}
           className="font-mono font-bold text-[#0F766E] hover:underline cursor-pointer"
         >
           {row.id}
@@ -277,10 +293,7 @@ export function Farmers() {
         <div className="inline-flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => {
-              setProfileInitialTab('overview');
-              setViewingFarmerId(row.id);
-            }}
+            onClick={() => openProfile(row.id)}
             title="View Complete Farmer Profile & Procurement Transactions"
             className="p-1.5 rounded-lg bg-[#CCFBF1] text-[#0F766E] hover:bg-[#0F766E] hover:text-white transition-colors cursor-pointer"
           >
@@ -288,10 +301,7 @@ export function Farmers() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              setProfileInitialTab('new-purchase');
-              setViewingFarmerId(row.id);
-            }}
+            onClick={() => openProfile(row.id, 'new-purchase')}
             title="Record Purchase from this Farmer"
             className="p-1.5 rounded-lg bg-[#F5FAF8] border border-[#E2E8F0] text-[#0F766E] hover:bg-[#CCFBF1] transition-colors cursor-pointer"
           >
@@ -328,7 +338,9 @@ export function Farmers() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div>
+      {/* Farmers Directory (kept mounted while a profile is open so table state is preserved) */}
+      <div className={isProfileView ? 'hidden' : 'space-y-6'}>
       <VendorPageHeader
         title="Farmers Directory & Procurement"
         subtitle="Manage registered farmers, crop availability, direct raw material purchases, OTP confirmations, and settlements."
@@ -445,6 +457,32 @@ export function Farmers() {
         data={filteredFarmers}
         onResetFilters={resetFilters}
       />
+      </div>
+
+      {/* Complete Individual Farmer Profile – Full-Page View (Eye Icon) */}
+      {isProfileView && (
+        <VendorDetailPage
+          title={`Farmer Profile – ${activeProfileFarmer.farmerName || ''}`}
+          subtitle={`Farmer ID: ${activeProfileFarmer.id || ''} • ${activeProfileFarmer.village || ''}, ${activeProfileFarmer.district || ''}`}
+          icon={Sprout}
+          backLabel="Back to Farmers"
+          onBack={handleCloseProfile}
+        >
+          <FarmerDetails
+            key={`${activeProfileFarmer.id}-${profileInitialTab}-${queryPurchaseId}`}
+            farmer={activeProfileFarmer}
+            purchases={purchases}
+            ledger={ledger}
+            initialTab={profileInitialTab}
+            initialPurchaseId={queryPurchaseId}
+            onEdit={(f) => {
+              handleCloseProfile();
+              setEditingFarmer(f);
+              setIsFormOpen(true);
+            }}
+          />
+        </VendorDetailPage>
+      )}
 
       {/* Add / Edit Farmer Modal */}
       <VendorModal
@@ -472,30 +510,6 @@ export function Farmers() {
         />
       </VendorModal>
 
-      {/* Complete Individual Farmer Profile Modal (Eye Icon) */}
-      <VendorModal
-        isOpen={Boolean(activeProfileFarmer)}
-        onClose={handleCloseProfile}
-        title={`Farmer Profile – ${activeProfileFarmer?.farmerName || ''}`}
-        subtitle={`Farmer ID: ${activeProfileFarmer?.id || ''} • ${activeProfileFarmer?.village || ''}, ${activeProfileFarmer?.district || ''}`}
-        size="xl"
-      >
-        <FarmerDetails
-          key={`${activeProfileFarmer?.id || ''}-${profileInitialTab}-${queryPurchaseId}`}
-          farmer={activeProfileFarmer}
-          purchases={purchases}
-          ledger={ledger}
-          initialTab={profileInitialTab}
-          initialPurchaseId={queryPurchaseId}
-          onClose={handleCloseProfile}
-          onEdit={(f) => {
-            handleCloseProfile();
-            setEditingFarmer(f);
-            setIsFormOpen(true);
-          }}
-        />
-      </VendorModal>
-
       {/* Record Direct Farmer Purchase Modal */}
       <VendorModal
         isOpen={isPurchaseModalOpen}
@@ -509,8 +523,7 @@ export function Farmers() {
           onSuccess={(created) => {
             setIsPurchaseModalOpen(false);
             if (created?.supplierId) {
-              setProfileInitialTab('transactions');
-              setViewingFarmerId(created.supplierId);
+              openProfile(created.supplierId, 'transactions');
             }
           }}
           onCancel={() => setIsPurchaseModalOpen(false)}

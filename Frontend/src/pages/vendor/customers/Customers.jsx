@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useMemo, useRef, useLayoutEffect } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
   UsersRound,
   Plus,
@@ -23,6 +23,7 @@ import VendorStatusBadge from '../VendorStatusBadge';
 import VendorModal from '../VendorModal';
 import VendorConfirmDialog from '../VendorConfirmDialog';
 import VendorExportMenu from '../VendorExportMenu';
+import VendorDetailPage from '../VendorDetailPage';
 import CustomerForm from './CustomerForm';
 import CustomerDetails from './CustomerDetails';
 import { AP_DISTRICTS, INDIAN_STATES } from '../../../utils/constants';
@@ -31,6 +32,7 @@ import { generateNextId } from '../../../utils/generateTransactionId';
 
 export function Customers() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryCustomerId = searchParams.get('customerId') || '';
 
@@ -51,7 +53,6 @@ export function Customers() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
-  const [viewingCustomerId, setViewingCustomerId] = useState('');
   const [confirmDeactivate, setConfirmDeactivate] = useState(null);
 
   // Enrich each customer with total purchased quantity across their sales/orders
@@ -73,16 +74,35 @@ export function Customers() {
     });
   }, [customers, sales]);
 
+  // Resolve active customer for the full-page profile view (driven by URL query params)
   const activeProfileCustomer = useMemo(() => {
-    const targetId = viewingCustomerId || queryCustomerId;
-    if (!targetId) return null;
-    return customersWithQty.find((c) => c.id === targetId) || null;
-  }, [customersWithQty, viewingCustomerId, queryCustomerId]);
+    if (!queryCustomerId) return null;
+    return customersWithQty.find((c) => c.id === queryCustomerId) || null;
+  }, [customersWithQty, queryCustomerId]);
 
+  const isProfileView = Boolean(activeProfileCustomer);
+  const listScrollRef = useRef(0);
+  const prevProfileViewRef = useRef(false);
+
+  // Scroll to top when opening the full-page profile; restore table scroll position on Back
+  useLayoutEffect(() => {
+    if (prevProfileViewRef.current === isProfileView) return;
+    prevProfileViewRef.current = isProfileView;
+    window.scrollTo(0, isProfileView ? 0 : listScrollRef.current);
+  }, [isProfileView]);
+
+  // Open the full-page Customer profile (pushes a history entry so browser Back works)
+  const openProfile = (customerId) => {
+    listScrollRef.current = window.scrollY;
+    setSearchParams({ customerId }, { state: { fromDirectory: true } });
+  };
+
+  // Return to the Customers table (search, filters, pagination and scroll are preserved)
   const handleCloseProfile = () => {
-    setViewingCustomerId('');
-    if (queryCustomerId) {
-      setSearchParams({});
+    if (location.state?.fromDirectory) {
+      navigate(-1);
+    } else {
+      setSearchParams({}, { replace: true });
     }
   };
 
@@ -167,7 +187,7 @@ export function Customers() {
       render: (row) => (
         <button
           type="button"
-          onClick={() => setViewingCustomerId(row.id)}
+          onClick={() => openProfile(row.id)}
           className="font-mono font-bold text-[#0F766E] hover:underline cursor-pointer"
         >
           {row.id}
@@ -269,7 +289,7 @@ export function Customers() {
         <div className="inline-flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => setViewingCustomerId(row.id)}
+            onClick={() => openProfile(row.id)}
             title="View Complete Customer Profile & Order Transactions"
             className="p-1.5 rounded-lg bg-[#CCFBF1] text-[#0F766E] hover:bg-[#0F766E] hover:text-white transition-colors cursor-pointer"
           >
@@ -316,7 +336,9 @@ export function Customers() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div>
+      {/* Customers Directory (kept mounted while a profile is open so table state is preserved) */}
+      <div className={isProfileView ? 'hidden' : 'space-y-6'}>
       <VendorPageHeader
         title="Customers Directory & Sales Orders"
         subtitle="Manage wholesale distributors, retail stores, and individual buyers with complete order, invoice, OTP, and receivable tracking."
@@ -426,6 +448,30 @@ export function Customers() {
         data={filteredCustomers}
         onResetFilters={resetFilters}
       />
+      </div>
+
+      {/* Complete Individual Customer Profile – Full-Page View (Eye Icon) */}
+      {isProfileView && (
+        <VendorDetailPage
+          title={`Customer Profile – ${activeProfileCustomer.customerName || ''}`}
+          subtitle={`Customer ID: ${activeProfileCustomer.id || ''} • ${activeProfileCustomer.businessName || 'Direct Buyer'}`}
+          icon={UsersRound}
+          backLabel="Back to Customers"
+          onBack={handleCloseProfile}
+        >
+          <CustomerDetails
+            key={activeProfileCustomer.id}
+            customer={activeProfileCustomer}
+            orders={orders}
+            sales={sales}
+            onEdit={(c) => {
+              handleCloseProfile();
+              setEditingCustomer(c);
+              setIsFormOpen(true);
+            }}
+          />
+        </VendorDetailPage>
+      )}
 
       {/* Add / Edit Modal */}
       <VendorModal
@@ -449,28 +495,6 @@ export function Customers() {
           onCancel={() => {
             setIsFormOpen(false);
             setEditingCustomer(null);
-          }}
-        />
-      </VendorModal>
-
-      {/* Complete Individual Customer Profile Modal (Eye Icon) */}
-      <VendorModal
-        isOpen={Boolean(activeProfileCustomer)}
-        onClose={handleCloseProfile}
-        title={`Customer Profile – ${activeProfileCustomer?.customerName || ''}`}
-        subtitle={`Customer ID: ${activeProfileCustomer?.id || ''} • ${activeProfileCustomer?.businessName || 'Direct Buyer'}`}
-        size="xl"
-      >
-        <CustomerDetails
-          key={activeProfileCustomer?.id || ''}
-          customer={activeProfileCustomer}
-          orders={orders}
-          sales={sales}
-          onClose={handleCloseProfile}
-          onEdit={(c) => {
-            handleCloseProfile();
-            setEditingCustomer(c);
-            setIsFormOpen(true);
           }}
         />
       </VendorModal>

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useMemo, useRef, useLayoutEffect } from 'react';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import {
   BriefcaseBusiness,
   Plus,
@@ -23,6 +23,7 @@ import VendorStatusBadge from '../VendorStatusBadge';
 import VendorModal from '../VendorModal';
 import VendorConfirmDialog from '../VendorConfirmDialog';
 import VendorExportMenu from '../VendorExportMenu';
+import VendorDetailPage from '../VendorDetailPage';
 import MiddlemanForm from './MiddlemanForm';
 import MiddlemanDetails from './MiddlemanDetails';
 import PurchaseForm from '../purchases/PurchaseForm';
@@ -31,9 +32,12 @@ import { formatCurrency, formatNumber } from '../../../utils/formatCurrency';
 import { generateNextId } from '../../../utils/generateTransactionId';
 
 export function Middlemen() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryMiddlemanId = searchParams.get('middlemanId') || '';
   const queryPurchaseId = searchParams.get('purchaseId') || '';
+  const profileInitialTab = searchParams.get('tab') || 'overview';
 
   const {
     middlemen,
@@ -52,15 +56,11 @@ export function Middlemen() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMid, setEditingMid] = useState(null);
-  const [viewingMidId, setViewingMidId] = useState('');
-  const [profileInitialTab, setProfileInitialTab] = useState('overview');
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [confirmDeactivate, setConfirmDeactivate] = useState(null);
 
+  // Resolve active middleman for the full-page profile view (driven by URL query params)
   const activeProfileMiddleman = useMemo(() => {
-    if (viewingMidId) {
-      return middlemen.find((m) => m.id === viewingMidId) || null;
-    }
     if (queryMiddlemanId) {
       return middlemen.find((m) => m.id === queryMiddlemanId) || null;
     }
@@ -73,13 +73,33 @@ export function Middlemen() {
       }
     }
     return null;
-  }, [middlemen, purchases, viewingMidId, queryMiddlemanId, queryPurchaseId]);
+  }, [middlemen, purchases, queryMiddlemanId, queryPurchaseId]);
 
+  const isProfileView = Boolean(activeProfileMiddleman);
+  const listScrollRef = useRef(0);
+  const prevProfileViewRef = useRef(false);
+
+  // Scroll to top when opening the full-page profile; restore table scroll position on Back
+  useLayoutEffect(() => {
+    if (prevProfileViewRef.current === isProfileView) return;
+    prevProfileViewRef.current = isProfileView;
+    window.scrollTo(0, isProfileView ? 0 : listScrollRef.current);
+  }, [isProfileView]);
+
+  // Open the full-page Middleman profile (pushes a history entry so browser Back works)
+  const openProfile = (middlemanId, tab = 'overview') => {
+    listScrollRef.current = window.scrollY;
+    const params = { middlemanId };
+    if (tab && tab !== 'overview') params.tab = tab;
+    setSearchParams(params, { state: { fromDirectory: true } });
+  };
+
+  // Return to the Middlemen table (search, filters, pagination and scroll are preserved)
   const handleCloseProfile = () => {
-    setViewingMidId('');
-    setProfileInitialTab('overview');
-    if (queryMiddlemanId || queryPurchaseId) {
-      setSearchParams({});
+    if (location.state?.fromDirectory) {
+      navigate(-1);
+    } else {
+      setSearchParams({}, { replace: true });
     }
   };
 
@@ -164,10 +184,7 @@ export function Middlemen() {
       render: (row) => (
         <button
           type="button"
-          onClick={() => {
-            setProfileInitialTab('overview');
-            setViewingMidId(row.id);
-          }}
+          onClick={() => openProfile(row.id)}
           className="font-mono font-bold text-[#0F766E] hover:underline cursor-pointer"
         >
           {row.id}
@@ -272,10 +289,7 @@ export function Middlemen() {
         <div className="inline-flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => {
-              setProfileInitialTab('overview');
-              setViewingMidId(row.id);
-            }}
+            onClick={() => openProfile(row.id)}
             title="View Complete Middleman Profile & Procurement Transactions"
             className="p-1.5 rounded-lg bg-[#CCFBF1] text-[#0F766E] hover:bg-[#0F766E] hover:text-white transition-colors cursor-pointer"
           >
@@ -283,10 +297,7 @@ export function Middlemen() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              setProfileInitialTab('new-purchase');
-              setViewingMidId(row.id);
-            }}
+            onClick={() => openProfile(row.id, 'new-purchase')}
             title="Record Purchase from this Middleman"
             className="p-1.5 rounded-lg bg-[#F5FAF8] border border-[#E2E8F0] text-[#0F766E] hover:bg-[#CCFBF1] transition-colors cursor-pointer"
           >
@@ -325,7 +336,9 @@ export function Middlemen() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div>
+      {/* Middlemen Directory (kept mounted while a profile is open so table state is preserved) */}
+      <div className={isProfileView ? 'hidden' : 'space-y-6'}>
       <VendorPageHeader
         title="Middlemen Directory & Procurement"
         subtitle="Manage mandi commission agents, bulk raw material purchases, GST compliance, OTP confirmations, and payables."
@@ -435,6 +448,32 @@ export function Middlemen() {
         data={filteredMiddlemen}
         onResetFilters={resetFilters}
       />
+      </div>
+
+      {/* Complete Individual Middleman Profile – Full-Page View (Eye Icon) */}
+      {isProfileView && (
+        <VendorDetailPage
+          title={`Middleman Profile – ${activeProfileMiddleman.businessName || ''}`}
+          subtitle={`Middleman ID: ${activeProfileMiddleman.id || ''} • Owner: ${activeProfileMiddleman.ownerName || ''}`}
+          icon={BriefcaseBusiness}
+          backLabel="Back to Middlemen"
+          onBack={handleCloseProfile}
+        >
+          <MiddlemanDetails
+            key={`${activeProfileMiddleman.id}-${profileInitialTab}-${queryPurchaseId}`}
+            middleman={activeProfileMiddleman}
+            purchases={purchases}
+            ledger={ledger}
+            initialTab={profileInitialTab}
+            initialPurchaseId={queryPurchaseId}
+            onEdit={(m) => {
+              handleCloseProfile();
+              setEditingMid(m);
+              setIsFormOpen(true);
+            }}
+          />
+        </VendorDetailPage>
+      )}
 
       {/* Add / Edit Modal */}
       <VendorModal
@@ -462,30 +501,6 @@ export function Middlemen() {
         />
       </VendorModal>
 
-      {/* Complete Individual Middleman Profile Modal (Eye Icon) */}
-      <VendorModal
-        isOpen={Boolean(activeProfileMiddleman)}
-        onClose={handleCloseProfile}
-        title={`Middleman Profile – ${activeProfileMiddleman?.businessName || ''}`}
-        subtitle={`Middleman ID: ${activeProfileMiddleman?.id || ''} • Owner: ${activeProfileMiddleman?.ownerName || ''}`}
-        size="xl"
-      >
-        <MiddlemanDetails
-          key={`${activeProfileMiddleman?.id || ''}-${profileInitialTab}-${queryPurchaseId}`}
-          middleman={activeProfileMiddleman}
-          purchases={purchases}
-          ledger={ledger}
-          initialTab={profileInitialTab}
-          initialPurchaseId={queryPurchaseId}
-          onClose={handleCloseProfile}
-          onEdit={(m) => {
-            handleCloseProfile();
-            setEditingMid(m);
-            setIsFormOpen(true);
-          }}
-        />
-      </VendorModal>
-
       {/* Record Bulk Middleman Purchase Modal */}
       <VendorModal
         isOpen={isPurchaseModalOpen}
@@ -499,8 +514,7 @@ export function Middlemen() {
           onSuccess={(created) => {
             setIsPurchaseModalOpen(false);
             if (created?.supplierId) {
-              setProfileInitialTab('transactions');
-              setViewingMidId(created.supplierId);
+              openProfile(created.supplierId, 'transactions');
             }
           }}
           onCancel={() => setIsPurchaseModalOpen(false)}
