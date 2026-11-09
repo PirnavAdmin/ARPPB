@@ -1,0 +1,1 @@
+export { useConfirmations } from './index';
