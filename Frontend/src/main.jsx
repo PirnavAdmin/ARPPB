@@ -5,7 +5,6 @@ import App from "./App";
 
 import "./index.css";
 import "./App.css";
-
 import "./styles/global.css";
 import "./styles/customer.css";
 
