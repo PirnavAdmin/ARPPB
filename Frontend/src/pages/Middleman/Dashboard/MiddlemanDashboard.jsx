@@ -8,7 +8,6 @@ import {
   Boxes,
   TrendingDown,
   TrendingUp,
-  RotateCw,
   ArrowRight,
   ChevronLeft,
   ChevronRight,
@@ -22,21 +21,13 @@ import { CropInventoryChart } from '../components/dashboard/CropInventoryChart';
 import { RecentTransactionsTable } from '../components/dashboard/RecentTransactionsTable';
 import { PendingConfirmations } from '../components/dashboard/PendingConfirmations';
 import { SectionCard } from '../components/common/SectionCard';
-import { DateRangePicker } from '../components/common/DateRangePicker';
 
 export const MiddlemanDashboard = () => {
   const navigate = useNavigate();
   const { profile, dashboardMetrics, purchases, vendorSales, customerSales, confirmations } = useMiddleman();
 
-  const [dateFilter, setDateFilter] = useState('This Month');
-  const [isRefreshing, setIsRefreshing] = useState(false);
   // 0 = First Group (Primary Metrics 1/2), 1 = Second Group (Additional Metrics 2/2)
   const [activeKpiGroup, setActiveKpiGroup] = useState(0);
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 500);
-  };
 
   // First Group – 5 Primary KPI Cards
   const primaryKpiCards = [
@@ -74,7 +65,7 @@ export const MiddlemanDashboard = () => {
       icon: ShoppingCart,
       description: 'Confirmed transactions',
       trend: { value: '+15%', isPositive: true },
-      onClick: () => navigate('/middleman/purchase-history'),
+      onClick: () => navigate('/middleman/sales-history', { state: { activeTab: 'farmer' } }),
     },
     {
       id: 'total-sales',
@@ -83,7 +74,7 @@ export const MiddlemanDashboard = () => {
       icon: BadgePercent,
       description: 'Completed orders',
       trend: { value: '+18%', isPositive: true },
-      onClick: () => navigate('/middleman/sales-history'),
+      onClick: () => navigate('/middleman/sales-history', { state: { activeTab: 'vendor' } }),
     },
   ];
 
@@ -105,7 +96,7 @@ export const MiddlemanDashboard = () => {
       icon: TrendingDown,
       description: 'Farmer purchases',
       trend: { value: 'Inflow', isPositive: true },
-      onClick: () => navigate('/middleman/purchase-history'),
+      onClick: () => navigate('/middleman/sales-history', { state: { activeTab: 'farmer' } }),
     },
     {
       id: 'total-sales-value',
@@ -114,7 +105,7 @@ export const MiddlemanDashboard = () => {
       icon: TrendingUp,
       description: 'Revenue generated',
       trend: { value: '+22%', isPositive: true },
-      onClick: () => navigate('/middleman/sales-history'),
+      onClick: () => navigate('/middleman/sales-history', { state: { activeTab: 'vendor' } }),
     },
     {
       id: 'expected-receivables',
@@ -157,22 +148,8 @@ export const MiddlemanDashboard = () => {
             Middleman Dashboard
           </h1>
           <p className="text-xs text-[#64748B] mt-0.5">
-            Welcome back, <span className="font-semibold text-[#1F2937]">{profile.ownerName}</span>. Trading health overview for {dateFilter}.
+            Welcome back, <span className="font-semibold text-[#1F2937]">{profile.ownerName}</span>. Trading health overview.
           </p>
-        </div>
-
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <DateRangePicker value={dateFilter} onChange={setDateFilter} />
-
-          <button
-            type="button"
-            onClick={handleRefresh}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-[#E2E8F0] bg-white hover:bg-slate-50 text-[#1F2937] cursor-pointer transition-all shadow-2xs"
-            title="Refresh dashboard metrics"
-          >
-            <RotateCw className={`w-3.5 h-3.5 text-[#0F766E] ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
-          </button>
         </div>
       </div>
 
@@ -342,7 +319,7 @@ export const MiddlemanDashboard = () => {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => navigate('/middleman/purchase-history')}
+              onClick={() => navigate('/middleman/sales-history', { state: { activeTab: 'farmer' } })}
               className="text-xs font-semibold text-[#0F766E] hover:underline cursor-pointer"
             >
               Purchases &rarr;
@@ -350,7 +327,7 @@ export const MiddlemanDashboard = () => {
             <span className="text-slate-300">|</span>
             <button
               type="button"
-              onClick={() => navigate('/middleman/sales-history')}
+              onClick={() => navigate('/middleman/sales-history', { state: { activeTab: 'vendor' } })}
               className="text-xs font-semibold text-[#0F766E] hover:underline cursor-pointer"
             >
               Sales &rarr;

@@ -10,7 +10,6 @@ export { default as PurchaseFromFarmersPage } from './PurchaseFromFarmers/Purcha
 export { default as SalesToVendorsPage } from './SalesToVendors/SalesToVendorsPage';
 export { default as SalesToCustomersPage } from './SalesToCustomers/SalesToCustomersPage';
 export { default as InventoryPage } from './Inventory/InventoryPage';
-export { default as PurchaseHistoryPage } from './PurchaseHistory/PurchaseHistoryPage';
 export { default as SalesHistoryPage } from './SalesHistory/SalesHistoryPage';
 export { default as OTPConfirmationsPage } from './OTPConfirmations/OTPConfirmationsPage';
 export { default as LedgerPage } from './Ledger/LedgerPage';

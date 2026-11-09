@@ -45,6 +45,7 @@ export const BRAND_THEME = {
     Draft: 'bg-brand-background text-brand-muted border-brand-border',
     Expired: 'bg-brand-error-light text-brand-error border-brand-error/20',
     Failed: 'bg-brand-error-light text-brand-error border-brand-error/20',
+    Rejected: 'bg-brand-error-light text-brand-error border-brand-error/20',
     Cancelled: 'bg-brand-error-light text-brand-error border-brand-error/20',
     'Low Stock': 'bg-brand-warning-light text-brand-warning border-brand-warning/20',
     'In Stock': 'bg-brand-success-light text-brand-success border-brand-success/20',
@@ -52,8 +53,12 @@ export const BRAND_THEME = {
     Exhausted: 'bg-brand-background text-brand-muted border-brand-border',
     Paid: 'bg-brand-success-light text-brand-success border-brand-success/20',
     Partial: 'bg-brand-warning-light text-brand-warning border-brand-warning/20',
+    'Partially Paid': 'bg-brand-warning-light text-brand-warning border-brand-warning/20',
     Unpaid: 'bg-brand-error-light text-brand-error border-brand-error/20',
     Overdue: 'bg-brand-error-light text-brand-error border-brand-error/20',
+    High: 'bg-brand-error-light text-brand-error border-brand-error/20',
+    Medium: 'bg-brand-warning-light text-brand-warning border-brand-warning/20',
+    Low: 'bg-brand-light text-brand-primary border-brand-secondary/30',
   },
 };
 
