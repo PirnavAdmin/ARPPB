@@ -9,6 +9,7 @@ import { AuthButton } from '../components/AuthButton';
 import { validateIndianPhone, sanitizePhone } from '../../../utils/validation/phoneValidation';
 import { login } from '../../../services/auth/authService';
 import { useAuth } from '../../../hooks/useAuth';
+import { getDashboardPathByRole, normalizeRole } from '../../../context/AuthContext';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -63,7 +64,10 @@ export const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading) return;
+
     setSubmitError(null);
+    setSuccessMessage(null);
 
     if (!validate()) return;
 
@@ -76,19 +80,42 @@ export const LoginPage = () => {
         rememberMe: formData.rememberMe,
       });
 
-      setAuthSession(
-        response?.user || {
-          contactNumber: formData.contactNumber,
-        }
+      const backendUser = response?.user || response?.data;
+      const resolvedRole = normalizeRole(
+        backendUser?.role || response?.role
+      );
+      const targetDashboard = getDashboardPathByRole(resolvedRole);
+
+      if (!resolvedRole || !targetDashboard) {
+        setSubmitError(
+          'Unable to determine your account role from the server response. Please contact support.'
+        );
+        return;
+      }
+
+      setAuthSession({
+        ...backendUser,
+        role: resolvedRole,
+      });
+
+      setSuccessMessage(
+        response.message || 'Signed in successfully! Redirecting...'
       );
 
-      setSuccessMessage(response.message || 'Signed in successfully! Redirecting...');
-      const redirectTarget = location.state?.from?.pathname || '/dashboard';
       setTimeout(() => {
-        navigate(redirectTarget, { replace: true });
-      }, 800);
+        navigate(targetDashboard, { replace: true });
+      }, 600);
     } catch (err) {
-      setSubmitError(err.message || 'Invalid credentials. Please verify your contact number and password.');
+      if (err?.fieldErrors && Object.keys(err.fieldErrors).length > 0) {
+        setErrors((prev) => ({
+          ...prev,
+          ...err.fieldErrors,
+        }));
+      }
+      setSubmitError(
+        err?.message ||
+          'Invalid credentials. Please verify your contact number and password.'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -168,7 +195,12 @@ export const LoginPage = () => {
 
         {/* Sign In Button */}
         <div className="pt-2">
-          <AuthButton type="submit" isLoading={isLoading} size="lg">
+          <AuthButton
+            type="submit"
+            isLoading={isLoading}
+            disabled={isLoading}
+            size="lg"
+          >
             Sign In
           </AuthButton>
         </div>

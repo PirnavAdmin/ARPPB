@@ -12,10 +12,16 @@ export default function ProtectedRoute({ children, allowedRoles = null }) {
 
   if (Array.isArray(allowedRoles) && allowedRoles.length > 0) {
     const activeRole = normalizeRole(user?.role);
-    const normalizedAllowed = allowedRoles.map((r) => normalizeRole(r));
+    if (!activeRole) {
+      return <Navigate to="/login" state={{ from: location }} replace />;
+    }
+
+    const normalizedAllowed = allowedRoles
+      .map((r) => normalizeRole(r))
+      .filter(Boolean);
 
     if (!normalizedAllowed.includes(activeRole)) {
-      const fallbackPath = PORTAL_HOME_PATHS[activeRole] || '/dashboard';
+      const fallbackPath = PORTAL_HOME_PATHS[activeRole] || '/login';
       return <Navigate to={fallbackPath} replace />;
     }
   }

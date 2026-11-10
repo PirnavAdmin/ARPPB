@@ -14,16 +14,39 @@ export const PORTAL_HOME_PATHS = {
 
 /**
  * Normalize role strings across Registration ('Farmer', 'Vendor', 'Middle Man', 'Customer'),
- * Backend enums, and Portal route guards ('vendor', 'middleman', 'farmer', 'customer').
+ * Backend enums ('Farmer', 'Customer', 'Supplier', 'Vendor'),
+ * and Portal route guards ('vendor', 'middleman', 'farmer', 'customer').
+ * Returns null if the role is missing or unrecognized.
  */
 export function normalizeRole(rawRole) {
-  if (!rawRole) return 'vendor';
-  const cleaned = String(rawRole).trim().toLowerCase().replace(/\s+/g, '');
-  if (cleaned === 'middleman' || cleaned === 'supplier') return 'middleman';
-  if (cleaned === 'farmer') return 'farmer';
-  if (cleaned === 'customer') return 'customer';
-  if (cleaned === 'vendor') return 'vendor';
-  return 'vendor';
+  if (rawRole === null || rawRole === undefined || rawRole === '') return null;
+  if (typeof rawRole === 'number') {
+    if (rawRole === 1) return 'farmer';
+    if (rawRole === 2) return 'customer';
+    if (rawRole === 3) return 'middleman';
+    if (rawRole === 4) return 'vendor';
+    return null;
+  }
+  const cleaned = String(rawRole)
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+  if (cleaned === 'farmer' || cleaned === '1') return 'farmer';
+  if (cleaned === 'customer' || cleaned === '2') return 'customer';
+  if (cleaned === 'middleman' || cleaned === 'supplier' || cleaned === '3') {
+    return 'middleman';
+  }
+  if (cleaned === 'vendor' || cleaned === '4') return 'vendor';
+  return null;
+}
+
+/**
+ * Resolve the portal dashboard route for a given backend role.
+ * Returns null if the role is missing or unknown.
+ */
+export function getDashboardPathByRole(rawRole) {
+  const normalized = normalizeRole(rawRole);
+  return normalized ? PORTAL_HOME_PATHS[normalized] || null : null;
 }
 
 export const AuthContext = createContext(null);
@@ -56,26 +79,39 @@ export function AuthProvider({ children }) {
   const role = currentUser?.role || null;
 
   const login = useCallback((userData = null) => {
-    const resolvedRole = normalizeRole(userData?.role || 'vendor');
+    const resolvedRole = normalizeRole(userData?.role);
+    if (!userData || !resolvedRole) {
+      return null;
+    }
+
+    const sanitizedUser = { ...userData };
+    delete sanitizedUser.password;
+    delete sanitizedUser.confirmPassword;
+
+    const contactNum =
+      sanitizedUser.mobile ||
+      sanitizedUser.contactNumber ||
+      sanitizedUser.phone ||
+      '';
+
     const nextSession = {
       isAuthenticated: true,
-      user: userData
-        ? {
-            ...userData,
-            role: resolvedRole,
-          }
-        : {
-            contactNumber: INITIAL_VENDOR_PROFILE.mobileNumber,
-            role: 'vendor',
-            fullName: INITIAL_VENDOR_PROFILE.ownerName,
-          },
+      user: {
+        ...sanitizedUser,
+        mobile: contactNum,
+        contactNumber: contactNum,
+        phone: contactNum,
+        role: resolvedRole,
+      },
     };
     setAuthSession(nextSession);
     writeStorage(AUTH_SESSION_KEY, nextSession);
+    return nextSession.user;
   }, []);
 
   const switchPortalRole = useCallback((targetRole) => {
     const normalized = normalizeRole(targetRole);
+    if (!normalized) return;
     setAuthSession((prev) => {
       const nextSession = {
         isAuthenticated: true,

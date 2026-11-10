@@ -21,6 +21,7 @@ import MiddlemanRoutes from './middleman/MiddlemanRoutes';
 import CustomerRoutes from './CustomerRoutes';
 import FarmerApp from '../pages/farmer/FarmerApp';
 import { useAuth } from '../hooks/useAuth';
+import { getDashboardPathByRole } from '../context/AuthContext';
 
 /**
  * Unified Authenticated ERP Workspace Portal Hub (/dashboard)
@@ -205,11 +206,15 @@ function WorkspacePortalHub() {
 }
 
 /**
- * Root Redirect Helper based on Authentication State
+ * Root Redirect Helper based on Authentication State and User Role
  */
 function RootRedirect() {
-  const { isAuthenticated } = useAuth();
-  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
+  const { isAuthenticated, role } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  const targetPath = getDashboardPathByRole(role) || '/dashboard';
+  return <Navigate to={targetPath} replace />;
 }
 
 /**

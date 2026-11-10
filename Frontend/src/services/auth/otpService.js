@@ -1,93 +1,127 @@
 /**
- * OTP Service for AgriConnect (Frontend Simulated Implementation)
- * Prepared for future backend SMS/email provider integration.
+ * OTP Service for AgriConnect Registration
+ * Connects mobile OTP generation and verification to the Backend API
+ * using Endpoints.REGISTRATION.SEND_MOBILE_OTP and Endpoints.REGISTRATION.VERIFY_MOBILE_OTP.
  */
 
+import Endpoints from '../../API/Endpoints';
 import { DEMO_CONFIG } from '../../data/mock/authMockData';
+import { postToBackend, parseBackendError } from './authService';
 
 /**
- * Simulates generating and sending an OTP to a phone number
+ * Sends a registration OTP to a 10-digit Indian mobile number
+ * via POST /api/v1/Registration/send-mobile-otp
  * @param {string} phone - 10-digit phone number
  */
 export const sendPhoneOTP = async (phone) => {
-  // Realistic simulated network latency (400ms)
-  await new Promise((resolve) => setTimeout(resolve, 400));
-
-  const cleanPhone = String(phone).replace(/\D/g, '');
+  const cleanPhone = String(phone || '').replace(/\D/g, '');
   if (cleanPhone.length !== 10) {
-    throw new Error('Please enter a valid 10-digit mobile number before requesting an OTP.');
+    throw new Error(
+      'Please enter a valid 10-digit mobile number before requesting an OTP.'
+    );
   }
 
-  return {
-    success: true,
-    message: DEMO_CONFIG.defaultOtpDemoNotice,
-    cooldownSeconds: DEMO_CONFIG.otpCooldownSeconds,
-    target: cleanPhone,
-    channel: 'phone',
-  };
+  try {
+    const resData = await postToBackend(Endpoints.REGISTRATION.SEND_MOBILE_OTP, {
+      mobile: cleanPhone,
+    });
+
+    const isSuccess = resData?.success ?? resData?.Success ?? true;
+    if (!isSuccess) {
+      throw new Error(
+        resData?.message || resData?.Message || 'Failed to send OTP.'
+      );
+    }
+
+    // In Development environment, the backend returns DevOtp formatted as "DEV-123456".
+    // Extract the 6-digit numeric code for verification.
+    const rawDevOtp = resData?.devOtp ?? resData?.DevOtp ?? null;
+    const extractedOtp = rawDevOtp
+      ? String(rawDevOtp).replace(/\D/g, '').slice(0, 6)
+      : null;
+
+    const baseMessage =
+      resData?.message ||
+      resData?.Message ||
+      resData?.data ||
+      'OTP generated successfully.';
+
+    return {
+      success: true,
+      message: extractedOtp
+        ? `${baseMessage} (OTP: ${extractedOtp})`
+        : baseMessage,
+      devOtp: extractedOtp,
+      cooldownSeconds: DEMO_CONFIG.otpCooldownSeconds,
+      target: cleanPhone,
+      channel: 'phone',
+    };
+  } catch (error) {
+    if (
+      error?.response ||
+      error?.isNetworkError ||
+      error?.code === 'ERR_NETWORK'
+    ) {
+      throw parseBackendError(error, 'Failed to send OTP. Please try again.');
+    }
+    throw error;
+  }
 };
 
 /**
- * Simulates verifying a 6-digit phone OTP
+ * Verifies the 6-digit registration mobile OTP
+ * via POST /api/v1/Registration/verify-mobile-otp
  * @param {string} phone
  * @param {string} otp
  */
 export const verifyPhoneOTP = async (phone, otp) => {
-  await new Promise((resolve) => setTimeout(resolve, 450));
+  const cleanPhone = String(phone || '').replace(/\D/g, '');
+  const cleanOtp = String(otp || '').replace(/\D/g, '').trim();
 
-  const cleanOtp = String(otp || '').trim();
   if (cleanOtp.length !== 6 || !/^\d{6}$/.test(cleanOtp)) {
     throw new Error('Please enter a complete 6-digit numeric OTP code.');
   }
 
-  return {
-    success: true,
-    verified: true,
-    message: 'Phone number verified successfully.',
-    target: phone,
-    channel: 'phone',
-  };
-};
+  try {
+    const resData = await postToBackend(
+      Endpoints.REGISTRATION.VERIFY_MOBILE_OTP,
+      {
+        mobile: cleanPhone,
+        otp: cleanOtp,
+      }
+    );
 
-/**
- * Optional email OTP simulation
- * @param {string} email
- */
-export const sendEmailOTP = async (email) => {
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  return {
-    success: true,
-    message: 'Demo Email OTP generated. Enter the 6-digit code to continue.',
-    cooldownSeconds: DEMO_CONFIG.otpCooldownSeconds,
-    target: email,
-    channel: 'email',
-  };
-};
+    const isSuccess = resData?.success ?? resData?.Success ?? true;
+    if (!isSuccess) {
+      throw new Error(
+        resData?.message || resData?.Message || 'OTP verification failed.'
+      );
+    }
 
-/**
- * Optional email OTP verification
- * @param {string} email
- * @param {string} otp
- */
-export const verifyEmailOTP = async (email, otp) => {
-  await new Promise((resolve) => setTimeout(resolve, 450));
-  const cleanOtp = String(otp || '').trim();
-  if (cleanOtp.length !== 6 || !/^\d{6}$/.test(cleanOtp)) {
-    throw new Error('Please enter a complete 6-digit numeric OTP code.');
+    return {
+      success: true,
+      verified: true,
+      message:
+        resData?.data ||
+        resData?.message ||
+        resData?.Message ||
+        'Phone number verified successfully.',
+      target: cleanPhone,
+      channel: 'phone',
+    };
+  } catch (error) {
+    if (
+      error?.response ||
+      error?.isNetworkError ||
+      error?.code === 'ERR_NETWORK'
+    ) {
+      throw parseBackendError(error, 'OTP verification failed.');
+    }
+    throw error;
   }
-  return {
-    success: true,
-    verified: true,
-    message: 'Email address verified successfully.',
-    target: email,
-    channel: 'email',
-  };
 };
 
 export default {
   sendPhoneOTP,
   verifyPhoneOTP,
-  sendEmailOTP,
-  verifyEmailOTP,
 };
-

@@ -11,9 +11,12 @@ import { AuthButton } from '../components/AuthButton';
 import { useOTPVerification } from '../../../hooks/useOTPVerification';
 import { validateRegistrationForm } from '../../../utils/validation/authValidation';
 import { register } from '../../../services/auth/authService';
+import { useAuth } from '../../../hooks/useAuth';
+import { getDashboardPathByRole, normalizeRole } from '../../../context/AuthContext';
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
+  const { login: setAuthSession } = useAuth();
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -88,7 +91,10 @@ export const RegisterPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     setSubmitError(null);
+    setSuccessMessage(null);
 
     // Validate form fields
     const { isValid, errors: validationErrors } = validateRegistrationForm(formData, isVerified);
@@ -110,20 +116,43 @@ export const RegisterPage = () => {
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
+        confirmPassword: formData.confirmPassword,
       });
 
-      setSuccessMessage(response.message || 'Account created successfully! Redirecting to login...');
+      const backendUser = response?.user || response?.data;
+      const resolvedRole = normalizeRole(
+        backendUser?.role || response?.role
+      );
+      const targetDashboard = getDashboardPathByRole(resolvedRole);
+
+      if (!resolvedRole || !targetDashboard) {
+        setSubmitError(
+          'Account registered, but your user role could not be determined from the server response. Please sign in.'
+        );
+        return;
+      }
+
+      // Store authenticated user session in AuthContext
+      setAuthSession({
+        ...backendUser,
+        role: resolvedRole,
+      });
+
+      setSuccessMessage(
+        response.message || 'Account created successfully! Redirecting to your dashboard...'
+      );
 
       setTimeout(() => {
-        navigate('/login', {
-          state: {
-            registered: true,
-            contactNumber: formData.phone,
-          },
-        });
-      }, 1200);
+        navigate(targetDashboard, { replace: true });
+      }, 800);
     } catch (err) {
-      setSubmitError(err.message || 'Registration failed. Please try again.');
+      if (err?.fieldErrors && Object.keys(err.fieldErrors).length > 0) {
+        setErrors((prev) => ({
+          ...prev,
+          ...err.fieldErrors,
+        }));
+      }
+      setSubmitError(err?.message || 'Registration failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
