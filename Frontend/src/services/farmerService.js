@@ -1,3 +1,5 @@
+import api from '../API/Config';
+import Endpoints from '../API/Endpoints';
 import { createCrudService, readStorage, writeStorage } from './api';
 import { STORAGE_KEYS } from '../utils/constants';
 import { INITIAL_FARMERS } from '../data/mockFarmers';
@@ -15,24 +17,22 @@ import {
 /**
  * Farmer Module API Service
  * Connects the Farmer Portal frontend components to the backend REST API
- * (ASP.NET Core /api/v1/farmer/*) with intelligent client caching and offline fallback.
+ * (ASP.NET Core /api/v1/Farmer/*) using the centralized Axios client (src/API/Config.js)
+ * and Endpoints registry (src/API/Endpoints.js) with client caching and offline fallback.
  */
 
 export const FARMER_STORAGE_KEY = 'agri-farmer-portal-state-v1';
 
-export const FARMER_API_BASE =
-  import.meta.env.VITE_API_BASE_URL || '/api/v1';
-
-export const FARMER_ENDPOINTS = {
-  DASHBOARD: `${FARMER_API_BASE}/farmer/dashboard`,
-  PROFILE: `${FARMER_API_BASE}/farmer/profile`,
-  CROPS: `${FARMER_API_BASE}/farmer/crops`,
-  STOCK: `${FARMER_API_BASE}/farmer/stock`,
-  MARKET_PRICES: `${FARMER_API_BASE}/farmer/market-prices`,
-  SALES: `${FARMER_API_BASE}/farmer/sales`,
-  PURCHASES: `${FARMER_API_BASE}/farmer/purchases`,
-  OTP_REQUESTS: `${FARMER_API_BASE}/farmer/otp-requests`,
-  NOTIFICATIONS: `${FARMER_API_BASE}/farmer/notifications`,
+export const FARMER_ENDPOINTS = Endpoints.FARMER || {
+  DASHBOARD: '/api/v1/Farmer/dashboard',
+  PROFILE: '/api/v1/Farmer/profile',
+  CROPS: '/api/v1/Farmer/crops',
+  STOCK: '/api/v1/Farmer/stock',
+  MARKET_PRICES: '/api/v1/Farmer/market-prices',
+  SALES: '/api/v1/Farmer/sales',
+  PURCHASES: '/api/v1/Farmer/purchases',
+  OTP_REQUESTS: '/api/v1/Farmer/otp-requests',
+  NOTIFICATIONS: '/api/v1/Farmer/notifications',
 };
 
 // Client-side state loader
@@ -60,20 +60,18 @@ function saveLocalFarmerState(updater) {
 /**
  * Generic request helper with automatic fallback to local persistence
  */
-async function fetchWithFallback(url, options = {}, fallbackAction) {
+async function callApiWithFallback(method, url, data = null, fallbackAction) {
   try {
-    const res = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        ...options.headers,
-      },
-      ...options,
+    const res = await api({
+      method,
+      url,
+      data,
     });
 
-    if (res.ok) {
-      const json = await res.json();
-      return json?.data !== undefined ? json.data : json;
+    if (res?.data) {
+      // Backend returns ApiResponse<T> where res.data.data contains payload
+      const payload = res.data.data !== undefined ? res.data.data : res.data;
+      return payload;
     }
   } catch {
     // Backend offline or unreachable — seamlessly utilize local simulated storage
@@ -90,9 +88,10 @@ export const farmerService = {
    * Fetch complete Dashboard data
    */
   async getDashboard() {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'GET',
       FARMER_ENDPOINTS.DASHBOARD,
-      { method: 'GET' },
+      null,
       () => {
         const state = getLocalFarmerState();
         return {
@@ -118,20 +117,19 @@ export const farmerService = {
    * Farmer Profile Management
    */
   async getProfile() {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'GET',
       FARMER_ENDPOINTS.PROFILE,
-      { method: 'GET' },
+      null,
       () => getLocalFarmerState().profile
     );
   },
 
   async updateProfile(profileData) {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'PUT',
       FARMER_ENDPOINTS.PROFILE,
-      {
-        method: 'PUT',
-        body: JSON.stringify(profileData),
-      },
+      profileData,
       () => {
         const updated = saveLocalFarmerState((prev) => ({
           ...prev,
@@ -146,20 +144,19 @@ export const farmerService = {
    * Crops Management
    */
   async getCrops() {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'GET',
       FARMER_ENDPOINTS.CROPS,
-      { method: 'GET' },
+      null,
       () => getLocalFarmerState().crops
     );
   },
 
   async addCrop(cropData) {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'POST',
       FARMER_ENDPOINTS.CROPS,
-      {
-        method: 'POST',
-        body: JSON.stringify(cropData),
-      },
+      cropData,
       () => {
         const newCrop = {
           id: cropData.id || `CROP-00${Date.now().toString().slice(-4)}`,
@@ -181,12 +178,10 @@ export const farmerService = {
   },
 
   async updateCrop(id, fields) {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'PUT',
       `${FARMER_ENDPOINTS.CROPS}/${id}`,
-      {
-        method: 'PUT',
-        body: JSON.stringify(fields),
-      },
+      fields,
       () => {
         let updatedCrop = null;
         saveLocalFarmerState((prev) => ({
@@ -205,9 +200,10 @@ export const farmerService = {
   },
 
   async deleteCrop(id) {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'DELETE',
       `${FARMER_ENDPOINTS.CROPS}/${id}`,
-      { method: 'DELETE' },
+      null,
       () => {
         saveLocalFarmerState((prev) => ({
           ...prev,
@@ -219,12 +215,10 @@ export const farmerService = {
   },
 
   async addHarvest(cropId, quantity, unit = 'qtl') {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'POST',
       `${FARMER_ENDPOINTS.CROPS}/${cropId}/harvest`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ quantity: Number(quantity), unit }),
-      },
+      { quantity: Number(quantity), unit },
       () => {
         let updatedCrop = null;
         saveLocalFarmerState((prev) => ({
@@ -253,9 +247,10 @@ export const farmerService = {
    * Stock Overview
    */
   async getStock() {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'GET',
       FARMER_ENDPOINTS.STOCK,
-      { method: 'GET' },
+      null,
       () => getLocalFarmerState().stockRecords
     );
   },
@@ -264,9 +259,10 @@ export const farmerService = {
    * Daily Mandi Market Prices
    */
   async getMarketPrices() {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'GET',
       FARMER_ENDPOINTS.MARKET_PRICES,
-      { method: 'GET' },
+      null,
       () => getLocalFarmerState().marketPrices
     );
   },
@@ -275,20 +271,19 @@ export const farmerService = {
    * Sales Transactions
    */
   async getSales() {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'GET',
       FARMER_ENDPOINTS.SALES,
-      { method: 'GET' },
+      null,
       () => getLocalFarmerState().sales
     );
   },
 
   async createSale(saleData) {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'POST',
       FARMER_ENDPOINTS.SALES,
-      {
-        method: 'POST',
-        body: JSON.stringify(saleData),
-      },
+      saleData,
       () => {
         saveLocalFarmerState((prev) => ({
           ...prev,
@@ -303,20 +298,19 @@ export const farmerService = {
    * Input Purchases
    */
   async getPurchases() {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'GET',
       FARMER_ENDPOINTS.PURCHASES,
-      { method: 'GET' },
+      null,
       () => getLocalFarmerState().purchases
     );
   },
 
   async addPurchase(purchaseData) {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'POST',
       FARMER_ENDPOINTS.PURCHASES,
-      {
-        method: 'POST',
-        body: JSON.stringify(purchaseData),
-      },
+      purchaseData,
       () => {
         saveLocalFarmerState((prev) => ({
           ...prev,
@@ -331,20 +325,19 @@ export const farmerService = {
    * OTP Requests
    */
   async getOtpRequests() {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'GET',
       FARMER_ENDPOINTS.OTP_REQUESTS,
-      { method: 'GET' },
+      null,
       () => getLocalFarmerState().otpRequests
     );
   },
 
   async verifyOtp(otpId, otpCode) {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'POST',
       `${FARMER_ENDPOINTS.OTP_REQUESTS}/${otpId}/verify`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ otpCode }),
-      },
+      { otpCode },
       () => {
         saveLocalFarmerState((prev) => ({
           ...prev,
@@ -358,12 +351,10 @@ export const farmerService = {
   },
 
   async rejectOtp(otpId, reason) {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'POST',
       `${FARMER_ENDPOINTS.OTP_REQUESTS}/${otpId}/reject`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ reason }),
-      },
+      { reason },
       () => {
         saveLocalFarmerState((prev) => ({
           ...prev,
@@ -377,9 +368,10 @@ export const farmerService = {
   },
 
   async resendOtp(otpId) {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'POST',
       `${FARMER_ENDPOINTS.OTP_REQUESTS}/${otpId}/resend`,
-      { method: 'POST' },
+      null,
       () => true
     );
   },
@@ -388,17 +380,19 @@ export const farmerService = {
    * Notifications
    */
   async getNotifications() {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'GET',
       FARMER_ENDPOINTS.NOTIFICATIONS,
-      { method: 'GET' },
+      null,
       () => getLocalFarmerState().notifications
     );
   },
 
   async markNotificationRead(id) {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'PUT',
       `${FARMER_ENDPOINTS.NOTIFICATIONS}/${id}/read`,
-      { method: 'PUT' },
+      null,
       () => {
         saveLocalFarmerState((prev) => ({
           ...prev,
@@ -412,9 +406,10 @@ export const farmerService = {
   },
 
   async markAllNotificationsRead() {
-    return fetchWithFallback(
+    return callApiWithFallback(
+      'PUT',
       `${FARMER_ENDPOINTS.NOTIFICATIONS}/read-all`,
-      { method: 'PUT' },
+      null,
       () => {
         saveLocalFarmerState((prev) => ({
           ...prev,
