@@ -55,7 +55,17 @@ builder.Services
             new JsonStringEnumConverter());
     });
 
-// 6. AUTHORIZATION
+// 6. CORS & AUTHORIZATION
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddAuthorization();
 
 // 7. SWAGGER SERVICES
@@ -87,6 +97,7 @@ app.UseSwaggerUI(options =>
 
 // 10. APPLICATION MIDDLEWARE
 // HTTPS redirection is omitted while testing on HTTP port 5034.
+app.UseCors();
 app.UseAuthorization();
 
 // 11. MAP CONTROLLERS
