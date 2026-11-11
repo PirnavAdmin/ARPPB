@@ -15,8 +15,6 @@ import {
   calculateExpectedPaymentDate,
   formatCurrency,
 } from '../utils/farmerHelpers';
-import { farmerService } from '../../../services/farmerService';
-import { useAuth } from '../../../hooks/useAuth';
 
 const FarmerContext = createContext(null);
 const STORAGE_KEY = 'agri-farmer-portal-state-v1';
@@ -57,8 +55,6 @@ export const farmerNavItems = [
 ];
 
 export function FarmerProvider({ children }) {
-  const { user } = useAuth() || {};
-
   const getInitialPage = () => {
     if (typeof window === 'undefined') return 'dashboard';
     const hash = window.location.hash.replace(/^#\/?/, '').trim();
@@ -70,7 +66,6 @@ export function FarmerProvider({ children }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [isLoadingApi, setIsLoadingApi] = useState(false);
 
   const persistedState = loadPersistedFarmerState();
 
@@ -84,91 +79,6 @@ export function FarmerProvider({ children }) {
   const [otpRequests, setOtpRequests] = useState(() => persistedState?.otpRequests ?? initialOTPRequests);
   const [notifications, setNotifications] = useState(() => persistedState?.notifications ?? initialNotifications);
 
-  // Sync profile when authenticated user is a farmer
-  useEffect(() => {
-    if (user?.role === 'farmer' && (user?.contactNumber || user?.phone)) {
-      setProfile((prev) => ({
-        ...prev,
-        farmerName: user.fullName || prev.farmerName,
-        mobileNumber: user.contactNumber || user.phone || prev.mobileNumber,
-        email: user.email || prev.email,
-        farmerId: user.entityCode || prev.farmerId,
-      }));
-    }
-  }, [user]);
-
-  // Load latest data from Backend API endpoints on initial mount with fallback
-  useEffect(() => {
-    let isMounted = true;
-    async function syncBackendData() {
-      try {
-        setIsLoadingApi(true);
-        const [
-          profileData,
-          cropsData,
-          pricesData,
-          salesData,
-          purchasesData,
-          stockData,
-          otpData,
-          notifData,
-        ] = await Promise.all([
-          farmerService.getProfile(),
-          farmerService.getCrops(),
-          farmerService.getMarketPrices(),
-          farmerService.getSales(),
-          farmerService.getPurchases(),
-          farmerService.getStock(),
-          farmerService.getOtpRequests(),
-          farmerService.getNotifications(),
-        ]);
-
-        if (isMounted) {
-          if (profileData) {
-            setProfile((prev) => ({
-              ...prev,
-              ...profileData,
-              // Retain current session user's identity if logged in
-              farmerName: user?.fullName || profileData.farmerName || prev.farmerName,
-              mobileNumber: user?.contactNumber || profileData.mobileNumber || prev.mobileNumber,
-            }));
-          }
-          if (cropsData && Array.isArray(cropsData) && cropsData.length > 0) {
-            setCrops(cropsData);
-          }
-          if (pricesData && Array.isArray(pricesData) && pricesData.length > 0) {
-            setMarketPrices(pricesData);
-          }
-          if (salesData && Array.isArray(salesData) && salesData.length > 0) {
-            setSales(salesData);
-          }
-          if (purchasesData && Array.isArray(purchasesData) && purchasesData.length > 0) {
-            setPurchases(purchasesData);
-          }
-          if (stockData && Array.isArray(stockData) && stockData.length > 0) {
-            setStockRecords(stockData);
-          }
-          if (otpData && Array.isArray(otpData) && otpData.length > 0) {
-            setOtpRequests(otpData);
-          }
-          if (notifData && Array.isArray(notifData) && notifData.length > 0) {
-            setNotifications(notifData);
-          }
-        }
-      } catch (err) {
-        console.info('Farmer portal operating in local cache / fallback mode:', err.message);
-      } finally {
-        if (isMounted) setIsLoadingApi(false);
-      }
-    }
-
-    syncBackendData();
-    return () => {
-      isMounted = false;
-    };
-  }, [user]);
-
-  // Persist to local storage whenever core state changes
   useEffect(() => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(
@@ -240,40 +150,25 @@ export function FarmerProvider({ children }) {
   }, []);
 
   // Notifications Actions
-  const markNotificationAsRead = useCallback(async (id) => {
+  const markNotificationAsRead = useCallback((id) => {
     setNotifications((prev) =>
       prev.map((item) => (item.id === id ? { ...item, read: true } : item))
     );
-    try {
-      await farmerService.markNotificationRead(id);
-    } catch {
-      // offline fallback handled
-    }
   }, []);
 
-  const markAllNotificationsAsRead = useCallback(async () => {
+  const markAllNotificationsAsRead = useCallback(() => {
     setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
-    try {
-      await farmerService.markAllNotificationsRead();
-    } catch {
-      // offline fallback handled
-    }
     showToast('All notifications marked as read', 'info', 3000);
   }, [showToast]);
 
   // Profile Action
-  const updateProfile = useCallback(async (updated) => {
+  const updateProfile = useCallback((updated) => {
     setProfile((prev) => ({ ...prev, ...updated }));
-    try {
-      await farmerService.updateProfile(updated);
-    } catch {
-      // offline fallback handled
-    }
     showToast('Profile updated successfully!', 'success');
   }, [showToast]);
 
   // Crop CRUD Actions
-  const addCrop = useCallback(async (newCropData) => {
+  const addCrop = useCallback((newCropData) => {
     const newId = `CROP-00${Date.now().toString().slice(-4)}`;
     const crop = {
       id: newId,
@@ -307,28 +202,17 @@ export function FarmerProvider({ children }) {
       ...prev,
     ]);
 
-    try {
-      await farmerService.addCrop(crop);
-    } catch {
-      // offline fallback handled
-    }
-
     showToast(`Crop "${crop.name}" registered successfully!`, 'success');
   }, [showToast]);
 
-  const updateCrop = useCallback(async (id, updatedFields) => {
+  const updateCrop = useCallback((id, updatedFields) => {
     setCrops((prev) =>
       prev.map((c) => (c.id === id ? { ...c, ...updatedFields } : c))
     );
-    try {
-      await farmerService.updateCrop(id, updatedFields);
-    } catch {
-      // offline fallback handled
-    }
     showToast('Crop information updated.', 'success');
   }, [showToast]);
 
-  const deleteCrop = useCallback(async (id) => {
+  const deleteCrop = useCallback((id) => {
     const crop = crops.find((c) => c.id === id);
     if (!crop) return;
 
@@ -341,17 +225,11 @@ export function FarmerProvider({ children }) {
     }
     setCrops((prev) => prev.filter((c) => c.id !== id));
     setStockRecords((prev) => prev.filter((s) => !matchesCropRecord(s, id, crop.name)));
-
-    try {
-      await farmerService.deleteCrop(id);
-    } catch {
-      // offline fallback handled
-    }
     showToast(`Crop "${crop.name}" removed from inventory.`, 'info');
   }, [crops, sales, showToast]);
 
   // Adjust Stock / Harvest
-  const addHarvestStock = useCallback(async (cropIdentifier, additionalQty, unit = 'qtl') => {
+  const addHarvestStock = useCallback((cropIdentifier, additionalQty, unit = 'qtl') => {
     const qty = Number(additionalQty);
     if (isNaN(qty) || qty <= 0) return;
 
@@ -409,17 +287,11 @@ export function FarmerProvider({ children }) {
       ...prev,
     ]);
 
-    try {
-      await farmerService.addHarvest(cropId, qty, unit);
-    } catch {
-      // offline fallback handled
-    }
-
     showToast(`Harvest of ${qty} ${unit} added to ${cropName} successfully!`, 'success');
   }, [crops, showToast]);
 
   // Sell Products: Create Sale Transaction
-  const createSale = useCallback(async (saleForm) => {
+  const createSale = useCallback((saleForm) => {
     const cropId = saleForm.cropId || crops.find((c) => c.name.toLowerCase() === (saleForm.cropName || '').toLowerCase())?.id;
     const crop = crops.find((c) => matchesCropRecord(c, cropId, saleForm.cropName));
     const qty = Number(saleForm.sellingQuantity);
@@ -539,12 +411,6 @@ export function FarmerProvider({ children }) {
       ...prev,
     ]);
 
-    try {
-      await farmerService.createSale(newTransaction);
-    } catch {
-      // offline fallback handled
-    }
-
     showToast(
       `Sale ${txId} created! Buyer confirmation is required before stock is finalized.`,
       'info',
@@ -555,7 +421,7 @@ export function FarmerProvider({ children }) {
   }, [crops, profile, showToast]);
 
   // Verify OTP Confirmation Action
-  const verifyOTP = useCallback(async (otpId, enteredCode) => {
+  const verifyOTP = useCallback((otpId, enteredCode) => {
     const otpReq = otpRequests.find((o) => o.id === otpId);
     if (!otpReq) {
       showToast('OTP request not found.', 'error');
@@ -669,12 +535,6 @@ export function FarmerProvider({ children }) {
       ...prev,
     ]);
 
-    try {
-      await farmerService.verifyOtp(otpId, enteredCode);
-    } catch {
-      // offline fallback handled
-    }
-
     showToast(
       `Transaction Confirmed Successfully! Your payment is expected within 3 working days.`,
       'success',
@@ -686,7 +546,7 @@ export function FarmerProvider({ children }) {
   }, [otpRequests, showToast]);
 
   // Reject OTP Transaction Action
-  const rejectOTP = useCallback(async (otpId, reason = 'Transaction rejected by user') => {
+  const rejectOTP = useCallback((otpId, reason = 'Transaction rejected by user') => {
     const otpReq = otpRequests.find((o) => o.id === otpId);
     if (!otpReq) return;
 
@@ -759,18 +619,12 @@ export function FarmerProvider({ children }) {
       ...prev,
     ]);
 
-    try {
-      await farmerService.rejectOtp(otpId, reason);
-    } catch {
-      // offline fallback handled
-    }
-
     showToast(`Transaction ${otpReq.transactionId} rejected. Reserved stock has been released.`, 'info');
     setActiveOtpRequest(null);
   }, [otpRequests, showToast]);
 
   // Resend OTP Action
-  const resendOTP = useCallback(async (otpId) => {
+  const resendOTP = useCallback((otpId) => {
     const newCode = generateOTP();
     const newExpiresAt = Date.now() + 10 * 60 * 1000;
     setOtpRequests((prev) =>
@@ -787,18 +641,11 @@ export function FarmerProvider({ children }) {
           : o
       )
     );
-
-    try {
-      await farmerService.resendOtp(otpId);
-    } catch {
-      // offline fallback handled
-    }
-
     showToast('A fresh OTP was sent to the receiving party.', 'info', 6000);
   }, [showToast]);
 
   // Add Purchase Action
-  const addPurchase = useCallback(async (purchaseData) => {
+  const addPurchase = useCallback((purchaseData) => {
     const newId = `PUR-AGRI-2026-0${Date.now().toString().slice(-3)}`;
     const total = Number(purchaseData.quantity) * Number(purchaseData.price);
     const purchase = {
@@ -811,12 +658,6 @@ export function FarmerProvider({ children }) {
     };
 
     setPurchases((prev) => [purchase, ...prev]);
-
-    try {
-      await farmerService.addPurchase(purchase);
-    } catch {
-      // offline fallback handled
-    }
 
     showToast(`Purchase ${newId} recorded. Payment remains pending until manually authorized.`, 'success');
   }, [showToast]);
@@ -834,7 +675,6 @@ export function FarmerProvider({ children }) {
       setIsSidebarCollapsed,
       isMobileDrawerOpen,
       setIsMobileDrawerOpen,
-      isLoadingApi,
 
       // Profile
       profile,
@@ -883,7 +723,6 @@ export function FarmerProvider({ children }) {
       toast,
       showToast,
       hideToast,
-      farmerService,
     }),
     [
       activePage,
@@ -892,7 +731,6 @@ export function FarmerProvider({ children }) {
       searchQuery,
       isSidebarCollapsed,
       isMobileDrawerOpen,
-      isLoadingApi,
       profile,
       updateProfile,
       crops,

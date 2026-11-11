@@ -11,18 +11,6 @@ const Endpoints = {
         VERIFY_MOBILE_OTP: "/api/v1/Registration/verify-mobile-otp",
         REGISTER: "/api/v1/Registration",
     },
-
-    FARMER: {
-        DASHBOARD: "/api/v1/Farmer/dashboard",
-        PROFILE: "/api/v1/Farmer/profile",
-        CROPS: "/api/v1/Farmer/crops",
-        STOCK: "/api/v1/Farmer/stock",
-        MARKET_PRICES: "/api/v1/Farmer/market-prices",
-        SALES: "/api/v1/Farmer/sales",
-        PURCHASES: "/api/v1/Farmer/purchases",
-        OTP_REQUESTS: "/api/v1/Farmer/otp-requests",
-        NOTIFICATIONS: "/api/v1/Farmer/notifications",
-    },
 };
 
 export default Endpoints;
