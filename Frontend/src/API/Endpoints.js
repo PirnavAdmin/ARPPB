@@ -11,6 +11,15 @@ const Endpoints = {
         VERIFY_MOBILE_OTP: "/api/v1/Registration/verify-mobile-otp",
         REGISTER: "/api/v1/Registration",
     },
+
+    ROLE_ACCESS: {
+        FARMER: "/api/v1/role-access/farmer",
+        CUSTOMER: "/api/v1/role-access/customer",
+        MIDDLEMAN: "/api/v1/role-access/middleman",
+        VENDOR: "/api/v1/role-access/vendor",
+        PROFILE: "/api/v1/role-access/profile",
+        BUSINESS_ACCESS: "/api/v1/role-access/business-access",
+    },
 };
 
 export default Endpoints;

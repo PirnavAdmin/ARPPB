@@ -1,290 +1,479 @@
 /**
- * AgriConnect ERP - Authentication Service Layer
- * Uses Contact Number as primary identifier for login.
- * Prepared for future backend API integration with standalone simulated fallback.
+ * AgriConnect ERP - Authentication & Role-Access Service Layer
+ * Connected to backend Authentication, Registration, and RoleAccess APIs
+ * via src/API/Config.js and src/API/Endpoints.js.
  */
 
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+import api from '../../API/Config';
+import Endpoints from '../../API/Endpoints';
+import {
+  DUPLICATE_MOBILE_MESSAGE,
+  isDuplicateMobileMessage,
+  extractBackendDemoOtp,
+} from './otpService';
 
-export const AUTH_ENDPOINTS = {
-  REGISTER: `${API_BASE_URL}/auth/register`,
-  LOGIN: `${API_BASE_URL}/auth/login`,
-  SEND_FORGOT_OTP: `${API_BASE_URL}/auth/forgot-password/send-otp`,
-  VERIFY_FORGOT_OTP: `${API_BASE_URL}/auth/forgot-password/verify-otp`,
-  RESET_PASSWORD: `${API_BASE_URL}/auth/reset-password`,
-};
-
-const REGISTERED_USERS_STORAGE_KEY = 'arppb_registered_users_v1';
-
-const DEFAULT_DEMO_USERS = {
-  '9440112233': {
-    contactNumber: '9440112233',
-    phone: '9440112233',
-    role: 'vendor',
-    fullName: 'Venkateswara Rao',
-    email: 'vendor@agriconnect.in',
-  },
-  '9848022338': {
-    contactNumber: '9848022338',
-    phone: '9848022338',
-    role: 'middleman',
-    fullName: 'K. Harsha Vardhan',
-    email: 'middleman@agriconnect.in',
-  },
-  '9848123456': {
-    contactNumber: '9848123456',
-    phone: '9848123456',
-    role: 'farmer',
-    fullName: 'Ramesh Kumar Goud',
-    email: 'ramesh.goud.farms@gmail.com',
-  },
-  '9876543210': {
-    contactNumber: '9876543210',
-    phone: '9876543210',
-    role: 'customer',
-    fullName: 'Ravi Kumar',
-    email: 'ravikumar@greenharvest.in',
-  },
-};
-
-const getStoredUsers = () => {
-  try {
-    const raw = localStorage.getItem(REGISTERED_USERS_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return { ...DEFAULT_DEMO_USERS, ...parsed };
-  } catch {
-    return { ...DEFAULT_DEMO_USERS };
+/**
+ * Maps frontend role labels ('Farmer', 'Customer', 'Middle Man', 'Vendor')
+ * to the backend UserRole enum ('Farmer', 'Customer', 'Middleman', 'Vendor').
+ */
+export const mapRoleToBackend = (role) => {
+  if (!role) return '';
+  const cleaned = String(role)
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+  if (cleaned === 'farmer' || cleaned === '1') return 'Farmer';
+  if (cleaned === 'customer' || cleaned === '2') return 'Customer';
+  if (cleaned === 'middleman' || cleaned === 'supplier' || cleaned === '3') {
+    return 'Middleman';
   }
-};
-
-const saveStoredUser = (userRecord) => {
-  try {
-    const current = getStoredUsers();
-    const key = String(userRecord.phone || userRecord.contactNumber || '').replace(/\D/g, '');
-    if (!key) return;
-    current[key] = {
-      ...current[key],
-      ...userRecord,
-      contactNumber: key,
-      phone: key,
-    };
-    localStorage.setItem(REGISTERED_USERS_STORAGE_KEY, JSON.stringify(current));
-  } catch {
-    // Ignore storage errors
-  }
+  if (cleaned === 'vendor' || cleaned === '4') return 'Vendor';
+  return String(role).trim();
 };
 
 /**
- * Fallback simulation for frontend-only testing when backend API is offline
+ * Normalizes Axios / ASP.NET Core / FluentValidation / ApiResponse errors into a structured Error
  */
-const handleFrontendFallback = async (endpoint, payload) => {
-  await new Promise((resolve) => setTimeout(resolve, 450));
-
-  if (endpoint.includes('/auth/register')) {
-    const userRecord = {
-      fullName: payload.fullName,
-      role: payload.role,
-      email: payload.email || null,
-      phone: payload.phone,
-      contactNumber: payload.phone,
-    };
-    saveStoredUser(userRecord);
-    return {
-      success: true,
-      message: 'Account created successfully.',
-      user: userRecord,
-    };
+const parseAuthApiError = (error, fallbackMessage) => {
+  if (error?.isNormalizedAuthError) {
+    return error;
   }
 
-  if (endpoint.includes('/auth/login')) {
-    const cleanPhone = String(payload.contactNumber || '').replace(/\D/g, '');
-    const storedUsers = getStoredUsers();
-    const matchedUser = storedUsers[cleanPhone];
+  const response = error?.response;
+  const status = response?.status || error?.status;
+  const data = response?.data || error?.data;
 
-    return {
-      success: true,
-      message: 'Welcome back! Signed in successfully.',
-      token: `demo-token-${Date.now()}`,
-      user: matchedUser || {
-        contactNumber: cleanPhone,
-        role: payload.role || 'vendor',
-      },
-    };
-  }
+  let message = fallbackMessage;
+  const fieldErrors = {};
+  const rawErrors = [];
 
-  if (endpoint.includes('/auth/forgot-password/send-otp')) {
-    return {
-      success: true,
-      message: `A 6-digit OTP has been sent to +91 ${payload.phone}.`,
-    };
-  }
-
-  if (endpoint.includes('/auth/forgot-password/verify-otp')) {
-    if (payload.otp && payload.otp.length === 6) {
-      return {
-        success: true,
-        verified: true,
-        message: 'OTP verified successfully.',
-        resetToken: `reset-auth-${Date.now()}`,
-      };
-    }
-    const err = new Error('Invalid OTP code. Please enter the correct 6-digit code.');
-    err.status = 400;
-    throw err;
-  }
-
-  if (endpoint.includes('/auth/reset-password')) {
-    return {
-      success: true,
-      message: 'Password reset successfully. Please sign in with your new password.',
-    };
-  }
-
-  return { success: true };
-};
-
-/**
- * Core HTTP Request Wrapper
- */
-const apiRequest = async (url, options = {}) => {
-  const config = {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      ...options.headers,
-    },
-  };
-
-  try {
-    const response = await fetch(url, config);
-
-    let data;
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      data = await response.json();
-    } else {
-      data = await response.text();
-    }
-
-    if (!response.ok) {
-      const message =
-        (typeof data === 'object' && data !== null && (data.message || data.error)) ||
-        `Request failed with status ${response.status}`;
-      const err = new Error(message);
-      err.status = response.status;
-      err.data = data;
-      throw err;
-    }
-
-    return data;
-  } catch (error) {
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      if (import.meta.env.VITE_STRICT_API === 'true') {
-        const netErr = new Error(
-          'Unable to reach the authentication server. Please ensure the backend API is running.'
-        );
-        netErr.isNetworkError = true;
-        throw netErr;
-      }
-
-      let parsedBody = {};
-      if (options.body) {
-        try {
-          parsedBody = JSON.parse(options.body);
-        } catch {
-          parsedBody = {};
+  if (data && typeof data === 'object') {
+    if (Array.isArray(data.errors) && data.errors.length > 0) {
+      rawErrors.push(...data.errors);
+      message = data.errors[0] || data.message || fallbackMessage;
+    } else if (data.errors && typeof data.errors === 'object') {
+      Object.entries(data.errors).forEach(([fieldKey, val]) => {
+        const errMsg = Array.isArray(val) ? val[0] : String(val);
+        if (!errMsg) return;
+        rawErrors.push(errMsg);
+        const lowerKey = fieldKey.toLowerCase();
+        if (lowerKey.includes('fullname') || lowerKey.includes('name')) {
+          fieldErrors.fullName = errMsg;
+        } else if (lowerKey.includes('mobile') || lowerKey.includes('phone')) {
+          fieldErrors.phone = errMsg;
+          fieldErrors.contactNumber = errMsg;
+        } else if (lowerKey.includes('identifier')) {
+          fieldErrors.contactNumber = errMsg;
+        } else if (lowerKey.includes('email')) {
+          fieldErrors.email = errMsg;
+        } else if (lowerKey.includes('role')) {
+          fieldErrors.role = errMsg;
+        } else if (lowerKey.includes('confirm')) {
+          fieldErrors.confirmPassword = errMsg;
+        } else if (lowerKey.includes('password')) {
+          fieldErrors.password = errMsg;
+          fieldErrors.newPassword = errMsg;
         }
-      }
-      return await handleFrontendFallback(url, parsedBody);
+      });
+      const firstFieldErr = Object.values(fieldErrors)[0];
+      message = firstFieldErr || data.message || data.title || fallbackMessage;
+    } else if (data.message || data.title || data.error) {
+      message = data.message || data.title || data.error;
     }
-    throw error;
+  } else if (typeof data === 'string' && data.trim()) {
+    message = data.trim();
+  } else if (!response && error?.request) {
+    message =
+      'Unable to reach the authentication server. Please verify the backend API is running.';
+  } else if (error?.message) {
+    message = error.message;
   }
+
+  const duplicateMobile = isDuplicateMobileMessage(status, message, rawErrors);
+  if (duplicateMobile) {
+    message = DUPLICATE_MOBILE_MESSAGE;
+    fieldErrors.phone = DUPLICATE_MOBILE_MESSAGE;
+  } else if (
+    message.toLowerCase().includes('email') &&
+    message.toLowerCase().includes('already registered')
+  ) {
+    fieldErrors.email = message;
+  }
+
+  const normalizedError = new Error(message);
+  normalizedError.status = status;
+  normalizedError.data = data;
+  normalizedError.fieldErrors = fieldErrors;
+  normalizedError.isDuplicateMobile = duplicateMobile;
+  normalizedError.isNormalizedAuthError = true;
+  return normalizedError;
 };
 
 /**
  * Register a new user
- * @param {Object} data - { fullName, role, email, phone, password }
+ * Endpoint: POST /api/v1/Registration
+ * @param {Object} data - { fullName, role, email, phone, mobile, password, confirmPassword }
  */
-export const register = async ({ fullName, role, email, phone, password }) => {
+export const register = async ({
+  fullName,
+  role,
+  email,
+  phone,
+  mobile,
+  password,
+  confirmPassword,
+}) => {
+  const cleanMobile = String(mobile || phone || '').replace(/\D/g, '');
+  const backendRole = mapRoleToBackend(role);
+
   const payload = {
-    fullName: fullName.trim(),
-    role: role.trim(),
-    email: email && email.trim() ? email.trim().toLowerCase() : null,
-    phone: String(phone).replace(/\D/g, ''),
+    fullName: String(fullName || '').trim(),
+    email: email && String(email).trim() ? String(email).trim().toLowerCase() : null,
+    mobile: cleanMobile,
+    role: backendRole,
     password,
+    confirmPassword: confirmPassword ?? password,
   };
 
-  return await apiRequest(AUTH_ENDPOINTS.REGISTER, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+  try {
+    const response = await api.post(Endpoints.REGISTRATION.REGISTER, payload);
+    const body = response.data;
+
+    if (body && body.success === false) {
+      const duplicate = isDuplicateMobileMessage(
+        response.status,
+        body.message,
+        body.errors
+      );
+      const err = new Error(
+        duplicate ? DUPLICATE_MOBILE_MESSAGE : body.message || 'Registration failed.'
+      );
+      err.status = response.status;
+      err.data = body;
+      err.isDuplicateMobile = duplicate;
+      err.fieldErrors = duplicate ? { phone: DUPLICATE_MOBILE_MESSAGE } : {};
+      err.isNormalizedAuthError = true;
+      throw err;
+    }
+
+    const userData = body?.data || body?.user || {};
+    const normalizedUser = {
+      userId: userData.userId ?? userData.id ?? null,
+      fullName: userData.fullName || payload.fullName,
+      email: userData.email ?? payload.email,
+      mobile: userData.mobile || cleanMobile,
+      contactNumber: userData.mobile || cleanMobile,
+      phone: userData.mobile || cleanMobile,
+      role: userData.role || backendRole,
+      entityCode: userData.entityCode || null,
+      createdAt: userData.createdAt || null,
+    };
+
+    return {
+      success: true,
+      message: body?.message || 'Account created successfully.',
+      user: normalizedUser,
+      data: normalizedUser,
+      raw: body,
+    };
+  } catch (error) {
+    throw parseAuthApiError(error, 'Registration failed. Please try again.');
+  }
 };
 
 /**
- * Authenticate existing user with Contact Number only
- * @param {Object} credentials - { contactNumber, password, rememberMe }
+ * Authenticate an existing user with mobile number (or email) and password
+ * Endpoint: POST /api/v1/Auth/login
+ * @param {Object} credentials - { contactNumber, identifier, password, rememberMe }
  */
-export const login = async ({ contactNumber, password, rememberMe }) => {
+export const login = async ({ contactNumber, identifier, password, rememberMe }) => {
+  const rawIdentifier = identifier || contactNumber || '';
+  const cleanIdentifier = String(rawIdentifier).includes('@')
+    ? String(rawIdentifier).trim().toLowerCase()
+    : String(rawIdentifier).replace(/\D/g, '');
+
   const payload = {
-    contactNumber: String(contactNumber).replace(/\D/g, ''),
+    identifier: cleanIdentifier,
     password,
-    rememberMe: Boolean(rememberMe),
   };
 
-  return await apiRequest(AUTH_ENDPOINTS.LOGIN, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+  try {
+    const response = await api.post(Endpoints.AUTH.LOGIN, payload);
+    const body = response.data;
+
+    if (body && body.success === false) {
+      const err = new Error(body.message || 'Invalid login credentials.');
+      err.status = response.status;
+      err.data = body;
+      err.isNormalizedAuthError = true;
+      throw err;
+    }
+
+    const userData = body?.data || body?.user || {};
+    const accessToken =
+      userData?.accessToken || body?.accessToken || body?.token || null;
+    const tokenType = userData?.tokenType || body?.tokenType || 'Bearer';
+    const expiresAt = userData?.expiresAt || body?.expiresAt || null;
+
+    const normalizedUser = {
+      userId: userData.userId ?? userData.id ?? null,
+      fullName: userData.fullName || userData.userName || '',
+      email: userData.email || null,
+      mobile: userData.mobile || userData.contactNumber || cleanIdentifier,
+      contactNumber: userData.mobile || userData.contactNumber || cleanIdentifier,
+      phone: userData.mobile || userData.contactNumber || cleanIdentifier,
+      role: userData.role || body?.role || null,
+      entityCode: userData.entityCode || null,
+      accessToken,
+      tokenType,
+      expiresAt,
+    };
+
+    return {
+      success: true,
+      message: body?.message || 'Login successful.',
+      token: accessToken,
+      accessToken,
+      tokenType,
+      expiresAt,
+      rememberMe: Boolean(rememberMe),
+      user: normalizedUser,
+      data: normalizedUser,
+      raw: body,
+    };
+  } catch (error) {
+    throw parseAuthApiError(
+      error,
+      'Invalid login credentials. Please verify your contact number and password.'
+    );
+  }
 };
 
 /**
  * Step 1: Send OTP for password recovery
- * @param {Object} data - { phone }
+ * Endpoint: POST /api/v1/Auth/forgot-password
+ * @param {Object} data - { phone, mobile, email }
  */
-export const sendForgotPasswordOTP = async ({ phone }) => {
-  const payload = {
-    phone: String(phone).replace(/\D/g, ''),
-  };
+export const sendForgotPasswordOTP = async ({ phone, mobile, email }) => {
+  const cleanMobile = String(mobile || phone || '').replace(/\D/g, '');
+  const cleanEmail =
+    email && String(email).trim() ? String(email).trim().toLowerCase() : null;
 
-  return await apiRequest(AUTH_ENDPOINTS.SEND_FORGOT_OTP, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+  const payload = cleanEmail ? { email: cleanEmail } : { mobile: cleanMobile };
+
+  try {
+    const response = await api.post(Endpoints.AUTH.FORGOT_PASSWORD, payload);
+    const body = response.data;
+
+    if (body && body.success === false) {
+      const err = new Error(body.message || 'Failed to send password reset OTP.');
+      err.status = response.status;
+      err.data = body;
+      err.isNormalizedAuthError = true;
+      throw err;
+    }
+
+    const { rawDevOtp, demoOtp } = extractBackendDemoOtp(body);
+
+    const statusMessage = demoOtp
+      ? body?.data || body?.message || 'OTP generated successfully. It expires in 5 minutes.'
+      : 'OTP sent successfully to your registered mobile number.';
+
+    return {
+      success: true,
+      message: statusMessage,
+      demoOtp,
+      rawDevOtp,
+      raw: body,
+    };
+  } catch (error) {
+    throw parseAuthApiError(
+      error,
+      'Failed to send OTP. Please check the number and try again.'
+    );
+  }
 };
 
 /**
- * Step 2: Verify received 6-digit OTP
- * @param {Object} data - { phone, otp }
+ * Step 2: Verify 6-digit password recovery OTP
+ * Endpoint: POST /api/v1/Auth/verify-otp
+ * @param {Object} data - { phone, mobile, email, otp }
  */
-export const verifyForgotPasswordOTP = async ({ phone, otp }) => {
-  const payload = {
-    phone: String(phone).replace(/\D/g, ''),
-    otp: String(otp).trim(),
-  };
+export const verifyForgotPasswordOTP = async ({ phone, mobile, email, otp }) => {
+  const cleanMobile = String(mobile || phone || '').replace(/\D/g, '');
+  const cleanEmail =
+    email && String(email).trim() ? String(email).trim().toLowerCase() : null;
+  const cleanOtp = String(otp || '')
+    .trim()
+    .replace(/^DEV-/i, '')
+    .replace(/\D/g, '');
 
-  return await apiRequest(AUTH_ENDPOINTS.VERIFY_FORGOT_OTP, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+  const payload = cleanEmail
+    ? { email: cleanEmail, otp: cleanOtp }
+    : { mobile: cleanMobile, otp: cleanOtp };
+
+  try {
+    const response = await api.post(Endpoints.AUTH.VERIFY_OTP, payload);
+    const body = response.data;
+
+    if (body && body.success === false) {
+      const err = new Error(body.message || 'Invalid or expired OTP code.');
+      err.status = response.status;
+      err.data = body;
+      err.isNormalizedAuthError = true;
+      throw err;
+    }
+
+    return {
+      success: true,
+      verified: true,
+      message:
+        (typeof body?.data === 'string' && body.data) ||
+        body?.message ||
+        'OTP verified successfully.',
+      raw: body,
+    };
+  } catch (error) {
+    throw parseAuthApiError(
+      error,
+      'Invalid or expired OTP code. Please try again.'
+    );
+  }
 };
 
 /**
- * Step 3: Set new password with verified OTP
- * @param {Object} data - { phone, otp, newPassword }
+ * Step 3: Reset password after OTP verification
+ * Endpoint: POST /api/v1/Auth/reset-password
+ * @param {Object} data - { phone, mobile, email, newPassword, confirmPassword }
  */
-export const resetPassword = async ({ phone, otp, newPassword }) => {
+export const resetPassword = async ({
+  phone,
+  mobile,
+  email,
+  newPassword,
+  confirmPassword,
+}) => {
+  const cleanMobile = String(mobile || phone || '').replace(/\D/g, '');
+  const cleanEmail =
+    email && String(email).trim() ? String(email).trim().toLowerCase() : null;
+
   const payload = {
-    phone: String(phone).replace(/\D/g, ''),
-    otp: String(otp).trim(),
+    ...(cleanEmail ? { email: cleanEmail } : { mobile: cleanMobile }),
     newPassword,
+    confirmPassword: confirmPassword ?? newPassword,
   };
 
-  return await apiRequest(AUTH_ENDPOINTS.RESET_PASSWORD, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+  try {
+    const response = await api.post(Endpoints.AUTH.RESET_PASSWORD, payload);
+    const body = response.data;
+
+    if (body && body.success === false) {
+      const err = new Error(body.message || 'Failed to reset password.');
+      err.status = response.status;
+      err.data = body;
+      err.isNormalizedAuthError = true;
+      throw err;
+    }
+
+    return {
+      success: true,
+      message: body?.message || 'Password reset successfully.',
+      raw: body,
+    };
+  } catch (error) {
+    throw parseAuthApiError(
+      error,
+      'Failed to reset password. Please try again.'
+    );
+  }
+};
+
+/**
+ * Verify current JWT token & retrieve authenticated user profile
+ * Endpoint: GET /api/v1/role-access/profile
+ */
+export const fetchAuthenticatedProfile = async () => {
+  try {
+    const response = await api.get(Endpoints.ROLE_ACCESS.PROFILE);
+    const body = response.data;
+    return {
+      success: Boolean(body?.success ?? true),
+      userId: body?.userId ?? null,
+      fullName: body?.userName || body?.fullName || '',
+      mobile: body?.mobile || '',
+      email: body?.email ?? null,
+      role: body?.role || null,
+      message: body?.message || 'Authenticated user access granted.',
+      raw: body,
+    };
+  } catch (error) {
+    throw parseAuthApiError(error, 'Unable to verify authenticated session.');
+  }
+};
+
+/**
+ * Verify role-specific portal authorization with the backend
+ * Endpoints:
+ * - GET /api/v1/role-access/farmer
+ * - GET /api/v1/role-access/customer
+ * - GET /api/v1/role-access/middleman
+ * - GET /api/v1/role-access/vendor
+ */
+export const verifyRoleAccess = async (role) => {
+  const normalized = String(role || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+
+  const roleEndpointMap = {
+    farmer: Endpoints.ROLE_ACCESS.FARMER,
+    customer: Endpoints.ROLE_ACCESS.CUSTOMER,
+    middleman: Endpoints.ROLE_ACCESS.MIDDLEMAN,
+    supplier: Endpoints.ROLE_ACCESS.MIDDLEMAN,
+    vendor: Endpoints.ROLE_ACCESS.VENDOR,
+  };
+
+  const targetEndpoint = roleEndpointMap[normalized];
+  if (!targetEndpoint) {
+    const err = new Error(`Unrecognized portal role: ${role}`);
+    err.status = 403;
+    throw err;
+  }
+
+  try {
+    const response = await api.get(targetEndpoint);
+    const body = response.data;
+    return {
+      success: Boolean(body?.success ?? true),
+      role: body?.role || role,
+      userId: body?.userId ?? null,
+      userName: body?.userName || '',
+      message: body?.message || 'Role access granted.',
+      raw: body,
+    };
+  } catch (error) {
+    throw parseAuthApiError(error, 'Access denied for this portal role.');
+  }
+};
+
+/**
+ * Verify business access authorization with the backend
+ * Endpoint: GET /api/v1/role-access/business-access
+ */
+export const verifyBusinessAccess = async () => {
+  try {
+    const response = await api.get(Endpoints.ROLE_ACCESS.BUSINESS_ACCESS);
+    const body = response.data;
+    return {
+      success: Boolean(body?.success ?? true),
+      userId: body?.userId ?? null,
+      role: body?.role || null,
+      message: body?.message || 'Business access granted.',
+      raw: body,
+    };
+  } catch (error) {
+    throw parseAuthApiError(error, 'Business access denied.');
+  }
 };
 
 export default {
@@ -293,4 +482,9 @@ export default {
   sendForgotPasswordOTP,
   verifyForgotPasswordOTP,
   resetPassword,
+  fetchAuthenticatedProfile,
+  verifyRoleAccess,
+  verifyBusinessAccess,
+  mapRoleToBackend,
 };
+

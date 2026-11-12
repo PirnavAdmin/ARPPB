@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Phone, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { validateIndianPhone, sanitizePhone } from '../../../utils/validation/phoneValidation';
 import { OTPVerification } from './OTPVerification';
@@ -27,22 +28,26 @@ export const PhoneNumberInput = ({
   isVerified = false,
   timer = 30,
   canResend = false,
-  otpNotice = 'Demo OTP generated. Enter the 6-digit code to continue.',
+  otpNotice = 'OTP sent successfully to your registered mobile number.',
+  demoOtp = null,
+  rawDevOtp = null,
+  isDuplicateMobile = false,
   otpError = null,
   onRequestOTP,
   onVerifyOTP,
   onResendOTP,
   onResetVerification,
 }) => {
-  const hasError = Boolean(error);
+  const fieldErrorMessage = error || (!isOtpSent ? otpError : null);
+  const hasError = Boolean(fieldErrorMessage);
   const isValidPhone = !validateIndianPhone(value);
 
   const handleInputChange = (e) => {
     const rawVal = e.target.value;
     const cleaned = sanitizePhone(rawVal);
 
-    // If verified or OTP is already sent, editing the number invalidates verification
-    if (isVerified || isOtpSent) {
+    // If verified, OTP is already sent, or an OTP error/duplicate status is active, editing resets it
+    if (isVerified || isOtpSent || otpError || isDuplicateMobile) {
       if (onResetVerification) {
         onResetVerification();
       }
@@ -157,14 +162,23 @@ export const PhoneNumberInput = ({
 
       {/* Field-level error */}
       {hasError && (
-        <p className="text-[11px] text-[#DC2626] flex items-center gap-1 font-medium">
-          <AlertCircle className="w-3 h-3 flex-shrink-0" />
-          <span>{error}</span>
-        </p>
+        <div className="text-[11px] text-[#DC2626] flex flex-wrap items-center gap-1.5 font-medium">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+          <span>{fieldErrorMessage}</span>
+          {isDuplicateMobile && (
+            <Link
+              to="/login"
+              state={{ contactNumber: value }}
+              className="font-bold text-[#0F766E] hover:text-[#115E59] underline ml-0.5"
+            >
+              Sign In →
+            </Link>
+          )}
+        </div>
       )}
 
-      {/* OTP verification input section (revealed when OTP sent and not yet verified) */}
-      {isOtpSent && !isVerified && (
+      {/* OTP verification input section (revealed ONLY when OTP is sent and not yet verified) */}
+      {isOtpSent && !isVerified && !isDuplicateMobile && (
         <div className="pt-1.5">
           <OTPVerification
             phone={value}
@@ -175,6 +189,8 @@ export const PhoneNumberInput = ({
             timer={timer}
             canResend={canResend}
             notice={otpNotice}
+            demoOtp={demoOtp}
+            rawDevOtp={rawDevOtp}
             error={otpError}
           />
         </div>
@@ -189,4 +205,5 @@ export const PhoneNumberInput = ({
 };
 
 export default PhoneNumberInput;
+
 

@@ -1,9 +1,20 @@
-import { createContext, useState, useCallback, useMemo } from 'react';
+import { createContext, useState, useCallback, useMemo, useEffect } from 'react';
 import { INITIAL_VENDOR_PROFILE } from '../data/mockNotifications';
 import { STORAGE_KEYS } from '../utils/constants';
 import { readStorage, writeStorage } from '../services/api';
+import {
+  AUTH_SESSION_STORAGE_KEY,
+  AUTH_TOKEN_STORAGE_KEY,
+} from '../API/Config';
+import { fetchAuthenticatedProfile } from '../services/auth/authService';
 
-const AUTH_SESSION_KEY = 'arppb_auth_session_v1';
+const EMPTY_AUTH_SESSION = {
+  isAuthenticated: false,
+  token: null,
+  tokenType: 'Bearer',
+  expiresAt: null,
+  user: null,
+};
 
 export const PORTAL_HOME_PATHS = {
   vendor: '/vendor/dashboard',
@@ -14,7 +25,7 @@ export const PORTAL_HOME_PATHS = {
 
 /**
  * Normalize role strings across Registration ('Farmer', 'Vendor', 'Middle Man', 'Customer'),
- * Backend enums ('Farmer', 'Customer', 'Supplier', 'Vendor'),
+ * Backend enums ('Farmer', 'Customer', 'Middleman', 'Supplier', 'Vendor'),
  * and Portal route guards ('vendor', 'middleman', 'farmer', 'customer').
  * Returns null if the role is missing or unrecognized.
  */
@@ -49,25 +60,64 @@ export function getDashboardPathByRole(rawRole) {
   return normalized ? PORTAL_HOME_PATHS[normalized] || null : null;
 }
 
+function readStoredAuthSession() {
+  try {
+    const raw = window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY);
+    if (!raw) return EMPTY_AUTH_SESSION;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.isAuthenticated || !parsed.user) {
+      return EMPTY_AUTH_SESSION;
+    }
+
+    const resolvedRole = normalizeRole(parsed.user.role);
+    if (!resolvedRole) {
+      return EMPTY_AUTH_SESSION;
+    }
+
+    if (parsed.expiresAt) {
+      const expiryMs = new Date(parsed.expiresAt).getTime();
+      if (!Number.isNaN(expiryMs) && expiryMs <= Date.now()) {
+        window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+        window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+        return EMPTY_AUTH_SESSION;
+      }
+    }
+
+    const token =
+      parsed.token ||
+      parsed.accessToken ||
+      parsed.user?.accessToken ||
+      window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) ||
+      null;
+
+    return {
+      isAuthenticated: true,
+      token,
+      tokenType: parsed.tokenType || 'Bearer',
+      expiresAt: parsed.expiresAt || null,
+      user: {
+        ...parsed.user,
+        role: resolvedRole,
+      },
+    };
+  } catch {
+    return EMPTY_AUTH_SESSION;
+  }
+}
+
 export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [authSession, setAuthSession] = useState(() =>
-    readStorage(AUTH_SESSION_KEY, {
-      isAuthenticated: true,
-      user: {
-        contactNumber: INITIAL_VENDOR_PROFILE.mobileNumber,
-        role: 'vendor',
-        fullName: INITIAL_VENDOR_PROFILE.ownerName,
-      },
-    })
-  );
+  const [authSession, setAuthSession] = useState(() => readStoredAuthSession());
 
   const [vendorUser, setVendorUser] = useState(() =>
     readStorage(STORAGE_KEYS.VENDOR_PROFILE, INITIAL_VENDOR_PROFILE)
   );
 
-  const isAuthenticated = Boolean(authSession?.isAuthenticated);
+  const isAuthenticated = Boolean(authSession?.isAuthenticated && authSession?.user);
+  const token = authSession?.token || null;
+
   const currentUser = useMemo(() => {
     if (!authSession?.user) return null;
     return {
@@ -77,6 +127,16 @@ export function AuthProvider({ children }) {
   }, [authSession]);
 
   const role = currentUser?.role || null;
+
+  const logout = useCallback(() => {
+    setAuthSession(EMPTY_AUTH_SESSION);
+    try {
+      window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+      window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    } catch {
+      // Ignore storage errors
+    }
+  }, []);
 
   const login = useCallback((userData = null) => {
     const resolvedRole = normalizeRole(userData?.role);
@@ -94,8 +154,16 @@ export function AuthProvider({ children }) {
       sanitizedUser.phone ||
       '';
 
+    const accessToken =
+      sanitizedUser.accessToken || sanitizedUser.token || null;
+    const tokenType = sanitizedUser.tokenType || 'Bearer';
+    const expiresAt = sanitizedUser.expiresAt || null;
+
     const nextSession = {
       isAuthenticated: true,
+      token: accessToken,
+      tokenType,
+      expiresAt,
       user: {
         ...sanitizedUser,
         mobile: contactNum,
@@ -104,16 +172,87 @@ export function AuthProvider({ children }) {
         role: resolvedRole,
       },
     };
+
     setAuthSession(nextSession);
-    writeStorage(AUTH_SESSION_KEY, nextSession);
+    writeStorage(AUTH_SESSION_STORAGE_KEY, nextSession);
+    try {
+      if (accessToken) {
+        window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, accessToken);
+      } else {
+        window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+      }
+    } catch {
+      // Ignore storage errors
+    }
+
+    if (resolvedRole === 'vendor' && (sanitizedUser.fullName || contactNum)) {
+      setVendorUser((prev) => {
+        const nextVendor = {
+          ...prev,
+          ownerName: sanitizedUser.fullName || prev.ownerName,
+          mobileNumber: contactNum || prev.mobileNumber,
+          email: sanitizedUser.email || prev.email,
+        };
+        writeStorage(STORAGE_KEYS.VENDOR_PROFILE, nextVendor);
+        return nextVendor;
+      });
+    }
+
     return nextSession.user;
   }, []);
+
+  // Verify stored JWT token against GET /api/v1/role-access/profile on session load
+  useEffect(() => {
+    if (!isAuthenticated || !token) return undefined;
+
+    const tracker = { active: true };
+    fetchAuthenticatedProfile()
+      .then((profile) => {
+        if (!tracker.active || !profile?.success) return;
+        const verifiedRole = normalizeRole(profile.role);
+        if (!verifiedRole) return;
+
+        setAuthSession((prev) => {
+          if (!prev?.isAuthenticated) return prev;
+          const contactNum =
+            profile.mobile ||
+            prev.user?.mobile ||
+            prev.user?.contactNumber ||
+            '';
+          const updatedSession = {
+            ...prev,
+            user: {
+              ...prev.user,
+              userId: profile.userId ?? prev.user?.userId,
+              fullName: profile.fullName || prev.user?.fullName || '',
+              email: profile.email ?? prev.user?.email ?? null,
+              mobile: contactNum,
+              contactNumber: contactNum,
+              phone: contactNum,
+              role: verifiedRole,
+            },
+          };
+          writeStorage(AUTH_SESSION_STORAGE_KEY, updatedSession);
+          return updatedSession;
+        });
+      })
+      .catch((err) => {
+        if (tracker.active && err?.status === 401) {
+          logout();
+        }
+      });
+
+    return () => {
+      tracker.active = false;
+    };
+  }, [isAuthenticated, token, logout]);
 
   const switchPortalRole = useCallback((targetRole) => {
     const normalized = normalizeRole(targetRole);
     if (!normalized) return;
     setAuthSession((prev) => {
       const nextSession = {
+        ...(prev || EMPTY_AUTH_SESSION),
         isAuthenticated: true,
         user: {
           ...(prev?.user || {
@@ -123,18 +262,9 @@ export function AuthProvider({ children }) {
           role: normalized,
         },
       };
-      writeStorage(AUTH_SESSION_KEY, nextSession);
+      writeStorage(AUTH_SESSION_STORAGE_KEY, nextSession);
       return nextSession;
     });
-  }, []);
-
-  const logout = useCallback(() => {
-    const nextSession = {
-      isAuthenticated: false,
-      user: null,
-    };
-    setAuthSession(nextSession);
-    writeStorage(AUTH_SESSION_KEY, nextSession);
   }, []);
 
   const updateVendorProfile = useCallback((updates) => {
@@ -155,6 +285,7 @@ export function AuthProvider({ children }) {
   const value = useMemo(
     () => ({
       isAuthenticated,
+      token,
       user: currentUser,
       role,
       vendorUser,
@@ -165,6 +296,7 @@ export function AuthProvider({ children }) {
     }),
     [
       isAuthenticated,
+      token,
       currentUser,
       role,
       vendorUser,
@@ -179,3 +311,4 @@ export function AuthProvider({ children }) {
 }
 
 export default AuthProvider;
+

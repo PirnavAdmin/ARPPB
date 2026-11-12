@@ -15,7 +15,9 @@ export const OTPVerification = ({
   isSending = false,
   timer = 30,
   canResend = false,
-  notice = 'Demo OTP generated. Enter the 6-digit code to continue.',
+  notice = 'OTP sent successfully to your registered mobile number.',
+  demoOtp = null,
+  rawDevOtp = null,
   error = null,
   className = '',
 }) => {
@@ -53,11 +55,27 @@ export const OTPVerification = ({
       {notice && (
         <div className="flex items-start gap-2 text-xs text-[#0F766E] bg-white/80 p-2.5 rounded-xl border border-teal-100 shadow-2xs">
           <Info className="w-4 h-4 text-[#0F766E] flex-shrink-0 mt-0.5" />
-          <div className="leading-snug">
+          <div className="leading-snug flex-1">
             <span className="font-semibold block">{notice}</span>
-            <span className="text-[11px] text-[#64748B]">
+            <span className="text-[11px] text-[#64748B] block">
               Code sent to <span className="font-medium text-[#1F2937]">+91 {phone}</span>
             </span>
+            {demoOtp && (
+              <div className="mt-2 inline-flex flex-wrap items-center gap-2 px-2.5 py-1 rounded-lg bg-[#CCFBF1]/80 border border-[#0F766E]/30 text-[#0F766E]">
+                <span className="text-[11px] font-semibold">Demo OTP:</span>
+                <span
+                  data-testid="registration-demo-otp"
+                  className="text-xs font-extrabold tracking-widest select-all"
+                >
+                  {demoOtp}
+                </span>
+                {rawDevOtp && rawDevOtp !== demoOtp && (
+                  <span className="text-[10px] text-[#0F766E]/80 font-medium">
+                    ({rawDevOtp})
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
