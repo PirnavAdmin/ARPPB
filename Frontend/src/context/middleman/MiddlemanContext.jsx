@@ -12,19 +12,56 @@ import { INITIAL_LEDGER_ENTRIES } from '../../data/mock/middleman/ledgerData';
 import { INITIAL_NOTIFICATIONS } from '../../data/mock/middleman/notificationData';
 import { generateId } from '../../utils/middleman/transactionHelpers';
 import { allocateInventoryFIFO, calculateGrossProfit, calculateOutstandingPosition } from '../../utils/middleman/calculations';
+import { useAuth } from '../../hooks/useAuth';
 
 const STORAGE_KEY = 'agriconnect_middleman_state_v1';
 
 export const MiddlemanProvider = ({ children }) => {
+  const { user, updateUserMobile } = useAuth();
+  const authKey = String(user?.userId || user?.fullName || '');
+
   // Load state from localStorage or initialize from mock data
   const [profile, setProfile] = useState(() => {
+    const authMobile = user?.mobile || user?.contactNumber || '';
+    const authName = user?.fullName || '';
+    const authEmail = user?.email || '';
     try {
       const saved = localStorage.getItem(`${STORAGE_KEY}_profile`);
-      return saved ? JSON.parse(saved) : INITIAL_PROFILE;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && (!authKey || parsed.authKey === authKey)) {
+          return {
+            ...parsed,
+            mobile: parsed.mobile || authMobile || INITIAL_PROFILE.mobile,
+          };
+        }
+      }
     } catch {
-      return INITIAL_PROFILE;
+      // ignore storage errors
     }
+    return {
+      ...INITIAL_PROFILE,
+      authKey,
+      ownerName: authName || INITIAL_PROFILE.ownerName,
+      mobile: authMobile || INITIAL_PROFILE.mobile,
+      email: authEmail || INITIAL_PROFILE.email,
+    };
   });
+
+  const [trackedAuthKey, setTrackedAuthKey] = useState(authKey);
+  if (authKey && authKey !== trackedAuthKey) {
+    setTrackedAuthKey(authKey);
+    const authMobile = user?.mobile || user?.contactNumber || '';
+    const authName = user?.fullName || '';
+    const authEmail = user?.email || '';
+    setProfile((prev) => ({
+      ...prev,
+      authKey,
+      ownerName: authName || prev.ownerName,
+      mobile: authMobile || prev.mobile,
+      email: authEmail || prev.email,
+    }));
+  }
 
   const [farmers, setFarmers] = useState(() => {
     try {
@@ -158,13 +195,16 @@ export const MiddlemanProvider = ({ children }) => {
   // Profile actions
   const updateProfile = useCallback((data) => {
     setProfile((prev) => ({ ...prev, ...data }));
+    if (data?.mobile) {
+      updateUserMobile(data.mobile);
+    }
     addNotification({
       title: 'Business Profile Updated',
       description: 'Your Middleman business details were saved successfully.',
       category: 'Transaction Completed',
       actionUrl: '/middleman/profile',
     });
-  }, [addNotification]);
+  }, [addNotification, updateUserMobile]);
 
   // Farmer actions
   const addFarmer = useCallback((data) => {

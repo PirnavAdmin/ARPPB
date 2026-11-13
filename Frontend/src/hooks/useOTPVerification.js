@@ -30,7 +30,7 @@ export const useOTPVerification = (defaultCooldown = 30) => {
   }, [isOtpSent, timer, isVerified]);
 
   // Request new OTP
-  const requestOTP = useCallback(async (phone) => {
+  const requestOTP = useCallback(async (phone, options = {}) => {
     setError(null);
     setStatusMessage(null);
     setDemoOtp(null);
@@ -45,15 +45,22 @@ export const useOTPVerification = (defaultCooldown = 30) => {
       setRawDevOtp(response.rawDevOtp || null);
       setTimer(response.cooldownSeconds || defaultCooldown);
       setStatusMessage(
-        response.message || 'OTP sent successfully to your registered mobile number.'
+        options.customMessage ||
+          response.message ||
+          'OTP sent successfully to your registered mobile number.'
       );
       return response;
     } catch (err) {
       setIsOtpSent(false);
       setDemoOtp(null);
       setRawDevOtp(null);
-      setIsDuplicateMobile(Boolean(err?.isDuplicateMobile));
-      setError(err?.message || 'Failed to send OTP.');
+      const isDup = Boolean(err?.isDuplicateMobile);
+      setIsDuplicateMobile(isDup);
+      setError(
+        isDup && options.duplicateMessage
+          ? options.duplicateMessage
+          : err?.message || 'Failed to send OTP.'
+      );
       throw err;
     } finally {
       setIsSending(false);
@@ -61,15 +68,15 @@ export const useOTPVerification = (defaultCooldown = 30) => {
   }, [defaultCooldown]);
 
   // Verify entered OTP
-  const verifyOTP = useCallback(async (phone, otpCode) => {
+  const verifyOTP = useCallback(async (phone, otpCode, options = {}) => {
     setError(null);
     setIsVerifying(true);
 
     try {
       const response = await verifyPhoneOTP(phone, otpCode);
       setIsVerified(true);
-      setVerifiedTarget(phone);
-      setStatusMessage('Phone Number Verified');
+      setVerifiedTarget(String(phone || '').replace(/\D/g, ''));
+      setStatusMessage(options.customVerifiedMessage || 'Phone Number Verified');
       return response;
     } catch (err) {
       setError(err?.message || 'OTP verification failed.');
@@ -80,9 +87,9 @@ export const useOTPVerification = (defaultCooldown = 30) => {
   }, []);
 
   // Resend OTP
-  const resendOTP = useCallback(async (phone) => {
+  const resendOTP = useCallback(async (phone, options = {}) => {
     if (!canResend || isSending) return;
-    return await requestOTP(phone);
+    return await requestOTP(phone, options);
   }, [canResend, isSending, requestOTP]);
 
   // Reset verification state (e.g., when the user changes their phone number)

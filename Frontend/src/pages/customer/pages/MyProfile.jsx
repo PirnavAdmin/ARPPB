@@ -13,9 +13,13 @@ import {
   ShieldCheck,
   Phone,
   Mail,
+  AlertCircle,
   Loader2,
+  RefreshCw,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useCustomer } from '../context/useCustomer';
+import { useOTPVerification } from '../../../hooks/useOTPVerification';
 import { AP_DISTRICTS, INDIAN_STATES } from '../../../utils/constants';
 import { formatDate } from '../../../utils/formatDate';
 import CustomerPageHeader from '../components/CustomerPageHeader';
@@ -109,13 +113,34 @@ export function MyProfile() {
   });
   const [errors, setErrors] = useState({});
   const [photoError, setPhotoError] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [phoneValidationError, setPhoneValidationError] = useState('');
+  const [phoneSuccessBanner, setPhoneSuccessBanner] = useState('');
 
-  // Mobile Number Update state
-  const [isMobileUpdateModalOpen, setIsMobileUpdateModalOpen] = useState(false);
-  const [isOTPModalOpen, setIsOTPModalOpen] = useState(false);
-  const [newMobileNumber, setNewMobileNumber] = useState('');
-  const [newNumberErrors, setNewNumberErrors] = useState('');
-  const [isSendingOTP, setIsSendingOTP] = useState(false);
+  const {
+    isOtpSent,
+    isSending,
+    isVerifying,
+    isVerified,
+    timer,
+    canResend,
+    statusMessage,
+    demoOtp,
+    error: otpError,
+    verifiedTarget,
+    requestOTP,
+    verifyOTP,
+    resendOTP,
+    resetVerification,
+    setError: setOtpError,
+  } = useOTPVerification(30);
+
+  const savedMobile = String(profile?.mobileNumber || '').replace(/\D/g, '');
+  const currentMobile = String(formData.mobileNumber || '').replace(/\D/g, '');
+  const isMobileChanged = isEditing && currentMobile !== savedMobile;
+  const isValidNewMobile = /^[6-9]\d{9}$/.test(currentMobile);
+  const isNewMobileVerified =
+    isMobileChanged && isVerified && verifiedTarget === currentMobile;
 
   // Delivery Address Modal state
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -145,17 +170,54 @@ export function MyProfile() {
     });
     setErrors({});
     setPhotoError('');
+    resetVerification();
+    setOtpCode('');
+    setPhoneValidationError('');
     setIsEditing(true);
   };
 
   const handleCancelEdit = () => {
+    setFormData({
+      fullName: profile.fullName || '',
+      mobileNumber: profile.mobileNumber || '',
+      email: profile.email || '',
+      profilePhoto: profile.profilePhoto || '',
+      alternateMobileNumber: profile.alternateMobileNumber || '',
+      address: profile.address || '',
+      district: profile.district || 'Guntur',
+      state: profile.state || 'Andhra Pradesh',
+      pinCode: profile.pinCode || '',
+    });
     setErrors({});
     setPhotoError('');
+    resetVerification();
+    setOtpCode('');
+    setPhoneValidationError('');
     setIsEditing(false);
   };
 
   const handleFieldChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'mobileNumber') {
+      const digitsOnly = String(value || '')
+        .replace(/\D/g, '')
+        .slice(0, 10);
+      setFormData((prev) => ({ ...prev, mobileNumber: digitsOnly }));
+      setPhoneValidationError('');
+      setPhoneSuccessBanner('');
+      if (isOtpSent || isVerified || otpError) {
+        resetVerification();
+        setOtpCode('');
+      }
+      if (errors.mobileNumber) {
+        setErrors((prev) => {
+          const next = { ...prev };
+          delete next.mobileNumber;
+          return next;
+        });
+      }
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors((prev) => {
@@ -163,6 +225,67 @@ export function MyProfile() {
         delete next[name];
         return next;
       });
+    }
+  };
+
+  const handleVerifyNewNumber = async () => {
+    setPhoneValidationError('');
+    setPhoneSuccessBanner('');
+
+    if (!currentMobile) {
+      setPhoneValidationError('Mobile number is required.');
+      return;
+    }
+    if (!isValidNewMobile) {
+      setPhoneValidationError('Please enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+    if (!isMobileChanged) {
+      setPhoneValidationError(
+        'Please enter a new mobile number different from your current number.'
+      );
+      return;
+    }
+
+    setOtpCode('');
+    try {
+      await requestOTP(currentMobile, {
+        customMessage: 'OTP sent successfully to your new mobile number.',
+        duplicateMessage:
+          'This mobile number is already registered. Please use a different mobile number.',
+      });
+    } catch {
+      // Error is captured in otpError state
+    }
+  };
+
+  const handleConfirmOtp = async () => {
+    const cleanOtp = String(otpCode || '').replace(/\D/g, '');
+    if (cleanOtp.length !== 6) {
+      setOtpError('Please enter a valid 6-digit numeric OTP.');
+      return;
+    }
+
+    try {
+      await verifyOTP(currentMobile, cleanOtp, {
+        customVerifiedMessage: 'New mobile number verified successfully.',
+      });
+    } catch {
+      // Error is captured in otpError state
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!canResend || isSending) return;
+    setOtpCode('');
+    try {
+      await resendOTP(currentMobile, {
+        customMessage: 'OTP sent successfully to your new mobile number.',
+        duplicateMessage:
+          'This mobile number is already registered. Please use a different mobile number.',
+      });
+    } catch {
+      // Error is captured in otpError state
     }
   };
 
@@ -191,9 +314,18 @@ export function MyProfile() {
       return;
     }
 
+    const mobileChangedOnSubmit = currentMobile !== savedMobile;
+    if (mobileChangedOnSubmit && !(isVerified && verifiedTarget === currentMobile)) {
+      setPhoneValidationError(
+        'Please verify your new mobile number with OTP before saving.'
+      );
+      toast.error('Please verify your new mobile number with OTP before saving.');
+      return;
+    }
+
     updateProfile({
       fullName: formData.fullName.trim(),
-      mobileNumber: formData.mobileNumber.replace(/\D/g, ''),
+      mobileNumber: currentMobile,
       email: formData.email.trim(),
       profilePhoto: formData.profilePhoto,
       alternateMobileNumber: formData.alternateMobileNumber.replace(/\D/g, ''),
@@ -202,6 +334,13 @@ export function MyProfile() {
       state: formData.state.trim(),
       pinCode: formData.pinCode.trim(),
     });
+    resetVerification();
+    setOtpCode('');
+    setPhoneValidationError('');
+    if (mobileChangedOnSubmit) {
+      setPhoneSuccessBanner('Your mobile number has been updated successfully.');
+      toast.success('Your mobile number has been updated successfully.');
+    }
     setIsEditing(false);
   };
 
@@ -537,19 +676,147 @@ export function MyProfile() {
             <label htmlFor="mobileNumber" className="block text-xs font-semibold text-[#0F172A] mb-1">
               Mobile Number <span className="text-[#DC2626]">*</span>
             </label>
-            <input
-              id="mobileNumber"
-              name="mobileNumber"
-              type="tel"
-              maxLength={10}
-              value={isEditing ? formData.mobileNumber : profile.mobileNumber}
-              onChange={handleFieldChange}
-              disabled={!isEditing}
-              className="w-full px-3 py-2 text-sm font-mono rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] disabled:bg-[#F8FAFC] disabled:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
-            />
-            {errors.mobileNumber && (
-              <p className="text-[11px] font-medium text-[#DC2626] mt-1">{errors.mobileNumber}</p>
-            )}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  id="mobileNumber"
+                  name="mobileNumber"
+                  type="tel"
+                  maxLength={10}
+                  value={isEditing ? formData.mobileNumber : profile.mobileNumber}
+                  onChange={handleFieldChange}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 text-sm font-mono rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] disabled:bg-[#F8FAFC] disabled:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
+                />
+                {isEditing && isMobileChanged && !isNewMobileVerified && (
+                  <button
+                    type="button"
+                    onClick={handleVerifyNewNumber}
+                    disabled={isSending || !isValidNewMobile}
+                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-[#0F766E] text-white hover:bg-[#115E59] disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSending ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Sending...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>{isOtpSent ? 'Resend OTP' : 'Verify New Number'}</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {(errors.mobileNumber || phoneValidationError || (!isOtpSent && otpError)) && (
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#DC2626]">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{errors.mobileNumber || phoneValidationError || otpError}</span>
+                </div>
+              )}
+
+              {!isMobileChanged && savedMobile && (
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#0F766E]">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>
+                    {phoneSuccessBanner || 'Registered & verified mobile number'}
+                  </span>
+                </div>
+              )}
+
+              {isEditing && isMobileChanged && isNewMobileVerified && (
+                <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{statusMessage || 'New mobile number verified successfully.'}</span>
+                </div>
+              )}
+
+              {isEditing && isMobileChanged && !isNewMobileVerified && !isOtpSent && (
+                <p className="text-[11px] text-amber-700 font-medium">
+                  Click &ldquo;Verify New Number&rdquo; to verify this mobile number with OTP before saving.
+                </p>
+              )}
+
+              {isEditing && isMobileChanged && isOtpSent && !isNewMobileVerified && (
+                <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#0F766E]/30 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-bold text-[#0F766E]">
+                      {statusMessage || 'OTP sent successfully to your new mobile number.'}
+                    </span>
+                    {demoOtp && (
+                      <button
+                        type="button"
+                        onClick={() => setOtpCode(demoOtp)}
+                        className="px-2 py-0.5 rounded bg-[#CCFBF1] text-[#0F766E] font-mono text-[11px] font-bold cursor-pointer"
+                        title="Click to auto-fill Dev OTP"
+                      >
+                        Dev OTP: {demoOtp}
+                      </button>
+                    )}
+                  </div>
+
+                  <p className="text-[11px] text-[#64748B]">
+                    Enter the 6-digit OTP sent to <strong className="font-mono text-[#0F172A]">+91 {currentMobile}</strong> (valid for 5 minutes).
+                  </p>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="Enter 6-digit OTP"
+                      value={otpCode}
+                      onChange={(e) => {
+                        setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                        if (otpError) setOtpError(null);
+                      }}
+                      className="w-full px-3 py-1.5 text-xs font-mono tracking-widest rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleConfirmOtp}
+                      disabled={isVerifying || otpCode.length !== 6}
+                      className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#0F766E] text-white hover:bg-[#115E59] disabled:opacity-50 cursor-pointer"
+                    >
+                      {isVerifying ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Verifying...</span>
+                        </>
+                      ) : (
+                        <span>Verify OTP</span>
+                      )}
+                    </button>
+                  </div>
+
+                  {otpError && (
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#DC2626]">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{otpError}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between text-[11px] text-[#64748B] pt-0.5">
+                    <span>Didn&apos;t receive the code?</span>
+                    {canResend ? (
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={isSending}
+                        className="inline-flex items-center gap-1 font-bold text-[#0F766E] hover:underline cursor-pointer"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>Resend OTP</span>
+                      </button>
+                    ) : (
+                      <span className="font-mono font-semibold">Resend in {timer}s</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Alternate Mobile Number */}
@@ -679,7 +946,8 @@ export function MyProfile() {
             </button>
             <button
               type="submit"
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-[#0F766E] text-white hover:bg-[#115E59] cursor-pointer"
+              disabled={isMobileChanged && !isNewMobileVerified}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-[#0F766E] text-white hover:bg-[#115E59] disabled:opacity-50 cursor-pointer"
             >
               <Save className="w-4 h-4" />
               <span>Save Changes</span>

@@ -43,8 +43,8 @@ function addWorkingDaysISO(startDate, workingDays = 3) {
 }
 
 export function CustomerProvider({ children }) {
-  const { user } = useAuth();
-  const authKey = String(user?.userId || user?.mobile || user?.contactNumber || user?.fullName || '');
+  const { user, updateUserMobile } = useAuth();
+  const authKey = String(user?.userId || user?.fullName || user?.mobile || user?.contactNumber || '');
 
   const [profile, setProfile] = useState(() => {
     const authName = user?.fullName || user?.name || '';
@@ -688,8 +688,11 @@ export function CustomerProvider({ children }) {
       ...updates,
       customerId: prev.customerId, // keep Customer ID immutable
     }));
+    if (updates?.mobileNumber) {
+      updateUserMobile(updates.mobileNumber);
+    }
     toast.success('Customer profile updated successfully.');
-  }, []);
+  }, [updateUserMobile]);
 
   const addDeliveryAddress = useCallback((newAddr) => {
     setProfile((prev) => {

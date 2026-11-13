@@ -77,6 +77,76 @@ export const LoginPage = () => {
 
     setIsLoading(true);
 
+    // Farmer-only validation: check new/old mobile number
+    const cleanPhone = String(formData.contactNumber || '').replace(/\D/g, '').slice(-10);
+    const farmerAuthRaw = typeof window !== 'undefined' ? localStorage.getItem('agri_farmer_auth_v1') : null;
+    const farmerStateRaw = typeof window !== 'undefined' ? localStorage.getItem('agri-farmer-portal-state-v1') : null;
+
+    let activeFarmerPhone = '9876543210';
+    let farmerPassword = 'farmer@123';
+    let farmerName = 'Venkata Reddy';
+    let farmerId = 'AG-FARM-5021';
+    let oldFarmerPhones = [];
+
+    if (farmerAuthRaw) {
+      try {
+        const fa = JSON.parse(farmerAuthRaw);
+        if (fa.mobile) activeFarmerPhone = String(fa.mobile).replace(/\D/g, '').slice(-10);
+        if (fa.password) farmerPassword = fa.password;
+        if (fa.fullName) farmerName = fa.fullName;
+        if (fa.farmerId) farmerId = fa.farmerId;
+        if (Array.isArray(fa.oldMobiles)) {
+          oldFarmerPhones = fa.oldMobiles.map((m) => String(m).replace(/\D/g, '').slice(-10));
+        }
+      } catch {}
+    } else if (farmerStateRaw) {
+      try {
+        const ps = JSON.parse(farmerStateRaw);
+        if (ps?.profile?.mobileNumber) activeFarmerPhone = String(ps.profile.mobileNumber).replace(/\D/g, '').slice(-10);
+        if (ps?.profile?.password) farmerPassword = ps.profile.password;
+        if (ps?.profile?.farmerName) farmerName = ps.profile.farmerName;
+        if (ps?.profile?.farmerId) farmerId = ps.profile.farmerId;
+      } catch {}
+    }
+
+    // 1. If farmer tries to log in with an old mobile number that was changed:
+    if (oldFarmerPhones.includes(cleanPhone)) {
+      setSubmitError('This mobile number is no longer active for this farmer account. Please sign in with your updated mobile number.');
+      setIsLoading(false);
+      return;
+    }
+
+    // 2. If farmer logs in with the active farmer mobile number:
+    if (cleanPhone === activeFarmerPhone) {
+      if (formData.password !== farmerPassword) {
+        setSubmitError('Invalid login credentials. Please verify your password.');
+        setIsLoading(false);
+        return;
+      }
+
+      const farmerUser = {
+        userId: 5021,
+        fullName: farmerName,
+        email: 'venkata.reddy@agriconnect.in',
+        mobile: activeFarmerPhone,
+        contactNumber: activeFarmerPhone,
+        phone: activeFarmerPhone,
+        role: 'farmer',
+        entityCode: farmerId,
+      };
+
+      setAuthSession({
+        ...farmerUser,
+        role: 'farmer',
+      });
+
+      setSuccessMessage('Signed in successfully! Redirecting...');
+      setTimeout(() => {
+        navigate('/farmer', { replace: true });
+      }, 600);
+      return;
+    }
+
     try {
       const response = await login({
         contactNumber: formData.contactNumber,

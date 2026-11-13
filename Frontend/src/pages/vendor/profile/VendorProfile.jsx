@@ -8,8 +8,13 @@ import ProfileForm from './ProfileForm';
 import BankDetailsForm from './BankDetailsForm';
 
 export default function VendorProfile() {
-  const { vendorUser, updateVendorProfile } = useAuth();
+  const { user, vendorUser, updateVendorProfile } = useAuth();
   const { resetDemoData } = useVendor();
+
+  const resolvedVendorUser = {
+    ...vendorUser,
+    mobileNumber: vendorUser?.mobileNumber || user?.mobile || user?.contactNumber || '',
+  };
 
   const handleSaveProfile = (profileUpdates) => {
     updateVendorProfile(profileUpdates);
@@ -102,7 +107,7 @@ export default function VendorProfile() {
 
       {/* Profile Form */}
       <ProfileForm
-        vendorUser={vendorUser}
+        vendorUser={resolvedVendorUser}
         onSaveProfile={handleSaveProfile}
       />
 
