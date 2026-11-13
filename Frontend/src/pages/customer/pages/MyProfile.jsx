@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react';
-import { toast } from 'sonner';
+
 import {
   UserCheck,
   Pencil,
   Save,
+  Send,
   X,
   Upload,
   Trash2,
@@ -116,6 +117,13 @@ export function MyProfile() {
   const [otpCode, setOtpCode] = useState('');
   const [phoneValidationError, setPhoneValidationError] = useState('');
   const [phoneSuccessBanner, setPhoneSuccessBanner] = useState('');
+
+  // Mobile Number Update Modal state
+  const [isMobileUpdateModalOpen, setIsMobileUpdateModalOpen] = useState(false);
+  const [isOTPModalOpen, setIsOTPModalOpen] = useState(false);
+  const [newMobileNumber, setNewMobileNumber] = useState('');
+  const [newNumberErrors, setNewNumberErrors] = useState('');
+  const [isSendingOTP, setIsSendingOTP] = useState(false);
 
   const {
     isOtpSent,
@@ -377,7 +385,6 @@ export function MyProfile() {
     }
     setIsSendingOTP(true);
     setNewNumberErrors('');
-    // Demo OTP is generated via mobileOTPService.sendDemoOTP inside the OTP modal
     setIsSendingOTP(false);
     closeMobileUpdateModal();
     setIsOTPModalOpen(true);
@@ -499,9 +506,9 @@ export function MyProfile() {
               <button
                 type="button"
                 onClick={openMobileUpdateModal}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-[#14B8A6]/30 bg-[#CCFBF1]/40 text-[#0F766E] hover:bg-[#0F766E] hover:text-white transition-colors cursor-pointer"
+                className="px-3 py-1.5 rounded-lg text-xs font-bold text-[#0F766E] border border-[#0F766E] hover:bg-[#0F766E] hover:text-white transition-colors cursor-pointer"
               >
-                <span>Update</span>
+                Update
               </button>
               {profile.email && (
                 <>
@@ -987,11 +994,10 @@ export function MyProfile() {
           {(profile.deliveryAddresses || []).map((addr) => (
             <div
               key={addr.id}
-              className={`p-4 rounded-xl border flex flex-col justify-between gap-3 transition-all ${
-                addr.isDefault
+              className={`p-4 rounded-xl border flex flex-col justify-between gap-3 transition-all ${addr.isDefault
                   ? 'bg-[#CCFBF1]/25 border-[#0F766E] ring-1 ring-[#0F766E]/20'
                   : 'bg-[#F8FAFC]/60 border-[#E2E8F0]'
-              }`}
+                }`}
             >
               <div className="space-y-1.5 text-xs">
                 <div className="flex items-center justify-between gap-2">
@@ -1199,13 +1205,13 @@ export function MyProfile() {
         </div>
       </CustomerModal>
 
-      {/* Mobile Number Update - New Number Entry Modal */}
+      {/* Mobile Number Update Modal - New Number Entry */}
       <CustomerModal
         isOpen={isMobileUpdateModalOpen}
         onClose={closeMobileUpdateModal}
         title="Update Mobile Number"
-        subtitle="Enter your new 10-digit mobile number. An OTP will be sent for verification."
-        size="sm"
+        subtitle="Enter your new mobile number to receive an OTP for verification"
+        size="md"
         footer={
           <div className="flex items-center justify-end gap-2">
             <button
@@ -1218,17 +1224,17 @@ export function MyProfile() {
             <button
               type="button"
               onClick={handleSendOTP}
-              disabled={isSendingOTP || !newMobileNumber || Boolean(newNumberErrors)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-[#0F766E] text-white hover:bg-[#115E59] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+              disabled={isSendingOTP}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-[#0F766E] text-white hover:bg-[#115E59] disabled:opacity-50 cursor-pointer"
             >
               {isSendingOTP ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-3 h-3 animate-spin" />
                   <span>Sending...</span>
                 </>
               ) : (
                 <>
-                  <Phone className="w-3.5 h-3.5" />
+                  <Send className="w-3 h-3" />
                   <span>Send OTP</span>
                 </>
               )}
@@ -1245,37 +1251,25 @@ export function MyProfile() {
               type="tel"
               maxLength={10}
               value={newMobileNumber}
-              onChange={(e) => setNewMobileNumber(e.target.value)}
-              placeholder="9876543210"
-              className={`w-full px-3 py-2 text-sm font-mono rounded-lg border bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E] ${newNumberErrors ? 'border-[#DC2626]' : 'border-[#E2E8F0]'}`}
+              onChange={(e) => setNewMobileNumber(e.target.value.replace(/\D/g, ''))}
+              placeholder="+91 9876543210"
+              className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
             />
             {newNumberErrors && (
-              <p className="text-[11px] text-[#DC2626] mt-1">{newNumberErrors}</p>
+              <p className="text-[11px] text-[#DC2626] mt-0.5">{newNumberErrors}</p>
             )}
-            <p className="text-[10px] text-[#64748B] mt-1">
-              Must be a valid 10-digit Indian mobile number and different from your
-              current registered number.
-            </p>
           </div>
-          <div className="p-3 rounded-lg border border-[#14B8A6]/30 bg-[#CCFBF1]/20">
-            <div className="flex items-start gap-2">
-              <span className="text-[#0F766E] font-semibold text-xs">How it works</span>
-              <span className="text-[#0F172A] text-xs">
-                1. Enter your new mobile number above.{' '}
-                2. We will send a 6-digit OTP for verification.{' '}
-                3. Enter the OTP to confirm the update.{' '}
-                Your number will only change after successful verification.
-              </span>
-            </div>
-          </div>
+          <p className="text-[11px] text-[#64748B]">
+            An OTP will be sent to <strong className="font-mono text-[#0F172A]">+91 {newMobileNumber || ''}</strong> for verification.
+          </p>
         </div>
       </CustomerModal>
 
-      {/* Mobile Number Update - OTP Verification Modal */}
+      {/* Mobile OTP Verification Modal */}
       <MobileOTPVerification
         isOpen={isOTPModalOpen}
+        phoneNumber={newMobileNumber}
         onClose={() => setIsOTPModalOpen(false)}
-        newNumber={newMobileNumber}
         onSuccess={handleMobileUpdateSuccess}
       />
 

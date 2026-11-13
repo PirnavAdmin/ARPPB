@@ -89,7 +89,6 @@ export function MobileOTPVerification({
   // Focus first input when modal opens
   useEffect(() => {
     if (isOpen) {
-      setOTPDigits(Array(6).fill(''));
       setOtpInput('');
       setFeedback(null);
       const record = mobileOTPService.getRecord(newNumber);
@@ -122,7 +121,6 @@ export function MobileOTPVerification({
 
     const next = [...digits];
     next[index] = char;
-    setOTPDigits(next);
     setOtpInput(next.join(''));
 
     if (feedback) setFeedback(null);
@@ -138,12 +136,10 @@ export function MobileOTPVerification({
         inputsRef.current[index - 1]?.focus();
         const next = [...digits];
         next[index - 1] = '';
-        setOTPDigits(next);
         setOtpInput(next.join(''));
       } else {
         const next = [...digits];
         next[index] = '';
-        setOTPDigits(next);
         setOtpInput(next.join(''));
       }
     } else if (e.key === 'ArrowLeft' && index > 0) {
@@ -161,9 +157,6 @@ export function MobileOTPVerification({
       .slice(0, 6);
     if (!pasted) return;
 
-    setOTPDigits(
-      Array.from({ length: 6 }, (_, i) => pasted[i] || '')
-    );
     setOtpInput(pasted);
     inputsRef.current[Math.min(pasted.length, 5)]?.focus();
     if (feedback) setFeedback(null);
@@ -210,7 +203,6 @@ export function MobileOTPVerification({
     const code = mobileOTPService.sendDemoOTP(newNumber);
     setResendCooldown(RESEND_COOLDOWN_SECONDS);
     setExpirySeconds(OTP_EXPIRY_SECONDS);
-    setOTPDigits(Array(6).fill(''));
     setOtpInput('');
 
     setIsResending(false);
