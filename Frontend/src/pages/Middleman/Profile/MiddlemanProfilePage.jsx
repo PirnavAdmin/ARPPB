@@ -6,12 +6,16 @@ import { ProfileForm } from '../components/profile/ProfileForm';
 
 export const MiddlemanProfilePage = () => {
   const { profile, updateProfile } = useMiddleman();
-  const [successToast, setSuccessToast] = useState(false);
+  const [successToast, setSuccessToast] = useState('');
 
-  const handleSave = (updatedData) => {
+  const handleSave = (updatedData, meta = {}) => {
     updateProfile(updatedData);
-    setSuccessToast(true);
-    setTimeout(() => setSuccessToast(false), 3000);
+    setSuccessToast(
+      meta?.mobileChanged
+        ? 'Your mobile number has been updated successfully.'
+        : 'Profile changes saved successfully! Header and portal identity updated.'
+    );
+    setTimeout(() => setSuccessToast(''), 4000);
   };
 
   return (
@@ -24,7 +28,7 @@ export const MiddlemanProfilePage = () => {
       {successToast && (
         <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[#15803D] text-xs font-bold flex items-center gap-2 animate-fadeIn">
           <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-          <span>Profile changes saved successfully! Header and portal identity updated.</span>
+          <span>{successToast}</span>
         </div>
       )}
 

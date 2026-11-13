@@ -15,6 +15,7 @@ import {
   calculateExpectedPaymentDate,
   formatCurrency,
 } from '../utils/farmerHelpers';
+import { useAuth } from '../../../hooks/useAuth';
 
 const FarmerContext = createContext(null);
 const STORAGE_KEY = 'agri-farmer-portal-state-v1';
@@ -55,6 +56,9 @@ export const farmerNavItems = [
 ];
 
 export function FarmerProvider({ children }) {
+  const { user, updateUserMobile } = useAuth();
+  const authKey = String(user?.userId || user?.fullName || '');
+
   const getInitialPage = () => {
     if (typeof window === 'undefined') return 'dashboard';
     const hash = window.location.hash.replace(/^#\/?/, '').trim();
@@ -70,7 +74,40 @@ export function FarmerProvider({ children }) {
   const persistedState = loadPersistedFarmerState();
 
   // Core Data States
-  const [profile, setProfile] = useState(() => persistedState?.profile ?? initialProfile);
+  const [profile, setProfile] = useState(() => {
+    const authMobile = user?.mobile || user?.contactNumber || '';
+    const authName = user?.fullName || '';
+    const authEmail = user?.email || '';
+    const savedProfile = persistedState?.profile;
+    if (savedProfile && (!authKey || savedProfile.authKey === authKey)) {
+      return {
+        ...savedProfile,
+        mobileNumber: savedProfile.mobileNumber || authMobile || initialProfile.mobileNumber,
+      };
+    }
+    return {
+      ...initialProfile,
+      authKey,
+      farmerName: authName || initialProfile.farmerName,
+      mobileNumber: authMobile || initialProfile.mobileNumber,
+      email: authEmail || initialProfile.email,
+    };
+  });
+
+  const [trackedAuthKey, setTrackedAuthKey] = useState(authKey);
+  if (authKey && authKey !== trackedAuthKey) {
+    setTrackedAuthKey(authKey);
+    const authMobile = user?.mobile || user?.contactNumber || '';
+    const authName = user?.fullName || '';
+    const authEmail = user?.email || '';
+    setProfile((prev) => ({
+      ...prev,
+      authKey,
+      farmerName: authName || prev.farmerName,
+      mobileNumber: authMobile || prev.mobileNumber,
+      email: authEmail || prev.email,
+    }));
+  }
   const [crops, setCrops] = useState(() => persistedState?.crops ?? initialCrops);
   const [marketPrices, setMarketPrices] = useState(() => persistedState?.marketPrices ?? initialMarketPrices);
   const [sales, setSales] = useState(() => persistedState?.sales ?? initialSales);
@@ -164,8 +201,11 @@ export function FarmerProvider({ children }) {
   // Profile Action
   const updateProfile = useCallback((updated) => {
     setProfile((prev) => ({ ...prev, ...updated }));
+    if (updated?.mobileNumber) {
+      updateUserMobile(updated.mobileNumber);
+    }
     showToast('Profile updated successfully!', 'success');
-  }, [showToast]);
+  }, [showToast, updateUserMobile]);
 
   // Crop CRUD Actions
   const addCrop = useCallback((newCropData) => {

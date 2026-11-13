@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { useFarmer } from '../context/FarmerContext';
+import { useOTPVerification } from '../../../hooks/useOTPVerification';
 
 function MyProfile() {
   const { profile, updateProfile, showToast } = useFarmer();
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ ...profile });
+  const [otpCode, setOtpCode] = useState('');
+  const [phoneValidationError, setPhoneValidationError] = useState('');
+  const [phoneSuccessBanner, setPhoneSuccessBanner] = useState('');
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -13,8 +17,46 @@ function MyProfile() {
     confirmPassword: '',
   });
 
+  const {
+    isOtpSent,
+    isSending,
+    isVerifying,
+    isVerified,
+    timer,
+    canResend,
+    statusMessage,
+    demoOtp,
+    error: otpError,
+    verifiedTarget,
+    requestOTP,
+    verifyOTP,
+    resendOTP,
+    resetVerification,
+    setError: setOtpError,
+  } = useOTPVerification(30);
+
+  const savedMobile = String(profile?.mobileNumber || '').replace(/\D/g, '');
+  const currentMobile = String(formData.mobileNumber || '').replace(/\D/g, '');
+  const isMobileChanged = isEditing && currentMobile !== savedMobile;
+  const isValidNewMobile = /^[6-9]\d{9}$/.test(currentMobile);
+  const isNewMobileVerified =
+    isMobileChanged && isVerified && verifiedTarget === currentMobile;
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'mobileNumber') {
+      const digitsOnly = String(value || '')
+        .replace(/\D/g, '')
+        .slice(0, 10);
+      setFormData((prev) => ({ ...prev, mobileNumber: digitsOnly }));
+      setPhoneValidationError('');
+      setPhoneSuccessBanner('');
+      if (isOtpSent || isVerified || otpError) {
+        resetVerification();
+        setOtpCode('');
+      }
+      return;
+    }
     if (name.startsWith('bank_')) {
       const field = name.replace('bank_', '');
       setFormData((prev) => ({
@@ -29,9 +71,104 @@ function MyProfile() {
     }
   };
 
+  const handleCancelEdit = () => {
+    setFormData({ ...profile });
+    resetVerification();
+    setOtpCode('');
+    setPhoneValidationError('');
+    setIsEditing(false);
+  };
+
+  const handleVerifyNewNumber = async () => {
+    setPhoneValidationError('');
+    setPhoneSuccessBanner('');
+
+    if (!currentMobile) {
+      setPhoneValidationError('Mobile number is required.');
+      return;
+    }
+    if (!isValidNewMobile) {
+      setPhoneValidationError('Please enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+    if (!isMobileChanged) {
+      setPhoneValidationError(
+        'Please enter a new mobile number different from your current number.'
+      );
+      return;
+    }
+
+    setOtpCode('');
+    try {
+      await requestOTP(currentMobile, {
+        customMessage: 'OTP sent successfully to your new mobile number.',
+        duplicateMessage:
+          'This mobile number is already registered. Please use a different mobile number.',
+      });
+    } catch {
+      // Error is captured in otpError state
+    }
+  };
+
+  const handleConfirmOtp = async () => {
+    const cleanOtp = String(otpCode || '').replace(/\D/g, '');
+    if (cleanOtp.length !== 6) {
+      setOtpError('Please enter a valid 6-digit numeric OTP.');
+      return;
+    }
+
+    try {
+      await verifyOTP(currentMobile, cleanOtp, {
+        customVerifiedMessage: 'New mobile number verified successfully.',
+      });
+    } catch {
+      // Error is captured in otpError state
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!canResend || isSending) return;
+    setOtpCode('');
+    try {
+      await resendOTP(currentMobile, {
+        customMessage: 'OTP sent successfully to your new mobile number.',
+        duplicateMessage:
+          'This mobile number is already registered. Please use a different mobile number.',
+      });
+    } catch {
+      // Error is captured in otpError state
+    }
+  };
+
   const handleSave = (e) => {
     e.preventDefault();
-    updateProfile(formData);
+    setPhoneValidationError('');
+
+    if (!/^[6-9]\d{9}$/.test(currentMobile)) {
+      setPhoneValidationError('Please enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+
+    const mobileChangedOnSubmit = currentMobile !== savedMobile;
+    if (mobileChangedOnSubmit && !(isVerified && verifiedTarget === currentMobile)) {
+      setPhoneValidationError(
+        'Please verify your new mobile number with OTP before saving.'
+      );
+      showToast('Please verify your new mobile number with OTP before saving.', 'error');
+      return;
+    }
+
+    updateProfile({
+      ...formData,
+      mobileNumber: currentMobile,
+    });
+    resetVerification();
+    setOtpCode('');
+    setPhoneValidationError('');
+    if (mobileChangedOnSubmit) {
+      setPhoneSuccessBanner('Your mobile number has been updated successfully.');
+      showToast('Your mobile number has been updated successfully.', 'success');
+    }
     setIsEditing(false);
   };
 
@@ -72,6 +209,9 @@ function MyProfile() {
                 className="farmer-btn farmer-btn-primary"
                 onClick={() => {
                   setFormData({ ...profile });
+                  resetVerification();
+                  setOtpCode('');
+                  setPhoneValidationError('');
                   setIsEditing(true);
                 }}
               >
@@ -89,7 +229,7 @@ function MyProfile() {
             <button
               type="button"
               className="farmer-btn farmer-btn-outline"
-              onClick={() => setIsEditing(false)}
+              onClick={handleCancelEdit}
             >
               ✕ Cancel Editing
             </button>
@@ -186,14 +326,223 @@ function MyProfile() {
             <div className="farmer-form-row">
               <div className="farmer-form-group">
                 <label>Mobile Number (SMS & OTP) *</label>
-                <input
-                  type="tel"
-                  name="mobileNumber"
-                  value={formData.mobileNumber}
-                  onChange={handleChange}
-                  disabled={!isEditing}
-                  required
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                      type="tel"
+                      name="mobileNumber"
+                      maxLength={10}
+                      value={isEditing ? formData.mobileNumber : profile.mobileNumber}
+                      onChange={handleChange}
+                      disabled={!isEditing}
+                      required
+                      style={{ flex: 1 }}
+                    />
+                    {isEditing && isMobileChanged && !isNewMobileVerified && (
+                      <button
+                        type="button"
+                        className="farmer-btn farmer-btn-primary"
+                        onClick={handleVerifyNewNumber}
+                        disabled={isSending || !isValidNewMobile}
+                        style={{
+                          whiteSpace: 'nowrap',
+                          padding: '9px 14px',
+                          fontSize: '0.78rem',
+                          opacity: isSending || !isValidNewMobile ? 0.55 : 1,
+                        }}
+                      >
+                        {isSending
+                          ? '⏳ Sending...'
+                          : isOtpSent
+                          ? '🔄 Resend OTP'
+                          : '🛡️ Verify New Number'}
+                      </button>
+                    )}
+                  </div>
+
+                  {(phoneValidationError || (!isOtpSent && otpError)) && (
+                    <div
+                      style={{
+                        color: '#DC2626',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      ⚠️ {phoneValidationError || otpError}
+                    </div>
+                  )}
+
+                  {!isMobileChanged && savedMobile && (
+                    <div
+                      style={{
+                        color: 'var(--farmer-primary)',
+                        fontSize: '0.76rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      ✓ {phoneSuccessBanner || 'Registered & verified mobile number'}
+                    </div>
+                  )}
+
+                  {isEditing && isMobileChanged && isNewMobileVerified && (
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        background: '#ECFDF5',
+                        border: '1px solid #A7F3D0',
+                        color: '#065F46',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      ✓ {statusMessage || 'New mobile number verified successfully.'}
+                    </div>
+                  )}
+
+                  {isEditing && isMobileChanged && !isNewMobileVerified && !isOtpSent && (
+                    <div
+                      style={{
+                        color: '#B45309',
+                        fontSize: '0.76rem',
+                        fontWeight: 500,
+                      }}
+                    >
+                      Click &ldquo;Verify New Number&rdquo; to verify this mobile number with OTP before saving.
+                    </div>
+                  )}
+
+                  {isEditing && isMobileChanged && isOtpSent && !isNewMobileVerified && (
+                    <div
+                      style={{
+                        padding: 12,
+                        borderRadius: 10,
+                        background: '#F8FAFC',
+                        border: '1px solid var(--farmer-border)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: 8,
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: '0.76rem',
+                            fontWeight: 700,
+                            color: 'var(--farmer-primary)',
+                          }}
+                        >
+                          {statusMessage || 'OTP sent successfully to your new mobile number.'}
+                        </span>
+                        {demoOtp && (
+                          <button
+                            type="button"
+                            onClick={() => setOtpCode(demoOtp)}
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: 6,
+                              border: '1px solid #A7F3D0',
+                              background: '#ECFDF5',
+                              color: '#065F46',
+                              fontFamily: 'monospace',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                            title="Click to auto-fill Dev OTP"
+                          >
+                            Dev OTP: {demoOtp}
+                          </button>
+                        )}
+                      </div>
+
+                      <div style={{ fontSize: '0.75rem', color: 'var(--farmer-secondary)' }}>
+                        Enter the 6-digit OTP sent to <strong>+91 {currentMobile}</strong> (valid for 5 minutes).
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={6}
+                          placeholder="Enter 6-digit OTP"
+                          value={otpCode}
+                          onChange={(e) => {
+                            setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                            if (otpError) setOtpError(null);
+                          }}
+                          style={{
+                            flex: 1,
+                            fontFamily: 'monospace',
+                            letterSpacing: '0.15em',
+                            padding: '8px 10px',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="farmer-btn farmer-btn-primary"
+                          onClick={handleConfirmOtp}
+                          disabled={isVerifying || otpCode.length !== 6}
+                          style={{
+                            whiteSpace: 'nowrap',
+                            padding: '8px 14px',
+                            fontSize: '0.78rem',
+                            opacity: isVerifying || otpCode.length !== 6 ? 0.55 : 1,
+                          }}
+                        >
+                          {isVerifying ? 'Verifying...' : 'Verify OTP'}
+                        </button>
+                      </div>
+
+                      {otpError && (
+                        <div style={{ color: '#DC2626', fontSize: '0.76rem', fontWeight: 600 }}>
+                          ⚠️ {otpError}
+                        </div>
+                      )}
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontSize: '0.74rem',
+                          color: 'var(--farmer-secondary)',
+                        }}
+                      >
+                        <span>Didn&apos;t receive the code?</span>
+                        {canResend ? (
+                          <button
+                            type="button"
+                            onClick={handleResendOtp}
+                            disabled={isSending}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--farmer-primary)',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              padding: 0,
+                            }}
+                          >
+                            Resend OTP
+                          </button>
+                        ) : (
+                          <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                            Resend in {timer}s
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="farmer-form-group">
@@ -388,11 +737,18 @@ function MyProfile() {
                 <button
                   type="button"
                   className="farmer-btn farmer-btn-outline"
-                  onClick={() => setIsEditing(false)}
+                  onClick={handleCancelEdit}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="farmer-btn farmer-btn-primary">
+                <button
+                  type="submit"
+                  className="farmer-btn farmer-btn-primary"
+                  disabled={isMobileChanged && !isNewMobileVerified}
+                  style={{
+                    opacity: isMobileChanged && !isNewMobileVerified ? 0.55 : 1,
+                  }}
+                >
                   💾 Save Profile Changes
                 </button>
               </div>

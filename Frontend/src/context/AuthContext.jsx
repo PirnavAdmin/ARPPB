@@ -215,10 +215,12 @@ export function AuthProvider({ children }) {
         setAuthSession((prev) => {
           if (!prev?.isAuthenticated) return prev;
           const contactNum =
-            profile.mobile ||
-            prev.user?.mobile ||
-            prev.user?.contactNumber ||
-            '';
+            prev.user?.mobileVerifiedViaOtp && prev.user?.mobile
+              ? prev.user.mobile
+              : profile.mobile ||
+                prev.user?.mobile ||
+                prev.user?.contactNumber ||
+                '';
           const updatedSession = {
             ...prev,
             user: {
@@ -267,20 +269,48 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
-  const updateVendorProfile = useCallback((updates) => {
-    setVendorUser((prev) => {
-      const next = {
+  const updateUserMobile = useCallback((newMobile) => {
+    const cleanedMobile = String(newMobile || '').replace(/\D/g, '');
+    if (!/^[6-9]\d{9}$/.test(cleanedMobile)) return;
+
+    setAuthSession((prev) => {
+      if (!prev?.user) return prev;
+      const nextSession = {
         ...prev,
-        ...updates,
-        bankDetails: updates.bankDetails
-          ? { ...(prev.bankDetails || {}), ...updates.bankDetails }
-          : prev.bankDetails,
-        updatedAt: new Date().toISOString().slice(0, 10),
+        user: {
+          ...prev.user,
+          mobile: cleanedMobile,
+          contactNumber: cleanedMobile,
+          phone: cleanedMobile,
+          mobileVerifiedViaOtp: true,
+        },
       };
-      writeStorage(STORAGE_KEYS.VENDOR_PROFILE, next);
-      return next;
+      writeStorage(AUTH_SESSION_STORAGE_KEY, nextSession);
+      return nextSession;
     });
   }, []);
+
+  const updateVendorProfile = useCallback(
+    (updates) => {
+      setVendorUser((prev) => {
+        const next = {
+          ...prev,
+          ...updates,
+          bankDetails: updates.bankDetails
+            ? { ...(prev.bankDetails || {}), ...updates.bankDetails }
+            : prev.bankDetails,
+          updatedAt: new Date().toISOString().slice(0, 10),
+        };
+        writeStorage(STORAGE_KEYS.VENDOR_PROFILE, next);
+        return next;
+      });
+
+      if (updates?.mobileNumber) {
+        updateUserMobile(updates.mobileNumber);
+      }
+    },
+    [updateUserMobile]
+  );
 
   const value = useMemo(
     () => ({
@@ -293,6 +323,7 @@ export function AuthProvider({ children }) {
       switchPortalRole,
       logout,
       updateVendorProfile,
+      updateUserMobile,
     }),
     [
       isAuthenticated,
@@ -304,6 +335,7 @@ export function AuthProvider({ children }) {
       switchPortalRole,
       logout,
       updateVendorProfile,
+      updateUserMobile,
     ]
   );
 
