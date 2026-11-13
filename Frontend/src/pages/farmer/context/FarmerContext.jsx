@@ -43,6 +43,31 @@ const matchesCropRecord = (record, cropId, cropName) => {
   return Boolean(recordName && normalizedCropName && recordName === normalizedCropName);
 };
 
+const getInitialFarmerProfile = (persistedState) => {
+  let base = persistedState?.profile ?? initialProfile;
+  if (typeof window !== 'undefined') {
+    try {
+      const authRaw = window.localStorage.getItem('agri_farmer_auth_v1');
+      if (authRaw) {
+        const parsed = JSON.parse(authRaw);
+        if (parsed?.mobile) {
+          const clean = String(parsed.mobile).replace(/\D/g, '').slice(-10);
+          base = {
+            ...base,
+            mobileNumber: `+91 ${clean}`,
+            farmerName: parsed.fullName || base.farmerName,
+            farmerId: parsed.farmerId || base.farmerId,
+            password: parsed.password || base.password,
+          };
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+  return base;
+};
+
 export const farmerNavItems = [
   { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
   { key: 'crops', label: 'My Crops', icon: 'crops' },
@@ -70,7 +95,7 @@ export function FarmerProvider({ children }) {
   const persistedState = loadPersistedFarmerState();
 
   // Core Data States
-  const [profile, setProfile] = useState(() => persistedState?.profile ?? initialProfile);
+  const [profile, setProfile] = useState(() => getInitialFarmerProfile(persistedState));
   const [crops, setCrops] = useState(() => persistedState?.crops ?? initialCrops);
   const [marketPrices, setMarketPrices] = useState(() => persistedState?.marketPrices ?? initialMarketPrices);
   const [sales, setSales] = useState(() => persistedState?.sales ?? initialSales);
@@ -163,7 +188,30 @@ export function FarmerProvider({ children }) {
 
   // Profile Action
   const updateProfile = useCallback((updated) => {
-    setProfile((prev) => ({ ...prev, ...updated }));
+    setProfile((prev) => {
+      const next = { ...prev, ...updated };
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = window.localStorage.getItem('agri_farmer_auth_v1');
+          const existing = raw ? JSON.parse(raw) : {};
+          const cleanMobile = next.mobileNumber
+            ? String(next.mobileNumber).replace(/\D/g, '').slice(-10)
+            : existing.mobile || '9876543210';
+          const syncedAuth = {
+            ...existing,
+            mobile: cleanMobile,
+            password: next.password || existing.password || 'farmer@123',
+            fullName: next.farmerName || existing.fullName || 'Venkata Reddy',
+            farmerId: next.farmerId || existing.farmerId || 'AG-FARM-5021',
+            updatedAt: new Date().toISOString(),
+          };
+          window.localStorage.setItem('agri_farmer_auth_v1', JSON.stringify(syncedAuth));
+        } catch {
+          // Ignore parse errors
+        }
+      }
+      return next;
+    });
     showToast('Profile updated successfully!', 'success');
   }, [showToast]);
 
