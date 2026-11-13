@@ -20,6 +20,8 @@ export const ForgotPasswordPage = () => {
 
   // OTP State
   const [otpCode, setOtpCode] = useState('');
+  const [demoOtp, setDemoOtp] = useState(null);
+  const [rawDevOtp, setRawDevOtp] = useState(null);
   const [timer, setTimer] = useState(30);
   const [isSending, setIsSending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -47,6 +49,8 @@ export const ForgotPasswordPage = () => {
     e.preventDefault();
     setErrorNotice(null);
     setSuccessNotice(null);
+    setDemoOtp(null);
+    setRawDevOtp(null);
 
     const err = validateIndianPhone(phone);
     if (err) {
@@ -57,7 +61,11 @@ export const ForgotPasswordPage = () => {
     setIsSending(true);
     try {
       const response = await sendForgotPasswordOTP({ phone });
-      setSuccessNotice(response.message || `A 6-digit verification code has been sent to +91 ${phone}.`);
+      setDemoOtp(response.demoOtp || null);
+      setRawDevOtp(response.rawDevOtp || null);
+      setSuccessNotice(
+        response.message || 'OTP sent successfully to your registered mobile number.'
+      );
       setStep(2);
       setTimer(30);
     } catch (err) {
@@ -80,16 +88,18 @@ export const ForgotPasswordPage = () => {
 
     try {
       const response = await verifyForgotPasswordOTP({ phone, otp: otpCode });
-      setSuccessNotice(response.message || 'Verification successful! Redirecting to set a new password...');
+      setSuccessNotice(
+        response.message || 'Verification successful! Redirecting to set a new password...'
+      );
 
       setTimeout(() => {
         navigate('/reset-password', {
           state: {
             phone,
-            resetToken: response.resetToken || `mock-token-${Date.now()}`,
+            otpVerified: true,
           },
         });
-      }, 900);
+      }, 800);
     } catch (err) {
       setErrorNotice(err.message || 'Invalid or expired OTP code. Please try again.');
     } finally {
@@ -102,11 +112,17 @@ export const ForgotPasswordPage = () => {
     if (timer > 0 || isSending) return;
     setErrorNotice(null);
     setOtpCode('');
+    setDemoOtp(null);
+    setRawDevOtp(null);
     setIsSending(true);
 
     try {
       const response = await sendForgotPasswordOTP({ phone });
-      setSuccessNotice(response.message || `New verification code sent to +91 ${phone}.`);
+      setDemoOtp(response.demoOtp || null);
+      setRawDevOtp(response.rawDevOtp || null);
+      setSuccessNotice(
+        response.message || `New verification code sent to +91 ${phone}.`
+      );
       setTimer(30);
     } catch (err) {
       setErrorNotice(err.message || 'Failed to resend OTP.');
@@ -128,9 +144,27 @@ export const ForgotPasswordPage = () => {
 
       {/* Success Banner */}
       {successNotice && (
-        <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-[#16A34A] text-xs flex items-center gap-2 font-medium animate-fadeIn">
-          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-          <span>{successNotice}</span>
+        <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-[#16A34A] text-xs flex items-start gap-2 font-medium animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 leading-snug">
+            <span className="block">{successNotice}</span>
+            {step === 2 && demoOtp && (
+              <div className="mt-2 inline-flex flex-wrap items-center gap-2 px-2.5 py-1 rounded-lg bg-[#CCFBF1]/80 border border-[#0F766E]/30 text-[#0F766E]">
+                <span className="text-[11px] font-semibold">Demo OTP:</span>
+                <span
+                  data-testid="forgot-password-demo-otp"
+                  className="text-xs font-extrabold tracking-widest select-all"
+                >
+                  {demoOtp}
+                </span>
+                {rawDevOtp && rawDevOtp !== demoOtp && (
+                  <span className="text-[10px] text-[#0F766E]/80 font-medium">
+                    ({rawDevOtp})
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

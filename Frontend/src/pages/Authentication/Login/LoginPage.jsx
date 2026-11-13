@@ -26,7 +26,11 @@ export const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(
-    location.state?.registered ? 'Registration successful! Please sign in with your contact number.' : null
+    location.state?.passwordReset
+      ? 'Password reset successfully! Please sign in with your new password.'
+      : location.state?.registered
+      ? 'Registration successful! Please sign in with your contact number.'
+      : null
   );
 
   const handleChange = (e) => {
@@ -81,6 +85,16 @@ export const LoginPage = () => {
       });
 
       const backendUser = response?.user || response?.data;
+      const accessToken =
+        response?.accessToken ||
+        response?.token ||
+        backendUser?.accessToken ||
+        null;
+      const tokenType =
+        response?.tokenType || backendUser?.tokenType || 'Bearer';
+      const expiresAt =
+        response?.expiresAt || backendUser?.expiresAt || null;
+
       const resolvedRole = normalizeRole(
         backendUser?.role || response?.role
       );
@@ -96,6 +110,10 @@ export const LoginPage = () => {
       setAuthSession({
         ...backendUser,
         role: resolvedRole,
+        accessToken,
+        token: accessToken,
+        tokenType,
+        expiresAt,
       });
 
       setSuccessMessage(

@@ -13,7 +13,6 @@ export const ResetPasswordPage = () => {
   const location = useLocation();
 
   const phone = location.state?.phone || '';
-  const resetToken = location.state?.resetToken || '';
 
   const [formData, setFormData] = useState({
     newPassword: '',
@@ -54,7 +53,15 @@ export const ResetPasswordPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setSubmitError(null);
+
+    if (!phone) {
+      setSubmitError(
+        'Please verify your mobile number via Forgot Password before setting a new password.'
+      );
+      return;
+    }
 
     if (!validate()) return;
 
@@ -63,22 +70,33 @@ export const ResetPasswordPage = () => {
     try {
       const response = await resetPassword({
         phone,
-        resetToken,
         newPassword: formData.newPassword,
+        confirmPassword: formData.confirmPassword,
       });
 
-      setSuccessMessage(response.message || 'Password reset successfully! Redirecting to login...');
+      setSuccessMessage(
+        response?.message || 'Password reset successfully! Redirecting to login...'
+      );
 
       setTimeout(() => {
         navigate('/login', {
+          replace: true,
           state: {
-            registered: true,
+            passwordReset: true,
             contactNumber: phone,
           },
         });
-      }, 1000);
+      }, 900);
     } catch (err) {
-      setSubmitError(err.message || 'Failed to reset password. Please try again.');
+      if (err?.fieldErrors && Object.keys(err.fieldErrors).length > 0) {
+        setErrors((prev) => ({
+          ...prev,
+          ...err.fieldErrors,
+        }));
+      }
+      setSubmitError(
+        err?.message || 'Failed to reset password. Please try again.'
+      );
     } finally {
       setIsSubmitting(false);
     }

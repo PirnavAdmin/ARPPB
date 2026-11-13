@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { sendPhoneOTP, verifyPhoneOTP } from '../services/auth/otpService';
 
 /**
- * Custom hook to manage frontend OTP request, countdown timer, and verification lifecycle.
+ * Custom hook to manage registration OTP request, countdown timer, demo OTP display,
+ * duplicate mobile detection, and verification lifecycle.
  */
 export const useOTPVerification = (defaultCooldown = 30) => {
   const [isOtpSent, setIsOtpSent] = useState(false);
@@ -11,6 +12,9 @@ export const useOTPVerification = (defaultCooldown = 30) => {
   const [isVerified, setIsVerified] = useState(false);
   const [timer, setTimer] = useState(defaultCooldown);
   const [statusMessage, setStatusMessage] = useState(null);
+  const [demoOtp, setDemoOtp] = useState(null);
+  const [rawDevOtp, setRawDevOtp] = useState(null);
+  const [isDuplicateMobile, setIsDuplicateMobile] = useState(false);
   const [error, setError] = useState(null);
   const [verifiedTarget, setVerifiedTarget] = useState(null);
 
@@ -29,16 +33,27 @@ export const useOTPVerification = (defaultCooldown = 30) => {
   const requestOTP = useCallback(async (phone) => {
     setError(null);
     setStatusMessage(null);
+    setDemoOtp(null);
+    setRawDevOtp(null);
+    setIsDuplicateMobile(false);
     setIsSending(true);
 
     try {
       const response = await sendPhoneOTP(phone);
       setIsOtpSent(true);
+      setDemoOtp(response.demoOtp || null);
+      setRawDevOtp(response.rawDevOtp || null);
       setTimer(response.cooldownSeconds || defaultCooldown);
-      setStatusMessage(response.message);
+      setStatusMessage(
+        response.message || 'OTP sent successfully to your registered mobile number.'
+      );
       return response;
     } catch (err) {
-      setError(err.message || 'Failed to send OTP.');
+      setIsOtpSent(false);
+      setDemoOtp(null);
+      setRawDevOtp(null);
+      setIsDuplicateMobile(Boolean(err?.isDuplicateMobile));
+      setError(err?.message || 'Failed to send OTP.');
       throw err;
     } finally {
       setIsSending(false);
@@ -57,7 +72,7 @@ export const useOTPVerification = (defaultCooldown = 30) => {
       setStatusMessage('Phone Number Verified');
       return response;
     } catch (err) {
-      setError(err.message || 'OTP verification failed.');
+      setError(err?.message || 'OTP verification failed.');
       throw err;
     } finally {
       setIsVerifying(false);
@@ -78,6 +93,9 @@ export const useOTPVerification = (defaultCooldown = 30) => {
     setIsVerified(false);
     setTimer(defaultCooldown);
     setStatusMessage(null);
+    setDemoOtp(null);
+    setRawDevOtp(null);
+    setIsDuplicateMobile(false);
     setError(null);
     setVerifiedTarget(null);
   }, [defaultCooldown]);
@@ -90,6 +108,9 @@ export const useOTPVerification = (defaultCooldown = 30) => {
     timer,
     canResend,
     statusMessage,
+    demoOtp,
+    rawDevOtp,
+    isDuplicateMobile,
     error,
     verifiedTarget,
     requestOTP,
@@ -102,4 +123,5 @@ export const useOTPVerification = (defaultCooldown = 30) => {
 };
 
 export default useOTPVerification;
+
 

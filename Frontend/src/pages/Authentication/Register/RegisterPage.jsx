@@ -11,12 +11,10 @@ import { AuthButton } from '../components/AuthButton';
 import { useOTPVerification } from '../../../hooks/useOTPVerification';
 import { validateRegistrationForm } from '../../../utils/validation/authValidation';
 import { register } from '../../../services/auth/authService';
-import { useAuth } from '../../../hooks/useAuth';
-import { getDashboardPathByRole, normalizeRole } from '../../../context/AuthContext';
+import { DUPLICATE_MOBILE_MESSAGE } from '../../../services/auth/otpService';
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
-  const { login: setAuthSession } = useAuth();
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -30,6 +28,7 @@ export const RegisterPage = () => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [isDuplicateSubmit, setIsDuplicateSubmit] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
 
   // OTP Verification Hook
@@ -41,6 +40,9 @@ export const RegisterPage = () => {
     timer,
     canResend,
     statusMessage: otpStatusNotice,
+    demoOtp,
+    rawDevOtp,
+    isDuplicateMobile,
     error: otpError,
     requestOTP,
     verifyOTP,
@@ -60,15 +62,25 @@ export const RegisterPage = () => {
       setErrors((prev) => ({ ...prev, [name]: null }));
     }
     if (submitError) setSubmitError(null);
+    if (isDuplicateSubmit && name === 'phone') {
+      setIsDuplicateSubmit(false);
+    }
   };
 
   const handleRequestOTP = async (phoneNumber) => {
+    setSubmitError(null);
+    setIsDuplicateSubmit(false);
+    setErrors((prev) => ({ ...prev, phone: null }));
+
     try {
       await requestOTP(phoneNumber);
-      // Clear any previous phone error
-      setErrors((prev) => ({ ...prev, phone: null }));
-    } catch {
-      // Error handled by hook
+    } catch (err) {
+      const msg = err?.message || 'Failed to send OTP. Please try again.';
+      setErrors((prev) => ({ ...prev, phone: msg }));
+      if (err?.isDuplicateMobile) {
+        setIsDuplicateSubmit(true);
+        setSubmitError(DUPLICATE_MOBILE_MESSAGE);
+      }
     }
   };
 
@@ -76,16 +88,20 @@ export const RegisterPage = () => {
     try {
       await verifyOTP(formData.phone, otpCode);
       setErrors((prev) => ({ ...prev, phone: null }));
+      if (submitError) setSubmitError(null);
     } catch {
-      // Error handled by hook
+      // Error state managed by useOTPVerification hook
     }
   };
 
   const handleResendOTP = async () => {
     try {
       await resendOTP(formData.phone);
-    } catch {
-      // Error handled by hook
+    } catch (err) {
+      if (err?.isDuplicateMobile) {
+        setIsDuplicateSubmit(true);
+        setSubmitError(DUPLICATE_MOBILE_MESSAGE);
+      }
     }
   };
 
@@ -96,13 +112,24 @@ export const RegisterPage = () => {
     setSubmitError(null);
     setSuccessMessage(null);
 
+    if (isDuplicateMobile || isDuplicateSubmit) {
+      setErrors((prev) => ({ ...prev, phone: DUPLICATE_MOBILE_MESSAGE }));
+      setSubmitError(DUPLICATE_MOBILE_MESSAGE);
+      return;
+    }
+
     // Validate form fields
-    const { isValid, errors: validationErrors } = validateRegistrationForm(formData, isVerified);
+    const { isValid, errors: validationErrors } = validateRegistrationForm(
+      formData,
+      isVerified
+    );
 
     if (!isValid) {
       setErrors(validationErrors);
-      if (!isVerified) {
-        setSubmitError('Please verify your mobile number with OTP before completing registration.');
+      if (!isVerified && !validationErrors.phone?.includes('10 digits')) {
+        setSubmitError(
+          'Please verify your mobile number with OTP before completing registration.'
+        );
       }
       return;
     }
@@ -119,44 +146,41 @@ export const RegisterPage = () => {
         confirmPassword: formData.confirmPassword,
       });
 
-      const backendUser = response?.user || response?.data;
-      const resolvedRole = normalizeRole(
-        backendUser?.role || response?.role
-      );
-      const targetDashboard = getDashboardPathByRole(resolvedRole);
-
-      if (!resolvedRole || !targetDashboard) {
-        setSubmitError(
-          'Account registered, but your user role could not be determined from the server response. Please sign in.'
-        );
-        return;
-      }
-
-      // Store authenticated user session in AuthContext
-      setAuthSession({
-        ...backendUser,
-        role: resolvedRole,
-      });
-
       setSuccessMessage(
-        response.message || 'Account created successfully! Redirecting to your dashboard...'
+        response?.message ||
+          'Account created successfully! Redirecting to login...'
       );
 
       setTimeout(() => {
-        navigate(targetDashboard, { replace: true });
-      }, 800);
+        navigate('/login', {
+          replace: true,
+          state: {
+            registered: true,
+            contactNumber: formData.phone,
+          },
+        });
+      }, 900);
     } catch (err) {
+      if (err?.isDuplicateMobile) {
+        setIsDuplicateSubmit(true);
+      }
       if (err?.fieldErrors && Object.keys(err.fieldErrors).length > 0) {
         setErrors((prev) => ({
           ...prev,
           ...err.fieldErrors,
         }));
       }
-      setSubmitError(err?.message || 'Registration failed. Please try again.');
+      setSubmitError(
+        err?.isDuplicateMobile
+          ? DUPLICATE_MOBILE_MESSAGE
+          : err?.message || 'Registration failed. Please try again.'
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const showDuplicateBannerLink = isDuplicateMobile || isDuplicateSubmit;
 
   return (
     <AuthLayout maxWidth="max-w-[520px]">
@@ -175,9 +199,20 @@ export const RegisterPage = () => {
 
       {/* General Submission Error */}
       {submitError && (
-        <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-[#DC2626] text-xs flex items-center gap-2 font-medium animate-fadeIn">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{submitError}</span>
+        <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-[#DC2626] text-xs flex items-start gap-2 font-medium animate-fadeIn">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 leading-relaxed">
+            <span>{submitError}</span>
+            {showDuplicateBannerLink && (
+              <Link
+                to="/login"
+                state={{ contactNumber: formData.phone }}
+                className="inline-block font-bold text-[#0F766E] hover:text-[#115E59] underline ml-1.5"
+              >
+                Login with existing account →
+              </Link>
+            )}
+          </div>
         </div>
       )}
 
@@ -234,11 +269,20 @@ export const RegisterPage = () => {
           timer={timer}
           canResend={canResend}
           otpNotice={otpStatusNotice}
+          demoOtp={demoOtp}
+          rawDevOtp={rawDevOtp}
+          isDuplicateMobile={isDuplicateMobile || isDuplicateSubmit}
           otpError={otpError}
           onRequestOTP={handleRequestOTP}
           onVerifyOTP={handleVerifyOTP}
           onResendOTP={handleResendOTP}
-          onResetVerification={resetVerification}
+          onResetVerification={() => {
+            resetVerification();
+            setIsDuplicateSubmit(false);
+            if (submitError === DUPLICATE_MOBILE_MESSAGE) {
+              setSubmitError(null);
+            }
+          }}
         />
 
         {/* Row 4: Create Password & Confirm Password (2 Columns on SM screens) */}
@@ -283,6 +327,7 @@ export const RegisterPage = () => {
           <span>Already have an account? </span>
           <Link
             to="/login"
+            state={{ contactNumber: formData.phone }}
             className="font-semibold text-[#0F766E] hover:text-[#115E59] hover:underline transition-colors"
           >
             Sign In
@@ -294,4 +339,5 @@ export const RegisterPage = () => {
 };
 
 export default RegisterPage;
+
 
