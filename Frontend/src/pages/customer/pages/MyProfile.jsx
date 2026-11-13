@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { toast } from 'sonner';
 import {
   UserCheck,
   Pencil,
@@ -12,6 +13,7 @@ import {
   ShieldCheck,
   Phone,
   Mail,
+  Loader2,
 } from 'lucide-react';
 import { useCustomer } from '../context/useCustomer';
 import { AP_DISTRICTS, INDIAN_STATES } from '../../../utils/constants';
@@ -19,6 +21,7 @@ import { formatDate } from '../../../utils/formatDate';
 import CustomerPageHeader from '../components/CustomerPageHeader';
 import CustomerStatusBadge from '../components/CustomerStatusBadge';
 import CustomerModal from '../components/CustomerModal';
+import MobileOTPVerification from '../components/MobileOTPVerification';
 
 const EMPTY_ADDRESS = {
   label: '',
@@ -107,6 +110,13 @@ export function MyProfile() {
   const [errors, setErrors] = useState({});
   const [photoError, setPhotoError] = useState('');
 
+  // Mobile Number Update state
+  const [isMobileUpdateModalOpen, setIsMobileUpdateModalOpen] = useState(false);
+  const [isOTPModalOpen, setIsOTPModalOpen] = useState(false);
+  const [newMobileNumber, setNewMobileNumber] = useState('');
+  const [newNumberErrors, setNewNumberErrors] = useState('');
+  const [isSendingOTP, setIsSendingOTP] = useState(false);
+
   // Delivery Address Modal state
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [editingAddrId, setEditingAddrId] = useState(null);
@@ -193,6 +203,53 @@ export function MyProfile() {
       pinCode: formData.pinCode.trim(),
     });
     setIsEditing(false);
+  };
+
+  // Mobile Number Update Handlers
+  const validateNewMobileNumber = (value) => {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (!digits) return 'Mobile number is required.';
+    if (!/^[6-9]\d{9}$/.test(digits)) {
+      return 'Enter a valid 10-digit Indian mobile number.';
+    }
+    if (digits === String(profile.mobileNumber || '').replace(/\D/g, '')) {
+      return 'This is already your registered mobile number.';
+    }
+    return null;
+  };
+
+  const openMobileUpdateModal = () => {
+    setNewMobileNumber('');
+    setNewNumberErrors('');
+    setIsMobileUpdateModalOpen(true);
+  };
+
+  const closeMobileUpdateModal = () => {
+    setIsMobileUpdateModalOpen(false);
+    setNewMobileNumber('');
+    setNewNumberErrors('');
+  };
+
+  const handleSendOTP = () => {
+    const error = validateNewMobileNumber(newMobileNumber);
+    if (error) {
+      setNewNumberErrors(error);
+      return;
+    }
+    setIsSendingOTP(true);
+    setNewNumberErrors('');
+    // Demo OTP is generated via mobileOTPService.sendDemoOTP inside the OTP modal
+    setIsSendingOTP(false);
+    closeMobileUpdateModal();
+    setIsOTPModalOpen(true);
+  };
+
+  const handleMobileUpdateSuccess = (verifiedNumber) => {
+    updateProfile({ mobileNumber: verifiedNumber });
+    setIsOTPModalOpen(false);
+    setNewMobileNumber('');
+    setNewNumberErrors('');
+    toast.success('Mobile number updated successfully.');
   };
 
   const openAddAddress = () => {
@@ -300,6 +357,13 @@ export function MyProfile() {
                 <Phone className="w-3.5 h-3.5 text-[#0F766E]" />
                 +91 {profile.mobileNumber}
               </span>
+              <button
+                type="button"
+                onClick={openMobileUpdateModal}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-[#14B8A6]/30 bg-[#CCFBF1]/40 text-[#0F766E] hover:bg-[#0F766E] hover:text-white transition-colors cursor-pointer"
+              >
+                <span>Update</span>
+              </button>
               {profile.email && (
                 <>
                   <span>&bull;</span>
@@ -866,6 +930,87 @@ export function MyProfile() {
           </label>
         </div>
       </CustomerModal>
+
+      {/* Mobile Number Update - New Number Entry Modal */}
+      <CustomerModal
+        isOpen={isMobileUpdateModalOpen}
+        onClose={closeMobileUpdateModal}
+        title="Update Mobile Number"
+        subtitle="Enter your new 10-digit mobile number. An OTP will be sent for verification."
+        size="sm"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={closeMobileUpdateModal}
+              className="px-4 py-2 text-xs font-semibold rounded-xl border border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC] cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSendOTP}
+              disabled={isSendingOTP || !newMobileNumber || Boolean(newNumberErrors)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-[#0F766E] text-white hover:bg-[#115E59] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {isSendingOTP ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Sending...</span>
+                </>
+              ) : (
+                <>
+                  <Phone className="w-3.5 h-3.5" />
+                  <span>Send OTP</span>
+                </>
+              )}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4 text-xs">
+          <div>
+            <label className="block font-semibold text-[#0F172A] mb-1">
+              New Mobile Number *
+            </label>
+            <input
+              type="tel"
+              maxLength={10}
+              value={newMobileNumber}
+              onChange={(e) => setNewMobileNumber(e.target.value)}
+              placeholder="9876543210"
+              className={`w-full px-3 py-2 text-sm font-mono rounded-lg border bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E] ${newNumberErrors ? 'border-[#DC2626]' : 'border-[#E2E8F0]'}`}
+            />
+            {newNumberErrors && (
+              <p className="text-[11px] text-[#DC2626] mt-1">{newNumberErrors}</p>
+            )}
+            <p className="text-[10px] text-[#64748B] mt-1">
+              Must be a valid 10-digit Indian mobile number and different from your
+              current registered number.
+            </p>
+          </div>
+          <div className="p-3 rounded-lg border border-[#14B8A6]/30 bg-[#CCFBF1]/20">
+            <div className="flex items-start gap-2">
+              <span className="text-[#0F766E] font-semibold text-xs">How it works</span>
+              <span className="text-[#0F172A] text-xs">
+                1. Enter your new mobile number above.{' '}
+                2. We will send a 6-digit OTP for verification.{' '}
+                3. Enter the OTP to confirm the update.{' '}
+                Your number will only change after successful verification.
+              </span>
+            </div>
+          </div>
+        </div>
+      </CustomerModal>
+
+      {/* Mobile Number Update - OTP Verification Modal */}
+      <MobileOTPVerification
+        isOpen={isOTPModalOpen}
+        onClose={() => setIsOTPModalOpen(false)}
+        newNumber={newMobileNumber}
+        onSuccess={handleMobileUpdateSuccess}
+      />
+
     </div>
   );
 }
