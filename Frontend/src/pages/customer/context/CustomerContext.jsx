@@ -53,8 +53,15 @@ export function CustomerProvider({ children }) {
     const authCustomerId = user?.entityCode || (user?.userId ? `CUS-${user.userId}` : INITIAL_CUSTOMER_PROFILE.customerId);
     const saved = readStoredJson(CUSTOMER_STORAGE_KEYS.PROFILE, null);
 
+    const SAMPLE_LABELS = ['Primary Warehouse', 'Godown Branch (Brodipet)'];
+
     if (saved && saved.authKey === authKey && saved.fullName) {
-      return saved;
+      const savedAddresses = Array.isArray(saved.deliveryAddresses) ? saved.deliveryAddresses : [];
+      const filteredAddresses = savedAddresses.filter((a) => !SAMPLE_LABELS.includes(a.label));
+      return {
+        ...saved,
+        deliveryAddresses: filteredAddresses,
+      };
     }
 
     return {

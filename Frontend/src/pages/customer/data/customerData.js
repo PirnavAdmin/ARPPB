@@ -490,30 +490,7 @@ export const INITIAL_CUSTOMER_PROFILE = {
   state: 'Andhra Pradesh',
   pinCode: '522001',
   memberSince: '2025-01-15',
-  deliveryAddresses: [
-    {
-      id: 'ADDR-01',
-      label: 'Primary Warehouse',
-      recipientName: 'Warehouse Manager',
-      contactNumber: '9876543210',
-      addressLine: 'Plot 14, Market Yard Road, Autonagar',
-      district: 'Guntur',
-      state: 'Andhra Pradesh',
-      pinCode: '522001',
-      isDefault: true,
-    },
-    {
-      id: 'ADDR-02',
-      label: 'Godown Branch (Brodipet)',
-      recipientName: 'Store In-charge',
-      contactNumber: '9123456789',
-      addressLine: 'Door No. 4-12-88, 2nd Lane Brodipet',
-      district: 'Guntur',
-      state: 'Andhra Pradesh',
-      pinCode: '522002',
-      isDefault: false,
-    },
-  ],
+  deliveryAddresses: [],
 };
 
 export const INITIAL_CART = [

@@ -991,62 +991,69 @@ export function MyProfile() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(profile.deliveryAddresses || []).map((addr) => (
-            <div
-              key={addr.id}
-              className={`p-4 rounded-xl border flex flex-col justify-between gap-3 transition-all ${addr.isDefault
-                  ? 'bg-[#CCFBF1]/25 border-[#0F766E] ring-1 ring-[#0F766E]/20'
-                  : 'bg-[#F8FAFC]/60 border-[#E2E8F0]'
-                }`}
-            >
-              <div className="space-y-1.5 text-xs">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-bold text-sm text-[#0F172A]">{addr.label}</span>
-                  {addr.isDefault ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0F766E] text-white">
-                      <CheckCircle2 className="w-3 h-3" />
-                      Default
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setDefaultDeliveryAddress(addr.id)}
-                      className="text-[11px] font-bold text-[#0F766E] hover:underline cursor-pointer"
-                    >
-                      Set as Default
-                    </button>
-                  )}
+          {(profile.deliveryAddresses || []).length > 0 ? (
+            (profile.deliveryAddresses || []).map((addr) => (
+              <div
+                key={addr.id}
+                className={`p-4 rounded-xl border flex flex-col justify-between gap-3 transition-all ${addr.isDefault
+                    ? 'bg-[#CCFBF1]/25 border-[#0F766E] ring-1 ring-[#0F766E]/20'
+                    : 'bg-[#F8FAFC]/60 border-[#E2E8F0]'
+                  }`}
+              >
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-sm text-[#0F172A]">{addr.label}</span>
+                    {addr.isDefault ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0F766E] text-white">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Default
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setDefaultDeliveryAddress(addr.id)}
+                        className="text-[11px] font-bold text-[#0F766E] hover:underline cursor-pointer"
+                      >
+                        Set as Default
+                      </button>
+                    )}
+                  </div>
+
+                  <p className="font-semibold text-[#0F172A]">{addr.recipientName}</p>
+                  <p className="text-[#64748B]">{addr.addressLine}</p>
+                  <p className="text-[#0F172A] font-medium">
+                    {addr.district}, {addr.state} - {addr.pinCode}
+                  </p>
+                  <p className="text-[#64748B] font-mono">Phone: +91 {addr.contactNumber}</p>
                 </div>
 
-                <p className="font-semibold text-[#0F172A]">{addr.recipientName}</p>
-                <p className="text-[#64748B]">{addr.addressLine}</p>
-                <p className="text-[#0F172A] font-medium">
-                  {addr.district}, {addr.state} - {addr.pinCode}
-                </p>
-                <p className="text-[#64748B] font-mono">Phone: +91 {addr.contactNumber}</p>
+                <div className="pt-2.5 border-t border-[#E2E8F0] flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openEditAddress(addr)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white border border-[#E2E8F0] text-[#0F766E] hover:bg-[#CCFBF1] transition-colors cursor-pointer"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={(profile.deliveryAddresses || []).length <= 1}
+                    onClick={() => deleteDeliveryAddress(addr.id)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white border border-red-200 text-[#DC2626] hover:bg-[#FEE2E2] disabled:opacity-40 cursor-pointer"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>Remove</span>
+                  </button>
+                </div>
               </div>
-
-              <div className="pt-2.5 border-t border-[#E2E8F0] flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => openEditAddress(addr)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white border border-[#E2E8F0] text-[#0F766E] hover:bg-[#CCFBF1] transition-colors cursor-pointer"
-                >
-                  <Pencil className="w-3 h-3" />
-                  <span>Edit</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={(profile.deliveryAddresses || []).length <= 1}
-                  onClick={() => deleteDeliveryAddress(addr.id)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white border border-red-200 text-[#DC2626] hover:bg-[#FEE2E2] disabled:opacity-40 cursor-pointer"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  <span>Remove</span>
-                </button>
-              </div>
+            ))
+          ) : (
+            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
+              <MapPin className="w-8 h-8 text-[#E2E8F0] mb-3" />
+              <p className="text-sm text-[#64748B]">No saved delivery addresses yet.</p>
             </div>
-          ))}
+          )}
         </div>
       </section>
 
