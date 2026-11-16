@@ -5,7 +5,7 @@ export const AUTH_SESSION_STORAGE_KEY = "arppb_auth_session_v1";
 
 export const REMOTE_API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL ||
-    "https://zodiac-excursion-rendition.ngrok-free.dev";
+    "https://flatterer-exalted-anthem.ngrok-free.dev";
 
 // In the browser on localhost (Vite dev/preview), use relative URLs ("")
 // so requests to /api/v1/... go through Vite's same-origin proxy in vite.config.js
