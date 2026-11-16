@@ -1,11 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { sendPhoneOTP, verifyPhoneOTP } from '../services/auth/otpService';
+import {
+  sendMiddlemanMobileChangeOtp,
+  verifyMiddlemanMobileChangeOtp,
+  sendVendorMobileChangeOtp,
+  verifyVendorMobileChangeOtp,
+  sendCustomerMobileChangeOtp,
+  verifyCustomerMobileChangeOtp,
+  sendFarmerMobileChangeOtp,
+  verifyFarmerMobileChangeOtp,
+} from '../services/profileService';
 
 /**
- * Custom hook to manage registration OTP request, countdown timer, demo OTP display,
- * duplicate mobile detection, and verification lifecycle.
+ * Custom hook to manage registration and portal-specific My Profile OTP request,
+ * countdown timer, demo OTP display, duplicate mobile detection, and verification lifecycle.
  */
-export const useOTPVerification = (defaultCooldown = 30) => {
+export const useOTPVerification = (defaultCooldown = 30, hookOptions = {}) => {
+  const defaultPortal = hookOptions?.portal || null;
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -38,8 +49,22 @@ export const useOTPVerification = (defaultCooldown = 30) => {
     setIsDuplicateMobile(false);
     setIsSending(true);
 
+    const activePortal = options.portal || defaultPortal;
+
     try {
-      const response = await sendPhoneOTP(phone);
+      let response;
+      if (activePortal === 'middleman') {
+        response = await sendMiddlemanMobileChangeOtp(phone);
+      } else if (activePortal === 'vendor') {
+        response = await sendVendorMobileChangeOtp(phone);
+      } else if (activePortal === 'customer') {
+        response = await sendCustomerMobileChangeOtp(phone);
+      } else if (activePortal === 'farmer') {
+        response = await sendFarmerMobileChangeOtp(phone, options.userId);
+      } else {
+        response = await sendPhoneOTP(phone);
+      }
+
       setIsOtpSent(true);
       setDemoOtp(response.demoOtp || null);
       setRawDevOtp(response.rawDevOtp || null);
@@ -65,15 +90,29 @@ export const useOTPVerification = (defaultCooldown = 30) => {
     } finally {
       setIsSending(false);
     }
-  }, [defaultCooldown]);
+  }, [defaultCooldown, defaultPortal]);
 
   // Verify entered OTP
   const verifyOTP = useCallback(async (phone, otpCode, options = {}) => {
     setError(null);
     setIsVerifying(true);
 
+    const activePortal = options.portal || defaultPortal;
+
     try {
-      const response = await verifyPhoneOTP(phone, otpCode);
+      let response;
+      if (activePortal === 'middleman') {
+        response = await verifyMiddlemanMobileChangeOtp(phone, otpCode);
+      } else if (activePortal === 'vendor') {
+        response = await verifyVendorMobileChangeOtp(phone, otpCode);
+      } else if (activePortal === 'customer') {
+        response = await verifyCustomerMobileChangeOtp(phone, otpCode);
+      } else if (activePortal === 'farmer') {
+        response = await verifyFarmerMobileChangeOtp(phone, otpCode, options.userId);
+      } else {
+        response = await verifyPhoneOTP(phone, otpCode);
+      }
+
       setIsVerified(true);
       setVerifiedTarget(String(phone || '').replace(/\D/g, ''));
       setStatusMessage(options.customVerifiedMessage || 'Phone Number Verified');
@@ -84,7 +123,7 @@ export const useOTPVerification = (defaultCooldown = 30) => {
     } finally {
       setIsVerifying(false);
     }
-  }, []);
+  }, [defaultPortal]);
 
   // Resend OTP
   const resendOTP = useCallback(async (phone, options = {}) => {

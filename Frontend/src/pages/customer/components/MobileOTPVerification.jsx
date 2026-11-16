@@ -8,40 +8,39 @@ import {
   Loader2,
 } from 'lucide-react';
 import {
-  mobileOTPService,
   formatMaskedNumber,
   formatDisplayNumber,
   OTP_EXPIRY_SECONDS,
   RESEND_COOLDOWN_SECONDS,
 } from '../data/customerOTPService';
+import {
+  sendCustomerMobileChangeOtp,
+  verifyCustomerMobileChangeOtp,
+} from '../../../services/profileService';
 
 /**
  * MobileOTPVerification
  *
  * Reusable OTP verification modal for customer mobile number updates.
- * All OTP business logic lives in customerOTPService.js; this component
- * only handles UI state and delegates verification/resend to the service.
- *
- * Props:
- *   isOpen        - boolean, whether the modal is visible
- *   onClose       - function, called when user cancels/closes
- *   currentNumber - string, the currently registered mobile number
- *   newNumber     - string, the new mobile number to verify
- *   onSuccess     - function(newNumber), called after successful OTP verification
+ * Connected to POST /api/customer/profile/mobile/send-otp and
+ * POST /api/customer/profile/mobile/verify-otp via profileService.js.
  */
 export function MobileOTPVerification({
   isOpen,
   onClose,
   newNumber,
+  phoneNumber,
+  initialDemoOtp = '',
   onSuccess,
 }) {
+  const targetNumber = String(newNumber || phoneNumber || '').replace(/\D/g, '');
   const [otpInput, setOtpInput] = useState('');
   const [expirySeconds, setExpirySeconds] = useState(OTP_EXPIRY_SECONDS);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [feedback, setFeedback] = useState(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [demoCodeVisible, setDemoCodeVisible] = useState(false);
+  const [activeDemoOtp, setActiveDemoOtp] = useState(initialDemoOtp || '');
   const timerRef = useRef(null);
   const cooldownRef = useRef(null);
   const inputsRef = useRef([]);
@@ -91,22 +90,11 @@ export function MobileOTPVerification({
     if (isOpen) {
       setOtpInput('');
       setFeedback(null);
-      const record = mobileOTPService.getRecord(newNumber);
-      if (record) {
-        setExpirySeconds(
-          Math.max(
-            0,
-            Math.floor(
-              (new Date(record.expiresAt) - new Date()) / 1000
-            )
-          )
-        );
-      } else {
-        setExpirySeconds(OTP_EXPIRY_SECONDS);
-      }
-      setResendCooldown(0);
+      setActiveDemoOtp(initialDemoOtp || '');
+      setExpirySeconds(OTP_EXPIRY_SECONDS);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
     }
-  }, [isOpen, newNumber]);
+  }, [isOpen, targetNumber, initialDemoOtp]);
 
   const formatCountdown = useCallback((seconds) => {
     const safe = Math.max(0, Number(seconds) || 0);
@@ -172,24 +160,33 @@ export function MobileOTPVerification({
     }
 
     setIsVerifying(true);
-    const result = mobileOTPService.verifyDemoOTP(newNumber, otpInput);
+    setFeedback(null);
 
-    if (result.success) {
+    try {
+      const result = await verifyCustomerMobileChangeOtp(targetNumber, otpInput);
       clearInterval(timerRef.current);
       timerRef.current = null;
       setIsVerifying(false);
-      setFeedback({ type: 'success', message: result.message });
+      setFeedback({
+        type: 'success',
+        message: result.message || 'Mobile number verified and updated successfully.',
+      });
 
       setTimeout(() => {
-        mobileOTPService.clearRecord(newNumber);
-        onSuccess(newNumber);
-      }, 800);
-    } else {
+        onSuccess(targetNumber, result.profileData);
+      }, 600);
+    } catch (err) {
       setIsVerifying(false);
+      const errMsg = err?.message || 'Invalid or expired OTP code.';
+      const lower = errMsg.toLowerCase();
       setFeedback({
         type: 'error',
-        message: result.message,
-        errorType: result.errorType,
+        message: errMsg,
+        errorType: lower.includes('maximum') || lower.includes('attempt')
+          ? 'locked'
+          : lower.includes('expired')
+          ? 'expired'
+          : 'incorrect',
       });
     }
   };
@@ -200,20 +197,27 @@ export function MobileOTPVerification({
     setIsResending(true);
     setFeedback(null);
 
-    const code = mobileOTPService.sendDemoOTP(newNumber);
-    setResendCooldown(RESEND_COOLDOWN_SECONDS);
-    setExpirySeconds(OTP_EXPIRY_SECONDS);
-    setOtpInput('');
+    try {
+      const res = await sendCustomerMobileChangeOtp(targetNumber);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      setExpirySeconds(OTP_EXPIRY_SECONDS);
+      setOtpInput('');
+      setActiveDemoOtp(res?.demoOtp || '');
+      setIsResending(false);
 
-    setIsResending(false);
-    setDemoCodeVisible(true);
-
-    setFeedback({
-      type: 'info',
-      message: `New OTP sent to ${formatMaskedNumber(newNumber)}. Code (demo): ${code}`,
-    });
-
-    setTimeout(() => setDemoCodeVisible(false), 4000);
+      setFeedback({
+        type: 'info',
+        message:
+          res?.message ||
+          `New OTP sent to ${formatMaskedNumber(targetNumber)}.`,
+      });
+    } catch (err) {
+      setIsResending(false);
+      setFeedback({
+        type: 'error',
+        message: err?.message || 'Failed to resend OTP.',
+      });
+    }
   };
 
   const handleCancel = () => {
@@ -222,8 +226,8 @@ export function MobileOTPVerification({
 
   if (!isOpen) return null;
 
-  const maskedNumber = formatMaskedNumber(newNumber);
-  const displayNumber = formatDisplayNumber(newNumber);
+  const maskedNumber = formatMaskedNumber(targetNumber);
+  const displayNumber = formatDisplayNumber(targetNumber);
   const isLocked = feedback?.errorType === 'locked';
   const isExpired = feedback?.errorType === 'expired';
 
@@ -256,16 +260,24 @@ export function MobileOTPVerification({
         </div>
 
         <div className="p-6 overflow-y-auto flex-1 text-[#0F172A]">
-          {/* Demo OTP disclosure banner (temporary development behaviour) */}
-          <div className="mb-4 rounded-lg border border-[#14B8A6]/30 bg-[#CCFBF1]/20 p-3 text-xs">
-            <div className="flex items-start gap-2">
-              <span className="text-[#0F766E] font-semibold">Developer Preview</span>
-              <span className="text-[#64748B]">
-                This is a temporary frontend demo OTP. Real SMS delivery will be
-                added during backend integration. No actual message is sent.
-              </span>
+          {/* Dev OTP banner when returned by backend in Development mode */}
+          {activeDemoOtp && (
+            <div className="mb-4 rounded-lg border border-[#14B8A6]/30 bg-[#CCFBF1]/20 p-3 text-xs flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[#0F766E] font-semibold">Developer OTP:</span>
+                <span className="font-mono font-bold text-[#0F766E] text-sm">
+                  {activeDemoOtp}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOtpInput(activeDemoOtp)}
+                className="px-2.5 py-1 rounded-md bg-[#0F766E] text-white font-semibold text-[11px] cursor-pointer"
+              >
+                Auto-fill
+              </button>
             </div>
-          </div>
+          )}
 
           {/* Feedback messages */}
           {feedback && (
@@ -290,16 +302,6 @@ export function MobileOTPVerification({
                 )}
                 <span>{feedback.message}</span>
               </div>
-              {demoCodeVisible && feedback.type === 'info' && (
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="font-mono text-[#0F766E] font-bold">
-                    OTP: {feedback.message.match(/\d{6}/)?.[0] || ''}
-                  </span>
-                  <span className="text-[10px] text-[#64748B]">
-                    visible only during development
-                  </span>
-                </div>
-              )}
             </div>
           )}
 

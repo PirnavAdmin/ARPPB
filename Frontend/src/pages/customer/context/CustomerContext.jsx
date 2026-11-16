@@ -14,6 +14,15 @@ import {
   INITIAL_NOTIFICATIONS,
 } from '../data/customerData';
 import { useAuth } from '../../../hooks/useAuth';
+import {
+  fetchCustomerProfile,
+  updateCustomerProfileApi,
+  createCustomerAddressApi,
+  updateCustomerAddressApi,
+  setDefaultCustomerAddressApi,
+  deleteCustomerAddressApi,
+  mapCustomerDtoToProfile,
+} from '../../../services/profileService';
 
 function readStoredJson(key, fallback) {
   try {
@@ -43,7 +52,7 @@ function addWorkingDaysISO(startDate, workingDays = 3) {
 }
 
 export function CustomerProvider({ children }) {
-  const { user, updateUserMobile } = useAuth();
+  const { user, token, updateUserMobile } = useAuth();
   const authKey = String(user?.userId || user?.fullName || user?.mobile || user?.contactNumber || '');
 
   const [profile, setProfile] = useState(() => {
@@ -77,10 +86,10 @@ export function CustomerProvider({ children }) {
     return {
       ...INITIAL_CUSTOMER_PROFILE,
       authKey,
-      customerId: authCustomerId,
-      fullName: authName || 'Customer',
-      email: authEmail,
-      mobileNumber: authMobile || INITIAL_CUSTOMER_PROFILE.mobileNumber,
+      customerId: authCustomerId || '',
+      fullName: authName || '',
+      email: authEmail || '',
+      mobileNumber: authMobile || '',
     };
   });
 
@@ -698,20 +707,96 @@ export function CustomerProvider({ children }) {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
-  // Profile & Multiple Delivery Addresses
-  const updateProfile = useCallback((updates) => {
-    setProfile((prev) => ({
-      ...prev,
+  // Profile & Multiple Delivery Addresses (connected to /api/customer/profile*)
+  const refreshProfile = useCallback(async () => {
+    if (!token || (user?.role && user.role !== 'customer')) return null;
+    try {
+      const dto = await fetchCustomerProfile();
+      if (dto && typeof dto === 'object') {
+        setProfile((prev) => mapCustomerDtoToProfile(dto, prev, user));
+        if (dto.mobileNumber) {
+          updateUserMobile(dto.mobileNumber);
+        }
+        return dto;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }, [token, user, updateUserMobile]);
+
+  useEffect(() => {
+    if (!token || user?.role !== 'customer') return;
+    Promise.resolve().then(() => {
+      refreshProfile();
+    });
+  }, [token, user?.role, authKey, refreshProfile]);
+
+  const updateProfile = useCallback(async (updates) => {
+    const mergedProfile = {
+      ...profile,
       ...updates,
-      customerId: prev.customerId, // keep Customer ID immutable
-    }));
+      customerId: profile.customerId,
+    };
+
+    setProfile(mergedProfile);
     if (updates?.mobileNumber) {
       updateUserMobile(updates.mobileNumber);
     }
-    toast.success('Customer profile updated successfully.');
-  }, [updateUserMobile]);
 
-  const addDeliveryAddress = useCallback((newAddr) => {
+    const isFullProfileSave =
+      updates &&
+      ('fullName' in updates ||
+        'address' in updates ||
+        'district' in updates ||
+        'state' in updates ||
+        'pinCode' in updates);
+
+    if (token && isFullProfileSave) {
+      try {
+        const savedDto = await updateCustomerProfileApi(mergedProfile);
+        if (savedDto && typeof savedDto === 'object') {
+          setProfile((prev) => mapCustomerDtoToProfile(savedDto, prev, user));
+          if (savedDto.mobileNumber) {
+            updateUserMobile(savedDto.mobileNumber);
+          }
+        }
+      } catch (err) {
+        toast.error(err?.message || 'Failed to update customer profile.');
+        throw err;
+      }
+    }
+
+    toast.success('Customer profile updated successfully.');
+  }, [profile, token, user, updateUserMobile]);
+
+  const addDeliveryAddress = useCallback(async (newAddr) => {
+    if (token) {
+      try {
+        const createdDto = await createCustomerAddressApi(newAddr);
+        setProfile((prev) => {
+          const existing = prev.deliveryAddresses || [];
+          const shouldBeDefault = Boolean(createdDto?.isDefault ?? newAddr.isDefault) || existing.length === 0;
+          const nextList = shouldBeDefault
+            ? existing.map((a) => ({ ...a, isDefault: false }))
+            : [...existing];
+          const addedItem = createdDto && typeof createdDto === 'object' && createdDto.id
+            ? { ...createdDto, isDefault: Boolean(createdDto.isDefault ?? shouldBeDefault) }
+            : { ...newAddr, id: `ADDR-${Date.now()}`, isDefault: shouldBeDefault };
+          return {
+            ...prev,
+            deliveryAddresses: [...nextList, addedItem],
+            addresses: [...nextList, addedItem],
+          };
+        });
+        toast.success('New delivery address added.');
+        return createdDto;
+      } catch (err) {
+        toast.error(err?.message || 'Failed to add delivery address.');
+        throw err;
+      }
+    }
+
     setProfile((prev) => {
       const existing = prev.deliveryAddresses || [];
       const addrId = `ADDR-${String(existing.length + 1).padStart(2, '0')}-${Date.now().toString().slice(-3)}`;
@@ -725,9 +810,31 @@ export function CustomerProvider({ children }) {
       };
     });
     toast.success('New delivery address added.');
-  }, []);
+  }, [token]);
 
-  const updateDeliveryAddress = useCallback((addrId, updates) => {
+  const updateDeliveryAddress = useCallback(async (addrId, updates) => {
+    if (token && addrId !== undefined && addrId !== null && !String(addrId).startsWith('ADDR-')) {
+      try {
+        const updatedDto = await updateCustomerAddressApi(addrId, updates);
+        setProfile((prev) => {
+          const existing = prev.deliveryAddresses || [];
+          const makeDefault = Boolean(updatedDto?.isDefault ?? updates.isDefault);
+          const nextList = existing.map((a) => {
+            if (String(a.id) === String(addrId)) {
+              return { ...a, ...updates, ...(updatedDto || {}) };
+            }
+            return makeDefault ? { ...a, isDefault: false } : a;
+          });
+          return { ...prev, deliveryAddresses: nextList, addresses: nextList };
+        });
+        toast.success('Delivery address updated.');
+        return updatedDto;
+      } catch (err) {
+        toast.error(err?.message || 'Failed to update delivery address.');
+        throw err;
+      }
+    }
+
     setProfile((prev) => {
       const existing = prev.deliveryAddresses || [];
       const makeDefault = Boolean(updates.isDefault);
@@ -740,35 +847,59 @@ export function CustomerProvider({ children }) {
       return { ...prev, deliveryAddresses: nextList };
     });
     toast.success('Delivery address updated.');
-  }, []);
+  }, [token]);
 
-  const deleteDeliveryAddress = useCallback((addrId) => {
-    setProfile((prev) => {
-      const existing = prev.deliveryAddresses || [];
-      if (existing.length <= 1) {
-        toast.error('At least one delivery address must be maintained.');
-        return prev;
+  const deleteDeliveryAddress = useCallback(async (addrId) => {
+    const existing = profile.deliveryAddresses || [];
+    if (existing.length <= 1) {
+      toast.error('At least one delivery address must be maintained.');
+      return;
+    }
+
+    if (token && addrId !== undefined && addrId !== null && !String(addrId).startsWith('ADDR-')) {
+      try {
+        await deleteCustomerAddressApi(addrId);
+      } catch (err) {
+        toast.error(err?.message || 'Failed to delete delivery address.');
+        return;
       }
-      const remaining = existing.filter((a) => a.id !== addrId);
+    }
+
+    setProfile((prev) => {
+      const currentList = prev.deliveryAddresses || [];
+      const remaining = currentList.filter((a) => String(a.id) !== String(addrId));
       const hasDefault = remaining.some((a) => a.isDefault);
       const normalized = hasDefault
         ? remaining
         : remaining.map((a, idx) => ({ ...a, isDefault: idx === 0 }));
       toast.info('Delivery address removed.');
-      return { ...prev, deliveryAddresses: normalized };
+      return { ...prev, deliveryAddresses: normalized, addresses: normalized };
     });
-  }, []);
+  }, [profile.deliveryAddresses, token]);
 
-  const setDefaultDeliveryAddress = useCallback((addrId) => {
-    setProfile((prev) => ({
-      ...prev,
-      deliveryAddresses: (prev.deliveryAddresses || []).map((a) => ({
+  const setDefaultDeliveryAddress = useCallback(async (addrId) => {
+    if (token && addrId !== undefined && addrId !== null && !String(addrId).startsWith('ADDR-')) {
+      try {
+        await setDefaultCustomerAddressApi(addrId);
+      } catch (err) {
+        toast.error(err?.message || 'Failed to set default delivery address.');
+        return;
+      }
+    }
+
+    setProfile((prev) => {
+      const nextList = (prev.deliveryAddresses || []).map((a) => ({
         ...a,
-        isDefault: a.id === addrId,
-      })),
-    }));
+        isDefault: String(a.id) === String(addrId),
+      }));
+      return {
+        ...prev,
+        deliveryAddresses: nextList,
+        addresses: nextList,
+      };
+    });
     toast.success('Default delivery address updated.');
-  }, []);
+  }, [token]);
 
   const resetCustomerDemoData = useCallback(() => {
     Object.values(CUSTOMER_STORAGE_KEYS).forEach((storageKey) => {
@@ -817,6 +948,7 @@ export function CustomerProvider({ children }) {
     markNotificationRead,
     markAllNotificationsRead,
     deleteNotification,
+    refreshProfile,
     updateProfile,
     addDeliveryAddress,
     updateDeliveryAddress,

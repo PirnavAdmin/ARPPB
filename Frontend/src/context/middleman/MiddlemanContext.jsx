@@ -13,11 +13,17 @@ import { INITIAL_NOTIFICATIONS } from '../../data/mock/middleman/notificationDat
 import { generateId } from '../../utils/middleman/transactionHelpers';
 import { allocateInventoryFIFO, calculateGrossProfit, calculateOutstandingPosition } from '../../utils/middleman/calculations';
 import { useAuth } from '../../hooks/useAuth';
+import {
+  fetchMiddlemanProfile,
+  fetchMiddlemanProfileById,
+  updateMiddlemanProfile,
+  mapMiddlemanDtoToProfile,
+} from '../../services/profileService';
 
 const STORAGE_KEY = 'agriconnect_middleman_state_v1';
 
 export const MiddlemanProvider = ({ children }) => {
-  const { user, updateUserMobile } = useAuth();
+  const { user, token, updateUserMobile } = useAuth();
   const authKey = String(user?.userId || user?.fullName || '');
 
   // Load state from localStorage or initialize from mock data
@@ -30,9 +36,23 @@ export const MiddlemanProvider = ({ children }) => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && (!authKey || parsed.authKey === authKey)) {
+          if (
+            parsed.businessName === 'Sri Lakshmi Venkateswara Agro Traders' ||
+            parsed.registrationNumber === 'AP/GNT/REG/2021/7892'
+          ) {
+            return {
+              ...INITIAL_PROFILE,
+              authKey,
+              ownerName: authName || '',
+              mobile: authMobile || '',
+              email: authEmail || '',
+            };
+          }
           return {
             ...parsed,
-            mobile: parsed.mobile || authMobile || INITIAL_PROFILE.mobile,
+            mobile: parsed.mobile || authMobile || '',
+            ownerName: parsed.ownerName || authName || '',
+            email: parsed.email || authEmail || '',
           };
         }
       }
@@ -42,9 +62,9 @@ export const MiddlemanProvider = ({ children }) => {
     return {
       ...INITIAL_PROFILE,
       authKey,
-      ownerName: authName || INITIAL_PROFILE.ownerName,
-      mobile: authMobile || INITIAL_PROFILE.mobile,
-      email: authEmail || INITIAL_PROFILE.email,
+      ownerName: authName || '',
+      mobile: authMobile || '',
+      email: authEmail || '',
     };
   });
 
@@ -192,19 +212,69 @@ export const MiddlemanProvider = ({ children }) => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   }, []);
 
-  // Profile actions
-  const updateProfile = useCallback((data) => {
+  // Fetch Middleman profile from backend API (GET /api/v1/middleman-profile and GET /api/v1/middleman-profile/{id})
+  const refreshProfile = useCallback(async (explicitId = null) => {
+    if (!token || (user?.role && user.role !== 'middleman')) return null;
+    try {
+      const dto = explicitId
+        ? await fetchMiddlemanProfileById(explicitId)
+        : await fetchMiddlemanProfile();
+      if (dto && typeof dto === 'object') {
+        const detailedDto =
+          !explicitId && dto.id
+            ? await fetchMiddlemanProfileById(dto.id).catch(() => dto)
+            : dto;
+        setProfile((prev) => mapMiddlemanDtoToProfile(detailedDto || dto, prev));
+        if ((detailedDto || dto).mobile) {
+          updateUserMobile((detailedDto || dto).mobile);
+        }
+        return detailedDto || dto;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }, [token, user, updateUserMobile]);
+
+  useEffect(() => {
+    if (!token || user?.role !== 'middleman') return;
+    Promise.resolve().then(() => {
+      refreshProfile();
+    });
+  }, [token, user?.role, authKey, refreshProfile]);
+
+  // Profile actions (PUT /api/v1/middleman-profile/{id})
+  const updateProfile = useCallback(async (data) => {
+    const currentId = data?.id ?? profile?.id;
     setProfile((prev) => ({ ...prev, ...data }));
+
     if (data?.mobile) {
       updateUserMobile(data.mobile);
     }
+
+    if (token) {
+      const savedDto = await updateMiddlemanProfile(currentId, {
+        ...profile,
+        ...data,
+      });
+      if (savedDto && typeof savedDto === 'object') {
+        setProfile((prev) => ({
+          ...mapMiddlemanDtoToProfile(savedDto, prev),
+          logo: data?.logo ?? prev.logo ?? savedDto.businessLogoUrl ?? '',
+        }));
+        if (savedDto.mobile) {
+          updateUserMobile(savedDto.mobile);
+        }
+      }
+    }
+
     addNotification({
       title: 'Business Profile Updated',
       description: 'Your Middleman business details were saved successfully.',
       category: 'Transaction Completed',
       actionUrl: '/middleman/profile',
     });
-  }, [addNotification, updateUserMobile]);
+  }, [addNotification, profile, token, updateUserMobile]);
 
   // Farmer actions
   const addFarmer = useCallback((data) => {
@@ -870,6 +940,7 @@ export const MiddlemanProvider = ({ children }) => {
   const value = {
     profile,
     updateProfile,
+    refreshProfile,
     farmers,
     addFarmer,
     updateFarmer,

@@ -44,8 +44,25 @@ const matchesCropRecord = (record, cropId, cropName) => {
   return Boolean(recordName && normalizedCropName && recordName === normalizedCropName);
 };
 
-const getInitialFarmerProfile = (persistedState) => {
+const getInitialFarmerProfile = (persistedState, authUser) => {
   let base = persistedState?.profile ?? initialProfile;
+  if (base.farmerName === 'Venkata Reddy' || base.farmName === 'Reddy Agro Farms & Greenfields') {
+    base = { ...initialProfile };
+  }
+  if (authUser) {
+    const authMobile = authUser.mobile || authUser.contactNumber || '';
+    base = {
+      ...base,
+      farmerName: authUser.fullName || base.farmerName || '',
+      mobileNumber: authMobile
+        ? (authMobile.startsWith('+91') ? authMobile : `+91 ${authMobile}`)
+        : (base.mobileNumber || ''),
+      email: authUser.email || base.email || '',
+      farmerId:
+        authUser.entityCode ||
+        (authUser.userId ? `AG-FARM-${authUser.userId}` : base.farmerId || ''),
+    };
+  }
   if (typeof window !== 'undefined') {
     try {
       const authRaw = window.localStorage.getItem('agri_farmer_auth_v1');
@@ -81,7 +98,7 @@ export const farmerNavItems = [
 ];
 
 export function FarmerProvider({ children }) {
-  const { user, updateUserMobile } = useAuth();
+  const { user } = useAuth();
   const authKey = String(user?.userId || user?.fullName || '');
 
   const getInitialPage = () => {
@@ -99,7 +116,23 @@ export function FarmerProvider({ children }) {
   const persistedState = loadPersistedFarmerState();
 
   // Core Data States
-  const [profile, setProfile] = useState(() => getInitialFarmerProfile(persistedState));
+  const [profile, setProfile] = useState(() => getInitialFarmerProfile(persistedState, user));
+  const [trackedAuthKey, setTrackedAuthKey] = useState(authKey);
+  if (authKey && authKey !== trackedAuthKey) {
+    setTrackedAuthKey(authKey);
+    const authMobile = user?.mobile || user?.contactNumber || '';
+    setProfile((prev) => ({
+      ...prev,
+      farmerName: user?.fullName || prev.farmerName || '',
+      mobileNumber: authMobile
+        ? (authMobile.startsWith('+91') ? authMobile : `+91 ${authMobile}`)
+        : (prev.mobileNumber || ''),
+      email: user?.email || prev.email || '',
+      farmerId:
+        user?.entityCode ||
+        (user?.userId ? `AG-FARM-${user.userId}` : prev.farmerId || ''),
+    }));
+  }
   const [crops, setCrops] = useState(() => persistedState?.crops ?? initialCrops);
   const [marketPrices, setMarketPrices] = useState(() => persistedState?.marketPrices ?? initialMarketPrices);
   const [sales, setSales] = useState(() => persistedState?.sales ?? initialSales);
@@ -191,7 +224,7 @@ export function FarmerProvider({ children }) {
   }, [showToast]);
 
   // Profile Action
-  const updateProfile = useCallback((updated) => {
+  const updateProfile = useCallback((updated, options = {}) => {
     setProfile((prev) => {
       const next = { ...prev, ...updated };
       if (typeof window !== 'undefined') {
@@ -200,13 +233,13 @@ export function FarmerProvider({ children }) {
           const existing = raw ? JSON.parse(raw) : {};
           const cleanMobile = next.mobileNumber
             ? String(next.mobileNumber).replace(/\D/g, '').slice(-10)
-            : existing.mobile || '9876543210';
+            : existing.mobile || '';
           const syncedAuth = {
             ...existing,
             mobile: cleanMobile,
-            password: next.password || existing.password || 'farmer@123',
-            fullName: next.farmerName || existing.fullName || 'Venkata Reddy',
-            farmerId: next.farmerId || existing.farmerId || 'AG-FARM-5021',
+            password: next.password || existing.password || '',
+            fullName: next.farmerName || existing.fullName || '',
+            farmerId: next.farmerId || existing.farmerId || '',
             updatedAt: new Date().toISOString(),
           };
           window.localStorage.setItem('agri_farmer_auth_v1', JSON.stringify(syncedAuth));
@@ -216,8 +249,10 @@ export function FarmerProvider({ children }) {
       }
       return next;
     });
-    showToast('Profile updated successfully!', 'success');
-  }, [showToast, updateUserMobile]);
+    if (!options?.silent) {
+      showToast('Profile updated successfully!', 'success');
+    }
+  }, [showToast]);
 
   // Crop CRUD Actions
   const addCrop = useCallback((newCropData) => {

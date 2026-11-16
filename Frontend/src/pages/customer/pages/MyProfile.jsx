@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 import {
   UserCheck,
@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner';
 import { useCustomer } from '../context/useCustomer';
 import { useOTPVerification } from '../../../hooks/useOTPVerification';
+import { sendCustomerMobileChangeOtp } from '../../../services/profileService';
 import { AP_DISTRICTS, INDIAN_STATES } from '../../../utils/constants';
 import { formatDate } from '../../../utils/formatDate';
 import CustomerPageHeader from '../components/CustomerPageHeader';
@@ -33,8 +34,8 @@ const EMPTY_ADDRESS = {
   recipientName: '',
   contactNumber: '',
   addressLine: '',
-  district: 'Guntur',
-  state: 'Andhra Pradesh',
+  district: '',
+  state: '',
   pinCode: '',
   isDefault: false,
 };
@@ -91,6 +92,7 @@ function validateAddressForm(addr) {
 export function MyProfile() {
   const {
     profile,
+    refreshProfile,
     updateProfile,
     addDeliveryAddress,
     updateDeliveryAddress,
@@ -99,6 +101,10 @@ export function MyProfile() {
   } = useCustomer();
 
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    refreshProfile?.();
+  }, [refreshProfile]);
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -122,6 +128,7 @@ export function MyProfile() {
   const [isMobileUpdateModalOpen, setIsMobileUpdateModalOpen] = useState(false);
   const [isOTPModalOpen, setIsOTPModalOpen] = useState(false);
   const [newMobileNumber, setNewMobileNumber] = useState('');
+  const [modalDemoOtp, setModalDemoOtp] = useState('');
   const [newNumberErrors, setNewNumberErrors] = useState('');
   const [isSendingOTP, setIsSendingOTP] = useState(false);
 
@@ -141,7 +148,7 @@ export function MyProfile() {
     resendOTP,
     resetVerification,
     setError: setOtpError,
-  } = useOTPVerification(30);
+  } = useOTPVerification(30, { portal: 'customer' });
 
   const savedMobile = String(profile?.mobileNumber || '').replace(/\D/g, '');
   const currentMobile = String(formData.mobileNumber || '').replace(/\D/g, '');
@@ -278,6 +285,7 @@ export function MyProfile() {
       await verifyOTP(currentMobile, cleanOtp, {
         customVerifiedMessage: 'New mobile number verified successfully.',
       });
+      await updateProfile({ mobileNumber: currentMobile });
     } catch {
       // Error is captured in otpError state
     }
@@ -314,7 +322,7 @@ export function MyProfile() {
     reader.readAsDataURL(file);
   };
 
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
     const validationErrors = validateProfileFields(formData);
     if (Object.keys(validationErrors).length > 0) {
@@ -331,25 +339,28 @@ export function MyProfile() {
       return;
     }
 
-    updateProfile({
-      fullName: formData.fullName.trim(),
-      mobileNumber: currentMobile,
-      email: formData.email.trim(),
-      profilePhoto: formData.profilePhoto,
-      alternateMobileNumber: formData.alternateMobileNumber.replace(/\D/g, ''),
-      address: formData.address.trim(),
-      district: formData.district.trim(),
-      state: formData.state.trim(),
-      pinCode: formData.pinCode.trim(),
-    });
-    resetVerification();
-    setOtpCode('');
-    setPhoneValidationError('');
-    if (mobileChangedOnSubmit) {
-      setPhoneSuccessBanner('Your mobile number has been updated successfully.');
-      toast.success('Your mobile number has been updated successfully.');
+    try {
+      await updateProfile({
+        fullName: formData.fullName.trim(),
+        mobileNumber: currentMobile,
+        email: formData.email.trim(),
+        profilePhoto: formData.profilePhoto,
+        alternateMobileNumber: formData.alternateMobileNumber.replace(/\D/g, ''),
+        address: formData.address.trim(),
+        district: formData.district.trim(),
+        state: formData.state.trim(),
+        pinCode: formData.pinCode.trim(),
+      });
+      resetVerification();
+      setOtpCode('');
+      setPhoneValidationError('');
+      if (mobileChangedOnSubmit) {
+        setPhoneSuccessBanner('Your mobile number has been updated successfully.');
+      }
+      setIsEditing(false);
+    } catch {
+      // Error toast is displayed by updateProfile
     }
-    setIsEditing(false);
   };
 
   // Mobile Number Update Handlers
@@ -367,6 +378,7 @@ export function MyProfile() {
 
   const openMobileUpdateModal = () => {
     setNewMobileNumber('');
+    setModalDemoOtp('');
     setNewNumberErrors('');
     setIsMobileUpdateModalOpen(true);
   };
@@ -377,25 +389,36 @@ export function MyProfile() {
     setNewNumberErrors('');
   };
 
-  const handleSendOTP = () => {
-    const error = validateNewMobileNumber(newMobileNumber);
+  const handleSendOTP = async () => {
+    const cleanNewNumber = String(newMobileNumber || '').replace(/\D/g, '');
+    const error = validateNewMobileNumber(cleanNewNumber);
     if (error) {
       setNewNumberErrors(error);
       return;
     }
     setIsSendingOTP(true);
     setNewNumberErrors('');
-    setIsSendingOTP(false);
-    closeMobileUpdateModal();
-    setIsOTPModalOpen(true);
+    try {
+      const res = await sendCustomerMobileChangeOtp(cleanNewNumber);
+      setModalDemoOtp(res?.demoOtp || '');
+      setIsMobileUpdateModalOpen(false);
+      setIsOTPModalOpen(true);
+    } catch (err) {
+      setNewNumberErrors(
+        err?.message || 'Failed to send OTP to new mobile number.'
+      );
+    } finally {
+      setIsSendingOTP(false);
+    }
   };
 
-  const handleMobileUpdateSuccess = (verifiedNumber) => {
-    updateProfile({ mobileNumber: verifiedNumber });
+  const handleMobileUpdateSuccess = async (verifiedNumber) => {
+    await updateProfile({ mobileNumber: verifiedNumber });
+    await refreshProfile?.();
     setIsOTPModalOpen(false);
     setNewMobileNumber('');
+    setModalDemoOtp('');
     setNewNumberErrors('');
-    toast.success('Mobile number updated successfully.');
   };
 
   const openAddAddress = () => {
@@ -416,8 +439,8 @@ export function MyProfile() {
       recipientName: addr.recipientName || '',
       contactNumber: addr.contactNumber || '',
       addressLine: addr.addressLine || '',
-      district: addr.district || 'Guntur',
-      state: addr.state || 'Andhra Pradesh',
+      district: addr.district || '',
+      state: addr.state || '',
       pinCode: addr.pinCode || '',
       isDefault: Boolean(addr.isDefault),
     });
@@ -425,7 +448,7 @@ export function MyProfile() {
     setIsAddressModalOpen(true);
   };
 
-  const handleSaveAddress = (e) => {
+  const handleSaveAddress = async (e) => {
     e.preventDefault();
     const errs = validateAddressForm(addrForm);
     if (Object.keys(errs).length > 0) {
@@ -444,12 +467,16 @@ export function MyProfile() {
       pinCode: addrForm.pinCode.trim(),
     };
 
-    if (editingAddrId) {
-      updateDeliveryAddress(editingAddrId, payload);
-    } else {
-      addDeliveryAddress(payload);
+    try {
+      if (editingAddrId) {
+        await updateDeliveryAddress(editingAddrId, payload);
+      } else {
+        await addDeliveryAddress(payload);
+      }
+      setIsAddressModalOpen(false);
+    } catch {
+      // Error toast is displayed by context action
     }
-    setIsAddressModalOpen(false);
   };
 
   const displayPhoto = isEditing ? formData.profilePhoto : profile.profilePhoto;
@@ -1190,6 +1217,7 @@ export function MyProfile() {
                 onChange={(e) => setAddrForm((p) => ({ ...p, state: e.target.value }))}
                 className="w-full px-3 py-2 text-xs rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A]"
               >
+                <option value="">Select State</option>
                 {INDIAN_STATES.map((st) => (
                   <option key={st} value={st}>
                     {st}
@@ -1277,7 +1305,9 @@ export function MyProfile() {
       {/* Mobile OTP Verification Modal */}
       <MobileOTPVerification
         isOpen={isOTPModalOpen}
+        newNumber={newMobileNumber}
         phoneNumber={newMobileNumber}
+        initialDemoOtp={modalDemoOtp}
         onClose={() => setIsOTPModalOpen(false)}
         onSuccess={handleMobileUpdateSuccess}
       />

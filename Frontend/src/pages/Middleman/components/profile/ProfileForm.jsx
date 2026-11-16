@@ -17,6 +17,7 @@ export const ProfileForm = ({
   onSave,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({ ...initialProfile });
   const [otpCode, setOtpCode] = useState('');
   const [phoneValidationError, setPhoneValidationError] = useState('');
@@ -38,8 +39,9 @@ export const ProfileForm = ({
     resendOTP,
     resetVerification,
     setError: setOtpError,
-  } = useOTPVerification(30);
+  } = useOTPVerification(30, { portal: 'middleman' });
 
+  const displayData = isEditing ? formData : initialProfile;
   const savedMobile = String(initialProfile?.mobile || '').replace(/\D/g, '');
   const currentMobile = String(formData.mobile || '').replace(/\D/g, '');
   const isMobileChanged = isEditing && currentMobile !== savedMobile;
@@ -141,7 +143,7 @@ export const ProfileForm = ({
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setPhoneValidationError('');
 
@@ -158,14 +160,24 @@ export const ProfileForm = ({
       return;
     }
 
-    onSave({ ...formData, mobile: currentMobile }, { mobileChanged: mobileChangedOnSubmit });
-    resetVerification();
-    setOtpCode('');
-    setPhoneValidationError('');
-    if (mobileChangedOnSubmit) {
-      setPhoneSuccessBanner('Your mobile number has been updated successfully.');
+    setIsSaving(true);
+    try {
+      const ok = await onSave(
+        { ...formData, mobile: currentMobile },
+        { mobileChanged: mobileChangedOnSubmit }
+      );
+      if (ok !== false) {
+        resetVerification();
+        setOtpCode('');
+        setPhoneValidationError('');
+        if (mobileChangedOnSubmit) {
+          setPhoneSuccessBanner('Your mobile number has been updated successfully.');
+        }
+        setIsEditing(false);
+      }
+    } finally {
+      setIsSaving(false);
     }
-    setIsEditing(false);
   };
 
   const handleCancel = () => {
@@ -205,9 +217,9 @@ export const ProfileForm = ({
 
         {/* Logo Upload & Preview */}
         <BusinessLogoUpload
-          logoUrl={formData.logo}
+          logoUrl={displayData.logo}
           onLogoChange={handleLogoChange}
-          businessName={formData.businessName}
+          businessName={displayData.businessName}
           disabled={!isEditing}
         />
 
@@ -216,7 +228,7 @@ export const ProfileForm = ({
             <input
               type="text"
               name="middlemanId"
-              value={formData.middlemanId}
+              value={displayData.middlemanId || ''}
               disabled
               className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-[#E2E8F0] bg-slate-100 text-slate-500 font-mono font-bold cursor-not-allowed"
             />
@@ -226,7 +238,7 @@ export const ProfileForm = ({
             <input
               type="text"
               name="businessName"
-              value={formData.businessName}
+              value={displayData.businessName || ''}
               onChange={handleChange}
               disabled={!isEditing}
               className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-[#E2E8F0] focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15 outline-none font-bold disabled:bg-slate-50 disabled:text-slate-600"
@@ -237,7 +249,7 @@ export const ProfileForm = ({
             <input
               type="text"
               name="registrationNumber"
-              value={formData.registrationNumber}
+              value={displayData.registrationNumber || ''}
               onChange={handleChange}
               disabled={!isEditing}
               className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-[#E2E8F0] focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15 outline-none font-mono disabled:bg-slate-50 disabled:text-slate-600"
@@ -250,7 +262,7 @@ export const ProfileForm = ({
             <input
               type="text"
               name="gstNumber"
-              value={formData.gstNumber}
+              value={displayData.gstNumber || ''}
               onChange={handleChange}
               disabled={!isEditing}
               className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-[#E2E8F0] focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15 outline-none uppercase font-mono disabled:bg-slate-50 disabled:text-slate-600"
@@ -270,7 +282,7 @@ export const ProfileForm = ({
             <input
               type="text"
               name="ownerName"
-              value={formData.ownerName}
+              value={displayData.ownerName || ''}
               onChange={handleChange}
               disabled={!isEditing}
               className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-[#E2E8F0] focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15 outline-none disabled:bg-slate-50 disabled:text-slate-600"
@@ -424,7 +436,7 @@ export const ProfileForm = ({
             <input
               type="email"
               name="email"
-              value={formData.email}
+              value={displayData.email || ''}
               onChange={handleChange}
               disabled={!isEditing}
               className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-[#E2E8F0] focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15 outline-none disabled:bg-slate-50 disabled:text-slate-600"
@@ -443,7 +455,7 @@ export const ProfileForm = ({
           <input
             type="text"
             name="businessAddress"
-            value={formData.businessAddress}
+            value={displayData.businessAddress || ''}
             onChange={handleChange}
             disabled={!isEditing}
             className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-[#E2E8F0] focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15 outline-none disabled:bg-slate-50 disabled:text-slate-600"
@@ -455,7 +467,7 @@ export const ProfileForm = ({
             <input
               type="text"
               name="village"
-              value={formData.village || ''}
+              value={displayData.village || ''}
               onChange={handleChange}
               disabled={!isEditing}
               className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-[#E2E8F0] focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15 outline-none disabled:bg-slate-50 disabled:text-slate-600"
@@ -466,7 +478,7 @@ export const ProfileForm = ({
             <input
               type="text"
               name="district"
-              value={formData.district}
+              value={displayData.district || ''}
               onChange={handleChange}
               disabled={!isEditing}
               className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-[#E2E8F0] focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15 outline-none disabled:bg-slate-50 disabled:text-slate-600"
@@ -477,7 +489,7 @@ export const ProfileForm = ({
             <input
               type="text"
               name="state"
-              value={formData.state}
+              value={displayData.state || ''}
               onChange={handleChange}
               disabled={!isEditing}
               className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-[#E2E8F0] focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15 outline-none disabled:bg-slate-50 disabled:text-slate-600"
@@ -489,7 +501,7 @@ export const ProfileForm = ({
               type="text"
               name="pinCode"
               maxLength={6}
-              value={formData.pinCode}
+              value={displayData.pinCode || ''}
               onChange={handleChange}
               disabled={!isEditing}
               className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-[#E2E8F0] focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15 outline-none disabled:bg-slate-50 disabled:text-slate-600"
@@ -501,7 +513,7 @@ export const ProfileForm = ({
       {/* 4. Optional Bank Settlement Details */}
       <div className="bg-white p-5 sm:p-6 rounded-2xl border border-[#E2E8F0] shadow-xs">
         <BankDetails
-          data={formData.bankDetails || {}}
+          data={displayData.bankDetails || {}}
           onChange={handleBankChange}
           disabled={!isEditing}
         />
@@ -513,16 +525,17 @@ export const ProfileForm = ({
           <button
             type="button"
             onClick={handleCancel}
+            disabled={isSaving}
             className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border border-[#E2E8F0] hover:bg-slate-50 text-[#1F2937] cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="submit"
-            disabled={isMobileChanged && !isNewMobileVerified}
+            disabled={isSaving || (isMobileChanged && !isNewMobileVerified)}
             className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-[#0F766E] hover:bg-[#115E59] text-white shadow-md shadow-[#0F766E]/20 disabled:opacity-50 cursor-pointer"
           >
-            Save Profile Changes
+            {isSaving ? 'Saving...' : 'Save Profile Changes'}
           </button>
         </div>
       )}

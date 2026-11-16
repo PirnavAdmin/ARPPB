@@ -479,7 +479,7 @@ export const INITIAL_PRODUCTS = [
 ];
 
 export const INITIAL_CUSTOMER_PROFILE = {
-  customerId: 'CUS-1001',
+  customerId: '',
   fullName: '',
   mobileNumber: '',
   email: '',
@@ -489,7 +489,7 @@ export const INITIAL_CUSTOMER_PROFILE = {
   district: '',
   state: '',
   pinCode: '',
-  memberSince: '2025-01-15',
+  memberSince: '',
   deliveryAddresses: [],
 };
 

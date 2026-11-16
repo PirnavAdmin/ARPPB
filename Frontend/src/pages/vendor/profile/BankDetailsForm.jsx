@@ -21,13 +21,11 @@ export default function BankDetailsForm({ bankDetails, onSaveBankDetails }) {
   } = useForm({
     resolver: zodResolver(bankDetailsSchema),
     defaultValues: {
-      accountHolderName:
-        bankDetails?.accountHolderName ||
-        'Sri Rayalaseema Agri Commodities & Processing Pvt. Ltd.',
-      bankName: bankDetails?.bankName || 'State Bank of India',
-      accountNumber: bankDetails?.accountNumber || '38910244551290',
-      ifscCode: bankDetails?.ifscCode || 'SBIN0000860',
-      branchName: bankDetails?.branchName || 'Kurnool Main Treasury Branch',
+      accountHolderName: bankDetails?.accountHolderName || '',
+      bankName: bankDetails?.bankName || '',
+      accountNumber: bankDetails?.accountNumber || '',
+      ifscCode: bankDetails?.ifscCode || '',
+      branchName: bankDetails?.branchName || '',
     },
   });
 
@@ -35,12 +33,16 @@ export default function BankDetailsForm({ bankDetails, onSaveBankDetails }) {
     setPendingData(data);
   };
 
-  const handleConfirmSave = () => {
+  const handleConfirmSave = async () => {
     if (!pendingData) return;
-    onSaveBankDetails(pendingData);
-    setPendingData(null);
-    setIsEditing(false);
-    toast.success('Vendor settlement bank details updated after security confirmation.');
+    try {
+      await onSaveBankDetails(pendingData);
+      setPendingData(null);
+      setIsEditing(false);
+      toast.success('Vendor settlement bank details updated after security confirmation.');
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update vendor bank details.');
+    }
   };
 
   return (
@@ -63,7 +65,16 @@ export default function BankDetailsForm({ bankDetails, onSaveBankDetails }) {
         {!isEditing && (
           <button
             type="button"
-            onClick={() => setIsEditing(true)}
+            onClick={() => {
+              reset({
+                accountHolderName: bankDetails?.accountHolderName || '',
+                bankName: bankDetails?.bankName || '',
+                accountNumber: bankDetails?.accountNumber || '',
+                ifscCode: bankDetails?.ifscCode || '',
+                branchName: bankDetails?.branchName || '',
+              });
+              setIsEditing(true);
+            }}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-brand-light text-brand-primary hover:bg-brand-primary hover:text-white transition-colors cursor-pointer"
           >
             <Edit3 className="w-3.5 h-3.5" />
@@ -78,17 +89,17 @@ export default function BankDetailsForm({ bankDetails, onSaveBankDetails }) {
             <div>
               <span className="text-brand-muted block mb-0.5">Account Holder Name</span>
               <span className="font-bold text-brand-text">
-                {bankDetails?.accountHolderName}
+                {bankDetails?.accountHolderName || '—'}
               </span>
             </div>
             <div>
               <span className="text-brand-muted block mb-0.5">Bank Name</span>
-              <span className="font-bold text-brand-text">{bankDetails?.bankName}</span>
+              <span className="font-bold text-brand-text">{bankDetails?.bankName || '—'}</span>
             </div>
             <div>
               <span className="text-brand-muted block mb-0.5">Branch Name</span>
               <span className="font-semibold text-brand-text">
-                {bankDetails?.branchName}
+                {bankDetails?.branchName || '—'}
               </span>
             </div>
             <div>
@@ -97,28 +108,32 @@ export default function BankDetailsForm({ bankDetails, onSaveBankDetails }) {
               </span>
               <div className="flex items-center gap-2">
                 <span className="font-mono font-bold text-brand-primary text-sm">
-                  {showFullAccount
-                    ? bankDetails?.accountNumber
-                    : maskAccountNumber(bankDetails?.accountNumber)}
+                  {bankDetails?.accountNumber
+                    ? showFullAccount
+                      ? bankDetails.accountNumber
+                      : maskAccountNumber(bankDetails.accountNumber)
+                    : '—'}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setShowFullAccount((p) => !p)}
-                  className="text-brand-muted hover:text-brand-primary cursor-pointer"
-                  title={showFullAccount ? 'Mask Account Number' : 'Reveal Account Number'}
-                >
-                  {showFullAccount ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
+                {bankDetails?.accountNumber && (
+                  <button
+                    type="button"
+                    onClick={() => setShowFullAccount((p) => !p)}
+                    className="text-brand-muted hover:text-brand-primary cursor-pointer"
+                    title={showFullAccount ? 'Mask Account Number' : 'Reveal Account Number'}
+                  >
+                    {showFullAccount ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
               </div>
             </div>
             <div>
               <span className="text-brand-muted block mb-0.5">IFSC Code</span>
               <span className="font-mono font-bold text-brand-text">
-                {bankDetails?.ifscCode}
+                {bankDetails?.ifscCode || '—'}
               </span>
             </div>
           </div>

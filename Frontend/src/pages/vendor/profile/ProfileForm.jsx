@@ -43,7 +43,7 @@ export default function ProfileForm({ vendorUser, onSaveProfile }) {
     resendOTP,
     resetVerification,
     setError: setOtpError,
-  } = useOTPVerification(30);
+  } = useOTPVerification(30, { portal: 'vendor' });
 
   const {
     register,
@@ -61,13 +61,11 @@ export default function ProfileForm({ vendorUser, onSaveProfile }) {
       email: vendorUser?.email || '',
       gstNumber: vendorUser?.gstNumber || '',
       businessRegNumber: vendorUser?.businessRegNumber || '',
-      businessType:
-        vendorUser?.businessType ||
-        'Agri Procurement, Milling & Wholesale Distribution',
+      businessType: vendorUser?.businessType || '',
       businessAddress: vendorUser?.businessAddress || '',
-      district: vendorUser?.district || 'Kurnool',
-      state: vendorUser?.state || 'Andhra Pradesh',
-      pinCode: vendorUser?.pinCode || '518003',
+      district: vendorUser?.district || '',
+      state: vendorUser?.state || '',
+      pinCode: vendorUser?.pinCode || '',
     },
   });
 
@@ -213,7 +211,7 @@ export default function ProfileForm({ vendorUser, onSaveProfile }) {
           </div>
         </div>
         <span className="px-2.5 py-1 rounded-md bg-brand-light text-brand-primary font-mono text-xs font-bold">
-          {vendorUser?.vendorId || 'VND-AP-2026-001'}
+          {vendorUser?.vendorId || ''}
         </span>
       </div>
 
@@ -232,7 +230,7 @@ export default function ProfileForm({ vendorUser, onSaveProfile }) {
           <input
             type="text"
             readOnly
-            value={vendorUser?.vendorId || 'VND-AP-2026-001'}
+            value={vendorUser?.vendorId || ''}
             className="w-full px-3 py-2 text-sm font-mono font-bold rounded-lg border border-brand-border bg-brand-background text-brand-primary cursor-not-allowed"
           />
         </VendorFormField>
@@ -451,6 +449,7 @@ export default function ProfileForm({ vendorUser, onSaveProfile }) {
             {...register('businessType')}
             className="w-full px-3 py-2 text-sm rounded-lg border border-brand-border bg-brand-surface text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-primary"
           >
+            <option value="">Select Business Type</option>
             <option value="Agri Procurement, Milling & Wholesale Distribution">
               Agri Procurement, Milling & Wholesale Distribution
             </option>
@@ -485,6 +484,7 @@ export default function ProfileForm({ vendorUser, onSaveProfile }) {
             {...register('district')}
             className="w-full px-3 py-2 text-sm rounded-lg border border-brand-border bg-brand-surface text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-primary"
           >
+            <option value="">Select District</option>
             {AP_DISTRICTS.map((d) => (
               <option key={d} value={d}>
                 {d}

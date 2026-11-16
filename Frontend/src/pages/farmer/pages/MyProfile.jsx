@@ -1,42 +1,80 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useFarmer } from '../context/FarmerContext';
-import { generateOTP } from '../utils/farmerHelpers';
+import { useAuth } from '../../../hooks/useAuth';
+import { useOTPVerification } from '../../../hooks/useOTPVerification';
+import {
+  fetchFarmerProfileApi,
+  updateFarmerProfileApi,
+  updateFarmerBankDetailsApi,
+  changeFarmerPasswordApi,
+  mapFarmerDtoToProfile,
+} from '../../../services/profileService';
 
 function MyProfile() {
   const { profile, updateProfile, showToast } = useFarmer();
+  const { user, token, updateUserMobile } = useAuth();
 
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ ...profile });
-  const [otpCode, setOtpCode] = useState('');
-  const [phoneValidationError, setPhoneValidationError] = useState('');
-  const [phoneSuccessBanner, setPhoneSuccessBanner] = useState('');
+
+  const [isEditingBank, setIsEditingBank] = useState(false);
+  const [isSavingBank, setIsSavingBank] = useState(false);
+  const [bankFormData, setBankFormData] = useState({ ...(profile.bankDetails || {}) });
+
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
 
-  // Mobile Number OTP Verification States
-  const [verifiedPhone, setVerifiedPhone] = useState('');
-  const [isMobileVerified, setIsMobileVerified] = useState(false);
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [phoneValidationError, setPhoneValidationError] = useState('');
   const [otpInput, setOtpInput] = useState('');
-  const [otpError, setOtpError] = useState('');
-  const [demoOtpNotice, setDemoOtpNotice] = useState('');
-  const [localGeneratedOtp, setLocalGeneratedOtp] = useState('');
 
-  // Countdown timer for OTP resend cooldown
+  const {
+    isOtpSent,
+    isSending: isSendingOtp,
+    isVerifying: isVerifyingOtp,
+    isVerified: isMobileVerified,
+    timer: otpCooldown,
+    canResend,
+    statusMessage,
+    demoOtp: devOtp,
+    error: otpError,
+    verifiedTarget: verifiedPhone,
+    requestOTP,
+    verifyOTP,
+    resendOTP,
+    resetVerification,
+    setError: setOtpError,
+  } = useOTPVerification(30, { portal: 'farmer' });
+
+  const resolvedUserId = user?.userId || profile?.userId || null;
+
+  const loadProfileFromApi = useCallback(async () => {
+    setIsLoadingProfile(true);
+    try {
+      const data = await fetchFarmerProfileApi(resolvedUserId);
+      if (data && typeof data === 'object') {
+        const mapped = mapFarmerDtoToProfile(data, profile);
+        updateProfile(mapped, { silent: true });
+        setFormData({ ...mapped });
+        setBankFormData({ ...(mapped.bankDetails || {}) });
+      }
+    } catch {
+      // Gracefully retain existing state if network issue
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  }, [resolvedUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
-    if (otpCooldown <= 0) return;
-    const interval = setInterval(() => {
-      setOtpCooldown((prev) => prev - 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [otpCooldown]);
+    loadProfileFromApi();
+  }, [loadProfileFromApi]);
 
   const currentCleanPhone = String(profile.mobileNumber || '').replace(/\D/g, '').slice(-10);
   const formCleanPhone = String(formData.mobileNumber || '').replace(/\D/g, '').slice(-10);
@@ -46,25 +84,17 @@ function MyProfile() {
   const handleStartEditing = () => {
     setFormData({ ...profile });
     setIsEditing(true);
-    setOtpSent(false);
+    resetVerification();
     setOtpInput('');
-    setOtpError('');
-    setIsMobileVerified(false);
-    setVerifiedPhone('');
-    setDemoOtpNotice('');
-    setLocalGeneratedOtp('');
+    setPhoneValidationError('');
   };
 
   const handleCancelEditing = () => {
     setFormData({ ...profile });
     setIsEditing(false);
-    setOtpSent(false);
+    resetVerification();
     setOtpInput('');
-    setOtpError('');
-    setIsMobileVerified(false);
-    setVerifiedPhone('');
-    setDemoOtpNotice('');
-    setLocalGeneratedOtp('');
+    setPhoneValidationError('');
   };
 
   const handleChange = (e) => {
@@ -74,67 +104,78 @@ function MyProfile() {
       setFormData((prev) => ({ ...prev, [name]: sanitized }));
       const digits = sanitized.replace(/\D/g, '').slice(-10);
       if (digits !== verifiedPhone) {
-        setIsMobileVerified(false);
+        resetVerification();
+        setOtpInput('');
       }
-      setOtpError('');
+      setPhoneValidationError('');
       return;
     }
 
-    if (name.startsWith('bank_')) {
-      const field = name.replace('bank_', '');
-      setFormData((prev) => ({
-        ...prev,
-        bankDetails: {
-          ...prev.bankDetails,
-          [field]: value,
-        },
-      }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSendOtp = () => {
+  const handleBankChange = (e) => {
+    const { name, value } = e.target;
+    const field = name.replace('bank_', '');
+    setBankFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleSendOtp = async () => {
+    setPhoneValidationError('');
     if (!formCleanPhone || formCleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(formCleanPhone)) {
-      setOtpError('Please enter a valid 10-digit Indian mobile number.');
+      setPhoneValidationError('Please enter a valid 10-digit Indian mobile number.');
       return;
     }
 
-    setIsSendingOtp(true);
-    setOtpError('');
-    setOtpInput('');
-
-    const generated = generateOTP();
-    setLocalGeneratedOtp(generated);
-    setOtpSent(true);
-    setOtpCooldown(30);
-    setDemoOtpNotice(generated);
-    showToast(`Verification OTP sent to +91 ${formCleanPhone}. (Demo Code: ${generated})`, 'info', 7000);
-    setIsSendingOtp(false);
+    try {
+      await requestOTP(formCleanPhone, {
+        userId: resolvedUserId,
+        customMessage: `Verification OTP sent to +91 ${formCleanPhone}.`,
+        duplicateMessage: 'This mobile number is already registered. Please use a different mobile number.',
+      });
+      showToast(`Verification OTP sent to +91 ${formCleanPhone}.`, 'info');
+    } catch {
+      // Error captured in otpError by useOTPVerification
+    }
   };
 
-  const handleVerifyOtp = () => {
+  const handleVerifyOtp = async () => {
+    setPhoneValidationError('');
     const cleanOtp = String(otpInput || '').trim();
     if (cleanOtp.length !== 6) {
       setOtpError('Please enter a complete 6-digit OTP code.');
       return;
     }
 
-    setIsVerifyingOtp(true);
-    setOtpError('');
-
-    if (localGeneratedOtp && cleanOtp === localGeneratedOtp) {
-      setIsMobileVerified(true);
-      setVerifiedPhone(formCleanPhone);
-      setOtpSent(false);
+    try {
+      await verifyOTP(formCleanPhone, cleanOtp, {
+        userId: resolvedUserId,
+        customVerifiedMessage: `Mobile number +91 ${formCleanPhone} verified successfully!`,
+      });
       showToast(`Mobile number +91 ${formCleanPhone} verified successfully!`, 'success');
-    } else {
-      setOtpError('Invalid OTP code. Please enter the correct 6-digit code.');
+    } catch {
+      // Error captured in otpError
     }
-    setIsVerifyingOtp(false);
   };
 
-  const handleSave = (e) => {
+  const handleResendOtp = async () => {
+    if (!canResend || isSendingOtp) return;
+    try {
+      await resendOTP(formCleanPhone, {
+        userId: resolvedUserId,
+        customMessage: `Verification OTP sent to +91 ${formCleanPhone}.`,
+        duplicateMessage: 'This mobile number is already registered. Please use a different mobile number.',
+      });
+      showToast(`Verification OTP resent to +91 ${formCleanPhone}.`, 'info');
+    } catch {
+      // Error captured in otpError
+    }
+  };
+
+  const handleSave = async (e) => {
     e.preventDefault();
 
     if (hasPhoneChanged && !isPhoneCurrentlyVerified) {
@@ -142,103 +183,134 @@ function MyProfile() {
       return;
     }
 
-    const finalMobile = hasPhoneChanged ? `+91 ${formCleanPhone}` : formData.mobileNumber;
+    const finalMobile = hasPhoneChanged ? formCleanPhone : (formData.mobileNumber || '');
 
-    if (hasPhoneChanged && isPhoneCurrentlyVerified) {
-      // 1. Persist updated farmer credentials for future logins
-      try {
-        const raw = window.localStorage.getItem('agri_farmer_auth_v1');
-        const existing = raw ? JSON.parse(raw) : {};
-        const oldList = Array.isArray(existing.oldMobiles) ? existing.oldMobiles : [];
-        if (currentCleanPhone && !oldList.includes(currentCleanPhone)) {
-          oldList.push(currentCleanPhone);
-        }
-
-        const updatedFarmerAuth = {
-          ...existing,
-          mobile: formCleanPhone,
-          oldMobiles: oldList,
-          password: profile.password || 'farmer@123',
-          fullName: formData.farmerName || profile.farmerName,
-          farmerId: profile.farmerId,
-          updatedAt: new Date().toISOString(),
-        };
-        window.localStorage.setItem('agri_farmer_auth_v1', JSON.stringify(updatedFarmerAuth));
-      } catch (err) {
-        console.error('Failed to update farmer auth storage:', err);
-      }
-
-      // 2. Update AuthContext session in localStorage if user is currently logged in as farmer
-      try {
-        const rawSession = window.localStorage.getItem('arppb_auth_session_v1');
-        if (rawSession) {
-          const parsed = JSON.parse(rawSession);
-          if (parsed?.user) {
-            parsed.user.mobile = formCleanPhone;
-            parsed.user.contactNumber = formCleanPhone;
-            parsed.user.phone = formCleanPhone;
-            window.localStorage.setItem('arppb_auth_session_v1', JSON.stringify(parsed));
-          }
-        }
-      } catch {
-        // Ignore storage errors
-      }
-
-      showToast(
-        `Mobile number updated to +91 ${formCleanPhone}! Please use this new number for your next login.`,
-        'success',
-        6000
+    setIsSavingProfile(true);
+    try {
+      const updatedDto = await updateFarmerProfileApi(
+        {
+          ...formData,
+          mobileNumber: finalMobile,
+        },
+        resolvedUserId
       );
+
+      let nextProfile;
+      if (updatedDto && typeof updatedDto === 'object') {
+        nextProfile = mapFarmerDtoToProfile(updatedDto, {
+          ...profile,
+          ...formData,
+          mobileNumber: `+91 ${finalMobile.replace(/\D/g, '').slice(-10)}`,
+        });
+      } else {
+        nextProfile = {
+          ...profile,
+          ...formData,
+          mobileNumber: `+91 ${finalMobile.replace(/\D/g, '').slice(-10)}`,
+        };
+      }
+
+      updateProfile(nextProfile, { silent: true });
+      setFormData({ ...nextProfile });
+
+      if (hasPhoneChanged) {
+        updateUserMobile?.(finalMobile);
+      }
+
+      showToast('Farmer profile details updated successfully!', 'success');
+      setIsEditing(false);
+      resetVerification();
+      setOtpInput('');
+    } catch (err) {
+      showToast(err?.message || 'Failed to update farmer profile.', 'error');
+    } finally {
+      setIsSavingProfile(false);
     }
-
-    updateProfile({
-      ...formData,
-      mobileNumber: finalMobile,
-    });
-
-    setIsEditing(false);
-    setOtpSent(false);
-    setOtpInput('');
-    setOtpError('');
-    setIsMobileVerified(false);
-    setVerifiedPhone('');
   };
 
-  const handleChangePassword = (e) => {
-    e.preventDefault();
-    if (passwordForm.currentPassword !== profile.password) {
-      showToast('Current password is incorrect.', 'error');
-      return;
+  const handleStartEditingBank = () => {
+    setBankFormData({ ...(profile.bankDetails || {}) });
+    setIsEditingBank(true);
+  };
+
+  const handleCancelEditingBank = () => {
+    setBankFormData({ ...(profile.bankDetails || {}) });
+    setIsEditingBank(false);
+  };
+
+  const handleSaveBankDetails = async (e) => {
+    if (e) e.preventDefault();
+    setIsSavingBank(true);
+    try {
+      const updatedBankDto = await updateFarmerBankDetailsApi(bankFormData, resolvedUserId);
+      const mergedBank = {
+        ...profile.bankDetails,
+        ...bankFormData,
+        ...(updatedBankDto && typeof updatedBankDto === 'object' ? updatedBankDto : {}),
+      };
+      const updatedProfile = {
+        ...profile,
+        bankDetails: mergedBank,
+      };
+      updateProfile(updatedProfile, { silent: true });
+      setBankFormData({ ...mergedBank });
+      setFormData((prev) => ({
+        ...prev,
+        bankDetails: mergedBank,
+      }));
+      setIsEditingBank(false);
+      showToast('Bank details updated successfully.', 'success');
+    } catch (err) {
+      showToast(err?.message || 'Failed to update bank details.', 'error');
+    } finally {
+      setIsSavingBank(false);
     }
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      showToast('New passwords do not match.', 'error');
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+
+    if (!passwordForm.currentPassword) {
+      setPasswordError('Current password is required.');
       return;
     }
     if (passwordForm.newPassword.length < 6) {
-      showToast('Password must be at least 6 characters long.', 'error');
+      setPasswordError('Password must be at least 6 characters long.');
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('New passwords do not match.');
       return;
     }
 
-    updateProfile({ password: passwordForm.newPassword });
-    // Also sync password in agri_farmer_auth_v1
+    setIsChangingPassword(true);
     try {
-      const raw = window.localStorage.getItem('agri_farmer_auth_v1');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        parsed.password = passwordForm.newPassword;
-        window.localStorage.setItem('agri_farmer_auth_v1', JSON.stringify(parsed));
-      }
-    } catch { }
-    showToast('Password updated successfully!', 'success');
-    setIsPasswordModalOpen(false);
-    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      const res = await changeFarmerPasswordApi(
+        {
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+          confirmNewPassword: passwordForm.confirmPassword,
+        },
+        resolvedUserId
+      );
+      showToast(res.message || 'Password updated successfully!', 'success');
+      setIsPasswordModalOpen(false);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordError('');
+    } catch (err) {
+      setPasswordError(err?.message || 'Failed to change password.');
+      showToast(err?.message || 'Failed to change password.', 'error');
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   return (
     <div>
       <div className="farmer-page-header">
         <div className="farmer-header-titles">
-          <h2>Farmer Profile & Account Settings</h2>
+          <h2>Farmer Profile &amp; Account Settings</h2>
           <p>Verified farmer credentials, landholding details, and bank account for automated sales settlement</p>
         </div>
 
@@ -255,7 +327,11 @@ function MyProfile() {
               <button
                 type="button"
                 className="farmer-btn farmer-btn-outline"
-                onClick={() => setIsPasswordModalOpen(true)}
+                onClick={() => {
+                  setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                  setPasswordError('');
+                  setIsPasswordModalOpen(true);
+                }}
               >
                 🔒 Change Password
               </button>
@@ -265,6 +341,7 @@ function MyProfile() {
               type="button"
               className="farmer-btn farmer-btn-outline"
               onClick={handleCancelEditing}
+              disabled={isSavingProfile}
             >
               ✕ Cancel Editing
             </button>
@@ -272,20 +349,41 @@ function MyProfile() {
         </div>
       </div>
 
+      {isLoadingProfile && (
+        <div
+          style={{
+            padding: '12px 16px',
+            background: '#F0FDF4',
+            border: '1px solid #86EFAC',
+            borderRadius: 10,
+            color: '#166534',
+            fontSize: '0.84rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            marginBottom: 20,
+          }}
+        >
+          <span style={{ fontSize: '1rem' }}>⏳</span>
+          <span>Loading verified farmer profile from server...</span>
+        </div>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24 }}>
         {/* Left Farmer Identity Card */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div className="farmer-card" style={{ padding: '28px 20px', textAlign: 'center' }}>
             <div className="farmer-avatar lg" style={{ margin: '0 auto 16px' }}>
-              {profile.farmerName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+              {(profile.farmerName || 'FM').split(' ').filter(Boolean).map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
             </div>
 
-            <h3 style={{ margin: '0 0 4px', fontSize: '1.35rem' }}>{profile.farmerName}</h3>
+            <h3 style={{ margin: '0 0 4px', fontSize: '1.35rem' }}>{profile.farmerName || 'Farmer'}</h3>
             <div style={{ color: 'var(--farmer-primary)', fontWeight: 700, fontSize: '0.9rem' }}>
-              {profile.farmName}
+              {profile.farmName || '—'}
             </div>
             <div style={{ fontSize: '0.8rem', color: 'var(--farmer-secondary)', marginTop: 4 }}>
-              Kisan ID: <strong>{profile.farmerId}</strong>
+              Kisan ID: <strong>{profile.farmerId || '—'}</strong>
             </div>
 
             <div
@@ -300,22 +398,22 @@ function MyProfile() {
             >
               <div>
                 <strong style={{ fontSize: '1.1rem', color: 'var(--farmer-text)' }}>
-                  {profile.rating.split(' ')[0]}
+                  {profile.rating ? profile.rating.split(' ')[0] : '—'}
                 </strong>
                 <small style={{ display: 'block', color: 'var(--farmer-secondary)', fontSize: '0.72rem' }}>
                   Platform Rating
                 </small>
               </div>
               <div style={{ borderLeft: '1px solid var(--farmer-border)', paddingLeft: 16 }}>
-                <strong style={{ fontSize: '1.1rem', color: 'var(--farmer-primary)' }}>18.5</strong>
+                <strong style={{ fontSize: '1.1rem', color: 'var(--farmer-primary)' }}>
+                  {profile.totalLandArea || '—'}
+                </strong>
                 <small style={{ display: 'block', color: 'var(--farmer-secondary)', fontSize: '0.72rem' }}>
                   Total Acres
                 </small>
               </div>
             </div>
           </div>
-
-          {/* Quick Agricultural Stats Card */}
         </div>
 
         {/* Right Details Card & Form */}
@@ -331,7 +429,7 @@ function MyProfile() {
                 paddingBottom: 8,
               }}
             >
-              1. Personal & Contact Information
+              1. Personal &amp; Contact Information
             </h4>
 
             <div className="farmer-form-row">
@@ -340,7 +438,7 @@ function MyProfile() {
                 <input
                   type="text"
                   name="farmerName"
-                  value={formData.farmerName}
+                  value={formData.farmerName || ''}
                   onChange={handleChange}
                   disabled={!isEditing}
                   required
@@ -351,7 +449,7 @@ function MyProfile() {
                 <label>Farmer ID (Official Registry)</label>
                 <input
                   type="text"
-                  value={formData.farmerId}
+                  value={formData.farmerId || ''}
                   disabled
                   style={{ background: '#F1F5F9' }}
                 />
@@ -361,7 +459,7 @@ function MyProfile() {
             <div className="farmer-form-row" style={{ alignItems: 'flex-start' }}>
               <div className="farmer-form-group" style={{ flex: 1.3 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <label style={{ margin: 0 }}>Mobile Number (SMS & OTP) *</label>
+                  <label style={{ margin: 0 }}>Mobile Number (SMS &amp; OTP) *</label>
                   {isEditing && (
                     hasPhoneChanged ? (
                       isPhoneCurrentlyVerified ? (
@@ -385,7 +483,7 @@ function MyProfile() {
                   <input
                     type="tel"
                     name="mobileNumber"
-                    value={formData.mobileNumber}
+                    value={formData.mobileNumber || ''}
                     onChange={handleChange}
                     disabled={!isEditing}
                     placeholder="10-digit mobile number"
@@ -400,10 +498,16 @@ function MyProfile() {
                       disabled={formCleanPhone.length !== 10 || isSendingOtp || otpCooldown > 0}
                       style={{ whiteSpace: 'nowrap', padding: '8px 14px', fontSize: '0.84rem' }}
                     >
-                      {isSendingOtp ? 'Sending...' : otpCooldown > 0 ? `Resend (${otpCooldown}s)` : otpSent ? 'Resend OTP' : '📲 Verify with OTP'}
+                      {isSendingOtp ? 'Sending...' : otpCooldown > 0 ? `Resend (${otpCooldown}s)` : isOtpSent ? 'Resend OTP' : '📲 Verify with OTP'}
                     </button>
                   )}
                 </div>
+
+                {(phoneValidationError || (!isOtpSent && otpError)) && (
+                  <div style={{ color: '#DC2626', fontSize: '0.78rem', fontWeight: 600, marginTop: 4 }}>
+                    ❌ {phoneValidationError || otpError}
+                  </div>
+                )}
 
                 {isEditing && hasPhoneChanged && isPhoneCurrentlyVerified && (
                   <div style={{
@@ -420,11 +524,11 @@ function MyProfile() {
                     gap: 6
                   }}>
                     <span>✅</span>
-                    <span>New number +91 {formCleanPhone} verified with OTP. Click "Save Profile Changes" below.</span>
+                    <span>New number +91 {formCleanPhone} verified with OTP. Click &quot;Save Profile Changes&quot; below.</span>
                   </div>
                 )}
 
-                {isEditing && hasPhoneChanged && !isPhoneCurrentlyVerified && otpSent && (
+                {isEditing && hasPhoneChanged && !isPhoneCurrentlyVerified && isOtpSent && (
                   <div style={{
                     background: '#F0FDF4',
                     border: '1.5px solid #86EFAC',
@@ -437,9 +541,9 @@ function MyProfile() {
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                       <span style={{ color: '#166534', fontSize: '0.84rem', fontWeight: 700 }}>
-                        Enter 6-Digit OTP sent to +91 {formCleanPhone}
+                        {statusMessage || `Enter 6-Digit OTP sent to +91 ${formCleanPhone}`}
                       </span>
-                      {demoOtpNotice && (
+                      {devOtp && (
                         <div style={{
                           background: '#DCFCE7',
                           border: '1px solid #4ADE80',
@@ -452,13 +556,13 @@ function MyProfile() {
                           alignItems: 'center',
                           gap: 6
                         }}>
-                          <span>🔑 Code: {demoOtpNotice}</span>
+                          <span>🔑 Dev Code: {devOtp}</span>
                           <button
                             type="button"
                             onClick={() => {
-                              const digits = demoOtpNotice.replace(/\D/g, '').slice(0, 6);
+                              const digits = devOtp.replace(/\D/g, '').slice(0, 6);
                               setOtpInput(digits);
-                              setOtpError('');
+                              setOtpError(null);
                             }}
                             style={{
                               background: '#16A34A',
@@ -486,7 +590,7 @@ function MyProfile() {
                         onChange={(e) => {
                           const clean = e.target.value.replace(/\D/g, '').slice(0, 6);
                           setOtpInput(clean);
-                          setOtpError('');
+                          if (otpError) setOtpError(null);
                         }}
                         style={{
                           letterSpacing: '4px',
@@ -514,9 +618,8 @@ function MyProfile() {
                         className="farmer-btn farmer-btn-outline"
                         onClick={() => {
                           setFormData((prev) => ({ ...prev, mobileNumber: profile.mobileNumber }));
-                          setOtpSent(false);
+                          resetVerification();
                           setOtpInput('');
-                          setOtpError('');
                         }}
                         style={{ padding: '7px 10px', fontSize: '0.8rem' }}
                       >
@@ -529,6 +632,29 @@ function MyProfile() {
                         ❌ {otpError}
                       </div>
                     )}
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#166534' }}>
+                      <span>Didn&apos;t receive code?</span>
+                      {canResend ? (
+                        <button
+                          type="button"
+                          onClick={handleResendOtp}
+                          disabled={isSendingOtp}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#166534',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                          }}
+                        >
+                          Resend OTP
+                        </button>
+                      ) : (
+                        <span>Resend in {otpCooldown}s</span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -538,7 +664,7 @@ function MyProfile() {
                 <input
                   type="email"
                   name="email"
-                  value={formData.email}
+                  value={formData.email || ''}
                   onChange={handleChange}
                   disabled={!isEditing}
                 />
@@ -555,7 +681,7 @@ function MyProfile() {
                 paddingBottom: 8,
               }}
             >
-              2. Farm Location & Landholding
+              2. Farm Location &amp; Landholding
             </h4>
 
             <div className="farmer-form-row">
@@ -564,7 +690,7 @@ function MyProfile() {
                 <input
                   type="text"
                   name="farmName"
-                  value={formData.farmName}
+                  value={formData.farmName || ''}
                   onChange={handleChange}
                   disabled={!isEditing}
                   required
@@ -576,7 +702,7 @@ function MyProfile() {
                 <input
                   type="text"
                   name="totalLandArea"
-                  value={formData.totalLandArea}
+                  value={formData.totalLandArea || ''}
                   onChange={handleChange}
                   disabled={!isEditing}
                   required
@@ -590,7 +716,7 @@ function MyProfile() {
                 <input
                   type="text"
                   name="village"
-                  value={formData.village}
+                  value={formData.village || ''}
                   onChange={handleChange}
                   disabled={!isEditing}
                 />
@@ -601,7 +727,7 @@ function MyProfile() {
                 <input
                   type="text"
                   name="mandal"
-                  value={formData.mandal}
+                  value={formData.mandal || ''}
                   onChange={handleChange}
                   disabled={!isEditing}
                 />
@@ -614,7 +740,7 @@ function MyProfile() {
                 <input
                   type="text"
                   name="district"
-                  value={formData.district}
+                  value={formData.district || ''}
                   onChange={handleChange}
                   disabled={!isEditing}
                 />
@@ -626,7 +752,7 @@ function MyProfile() {
                   <input
                     type="text"
                     name="state"
-                    value={formData.state}
+                    value={formData.state || ''}
                     onChange={handleChange}
                     disabled={!isEditing}
                   />
@@ -636,7 +762,7 @@ function MyProfile() {
                   <input
                     type="text"
                     name="pinCode"
-                    value={formData.pinCode}
+                    value={formData.pinCode || ''}
                     onChange={handleChange}
                     disabled={!isEditing}
                   />
@@ -645,38 +771,106 @@ function MyProfile() {
             </div>
 
             <div className="farmer-form-group">
-              <label>Complete Dispatch & Farm Address *</label>
+              <label>Complete Dispatch &amp; Farm Address *</label>
               <textarea
                 rows={2}
                 name="completeAddress"
-                value={formData.completeAddress}
+                value={formData.completeAddress || ''}
                 onChange={handleChange}
                 disabled={!isEditing}
               />
             </div>
 
-            {/* Section 3: Bank Details for Settlement */}
+            {isEditing && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+                <button
+                  type="button"
+                  className="farmer-btn farmer-btn-outline"
+                  onClick={handleCancelEditing}
+                  disabled={isSavingProfile}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="farmer-btn farmer-btn-primary"
+                  disabled={isSavingProfile || (hasPhoneChanged && !isPhoneCurrentlyVerified)}
+                  style={{
+                    opacity: hasPhoneChanged && !isPhoneCurrentlyVerified ? 0.6 : 1,
+                    cursor: hasPhoneChanged && !isPhoneCurrentlyVerified ? 'not-allowed' : 'pointer'
+                  }}
+                  title={hasPhoneChanged && !isPhoneCurrentlyVerified ? 'Please verify your new mobile number with OTP first' : ''}
+                >
+                  {isSavingProfile ? 'Saving...' : '💾 Save Profile Changes'}
+                </button>
+              </div>
+            )}
+          </form>
+
+          {/* Section 3: Bank Details for Settlement (Independent Form & API) */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              margin: '32px 0 16px',
+              borderBottom: '1px solid var(--farmer-border)',
+              paddingBottom: 8,
+            }}
+          >
             <h4
               style={{
-                margin: '24px 0 16px',
+                margin: 0,
                 fontSize: '1.05rem',
                 color: 'var(--farmer-dark)',
-                borderBottom: '1px solid var(--farmer-border)',
-                paddingBottom: 8,
               }}
             >
               3. Bank Details (For Direct Trade Settlement)
             </h4>
+            {!isEditingBank ? (
+              <button
+                type="button"
+                className="farmer-btn farmer-btn-outline"
+                onClick={handleStartEditingBank}
+                style={{ padding: '5px 12px', fontSize: '0.82rem' }}
+              >
+                ✏️ Edit Bank Details
+              </button>
+            ) : (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  className="farmer-btn farmer-btn-outline"
+                  onClick={handleCancelEditingBank}
+                  disabled={isSavingBank}
+                  style={{ padding: '5px 12px', fontSize: '0.82rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="farmer-btn farmer-btn-primary"
+                  onClick={handleSaveBankDetails}
+                  disabled={isSavingBank}
+                  style={{ padding: '5px 12px', fontSize: '0.82rem' }}
+                >
+                  {isSavingBank ? 'Saving...' : '💾 Save Bank Details'}
+                </button>
+              </div>
+            )}
+          </div>
 
+          <form onSubmit={handleSaveBankDetails}>
             <div className="farmer-form-row">
               <div className="farmer-form-group">
                 <label>Bank Name</label>
                 <input
                   type="text"
                   name="bank_bankName"
-                  value={formData.bankDetails?.bankName || ''}
-                  onChange={handleChange}
-                  disabled={!isEditing}
+                  value={bankFormData.bankName || ''}
+                  onChange={handleBankChange}
+                  disabled={!isEditingBank}
+                  placeholder="e.g. State Bank of India"
                 />
               </div>
 
@@ -684,14 +878,15 @@ function MyProfile() {
                 <label>Account Number</label>
                 <input
                   type="text"
-                  name="bank_fullAccountNumber"
+                  name="bank_accountNumber"
                   value={
-                    isEditing
-                      ? formData.bankDetails?.fullAccountNumber || ''
-                      : formData.bankDetails?.accountNumber || ''
+                    isEditingBank
+                      ? bankFormData.accountNumber || bankFormData.fullAccountNumber || ''
+                      : bankFormData.accountNumber || '—'
                   }
-                  onChange={handleChange}
-                  disabled={!isEditing}
+                  onChange={handleBankChange}
+                  disabled={!isEditingBank}
+                  placeholder="Bank account number"
                 />
               </div>
             </div>
@@ -702,47 +897,35 @@ function MyProfile() {
                 <input
                   type="text"
                   name="bank_ifscCode"
-                  value={formData.bankDetails?.ifscCode || ''}
-                  onChange={handleChange}
-                  disabled={!isEditing}
+                  value={bankFormData.ifscCode || ''}
+                  onChange={handleBankChange}
+                  disabled={!isEditingBank}
+                  placeholder="SBIN0001245"
                 />
               </div>
 
               <div className="farmer-form-group">
-                <label>Branch Name & Account Type</label>
-                <input
-                  type="text"
-                  name="bank_branch"
-                  value={`${formData.bankDetails?.branch || ''} (${formData.bankDetails?.accountType || ''})`}
-                  onChange={handleChange}
-                  disabled={!isEditing}
-                />
+                <label>Branch Name &amp; Account Type</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <input
+                    type="text"
+                    name="bank_branchName"
+                    value={bankFormData.branchName || bankFormData.branch || ''}
+                    onChange={handleBankChange}
+                    disabled={!isEditingBank}
+                    placeholder="Branch Name"
+                  />
+                  <input
+                    type="text"
+                    name="bank_accountType"
+                    value={bankFormData.accountType || 'Savings'}
+                    onChange={handleBankChange}
+                    disabled={!isEditingBank}
+                    placeholder="Account Type (e.g. Savings)"
+                  />
+                </div>
               </div>
             </div>
-
-            {isEditing && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
-                <button
-                  type="button"
-                  className="farmer-btn farmer-btn-outline"
-                  onClick={handleCancelEditing}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="farmer-btn farmer-btn-primary"
-                  disabled={hasPhoneChanged && !isPhoneCurrentlyVerified}
-                  style={{
-                    opacity: hasPhoneChanged && !isPhoneCurrentlyVerified ? 0.6 : 1,
-                    cursor: hasPhoneChanged && !isPhoneCurrentlyVerified ? 'not-allowed' : 'pointer'
-                  }}
-                  title={hasPhoneChanged && !isPhoneCurrentlyVerified ? 'Please verify your new mobile number with OTP first' : ''}
-                >
-                  💾 Save Profile Changes
-                </button>
-              </div>
-            )}
           </form>
         </div>
       </div>
@@ -764,6 +947,23 @@ function MyProfile() {
 
             <form onSubmit={handleChangePassword}>
               <div className="farmer-modal-body">
+                {passwordError && (
+                  <div
+                    style={{
+                      padding: '8px 12px',
+                      background: '#FEF2F2',
+                      border: '1px solid #FCA5A5',
+                      borderRadius: 8,
+                      color: '#DC2626',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      marginBottom: 12,
+                    }}
+                  >
+                    ❌ {passwordError}
+                  </div>
+                )}
+
                 <div className="farmer-form-group">
                   <label>Current Password *</label>
                   <input
@@ -818,11 +1018,16 @@ function MyProfile() {
                   type="button"
                   className="farmer-btn farmer-btn-outline"
                   onClick={() => setIsPasswordModalOpen(false)}
+                  disabled={isChangingPassword}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="farmer-btn farmer-btn-primary">
-                  Update Password
+                <button
+                  type="submit"
+                  className="farmer-btn farmer-btn-primary"
+                  disabled={isChangingPassword}
+                >
+                  {isChangingPassword ? 'Updating...' : 'Update Password'}
                 </button>
               </div>
             </form>

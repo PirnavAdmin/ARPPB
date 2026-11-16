@@ -111,9 +111,17 @@ export const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [authSession, setAuthSession] = useState(() => readStoredAuthSession());
 
-  const [vendorUser, setVendorUser] = useState(() =>
-    readStorage(STORAGE_KEYS.VENDOR_PROFILE, INITIAL_VENDOR_PROFILE)
-  );
+  const [vendorUser, setVendorUser] = useState(() => {
+    const raw = readStorage(STORAGE_KEYS.VENDOR_PROFILE, INITIAL_VENDOR_PROFILE);
+    if (
+      raw &&
+      (raw.businessName === 'Sri Rayalaseema Agri Commodities & Processing Pvt. Ltd.' ||
+        raw.gstNumber === '37AABCS1429B1Z5')
+    ) {
+      return INITIAL_VENDOR_PROFILE;
+    }
+    return raw || INITIAL_VENDOR_PROFILE;
+  });
 
   const isAuthenticated = Boolean(authSession?.isAuthenticated && authSession?.user);
   const token = authSession?.token || null;
@@ -258,8 +266,8 @@ export function AuthProvider({ children }) {
         isAuthenticated: true,
         user: {
           ...(prev?.user || {
-            contactNumber: INITIAL_VENDOR_PROFILE.mobileNumber,
-            fullName: INITIAL_VENDOR_PROFILE.ownerName,
+            contactNumber: '',
+            fullName: '',
           }),
           role: normalized,
         },
