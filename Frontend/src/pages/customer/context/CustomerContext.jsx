@@ -54,14 +54,24 @@ export function CustomerProvider({ children }) {
     const saved = readStoredJson(CUSTOMER_STORAGE_KEYS.PROFILE, null);
 
     const SAMPLE_LABELS = ['Primary Warehouse', 'Godown Branch (Brodipet)'];
+    const SAMPLE_DEFAULTS = {
+      mobileNumber: '9876543210',
+      address: 'Plot 14, Market Yard Road, Autonagar',
+      district: 'Guntur',
+      state: 'Andhra Pradesh',
+      pinCode: '522001',
+    };
 
     if (saved && saved.authKey === authKey && saved.fullName) {
       const savedAddresses = Array.isArray(saved.deliveryAddresses) ? saved.deliveryAddresses : [];
       const filteredAddresses = savedAddresses.filter((a) => !SAMPLE_LABELS.includes(a.label));
-      return {
-        ...saved,
-        deliveryAddresses: filteredAddresses,
-      };
+      const cleaned = { ...saved, deliveryAddresses: filteredAddresses };
+      Object.entries(SAMPLE_DEFAULTS).forEach(([key, sampleValue]) => {
+        if (cleaned[key] === sampleValue) {
+          cleaned[key] = '';
+        }
+      });
+      return cleaned;
     }
 
     return {

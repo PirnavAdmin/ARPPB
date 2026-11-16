@@ -108,8 +108,8 @@ export function MyProfile() {
     profilePhoto: profile.profilePhoto || '',
     alternateMobileNumber: profile.alternateMobileNumber || '',
     address: profile.address || '',
-    district: profile.district || 'Guntur',
-    state: profile.state || 'Andhra Pradesh',
+    district: profile.district || '',
+    state: profile.state || '',
     pinCode: profile.pinCode || '',
   });
   const [errors, setErrors] = useState({});
@@ -170,19 +170,19 @@ export function MyProfile() {
       mobileNumber: profile.mobileNumber || '',
       email: profile.email || '',
       profilePhoto: profile.profilePhoto || '',
-      alternateMobileNumber: profile.alternateMobileNumber || '',
-      address: profile.address || '',
-      district: profile.district || 'Guntur',
-      state: profile.state || 'Andhra Pradesh',
-      pinCode: profile.pinCode || '',
-    });
-    setErrors({});
-    setPhotoError('');
-    resetVerification();
-    setOtpCode('');
-    setPhoneValidationError('');
-    setIsEditing(true);
-  };
+    alternateMobileNumber: profile.alternateMobileNumber || '',
+    address: profile.address || '',
+    district: profile.district || '',
+    state: profile.state || '',
+    pinCode: profile.pinCode || '',
+  });
+  setErrors({});
+  setPhotoError('');
+  resetVerification();
+  setOtpCode('');
+  setPhoneValidationError('');
+  setIsEditing(true);
+};
 
   const handleCancelEdit = () => {
     setFormData({
@@ -190,19 +190,19 @@ export function MyProfile() {
       mobileNumber: profile.mobileNumber || '',
       email: profile.email || '',
       profilePhoto: profile.profilePhoto || '',
-      alternateMobileNumber: profile.alternateMobileNumber || '',
-      address: profile.address || '',
-      district: profile.district || 'Guntur',
-      state: profile.state || 'Andhra Pradesh',
-      pinCode: profile.pinCode || '',
-    });
-    setErrors({});
-    setPhotoError('');
-    resetVerification();
-    setOtpCode('');
-    setPhoneValidationError('');
-    setIsEditing(false);
-  };
+    alternateMobileNumber: profile.alternateMobileNumber || '',
+    address: profile.address || '',
+    district: profile.district || '',
+    state: profile.state || '',
+    pinCode: profile.pinCode || '',
+  });
+  setErrors({});
+  setPhotoError('');
+  resetVerification();
+  setOtpCode('');
+  setPhoneValidationError('');
+  setIsEditing(false);
+};
 
   const handleFieldChange = (e) => {
     const { name, value } = e.target;
@@ -903,6 +903,7 @@ export function MyProfile() {
               disabled={!isEditing}
               className="w-full px-3 py-2 text-sm rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] disabled:bg-[#F8FAFC] disabled:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
             >
+              <option value="">Select District</option>
               {Array.from(new Set([...AP_DISTRICTS, 'Warangal', 'Hyderabad', 'Vijayawada'])).map(
                 (dist) => (
                   <option key={dist} value={dist}>
@@ -929,6 +930,7 @@ export function MyProfile() {
               disabled={!isEditing}
               className="w-full px-3 py-2 text-sm rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] disabled:bg-[#F8FAFC] disabled:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
             >
+              <option value="">Select State</option>
               {INDIAN_STATES.map((st) => (
                 <option key={st} value={st}>
                   {st}
