@@ -1,11 +1,24 @@
 import { useMemo, useState } from 'react';
+import {
+  Sprout,
+  Boxes,
+  CheckCircle2,
+  TrendingUp,
+  CreditCard,
+  ShieldCheck,
+  Plus,
+  ArrowRight,
+  Search,
+  Building2,
+  Users,
+  ShoppingBag,
+} from 'lucide-react';
 import { useFarmer } from '../context/FarmerContext';
-import DashboardCard from '../components/DashboardCard';
 import DataTable from '../components/DataTable';
 import StatusBadge from '../components/StatusBadge';
 import { formatCurrency, formatDate, buyerCategoryStyles } from '../utils/farmerHelpers';
 
-function FarmerDashboard() {
+export default function FarmerDashboard() {
   const {
     crops,
     sales,
@@ -86,25 +99,25 @@ function FarmerDashboard() {
 
   // Crop-wise Sales Breakdown
   const cropSalesBreakdown = [
-    { name: 'Paddy', qty: 195, value: 4.38, pct: 36, color: '#237A45' },
+    { name: 'Paddy', qty: 195, value: 4.38, pct: 36, color: '#0F766E' },
     { name: 'Turmeric', qty: 40, value: 3.36, pct: 28, color: '#D97706' },
-    { name: 'Groundnut', qty: 70, value: 4.27, pct: 20, color: '#B45309' },
+    { name: 'Groundnut', qty: 70, value: 4.27, pct: 20, color: '#0284C7' },
     { name: 'Maize', qty: 95, value: 2.51, pct: 10, color: '#EAB308' },
     { name: 'Chilli & Cotton', qty: 45, value: 5.37, pct: 6, color: '#DC2626' },
   ];
 
   // Sales Distribution by Buyer Category
   const buyerDistribution = [
-    { category: 'Middlemen', count: 4, amount: 952500, share: 45, color: '#3478C7' },
-    { category: 'Vendors', count: 5, amount: 812800, share: 38, color: '#6B21A8' },
-    { category: 'Customers', count: 2, amount: 352500, share: 17, color: '#16A34A' },
+    { category: 'Middlemen', count: 4, amount: 952500, share: 45, color: '#0284C7', icon: Users },
+    { category: 'Vendors', count: 5, amount: 812800, share: 38, color: '#7C3AED', icon: Building2 },
+    { category: 'Customers', count: 2, amount: 352500, share: 17, color: '#16A34A', icon: ShoppingBag },
   ];
 
   // Expected Payments Status
   const paymentBreakdown = [
-    { label: 'Expected (Within 3 Days)', amount: expectedReceivables, color: '#E99A24', pct: 62 },
+    { label: 'Expected (Within 3 Days)', amount: expectedReceivables, color: '#D97706', pct: 62 },
     { label: 'Received & Settled', amount: 677800, color: '#16A34A', pct: 33 },
-    { label: 'Delayed / Audit Pending', amount: 75000, color: '#DC4545', pct: 5 },
+    { label: 'Delayed / Audit Pending', amount: 75000, color: '#DC2626', pct: 5 },
   ];
 
   const recentSalesColumns = [
@@ -113,7 +126,7 @@ function FarmerDashboard() {
       label: 'Txn ID',
       render: (val, row) => (
         <span
-          style={{ fontWeight: 700, color: 'var(--farmer-primary)', cursor: 'pointer' }}
+          className="font-bold text-[#0F766E] hover:underline cursor-pointer"
           onClick={() => setSelectedTransaction(row)}
         >
           {val}
@@ -128,11 +141,12 @@ function FarmerDashboard() {
     {
       key: 'cropName',
       label: 'Crop Name',
-      render: (val) => <strong>{val}</strong>,
+      render: (val) => <span className="font-semibold text-slate-900">{val}</span>,
     },
     {
       key: 'buyerName',
       label: 'Buyer Name',
+      render: (val) => <span className="text-slate-800 font-medium">{val}</span>,
     },
     {
       key: 'buyerCategory',
@@ -141,7 +155,7 @@ function FarmerDashboard() {
         const style = buyerCategoryStyles[val] || { bg: '#F1F5F9', color: '#475569' };
         return (
           <span
-            className="buyer-badge"
+            className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold"
             style={{ backgroundColor: style.bg, color: style.color }}
           >
             {val}
@@ -163,7 +177,7 @@ function FarmerDashboard() {
       key: 'totalAmount',
       label: 'Total Amount',
       render: (val) => (
-        <strong style={{ color: 'var(--farmer-primary)' }}>{formatCurrency(val)}</strong>
+        <span className="font-extrabold text-[#0F766E]">{formatCurrency(val)}</span>
       ),
     },
     {
@@ -185,457 +199,270 @@ function FarmerDashboard() {
       key: 'actions',
       label: 'Action',
       render: (_, row) => (
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button
-            type="button"
-            className="farmer-btn farmer-btn-outline farmer-btn-sm"
-            onClick={() => setSelectedTransaction(row)}
-          >
-            Details
-          </button>
-        </div>
+        <button
+          type="button"
+          className="px-3 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+          onClick={() => setSelectedTransaction(row)}
+        >
+          Details
+        </button>
       ),
     },
   ];
 
   return (
-    <div>
+    <div className="space-y-6">
+      {/* Search notification banner if filtered */}
       {searchTerm && (
-        <div
-          style={{
-            background: '#F0FDF4',
-            border: '1px solid #C3ECD0',
-            borderRadius: 14,
-            padding: '12px 14px',
-            marginBottom: 18,
-            color: 'var(--farmer-primary)',
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            flexWrap: 'wrap',
-          }}
-        >
-          <span>
-            Search results for <strong>"{searchQuery}"</strong>
+        <div className="bg-[#CCFBF1]/40 border border-[#0F766E]/20 rounded-xl p-3 px-4 flex items-center justify-between text-xs font-semibold text-[#0F766E]">
+          <span className="flex items-center gap-1.5">
+            <Search className="w-3.5 h-3.5" />
+            Showing search results for &quot;<strong className="text-slate-900">{searchQuery}</strong>&quot;
           </span>
-          <span style={{ color: 'var(--farmer-secondary)', fontWeight: 600 }}>
+          <span className="text-slate-500">
             {recentSales.length} match{recentSales.length === 1 ? '' : 'es'} found
           </span>
         </div>
       )}
 
-      {/* Hero Welcome Banner */}
-      <div
-        style={{
-          background: 'linear-gradient(135deg, #E8F5EC 0%, #D4EEDC 100%)',
-          borderRadius: 20,
-          border: '1px solid #C3ECD0',
-          padding: '24px 28px',
-          marginBottom: 24,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 20,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: '#FFFFFF',
-              color: 'var(--farmer-dark)',
-              padding: '4px 12px',
-              borderRadius: 999,
-              fontSize: '0.76rem',
-              fontWeight: 700,
-              marginBottom: 8,
-              boxShadow: 'var(--farmer-shadow-sm)',
-            }}
-          >
-            <span style={{ color: '#16A34A' }}>●</span> Live Agricultural Trading Dashboard
+      {/* Page Header and Welcome Section */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="space-y-1.5">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#CCFBF1] text-[#0F766E] border border-[#0F766E]/20 text-xs font-bold">
+            <span className="w-2 h-2 rounded-full bg-[#0F766E] animate-pulse" />
+            Live Agricultural Trading Portal
           </div>
-          <h2 style={{ margin: '0 0 6px', fontSize: '1.7rem', color: 'var(--farmer-dark)' }}>
-            Welcome back, {profile.farmerName}!
-          </h2>
-          <p style={{ margin: 0, color: 'var(--farmer-secondary)', fontSize: '0.94rem', maxWidth: 640 }}>
-            {profile.farmName} • {profile.village}, {profile.district}. Market rates for Paddy and Chilli are trending upward across AP and Telangana mandis today.
+          <h1 className="text-xl md:text-2xl font-extrabold text-slate-900">
+            Welcome back, {profile.farmerName || 'Farmer'}!
+          </h1>
+          <p className="text-xs md:text-sm text-slate-500 max-w-2xl">
+            {profile.farmName || 'Kisan Agro Enterprise'} • {profile.village || 'Dispatch Center'}, {profile.district || 'Andhra Pradesh'}.
+            Mandi rates for Paddy and Chilli are trending upward across AP and Telangana markets today.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <button
             type="button"
-            className="farmer-btn farmer-btn-primary"
             onClick={() => navigateTo('sell')}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-semibold rounded-lg bg-[#0F766E] hover:bg-[#115E59] text-white shadow-xs transition-colors cursor-pointer"
           >
-            ➕ Create Sale Order
+            <Plus className="w-4 h-4" />
+            Create Sale Order
           </button>
           <button
             type="button"
-            className="farmer-btn farmer-btn-secondary"
             onClick={() => navigateTo('crops')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs md:text-sm font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            🌾 Manage Crops
+            <Sprout className="w-4 h-4 text-[#0F766E]" />
+            Manage Crops
           </button>
           <button
             type="button"
-            className="farmer-btn farmer-btn-outline"
             onClick={() => navigateTo('prices')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs md:text-sm font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            📈 Mandi Prices
+            <TrendingUp className="w-4 h-4 text-[#0F766E]" />
+            Mandi Prices
           </button>
         </div>
       </div>
 
-      {/* 6 Summary Cards */}
-      <div className="farmer-stat-grid">
-        <DashboardCard
-          label="Total Crop Types"
-          value={`${totalCropTypes} Crops`}
-          trend="+2 This Season"
-          tone="positive"
-          description="Paddy, Turmeric, Groundnut & more"
+      {/* KPI Statistic Cards (6 Standard Summary Cards) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {/* Card 1 */}
+        <div
           onClick={() => navigateTo('crops')}
-          icon={
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v18m0-18C8.5 7 5 10 5 14c0 3 2.5 5 7 7m0-18c3.5 4 7 7 7 11 0 3-2.5 5-7 7" />
-            </svg>
-          }
-        />
+          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-10 h-10 rounded-xl bg-[#CCFBF1] text-[#0F766E] flex items-center justify-center font-bold">
+              <Sprout className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              +2 Season
+            </span>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-extrabold text-slate-900">{totalCropTypes} Crops</div>
+            <div className="text-xs font-semibold text-slate-500">Total Crop Types</div>
+            <div className="text-[11px] text-slate-400 mt-1 truncate">Paddy, Turmeric, Groundnut</div>
+          </div>
+        </div>
 
-        <DashboardCard
-          label="Total Available Stock"
-          value={`${totalAvailableStock} qtl`}
-          trend="In 3 Storage Bays"
-          tone="neutral"
-          description="Ready for sale & verified dispatch"
+        {/* Card 2 */}
+        <div
           onClick={() => navigateTo('stock')}
-          icon={
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-          }
-        />
+          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-10 h-10 rounded-xl bg-[#CCFBF1] text-[#0F766E] flex items-center justify-center font-bold">
+              <Boxes className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-50 text-slate-600 border border-slate-200">
+              3 Storage Bays
+            </span>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-extrabold text-slate-900">{totalAvailableStock} qtl</div>
+            <div className="text-xs font-semibold text-slate-500">Available Stock</div>
+            <div className="text-[11px] text-slate-400 mt-1 truncate">Ready for sale &amp; dispatch</div>
+          </div>
+        </div>
 
-        <DashboardCard
-          label="Total Quantity Sold"
-          value={`${totalQuantitySold} qtl`}
-          trend="+18.4% MoM"
-          tone="positive"
-          description="Dispatched across 8 orders"
+        {/* Card 3 */}
+        <div
           onClick={() => navigateTo('sales')}
-          icon={
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          }
-        />
+          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-10 h-10 rounded-xl bg-[#CCFBF1] text-[#0F766E] flex items-center justify-center font-bold">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              +18.4% MoM
+            </span>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-extrabold text-slate-900">{totalQuantitySold} qtl</div>
+            <div className="text-xs font-semibold text-slate-500">Quantity Sold</div>
+            <div className="text-[11px] text-slate-400 mt-1 truncate">Dispatched across 8 orders</div>
+          </div>
+        </div>
 
-        <DashboardCard
-          label="Total Sales Amount"
-          value={formatCurrency(totalSalesAmount)}
-          trend="+14.2% Growth"
-          tone="positive"
-          description="Confirmed transactions value"
+        {/* Card 4 */}
+        <div
           onClick={() => navigateTo('sales')}
-          icon={
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          }
-        />
+          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-10 h-10 rounded-xl bg-[#CCFBF1] text-[#0F766E] flex items-center justify-center font-bold">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              +14.2% Growth
+            </span>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-extrabold text-slate-900">{formatCurrency(totalSalesAmount)}</div>
+            <div className="text-xs font-semibold text-slate-500">Total Sales Amount</div>
+            <div className="text-[11px] text-slate-400 mt-1 truncate">Confirmed transactions</div>
+          </div>
+        </div>
 
-        <DashboardCard
-          label="Expected Receivables"
-          value={formatCurrency(expectedReceivables)}
-          trend="Due in 3 Days"
-          tone="warning"
-          description="Awaiting bank settlement after OTP"
+        {/* Card 5 */}
+        <div
           onClick={() => navigateTo('sales')}
-          icon={
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          }
-        />
+          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center font-bold">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+              Due in 3 Days
+            </span>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-extrabold text-slate-900">{formatCurrency(expectedReceivables)}</div>
+            <div className="text-xs font-semibold text-slate-500">Expected Receivables</div>
+            <div className="text-[11px] text-slate-400 mt-1 truncate">Awaiting bank settlement</div>
+          </div>
+        </div>
 
-        <DashboardCard
-          label="Pending OTP Confirmations"
-          value={`${pendingOtpList.length} Orders`}
-          trend={pendingOtpList.length > 0 ? 'Action Required' : 'All Clear'}
-          tone={pendingOtpList.length > 0 ? 'warning' : 'positive'}
-          description="Buyer verification pending"
+        {/* Card 6 */}
+        <div
           onClick={() => navigateTo('otp')}
-          icon={
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-          }
-        />
-      </div>
-
-      {/* 4 Professional Charts Grid */}
-      <div className="farmer-charts-grid">
-        {/* Chart 1: Monthly Crop Sales */}
-        <div className="farmer-card farmer-chart-container">
-          <div className="farmer-chart-header">
-            <div>
-              <h4>Monthly Crop Sales Growth</h4>
-              <span>Quantity (qtl) vs Sales Turnover (₹ in Lakhs)</span>
+          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-10 h-10 rounded-xl bg-[#CCFBF1] text-[#0F766E] flex items-center justify-center font-bold">
+              <ShieldCheck className="w-5 h-5" />
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button
-                type="button"
-                className={`farmer-btn farmer-btn-sm ${activeChartMetric === 'value' ? 'farmer-btn-primary' : 'farmer-btn-outline'}`}
-                onClick={() => setActiveChartMetric('value')}
-              >
-                ₹ Value
-              </button>
-              <button
-                type="button"
-                className={`farmer-btn farmer-btn-sm ${activeChartMetric === 'quantity' ? 'farmer-btn-primary' : 'farmer-btn-outline'}`}
-                onClick={() => setActiveChartMetric('quantity')}
-              >
-                Quintals (qtl)
-              </button>
-            </div>
-          </div>
-
-          {/* Clean Bar Visualization */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, height: 180, paddingTop: 20, borderBottom: '1px solid var(--farmer-border)' }}>
-            {monthlyData.map((d) => {
-              const maxVal = activeChartMetric === 'value' ? 12 : 420;
-              const current = activeChartMetric === 'value' ? d.value : d.qty;
-              const heightPct = Math.round((current / maxVal) * 100);
-
-              return (
-                <div key={d.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--farmer-primary)', marginBottom: 4 }}>
-                    {activeChartMetric === 'value' ? `₹${d.value}L` : `${d.qty}q`}
-                  </span>
-                  <div
-                    style={{
-                      width: '75%',
-                      height: `${heightPct}%`,
-                      background: 'linear-gradient(180deg, #237A45 0%, #155D35 100%)',
-                      borderRadius: '6px 6px 0 0',
-                      transition: 'height 0.4s ease',
-                    }}
-                  />
-                  <span style={{ fontSize: '0.78rem', color: 'var(--farmer-secondary)', marginTop: 8 }}>
-                    {d.month}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Chart 2: Crop-Wise Sales Breakdown */}
-        <div className="farmer-card farmer-chart-container">
-          <div className="farmer-chart-header">
-            <div>
-              <h4>Crop-Wise Sales Volume</h4>
-              <span>Distribution across harvested crops</span>
-            </div>
-            <span style={{ fontSize: '0.78rem', color: 'var(--farmer-primary)', fontWeight: 600 }}>
-              Total 440 qtl
+            <span
+              className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                pendingOtpList.length > 0
+                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              }`}
+            >
+              {pendingOtpList.length > 0 ? 'Action Required' : 'All Clear'}
             </span>
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
-            {cropSalesBreakdown.map((item) => (
-              <div key={item.name}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', marginBottom: 4 }}>
-                  <strong>{item.name}</strong>
-                  <span style={{ color: 'var(--farmer-secondary)' }}>
-                    {item.qty} qtl (₹{item.value} Lakhs) • <strong>{item.pct}%</strong>
-                  </span>
-                </div>
-                <div style={{ height: 8, backgroundColor: '#F1F5F9', borderRadius: 999, overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      width: `${item.pct}%`,
-                      height: '100%',
-                      backgroundColor: item.color,
-                      borderRadius: 999,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Chart 3: Sales Distribution (Middlemen vs Vendors vs Customers) */}
-        <div className="farmer-card farmer-chart-container">
-          <div className="farmer-chart-header">
-            <div>
-              <h4>Sales Channel Distribution</h4>
-              <span>Sold to Middlemen, Vendors & Direct Consumers</span>
-            </div>
-            <span style={{ fontSize: '0.78rem', color: 'var(--farmer-secondary)' }}>
-              100% Verified Trades
-            </span>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 10 }}>
-            {buyerDistribution.map((b) => (
-              <div
-                key={b.category}
-                style={{
-                  padding: '16px 12px',
-                  borderRadius: 12,
-                  background: '#F9FAF9',
-                  border: '1px solid var(--farmer-border)',
-                  textAlign: 'center',
-                }}
-              >
-                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: b.color }}>
-                  {b.share}%
-                </div>
-                <strong style={{ fontSize: '0.88rem', display: 'block', marginTop: 4 }}>
-                  {b.category}
-                </strong>
-                <span style={{ fontSize: '0.78rem', color: 'var(--farmer-secondary)' }}>
-                  {formatCurrency(b.amount)}
-                </span>
-                <div style={{ fontSize: '0.72rem', color: 'var(--farmer-primary)', fontWeight: 600, marginTop: 4 }}>
-                  {b.count} Orders
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ marginTop: 14, height: 10, display: 'flex', borderRadius: 999, overflow: 'hidden' }}>
-            <div style={{ width: '45%', backgroundColor: '#3478C7' }} title="Middlemen: 45%" />
-            <div style={{ width: '38%', backgroundColor: '#6B21A8' }} title="Vendors: 38%" />
-            <div style={{ width: '17%', backgroundColor: '#16A34A' }} title="Customers: 17%" />
-          </div>
-        </div>
-
-        {/* Chart 4: Expected Payments Overview */}
-        <div className="farmer-card farmer-chart-container">
-          <div className="farmer-chart-header">
-            <div>
-              <h4>Expected Payments & Cashflow</h4>
-              <span>Settlement timeline status for farm accounts</span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
-            {paymentBreakdown.map((p) => (
-              <div
-                key={p.label}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 14px',
-                  borderRadius: 10,
-                  backgroundColor: '#FCFDFC',
-                  border: '1px solid var(--farmer-border)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: '50%',
-                      backgroundColor: p.color,
-                    }}
-                  />
-                  <strong style={{ fontSize: '0.88rem' }}>{p.label}</strong>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <strong style={{ fontSize: '0.96rem', color: 'var(--farmer-text)' }}>
-                    {formatCurrency(p.amount)}
-                  </strong>
-                  <span style={{ display: 'block', fontSize: '0.72rem', color: 'var(--farmer-secondary)' }}>
-                    {p.pct}% of monthly revenue
-                  </span>
-                </div>
-              </div>
-            ))}
+          <div className="mt-3">
+            <div className="text-2xl font-extrabold text-slate-900">{pendingOtpList.length} Orders</div>
+            <div className="text-xs font-semibold text-slate-500">Pending OTPs</div>
+            <div className="text-[11px] text-slate-400 mt-1 truncate">Buyer verification security</div>
           </div>
         </div>
       </div>
 
-      {/* Pending OTP Confirmations Quick Action Panel */}
+      {/* Pending OTP Confirmations Quick Action Card */}
       {pendingOtpList.length > 0 && (
-        <div className="farmer-card" style={{ padding: '20px', marginBottom: 24, border: '2px solid #FED7AA' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div>
-              <h3 style={{ margin: 0, color: 'var(--farmer-text)' }}>
-                ⚡ Pending OTP Confirmations ({pendingOtpList.length})
-              </h3>
-              <p style={{ margin: '4px 0 0', fontSize: '0.86rem', color: 'var(--farmer-secondary)' }}>
-                Incoming purchase requests require OTP confirmation before reserved stock is deducted and payment process initiates.
-              </p>
+        <div className="bg-white rounded-xl border border-amber-200 p-5 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm md:text-base font-bold text-slate-900">
+                  Pending Buyer OTP Confirmations ({pendingOtpList.length})
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Incoming purchase orders require OTP confirmation before reserved stock is deducted.
+                </p>
+              </div>
             </div>
+
             <button
               type="button"
-              className="farmer-btn farmer-btn-primary farmer-btn-sm"
               onClick={() => navigateTo('otp')}
+              className="inline-flex items-center gap-1 text-xs font-bold text-[#0F766E] hover:underline cursor-pointer"
             >
-              View All OTPs
+              View All OTPs ({otpRequests.length})
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {pendingOtpList.map((otp) => (
               <div
                 key={otp.id}
-                style={{
-                  padding: '16px',
-                  borderRadius: 12,
-                  backgroundColor: '#FFFDF9',
-                  border: '1px solid #FED7AA',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                }}
+                className="p-4 rounded-xl bg-amber-50/40 border border-amber-200 flex flex-col justify-between gap-3"
               >
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <strong style={{ color: 'var(--farmer-primary)', fontSize: '0.88rem' }}>
-                      {otp.transactionId}
-                    </strong>
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-[#0F766E]">{otp.transactionId}</span>
                     <StatusBadge status={otp.otpStatus} />
                   </div>
-                  <div style={{ fontSize: '0.94rem', fontWeight: 700 }}>
+                  <div className="text-sm font-bold text-slate-900 mt-2">
                     {otp.crop} • {otp.quantity} {otp.unit}
                   </div>
-                  <div style={{ fontSize: '0.84rem', color: 'var(--farmer-secondary)', marginTop: 2 }}>
-                    Buyer: <strong>{otp.buyerName}</strong> ({otp.buyerCategory})
+                  <div className="text-xs text-slate-500 mt-0.5">
+                    Buyer: <strong className="text-slate-700">{otp.buyerName}</strong> ({otp.buyerCategory})
                   </div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--farmer-dark)', marginTop: 8 }}>
+                  <div className="text-base font-extrabold text-slate-900 mt-2">
                     {formatCurrency(otp.totalAmount)}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                <div className="flex items-center gap-2 pt-2 border-t border-amber-200/60">
                   <button
                     type="button"
-                    className="farmer-btn farmer-btn-primary farmer-btn-sm"
-                    style={{ flex: 1 }}
                     onClick={() => setActiveOtpRequest(otp)}
+                    className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-[#0F766E] hover:bg-[#115E59] text-white transition-colors cursor-pointer"
                   >
-                    🔐 Confirm OTP
+                    Confirm OTP
                   </button>
                   <button
                     type="button"
-                    className="farmer-btn farmer-btn-outline farmer-btn-sm"
                     onClick={() => {
                       const match = sales.find((s) => s.id === otp.transactionId);
                       if (match) setSelectedTransaction(match);
                     }}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
                   >
                     Details
                   </button>
@@ -646,21 +473,196 @@ function FarmerDashboard() {
         </div>
       )}
 
-      {/* Recent Sales Table */}
-      <div className="farmer-card" style={{ padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div>
-            <h3 style={{ margin: 0 }}>Recent Sales Transactions</h3>
-            <span style={{ fontSize: '0.84rem', color: 'var(--farmer-secondary)' }}>
-              Latest transactions across Middleman, Vendor, and Direct Consumer channels
+      {/* 4 Professional Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Chart 1: Monthly Crop Sales Growth */}
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm md:text-base font-bold text-slate-900">
+                Monthly Crop Sales Growth
+              </h3>
+              <p className="text-xs text-slate-500">
+                Quantity (qtl) vs Sales Turnover (₹ in Lakhs)
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-lg border border-slate-200">
+              <button
+                type="button"
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  activeChartMetric === 'value'
+                    ? 'bg-[#0F766E] text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-white'
+                }`}
+                onClick={() => setActiveChartMetric('value')}
+              >
+                ₹ Value
+              </button>
+              <button
+                type="button"
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  activeChartMetric === 'quantity'
+                    ? 'bg-[#0F766E] text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-white'
+                }`}
+                onClick={() => setActiveChartMetric('quantity')}
+              >
+                Quintals (qtl)
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-end gap-3 h-48 pt-4 border-b border-slate-100 px-2">
+            {monthlyData.map((d) => {
+              const maxVal = activeChartMetric === 'value' ? 12 : 420;
+              const current = activeChartMetric === 'value' ? d.value : d.qty;
+              const heightPct = Math.round((current / maxVal) * 100);
+
+              return (
+                <div key={d.month} className="flex-1 flex flex-col items-center h-full justify-end group">
+                  <span className="text-[11px] font-bold text-[#0F766E] mb-1.5 opacity-90 group-hover:scale-105 transition-transform">
+                    {activeChartMetric === 'value' ? `₹${d.value}L` : `${d.qty}q`}
+                  </span>
+                  <div
+                    style={{ height: `${heightPct}%` }}
+                    className="w-4/5 max-w-[42px] bg-gradient-to-t from-[#115E59] to-[#0F766E] rounded-t-md transition-all group-hover:brightness-110"
+                  />
+                  <span className="text-xs font-semibold text-slate-500 mt-2">
+                    {d.month}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Chart 2: Crop-Wise Sales Volume */}
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm md:text-base font-bold text-slate-900">
+                Crop-Wise Sales Volume
+              </h3>
+              <p className="text-xs text-slate-500">Distribution across harvested crops</p>
+            </div>
+            <span className="text-xs font-bold text-[#0F766E] bg-[#CCFBF1] px-2.5 py-1 rounded-md">
+              Total: 440 qtl
             </span>
+          </div>
+
+          <div className="space-y-3 pt-1">
+            {cropSalesBreakdown.map((item) => (
+              <div key={item.name} className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-900">{item.name}</span>
+                  <span className="text-slate-500">
+                    {item.qty} qtl (₹{item.value} Lakhs) • <strong className="text-slate-800">{item.pct}%</strong>
+                  </span>
+                </div>
+                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    style={{ width: `${item.pct}%`, backgroundColor: item.color }}
+                    className="h-full rounded-full transition-all duration-500"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Chart 3: Sales Channel Distribution */}
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm md:text-base font-bold text-slate-900">
+                Sales Channel Distribution
+              </h3>
+              <p className="text-xs text-slate-500">Middlemen, Vendors &amp; Direct Consumers</p>
+            </div>
+            <span className="text-xs font-semibold text-slate-500">100% Verified Trades</span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            {buyerDistribution.map((b) => {
+              const Icon = b.icon;
+              return (
+                <div
+                  key={b.category}
+                  className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200 text-center flex flex-col items-center justify-center"
+                >
+                  <Icon className="w-5 h-5 mb-1" style={{ color: b.color }} />
+                  <div className="text-xl font-extrabold" style={{ color: b.color }}>
+                    {b.share}%
+                  </div>
+                  <div className="text-xs font-bold text-slate-800 mt-0.5">{b.category}</div>
+                  <div className="text-[11px] text-slate-500">{formatCurrency(b.amount)}</div>
+                  <div className="text-[10px] font-bold text-[#0F766E] mt-1">{b.count} Orders</div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 h-2.5 flex rounded-full overflow-hidden">
+            <div style={{ width: '45%', backgroundColor: '#0284C7' }} title="Middlemen: 45%" />
+            <div style={{ width: '38%', backgroundColor: '#7C3AED' }} title="Vendors: 38%" />
+            <div style={{ width: '17%', backgroundColor: '#16A34A' }} title="Customers: 17%" />
+          </div>
+        </div>
+
+        {/* Chart 4: Expected Payments & Cashflow */}
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm md:text-base font-bold text-slate-900">
+                Expected Payments &amp; Settlement Timeline
+              </h3>
+              <p className="text-xs text-slate-500">Automated APMC bank escrow settlement</p>
+            </div>
+          </div>
+
+          <div className="space-y-2.5">
+            {paymentBreakdown.map((p) => (
+              <div
+                key={p.label}
+                className="flex items-center justify-between p-3 rounded-lg bg-slate-50/80 border border-slate-200"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="w-3 h-3 rounded-full shrink-0"
+                    style={{ backgroundColor: p.color }}
+                  />
+                  <span className="text-xs font-bold text-slate-800">{p.label}</span>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs font-extrabold text-slate-900">
+                    {formatCurrency(p.amount)}
+                  </div>
+                  <span className="text-[10px] text-slate-400">{p.pct}% of monthly revenue</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Sales Table */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div>
+            <h3 className="text-sm md:text-base font-bold text-slate-900">
+              Recent Sales Transactions
+            </h3>
+            <p className="text-xs text-slate-500">
+              Latest transactions across Middleman, Vendor, and Direct Consumer channels
+            </p>
           </div>
           <button
             type="button"
-            className="farmer-btn farmer-btn-outline farmer-btn-sm"
             onClick={() => navigateTo('sales')}
+            className="inline-flex items-center gap-1 text-xs font-bold text-[#0F766E] hover:underline cursor-pointer"
           >
-            View Full Sales History ({sales.length}) →
+            View Full Sales History ({sales.length})
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
@@ -669,5 +671,3 @@ function FarmerDashboard() {
     </div>
   );
 }
-
-export default FarmerDashboard;

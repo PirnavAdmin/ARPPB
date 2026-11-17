@@ -12,7 +12,7 @@ import {
 
 function MyProfile() {
   const { profile, updateProfile, showToast } = useFarmer();
-  const { user, token, updateUserMobile } = useAuth();
+  const { user, updateUserMobile } = useAuth();
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);

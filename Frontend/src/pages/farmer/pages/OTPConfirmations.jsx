@@ -1,50 +1,77 @@
 import { useState, useMemo } from 'react';
+import {
+  ShieldCheck,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Search,
+  Eye,
+  KeyRound,
+} from 'lucide-react';
 import { useFarmer } from '../context/FarmerContext';
 import DataTable from '../components/DataTable';
-import StatusBadge from '../components/StatusBadge';
 import { formatCurrency, buyerCategoryStyles } from '../utils/farmerHelpers';
 
-function OTPConfirmations() {
-  const { otpRequests, setActiveOtpRequest, setSelectedTransaction, sales, searchQuery } = useFarmer();
+export default function OTPConfirmations() {
+  const {
+    otpRequests,
+    setActiveOtpRequest,
+    setSelectedTransaction,
+    sales,
+    searchQuery: globalSearchQuery,
+  } = useFarmer();
 
-  const [activeTab, setActiveTab] = useState('Pending'); // 'Pending' | 'Confirmed' | 'Rejected' | 'Expired'
+  const [activeTab, setActiveTab] = useState('Pending'); // 'Pending' | 'Confirmed' | 'Rejected' | 'Expired' | 'All'
+  const [internalSearch, setInternalSearch] = useState('');
+  const [buyerCategoryFilter, setBuyerCategoryFilter] = useState('All');
 
+  const effectiveSearch = (globalSearchQuery || internalSearch).trim().toLowerCase();
+
+  // Tab counts
   const tabCounts = useMemo(() => {
     return {
       Pending: otpRequests.filter((o) => o.otpStatus === 'Pending' && o.direction !== 'farmer_initiated').length,
       Confirmed: otpRequests.filter((o) => o.otpStatus === 'Confirmed' && o.direction !== 'farmer_initiated').length,
       Rejected: otpRequests.filter((o) => o.otpStatus === 'Rejected' && o.direction !== 'farmer_initiated').length,
       Expired: otpRequests.filter((o) => o.otpStatus === 'Expired' && o.direction !== 'farmer_initiated').length,
+      All: otpRequests.filter((o) => o.direction !== 'farmer_initiated').length,
     };
   }, [otpRequests]);
 
   const filteredRequests = useMemo(() => {
     return otpRequests.filter((item) => {
       if (item.direction === 'farmer_initiated') return false;
-      const matchTab = item.otpStatus === activeTab;
-      const matchSearch =
-        !searchQuery ||
-        item.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.transactionId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.buyerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.crop.toLowerCase().includes(searchQuery.toLowerCase());
 
-      return matchTab && matchSearch;
+      const matchTab = activeTab === 'All' ? true : item.otpStatus === activeTab;
+      const matchCategory = buyerCategoryFilter === 'All' ? true : item.buyerCategory === buyerCategoryFilter;
+
+      const matchSearch =
+        !effectiveSearch ||
+        item.id.toLowerCase().includes(effectiveSearch) ||
+        item.transactionId.toLowerCase().includes(effectiveSearch) ||
+        item.buyerName.toLowerCase().includes(effectiveSearch) ||
+        item.crop.toLowerCase().includes(effectiveSearch);
+
+      return matchTab && matchCategory && matchSearch;
     });
-  }, [otpRequests, activeTab, searchQuery]);
+  }, [otpRequests, activeTab, buyerCategoryFilter, effectiveSearch]);
 
   const columns = [
     {
       key: 'id',
       label: 'OTP ID',
-      render: (val) => <strong style={{ color: 'var(--farmer-primary)' }}>{val}</strong>,
+      render: (val) => (
+        <span className="font-mono font-bold text-[#0F766E] text-xs md:text-sm">
+          {val}
+        </span>
+      ),
     },
     {
       key: 'transactionId',
       label: 'Linked Transaction',
       render: (val) => (
         <span
-          style={{ fontWeight: 600, color: 'var(--farmer-dark)', cursor: 'pointer' }}
+          className="font-mono font-semibold text-slate-800 hover:text-[#0F766E] hover:underline cursor-pointer text-xs md:text-sm"
           onClick={() => {
             const match = sales.find((s) => s.id === val);
             if (match) setSelectedTransaction(match);
@@ -56,24 +83,22 @@ function OTPConfirmations() {
     },
     {
       key: 'buyerName',
-      label: 'Buyer Name & Phone',
+      label: 'Buyer Information',
       render: (val, row) => (
-        <div>
-          <strong style={{ fontSize: '0.92rem' }}>{val}</strong>
-          <small style={{ display: 'block', color: 'var(--farmer-secondary)' }}>
-            {row.buyerMobile}
-          </small>
+        <div className="space-y-0.5">
+          <div className="font-bold text-slate-900 text-sm">{val}</div>
+          <div className="text-xs text-slate-500 font-mono">{row.buyerMobile}</div>
         </div>
       ),
     },
     {
       key: 'buyerCategory',
-      label: 'Category',
+      label: 'Channel',
       render: (val) => {
         const style = buyerCategoryStyles[val] || { bg: '#F1F5F9', color: '#475569' };
         return (
           <span
-            className="buyer-badge"
+            className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold"
             style={{ backgroundColor: style.bg, color: style.color }}
           >
             {val}
@@ -85,9 +110,9 @@ function OTPConfirmations() {
       key: 'crop',
       label: 'Crop & Quantity',
       render: (val, row) => (
-        <div>
-          <strong>{val}</strong>
-          <div style={{ fontSize: '0.82rem', color: 'var(--farmer-secondary)' }}>
+        <div className="space-y-0.5">
+          <span className="font-bold text-slate-900 text-sm">{val}</span>
+          <div className="text-xs text-slate-500 font-medium">
             {row.quantity} {row.unit}
           </div>
         </div>
@@ -95,51 +120,57 @@ function OTPConfirmations() {
     },
     {
       key: 'rate',
-      label: 'Rate',
-      render: (val, row) => `${formatCurrency(val)} / ${row.unit}`,
+      label: 'Agreed Rate',
+      render: (val, row) => (
+        <span className="text-xs md:text-sm text-slate-700 font-medium">
+          {formatCurrency(val)} / {row.unit}
+        </span>
+      ),
     },
     {
       key: 'totalAmount',
-      label: 'Total Amount',
+      label: 'Total Value',
       render: (val) => (
-        <strong style={{ color: 'var(--farmer-primary)', fontSize: '1rem' }}>
+        <span className="font-extrabold text-[#0F766E] text-sm md:text-base">
           {formatCurrency(val)}
-        </strong>
+        </span>
       ),
     },
     {
       key: 'requestDate',
-      label: 'Request Time',
-      render: (val) => <span style={{ fontSize: '0.84rem' }}>{val}</span>,
+      label: 'Request Date',
+      render: (val) => <span className="text-xs text-slate-500">{val}</span>,
     },
     {
       key: 'otpStatus',
-      label: 'OTP Status',
+      label: 'Verification Status',
       badge: 'otpStatus',
     },
     {
       key: 'action',
       label: 'Action',
       render: (_, row) => (
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div className="flex items-center gap-1.5">
           {row.otpStatus === 'Pending' ? (
             <button
               type="button"
-              className="farmer-btn farmer-btn-primary farmer-btn-sm"
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#0F766E] hover:bg-[#115E59] text-white shadow-xs transition-colors cursor-pointer"
               onClick={() => setActiveOtpRequest(row)}
             >
-              🔐 Enter OTP
+              <KeyRound className="w-3.5 h-3.5" />
+              Enter OTP
             </button>
           ) : (
             <button
               type="button"
-              className="farmer-btn farmer-btn-outline farmer-btn-sm"
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
               onClick={() => {
                 const match = sales.find((s) => s.id === row.transactionId);
                 if (match) setSelectedTransaction(match);
               }}
             >
-              View Details
+              <Eye className="w-3.5 h-3.5 text-slate-400" />
+              Details
             </button>
           )}
         </div>
@@ -148,54 +179,168 @@ function OTPConfirmations() {
   ];
 
   return (
-    <div>
-      <div className="farmer-page-header">
-        <div className="farmer-header-titles">
-          <h2>OTP Confirmations & Verifications</h2>
-          <p>
-            Cryptographic 6-digit verification protecting stock deduction and authorizing buyer dispatch
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#CCFBF1] text-[#0F766E] border border-[#0F766E]/20">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#0F766E]" />
+            Kisan Trade Security Center
+          </div>
+          <h1 className="text-xl md:text-2xl font-extrabold text-slate-900">
+            OTP Confirmations &amp; Verifications
+          </h1>
+          <p className="text-xs md:text-sm text-slate-500 max-w-2xl">
+            Cryptographic 6-digit verification protecting stock deduction and authorizing buyer dispatch for agricultural produce sales.
           </p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="farmer-tabs">
-        {['Pending', 'Confirmed', 'Rejected', 'Expired'].map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={`farmer-tab-btn ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-            <span
-              style={{
-                marginLeft: 8,
-                fontSize: '0.74rem',
-                padding: '2px 8px',
-                borderRadius: 999,
-                backgroundColor: activeTab === tab ? 'var(--farmer-light)' : '#F1F5F9',
-                color: activeTab === tab ? 'var(--farmer-dark)' : 'var(--farmer-secondary)',
-                fontWeight: 700,
-              }}
-            >
-              {tabCounts[tab]}
+      {/* 4 Summary Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div
+          onClick={() => setActiveTab('All')}
+          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-10 h-10 rounded-xl bg-[#CCFBF1] text-[#0F766E] flex items-center justify-center font-bold">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-50 text-slate-600 border border-slate-200">
+              Total Log
             </span>
-          </button>
-        ))}
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-extrabold text-slate-900">{tabCounts.All}</div>
+            <div className="text-xs font-semibold text-slate-500">Total OTP Requests</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">All verification cycles</div>
+          </div>
+        </div>
+
+        <div
+          onClick={() => setActiveTab('Pending')}
+          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center font-bold">
+              <Clock className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+              {tabCounts.Pending > 0 ? 'Action Required' : 'Cleared'}
+            </span>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-extrabold text-slate-900">{tabCounts.Pending}</div>
+            <div className="text-xs font-semibold text-slate-500">Pending Confirmations</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Awaiting buyer verification</div>
+          </div>
+        </div>
+
+        <div
+          onClick={() => setActiveTab('Confirmed')}
+          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Verified
+            </span>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-extrabold text-slate-900">{tabCounts.Confirmed}</div>
+            <div className="text-xs font-semibold text-slate-500">Confirmed &amp; Settled</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Dispatched to buyer</div>
+          </div>
+        </div>
+
+        <div
+          onClick={() => setActiveTab('Expired')}
+          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center font-bold">
+              <XCircle className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-50 text-slate-600 border border-slate-200">
+              Expired
+            </span>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-extrabold text-slate-900">{tabCounts.Expired + tabCounts.Rejected}</div>
+            <div className="text-xs font-semibold text-slate-500">Expired / Rejected</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Stock automatically retained</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs, Search & Filters Bar */}
+      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Status Tab Pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          {['Pending', 'Confirmed', 'Rejected', 'Expired', 'All'].map((tab) => {
+            const isActive = activeTab === tab;
+            const count = tabCounts[tab];
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                  isActive
+                    ? 'bg-[#0F766E] text-white shadow-xs'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <span>{tab}</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Channel Filter & Search */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <select
+            value={buyerCategoryFilter}
+            onChange={(e) => setBuyerCategoryFilter(e.target.value)}
+            className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20"
+          >
+            <option value="All">All Channels</option>
+            <option value="Middleman">Middlemen</option>
+            <option value="Vendor">Vendors</option>
+            <option value="Customer">Customers</option>
+          </select>
+
+          <div className="relative w-full sm:w-60">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="Search OTP or txn..."
+              value={internalSearch}
+              onChange={(e) => setInternalSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 focus:border-[#0F766E]"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Main Table */}
-      <div className="farmer-card" style={{ padding: '20px' }}>
+      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
         <DataTable
           columns={columns}
           rows={filteredRequests}
           emptyTitle={`No ${activeTab} OTP Requests`}
-          emptyMessage={`There are currently no transactions with ${activeTab.toLowerCase()} OTP status.`}
+          emptyMessage={`There are currently no transactions matching your ${activeTab.toLowerCase()} status or search filter.`}
         />
       </div>
     </div>
   );
 }
-
-export default OTPConfirmations;

@@ -767,8 +767,8 @@ button {
 }
 
 .farmer-table th {
-  background-color: #F8FAF8;
-  color: var(--farmer-secondary);
+  background-color: #F8FAFC;
+  color: #475569;
   font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -807,15 +807,15 @@ button {
 }
 
 .farmer-status-badge.success {
-  background-color: #E8F5EC;
-  color: #155D35;
-  border: 1px solid #C3ECD0;
+  background-color: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
 }
 
 .farmer-status-badge.warning {
-  background-color: #FFF7ED;
-  color: #C2410C;
-  border: 1px solid #FED7AA;
+  background-color: #FFFBEB;
+  color: #B45309;
+  border: 1px solid #FDE68A;
 }
 
 .farmer-status-badge.danger {
@@ -825,13 +825,13 @@ button {
 }
 
 .farmer-status-badge.info {
-  background-color: #EFF6FF;
-  color: #1D4ED8;
-  border: 1px solid #BFDBFE;
+  background-color: #F0FDF4;
+  color: #0F766E;
+  border: 1px solid #CCFBF1;
 }
 
 .farmer-status-badge.neutral {
-  background-color: #F1F5F9;
+  background-color: #F8FAFC;
   color: #475569;
   border: 1px solid #E2E8F0;
 }
