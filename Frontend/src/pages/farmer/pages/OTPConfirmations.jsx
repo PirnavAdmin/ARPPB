@@ -7,10 +7,22 @@ import {
   Search,
   Eye,
   KeyRound,
+  Download,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useFarmer } from '../context/FarmerContext';
-import DataTable from '../components/DataTable';
+import FarmerPageHeader from '../components/FarmerPageHeader';
+import FarmerStatCard from '../components/FarmerStatCard';
 import { formatCurrency, buyerCategoryStyles } from '../utils/farmerHelpers';
+import { exportToCSV } from '../../../utils/exportUtils';
+
+const TABS = [
+  { id: 'Pending', label: 'Pending Authorizations' },
+  { id: 'Confirmed', label: 'Confirmed Transactions' },
+  { id: 'Rejected', label: 'Rejected' },
+  { id: 'Expired', label: 'Expired' },
+  { id: 'All', label: 'All Confirmations' },
+];
 
 export default function OTPConfirmations() {
   const {
@@ -38,6 +50,13 @@ export default function OTPConfirmations() {
     };
   }, [otpRequests]);
 
+  // Total secured value
+  const totalSecuredValue = useMemo(() => {
+    return otpRequests
+      .filter((o) => o.direction !== 'farmer_initiated')
+      .reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
+  }, [otpRequests]);
+
   const filteredRequests = useMemo(() => {
     return otpRequests.filter((item) => {
       if (item.direction === 'farmer_initiated') return false;
@@ -56,247 +75,116 @@ export default function OTPConfirmations() {
     });
   }, [otpRequests, activeTab, buyerCategoryFilter, effectiveSearch]);
 
-  const columns = [
-    {
-      key: 'id',
-      label: 'OTP ID',
-      render: (val) => (
-        <span className="font-mono font-bold text-[#0F766E] text-xs md:text-sm">
-          {val}
-        </span>
-      ),
-    },
-    {
-      key: 'transactionId',
-      label: 'Linked Transaction',
-      render: (val) => (
-        <span
-          className="font-mono font-semibold text-slate-800 hover:text-[#0F766E] hover:underline cursor-pointer text-xs md:text-sm"
-          onClick={() => {
-            const match = sales.find((s) => s.id === val);
-            if (match) setSelectedTransaction(match);
-          }}
-        >
-          {val}
-        </span>
-      ),
-    },
-    {
-      key: 'buyerName',
-      label: 'Buyer Information',
-      render: (val, row) => (
-        <div className="space-y-0.5">
-          <div className="font-bold text-slate-900 text-sm">{val}</div>
-          <div className="text-xs text-slate-500 font-mono">{row.buyerMobile}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'buyerCategory',
-      label: 'Channel',
-      render: (val) => {
-        const style = buyerCategoryStyles[val] || { bg: '#F1F5F9', color: '#475569' };
-        return (
-          <span
-            className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold"
-            style={{ backgroundColor: style.bg, color: style.color }}
-          >
-            {val}
-          </span>
-        );
-      },
-    },
-    {
-      key: 'crop',
-      label: 'Crop & Quantity',
-      render: (val, row) => (
-        <div className="space-y-0.5">
-          <span className="font-bold text-slate-900 text-sm">{val}</span>
-          <div className="text-xs text-slate-500 font-medium">
-            {row.quantity} {row.unit}
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'rate',
-      label: 'Agreed Rate',
-      render: (val, row) => (
-        <span className="text-xs md:text-sm text-slate-700 font-medium">
-          {formatCurrency(val)} / {row.unit}
-        </span>
-      ),
-    },
-    {
-      key: 'totalAmount',
-      label: 'Total Value',
-      render: (val) => (
-        <span className="font-extrabold text-[#0F766E] text-sm md:text-base">
-          {formatCurrency(val)}
-        </span>
-      ),
-    },
-    {
-      key: 'requestDate',
-      label: 'Request Date',
-      render: (val) => <span className="text-xs text-slate-500">{val}</span>,
-    },
-    {
-      key: 'otpStatus',
-      label: 'Verification Status',
-      badge: 'otpStatus',
-    },
-    {
-      key: 'action',
-      label: 'Action',
-      render: (_, row) => (
-        <div className="flex items-center gap-1.5">
-          {row.otpStatus === 'Pending' ? (
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#0F766E] hover:bg-[#115E59] text-white shadow-xs transition-colors cursor-pointer"
-              onClick={() => setActiveOtpRequest(row)}
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              Enter OTP
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-              onClick={() => {
-                const match = sales.find((s) => s.id === row.transactionId);
-                if (match) setSelectedTransaction(match);
-              }}
-            >
-              <Eye className="w-3.5 h-3.5 text-slate-400" />
-              Details
-            </button>
-          )}
-        </div>
-      ),
-    },
-  ];
+  const handleExportCSV = () => {
+    const rows = filteredRequests.map((r) => ({
+      otpId: r.id,
+      transactionId: r.transactionId,
+      buyerName: r.buyerName,
+      buyerCategory: r.buyerCategory,
+      crop: r.crop,
+      quantity: `${r.quantity} ${r.unit}`,
+      totalAmount: r.totalAmount,
+      status: r.otpStatus,
+      requestDate: r.requestDate,
+    }));
+
+    exportToCSV(
+      rows,
+      [
+        { key: 'otpId', header: 'OTP ID' },
+        { key: 'transactionId', header: 'Linked Transaction' },
+        { key: 'buyerName', header: 'Buyer Name' },
+        { key: 'buyerCategory', header: 'Channel' },
+        { key: 'crop', header: 'Crop' },
+        { key: 'quantity', header: 'Quantity' },
+        { key: 'totalAmount', header: 'Total Amount (INR)' },
+        { key: 'status', header: 'Status' },
+        { key: 'requestDate', header: 'Request Date' },
+      ],
+      `farmer_otp_confirmations_${activeTab.toLowerCase()}.csv`
+    );
+    toast.success('OTP Confirmations log exported to CSV.');
+  };
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#CCFBF1] text-[#0F766E] border border-[#0F766E]/20">
-            <ShieldCheck className="w-3.5 h-3.5 text-[#0F766E]" />
-            Kisan Trade Security Center
-          </div>
-          <h1 className="text-xl md:text-2xl font-extrabold text-slate-900">
-            OTP Confirmations &amp; Verifications
-          </h1>
-          <p className="text-xs md:text-sm text-slate-500 max-w-2xl">
-            Cryptographic 6-digit verification protecting stock deduction and authorizing buyer dispatch for agricultural produce sales.
-          </p>
-        </div>
-      </div>
+      {/* Page Header (Matches VendorPageHeader & CustomerPageHeader) */}
+      <FarmerPageHeader
+        title="OTP Confirmations & Transaction Security"
+        subtitle="Multi-party OTP authorization center for crop sales, dispatch clearances, and secure mandi settlement."
+        icon={ShieldCheck}
+        badge="Kisan Dispatch Security"
+        actions={
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className="inline-flex items-center gap-1.5 px-4 h-9 rounded-xl text-xs font-semibold bg-[#0F766E] text-white hover:bg-[#115E59] transition-all duration-200 cursor-pointer shadow-xs"
+          >
+            <Download className="w-3.5 h-3.5 stroke-[2] shrink-0" />
+            <span>Export Audit Log</span>
+          </button>
+        }
+      />
 
-      {/* 4 Summary Stat Cards */}
+      {/* 4 Standard Summary KPI Cards (Using FarmerStatCard) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div
-          onClick={() => setActiveTab('All')}
-          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-[#CCFBF1] text-[#0F766E] flex items-center justify-center font-bold">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-50 text-slate-600 border border-slate-200">
-              Total Log
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">{tabCounts.All}</div>
-            <div className="text-xs font-semibold text-slate-500">Total OTP Requests</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">All verification cycles</div>
-          </div>
-        </div>
-
-        <div
+        <FarmerStatCard
+          title="Pending Authorizations"
+          value={`${tabCounts.Pending} Orders`}
+          subtitle="Awaiting your 6-digit OTP"
+          icon={Clock}
+          trend={tabCounts.Pending > 0 ? { value: 'Action req.', direction: 'down' } : null}
           onClick={() => setActiveTab('Pending')}
-          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center font-bold">
-              <Clock className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-              {tabCounts.Pending > 0 ? 'Action Required' : 'Cleared'}
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">{tabCounts.Pending}</div>
-            <div className="text-xs font-semibold text-slate-500">Pending Confirmations</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Awaiting buyer verification</div>
-          </div>
-        </div>
-
-        <div
+        />
+        <FarmerStatCard
+          title="Confirmed Transactions"
+          value={`${tabCounts.Confirmed} Dispatches`}
+          subtitle="Verified & stock released"
+          icon={CheckCircle2}
+          trend={{ value: 'Verified', direction: 'up' }}
           onClick={() => setActiveTab('Confirmed')}
-          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Verified
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">{tabCounts.Confirmed}</div>
-            <div className="text-xs font-semibold text-slate-500">Confirmed &amp; Settled</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Dispatched to buyer</div>
-          </div>
-        </div>
-
-        <div
-          onClick={() => setActiveTab('Expired')}
-          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center font-bold">
-              <XCircle className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-50 text-slate-600 border border-slate-200">
-              Expired
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">{tabCounts.Expired + tabCounts.Rejected}</div>
-            <div className="text-xs font-semibold text-slate-500">Expired / Rejected</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Stock automatically retained</div>
-          </div>
-        </div>
+        />
+        <FarmerStatCard
+          title="Rejected / Expired"
+          value={`${tabCounts.Rejected + tabCounts.Expired} Total`}
+          subtitle="Declined or timed out"
+          icon={XCircle}
+          onClick={() => setActiveTab('Rejected')}
+        />
+        <FarmerStatCard
+          title="Total Protected Value"
+          value={formatCurrency(totalSecuredValue)}
+          subtitle="Secured by OTP handshake"
+          icon={ShieldCheck}
+          onClick={() => setActiveTab('All')}
+        />
       </div>
 
-      {/* Tabs, Search & Filters Bar */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Status Tab Pills */}
+      {/* Filter Tabs and Search Bar */}
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        {/* Status Tab Pills with Badge Counts */}
         <div className="flex flex-wrap items-center gap-2">
-          {['Pending', 'Confirmed', 'Rejected', 'Expired', 'All'].map((tab) => {
-            const isActive = activeTab === tab;
-            const count = tabCounts[tab];
+          {TABS.map((tab) => {
+            const count = tabCounts[tab.id];
+            const isActive = activeTab === tab.id;
+
             return (
               <button
-                key={tab}
+                key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab)}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                onClick={() => setActiveTab(tab.id)}
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   isActive
                     ? 'bg-[#0F766E] text-white shadow-xs'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                    : 'bg-[#F8FAFC] border border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100'
                 }`}
               >
-                <span>{tab}</span>
+                <span>{tab.label}</span>
                 <span
                   className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                    isActive
+                      ? 'bg-white/20 text-white'
+                      : 'bg-slate-200 text-slate-700'
                   }`}
                 >
                   {count}
@@ -306,40 +194,157 @@ export default function OTPConfirmations() {
           })}
         </div>
 
-        {/* Channel Filter & Search */}
+        {/* Channel Filter & Search Input */}
         <div className="flex flex-wrap items-center gap-2.5">
           <select
             value={buyerCategoryFilter}
             onChange={(e) => setBuyerCategoryFilter(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20"
+            className="px-3 py-1.5 text-xs bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] focus:bg-white transition-all cursor-pointer"
           >
-            <option value="All">All Channels</option>
-            <option value="Middleman">Middlemen</option>
-            <option value="Vendor">Vendors</option>
-            <option value="Customer">Customers</option>
+            <option value="All">All Buyer Channels</option>
+            <option value="Vendor">Vendors Only</option>
+            <option value="Middleman">Middlemen Only</option>
+            <option value="Customer">Retail Customers</option>
           </select>
 
-          <div className="relative w-full sm:w-60">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-[#64748B] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search OTP or txn..."
               value={internalSearch}
               onChange={(e) => setInternalSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 focus:border-[#0F766E]"
+              placeholder="Search OTP ID, buyer, crop..."
+              className="w-full pl-9 pr-4 py-1.5 text-xs bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F172A] placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] focus:bg-white transition-all"
             />
           </div>
         </div>
       </div>
 
-      {/* Main Table */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
-        <DataTable
-          columns={columns}
-          rows={filteredRequests}
-          emptyTitle={`No ${activeTab} OTP Requests`}
-          emptyMessage={`There are currently no transactions matching your ${activeTab.toLowerCase()} status or search filter.`}
-        />
+      {/* OTP Confirmations Data Table */}
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-[#64748B] uppercase tracking-wider font-bold">
+                <th className="py-3 px-4">OTP ID</th>
+                <th className="py-3 px-4">Linked Txn</th>
+                <th className="py-3 px-4">Buyer Information</th>
+                <th className="py-3 px-4">Channel</th>
+                <th className="py-3 px-4">Crop &amp; Quantity</th>
+                <th className="py-3 px-4">Agreed Rate</th>
+                <th className="py-3 px-4">Total Value</th>
+                <th className="py-3 px-4">Request Date</th>
+                <th className="py-3 px-4">Verification Status</th>
+                <th className="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E2E8F0]">
+              {filteredRequests.length === 0 ? (
+                <tr>
+                  <td colSpan="10" className="py-12 text-center text-xs text-[#64748B]">
+                    No OTP verification records match your selected tab or search query.
+                  </td>
+                </tr>
+              ) : (
+                filteredRequests.map((row) => {
+                  const channelStyle = buyerCategoryStyles[row.buyerCategory] || {
+                    bg: '#F1F5F9',
+                    color: '#475569',
+                  };
+
+                  return (
+                    <tr
+                      key={row.id}
+                      className="hover:bg-[#CCFBF1]/20 transition-colors"
+                    >
+                      <td className="py-3.5 px-4 font-mono font-bold text-[#0F766E]">
+                        {row.id}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-semibold text-[#0F172A]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const match = sales.find((s) => s.id === row.transactionId);
+                            if (match) setSelectedTransaction(match);
+                          }}
+                          className="hover:text-[#0F766E] hover:underline cursor-pointer"
+                        >
+                          {row.transactionId}
+                        </button>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-[#0F172A]">{row.buyerName}</div>
+                        <div className="text-[11px] text-[#64748B] font-mono">{row.buyerMobile}</div>
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span
+                          className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold"
+                          style={{ backgroundColor: channelStyle.bg, color: channelStyle.color }}
+                        >
+                          {row.buyerCategory}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-[#0F172A]">{row.crop}</div>
+                        <div className="text-[11px] text-[#64748B] font-medium">
+                          {row.quantity} {row.unit}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-[#64748B] whitespace-nowrap">
+                        {formatCurrency(row.rate)}/{row.unit}
+                      </td>
+                      <td className="py-3.5 px-4 font-extrabold text-[#0F766E] text-sm whitespace-nowrap">
+                        {formatCurrency(row.totalAmount)}
+                      </td>
+                      <td className="py-3.5 px-4 text-[#64748B] whitespace-nowrap">
+                        {row.requestDate}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                            row.otpStatus === 'Confirmed'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : row.otpStatus === 'Pending'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse'
+                              : row.otpStatus === 'Expired'
+                              ? 'bg-slate-100 text-slate-600'
+                              : 'bg-red-50 text-red-700 border border-red-200'
+                          }`}
+                        >
+                          {row.otpStatus}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        {row.otpStatus === 'Pending' ? (
+                          <button
+                            type="button"
+                            onClick={() => setActiveOtpRequest(row)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-[#0F766E] hover:bg-[#115E59] text-white shadow-xs transition-colors cursor-pointer"
+                          >
+                            <KeyRound className="w-3.5 h-3.5 stroke-[2]" />
+                            <span>Enter OTP</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const match = sales.find((s) => s.id === row.transactionId);
+                              if (match) setSelectedTransaction(match);
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl border border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC] hover:text-[#0F766E] transition-colors cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-[#64748B]" />
+                            <span>Details</span>
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

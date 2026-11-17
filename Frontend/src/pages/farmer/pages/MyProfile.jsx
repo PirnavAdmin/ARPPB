@@ -1,4 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
+import {
+  UserCheck,
+  Building2,
+  MapPin,
+  ShieldCheck,
+  Lock,
+  Pencil,
+  Save,
+  X,
+  Landmark,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { useFarmer } from '../context/FarmerContext';
 import { useAuth } from '../../../hooks/useAuth';
 import { useOTPVerification } from '../../../hooks/useOTPVerification';
@@ -9,9 +24,11 @@ import {
   changeFarmerPasswordApi,
   mapFarmerDtoToProfile,
 } from '../../../services/profileService';
+import FarmerPageHeader from '../components/FarmerPageHeader';
+import { AP_DISTRICTS, INDIAN_STATES } from '../../../utils/constants';
 
-function MyProfile() {
-  const { profile, updateProfile, showToast } = useFarmer();
+export default function MyProfile() {
+  const { profile, updateProfile } = useFarmer();
   const { user, updateUserMobile } = useAuth();
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
@@ -42,7 +59,6 @@ function MyProfile() {
     isVerified: isMobileVerified,
     timer: otpCooldown,
     canResend,
-    statusMessage,
     demoOtp: devOtp,
     error: otpError,
     verifiedTarget: verifiedPhone,
@@ -136,7 +152,7 @@ function MyProfile() {
         customMessage: `Verification OTP sent to +91 ${formCleanPhone}.`,
         duplicateMessage: 'This mobile number is already registered. Please use a different mobile number.',
       });
-      showToast(`Verification OTP sent to +91 ${formCleanPhone}.`, 'info');
+      toast.info(`Verification OTP sent to +91 ${formCleanPhone}.`);
     } catch {
       // Error captured in otpError by useOTPVerification
     }
@@ -155,7 +171,7 @@ function MyProfile() {
         userId: resolvedUserId,
         customVerifiedMessage: `Mobile number +91 ${formCleanPhone} verified successfully!`,
       });
-      showToast(`Mobile number +91 ${formCleanPhone} verified successfully!`, 'success');
+      toast.success(`Mobile number +91 ${formCleanPhone} verified successfully!`);
     } catch {
       // Error captured in otpError
     }
@@ -169,7 +185,7 @@ function MyProfile() {
         customMessage: `Verification OTP sent to +91 ${formCleanPhone}.`,
         duplicateMessage: 'This mobile number is already registered. Please use a different mobile number.',
       });
-      showToast(`Verification OTP resent to +91 ${formCleanPhone}.`, 'info');
+      toast.info(`Verification OTP resent to +91 ${formCleanPhone}.`);
     } catch {
       // Error captured in otpError
     }
@@ -179,7 +195,7 @@ function MyProfile() {
     e.preventDefault();
 
     if (hasPhoneChanged && !isPhoneCurrentlyVerified) {
-      showToast('Please verify your new mobile number with OTP before saving.', 'error');
+      toast.error('Please verify your new mobile number with OTP before saving.');
       return;
     }
 
@@ -217,12 +233,12 @@ function MyProfile() {
         updateUserMobile?.(finalMobile);
       }
 
-      showToast('Farmer profile details updated successfully!', 'success');
+      toast.success('Farmer profile details updated successfully!');
       setIsEditing(false);
       resetVerification();
       setOtpInput('');
     } catch (err) {
-      showToast(err?.message || 'Failed to update farmer profile.', 'error');
+      toast.error(err?.message || 'Failed to update farmer profile.');
     } finally {
       setIsSavingProfile(false);
     }
@@ -248,6 +264,7 @@ function MyProfile() {
         ...bankFormData,
         ...(updatedBankDto && typeof updatedBankDto === 'object' ? updatedBankDto : {}),
       };
+
       const updatedProfile = {
         ...profile,
         bankDetails: mergedBank,
@@ -259,9 +276,9 @@ function MyProfile() {
         bankDetails: mergedBank,
       }));
       setIsEditingBank(false);
-      showToast('Bank details updated successfully.', 'success');
+      toast.success('Bank settlement details updated successfully.');
     } catch (err) {
-      showToast(err?.message || 'Failed to update bank details.', 'error');
+      toast.error(err?.message || 'Failed to update bank details.');
     } finally {
       setIsSavingBank(false);
     }
@@ -294,738 +311,744 @@ function MyProfile() {
         },
         resolvedUserId
       );
-      showToast(res.message || 'Password updated successfully!', 'success');
+      toast.success(res.message || 'Password updated successfully!');
       setIsPasswordModalOpen(false);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setPasswordError('');
     } catch (err) {
       setPasswordError(err?.message || 'Failed to change password.');
-      showToast(err?.message || 'Failed to change password.', 'error');
+      toast.error(err?.message || 'Failed to change password.');
     } finally {
       setIsChangingPassword(false);
     }
   };
 
-  return (
-    <div>
-      <div className="farmer-page-header">
-        <div className="farmer-header-titles">
-          <h2>Farmer Profile &amp; Account Settings</h2>
-          <p>Verified farmer credentials, landholding details, and bank account for automated sales settlement</p>
-        </div>
+  const initials = (profile.farmerName || 'Farmer')
+    .split(' ')
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
-        <div className="farmer-header-actions">
-          {!isEditing ? (
-            <>
-              <button
-                type="button"
-                className="farmer-btn farmer-btn-primary"
-                onClick={handleStartEditing}
-              >
-                ✏️ Edit Profile Details
-              </button>
-              <button
-                type="button"
-                className="farmer-btn farmer-btn-outline"
-                onClick={() => {
-                  setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                  setPasswordError('');
-                  setIsPasswordModalOpen(true);
-                }}
-              >
-                🔒 Change Password
-              </button>
-            </>
-          ) : (
+  return (
+    <div className="space-y-6">
+      {/* Page Header (Matches VendorPageHeader & CustomerPageHeader) */}
+      <FarmerPageHeader
+        title="My Farmer Profile & Settlement Treasury"
+        subtitle="Manage your agricultural producer registry, Kisan ID, farm acreage, contact credentials, and bank settlement account."
+        icon={UserCheck}
+        badge="Verified Agricultural Producer"
+        actions={
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
               type="button"
-              className="farmer-btn farmer-btn-outline"
-              onClick={handleCancelEditing}
-              disabled={isSavingProfile}
+              onClick={() => {
+                setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                setPasswordError('');
+                setIsPasswordModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 h-9 rounded-xl text-xs font-semibold bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] hover:text-[#0F766E] transition-all duration-200 cursor-pointer shadow-2xs"
             >
-              ✕ Cancel Editing
+              <Lock className="w-3.5 h-3.5 text-[#0F766E]" />
+              <span>Change Password</span>
             </button>
-          )}
-        </div>
-      </div>
 
+            {!isEditing ? (
+              <button
+                type="button"
+                onClick={handleStartEditing}
+                className="inline-flex items-center gap-1.5 px-4 h-9 rounded-xl text-xs font-semibold bg-[#0F766E] text-white hover:bg-[#115E59] transition-all duration-200 cursor-pointer shadow-xs"
+              >
+                <Pencil className="w-3.5 h-3.5 stroke-[2] shrink-0" />
+                <span>Edit Profile</span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCancelEditing}
+                  disabled={isSavingProfile}
+                  className="inline-flex items-center gap-1 px-3.5 h-9 rounded-xl text-xs font-semibold bg-white border border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Cancel</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={isSavingProfile}
+                  className="inline-flex items-center gap-1.5 px-4 h-9 rounded-xl text-xs font-semibold bg-[#0F766E] text-white hover:bg-[#115E59] transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  {isSavingProfile ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        }
+      />
+
+      {/* Loading banner if refreshing from server */}
       {isLoadingProfile && (
-        <div
-          style={{
-            padding: '12px 16px',
-            background: '#F0FDF4',
-            border: '1px solid #86EFAC',
-            borderRadius: 10,
-            color: '#166534',
-            fontSize: '0.84rem',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            marginBottom: 20,
-          }}
-        >
-          <span style={{ fontSize: '1rem' }}>⏳</span>
-          <span>Loading verified farmer profile from server...</span>
+        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2.5">
+          <Loader2 className="w-4 h-4 animate-spin text-[#0F766E] shrink-0" />
+          <span>Synchronizing verified agricultural producer records with backend ERP...</span>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24 }}>
-        {/* Left Farmer Identity Card */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div className="farmer-card" style={{ padding: '28px 20px', textAlign: 'center' }}>
-            <div className="farmer-avatar lg" style={{ margin: '0 auto 16px' }}>
-              {(profile.farmerName || 'FM').split(' ').filter(Boolean).map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+      {/* Producer Identity Summary Card (Matches Vendor Enterprise Identity Card) */}
+      <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-start sm:items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-[#0F766E] text-white flex items-center justify-center font-extrabold text-xl shrink-0 shadow-sm shadow-[#0F766E]/20">
+            {initials}
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 className="text-xl font-extrabold text-[#0F172A]">
+                {profile.farmerName || 'Farmer Producer'}
+              </h2>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <CheckCircle2 className="w-3 h-3" />
+                Active Verified Producer
+              </span>
             </div>
 
-            <h3 style={{ margin: '0 0 4px', fontSize: '1.35rem' }}>{profile.farmerName || 'Farmer'}</h3>
-            <div style={{ color: 'var(--farmer-primary)', fontWeight: 700, fontSize: '0.9rem' }}>
-              {profile.farmName || '—'}
-            </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--farmer-secondary)', marginTop: 4 }}>
-              Kisan ID: <strong>{profile.farmerId || '—'}</strong>
-            </div>
+            <p className="text-xs text-[#64748B] flex flex-wrap items-center gap-2.5">
+              <span className="inline-flex items-center gap-1 font-semibold text-[#0F172A]">
+                <Building2 className="w-3.5 h-3.5 text-[#0F766E]" />
+                {profile.farmName || 'Kisan Agro Enterprise'}
+              </span>
+              <span>•</span>
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-[#0F766E]" />
+                {profile.village ? `${profile.village}, ${profile.district || 'Kurnool'} - ${profile.pinCode || ''}` : 'Kurnool, Andhra Pradesh'}
+              </span>
+            </p>
 
-            <div
-              style={{
-                marginTop: 20,
-                paddingTop: 16,
-                borderTop: '1px solid var(--farmer-border)',
-                display: 'flex',
-                justifyContent: 'space-around',
-                textAlign: 'center',
-              }}
-            >
-              <div>
-                <strong style={{ fontSize: '1.1rem', color: 'var(--farmer-text)' }}>
-                  {profile.rating ? profile.rating.split(' ')[0] : '—'}
-                </strong>
-                <small style={{ display: 'block', color: 'var(--farmer-secondary)', fontSize: '0.72rem' }}>
-                  Platform Rating
-                </small>
-              </div>
-              <div style={{ borderLeft: '1px solid var(--farmer-border)', paddingLeft: 16 }}>
-                <strong style={{ fontSize: '1.1rem', color: 'var(--farmer-primary)' }}>
-                  {profile.totalLandArea || '—'}
-                </strong>
-                <small style={{ display: 'block', color: 'var(--farmer-secondary)', fontSize: '0.72rem' }}>
-                  Total Acres
-                </small>
-              </div>
+            <div className="flex flex-wrap items-center gap-2.5 pt-1 text-xs">
+              <span className="px-2.5 py-0.5 rounded-lg bg-[#CCFBF1] text-[#0F766E] font-mono font-bold">
+                Kisan ID: {profile.farmerId || 'AG-FARM-01'}
+              </span>
+              <span className="px-2.5 py-0.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] font-semibold text-[#0F172A]">
+                Total Land: <strong>{profile.totalLandArea || '—'}</strong>
+              </span>
+              <span className="px-2.5 py-0.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] font-semibold text-[#0F172A]">
+                Rating: <strong>{profile.rating || '4.9 ★'}</strong>
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Right Details Card & Form */}
-        <div className="farmer-card" style={{ padding: '28px' }}>
-          <form onSubmit={handleSave}>
-            {/* Section 1: Personal & Contact */}
-            <h4
-              style={{
-                margin: '0 0 16px',
-                fontSize: '1.05rem',
-                color: 'var(--farmer-dark)',
-                borderBottom: '1px solid var(--farmer-border)',
-                paddingBottom: 8,
-              }}
-            >
-              1. Personal &amp; Contact Information
-            </h4>
+        <div className="p-4 rounded-xl bg-[#CCFBF1]/40 border border-[#0F766E]/20 text-xs space-y-1 shrink-0">
+          <div className="flex items-center gap-1.5 font-bold text-[#0F766E]">
+            <ShieldCheck className="w-4 h-4 stroke-[2]" />
+            <span>Mandi Settlement Status</span>
+          </div>
+          <p className="text-[#0F172A] font-medium">
+            Direct Bank ECS &amp; Buyer OTP Verification Enabled
+          </p>
+          <p className="text-[11px] text-[#64748B]">
+            Primary Mandi: Kurnool Agricultural Market Committee
+          </p>
+        </div>
+      </div>
 
-            <div className="farmer-form-row">
-              <div className="farmer-form-group">
-                <label>Farmer Full Name *</label>
-                <input
-                  type="text"
-                  name="farmerName"
-                  value={formData.farmerName || ''}
-                  onChange={handleChange}
-                  disabled={!isEditing}
-                  required
-                />
-              </div>
+      {/* Section 1: Personal & Contact Information */}
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-xs space-y-5">
+        <div className="border-b border-[#E2E8F0] pb-3 flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-bold text-[#0F766E] tracking-tight">
+              1. Personal &amp; Contact Credentials
+            </h3>
+            <p className="text-xs text-[#64748B] mt-0.5">
+              Verified identity details used for buyer communication, notifications, and transaction SMS
+            </p>
+          </div>
+          {isEditing && (
+            <span className="text-xs font-semibold text-[#0F766E] bg-[#CCFBF1] px-2.5 py-0.5 rounded-full">
+              Editing Mode
+            </span>
+          )}
+        </div>
 
-              <div className="farmer-form-group">
-                <label>Farmer ID (Official Registry)</label>
-                <input
-                  type="text"
-                  value={formData.farmerId || ''}
-                  disabled
-                  style={{ background: '#F1F5F9' }}
-                />
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              Farmer Full Name *
+            </label>
+            <input
+              type="text"
+              name="farmerName"
+              value={formData.farmerName || ''}
+              onChange={handleChange}
+              disabled={!isEditing}
+              placeholder="Enter farmer full name"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              Kisan / Registry ID (Official)
+            </label>
+            <input
+              type="text"
+              value={formData.farmerId || ''}
+              disabled
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm font-mono text-[#64748B] bg-[#F8FAFC]"
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B]">
+                Registered Mobile (SMS &amp; OTP) *
+              </label>
+              {isEditing && (
+                hasPhoneChanged ? (
+                  isPhoneCurrentlyVerified ? (
+                    <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> OTP Verified
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-bold text-amber-600 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> Verification Required
+                    </span>
+                  )
+                ) : (
+                  <span className="text-[11px] font-semibold text-emerald-600">
+                    ✓ Current Registered
+                  </span>
+                )
+              )}
             </div>
 
-            <div className="farmer-form-row" style={{ alignItems: 'flex-start' }}>
-              <div className="farmer-form-group" style={{ flex: 1.3 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <label style={{ margin: 0 }}>Mobile Number (SMS &amp; OTP) *</label>
-                  {isEditing && (
-                    hasPhoneChanged ? (
-                      isPhoneCurrentlyVerified ? (
-                        <span style={{ color: '#16A34A', fontSize: '0.78rem', fontWeight: 700 }}>
-                          ✓ OTP Verified
-                        </span>
-                      ) : (
-                        <span style={{ color: '#D97706', fontSize: '0.78rem', fontWeight: 700 }}>
-                          ⚠️ Verification Required
-                        </span>
-                      )
-                    ) : (
-                      <span style={{ color: '#16A34A', fontSize: '0.78rem', fontWeight: 600 }}>
-                        ✓ Current Registered
-                      </span>
-                    )
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    type="tel"
-                    name="mobileNumber"
-                    value={formData.mobileNumber || ''}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    placeholder="10-digit mobile number"
-                    required
-                    style={{ flex: 1 }}
-                  />
-                  {isEditing && hasPhoneChanged && !isPhoneCurrentlyVerified && (
-                    <button
-                      type="button"
-                      className="farmer-btn farmer-btn-primary"
-                      onClick={handleSendOtp}
-                      disabled={formCleanPhone.length !== 10 || isSendingOtp || otpCooldown > 0}
-                      style={{ whiteSpace: 'nowrap', padding: '8px 14px', fontSize: '0.84rem' }}
-                    >
-                      {isSendingOtp ? 'Sending...' : otpCooldown > 0 ? `Resend (${otpCooldown}s)` : isOtpSent ? 'Resend OTP' : '📲 Verify with OTP'}
-                    </button>
-                  )}
-                </div>
-
-                {(phoneValidationError || (!isOtpSent && otpError)) && (
-                  <div style={{ color: '#DC2626', fontSize: '0.78rem', fontWeight: 600, marginTop: 4 }}>
-                    ❌ {phoneValidationError || otpError}
-                  </div>
-                )}
-
-                {isEditing && hasPhoneChanged && isPhoneCurrentlyVerified && (
-                  <div style={{
-                    marginTop: 8,
-                    background: '#ECFDF5',
-                    border: '1px solid #10B981',
-                    borderRadius: 8,
-                    padding: '8px 12px',
-                    color: '#065F46',
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6
-                  }}>
-                    <span>✅</span>
-                    <span>New number +91 {formCleanPhone} verified with OTP. Click &quot;Save Profile Changes&quot; below.</span>
-                  </div>
-                )}
-
-                {isEditing && hasPhoneChanged && !isPhoneCurrentlyVerified && isOtpSent && (
-                  <div style={{
-                    background: '#F0FDF4',
-                    border: '1.5px solid #86EFAC',
-                    borderRadius: 10,
-                    padding: '12px 14px',
-                    marginTop: 10,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 10
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                      <span style={{ color: '#166534', fontSize: '0.84rem', fontWeight: 700 }}>
-                        {statusMessage || `Enter 6-Digit OTP sent to +91 ${formCleanPhone}`}
-                      </span>
-                      {devOtp && (
-                        <div style={{
-                          background: '#DCFCE7',
-                          border: '1px solid #4ADE80',
-                          color: '#166534',
-                          padding: '3px 8px',
-                          borderRadius: 6,
-                          fontSize: '0.74rem',
-                          fontWeight: 700,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6
-                        }}>
-                          <span>🔑 Dev Code: {devOtp}</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const digits = devOtp.replace(/\D/g, '').slice(0, 6);
-                              setOtpInput(digits);
-                              setOtpError(null);
-                            }}
-                            style={{
-                              background: '#16A34A',
-                              color: '#FFF',
-                              border: 'none',
-                              padding: '2px 6px',
-                              borderRadius: 4,
-                              cursor: 'pointer',
-                              fontSize: '0.7rem',
-                              fontWeight: 700
-                            }}
-                          >
-                            Fill
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <input
-                        type="text"
-                        maxLength={6}
-                        placeholder="123456"
-                        value={otpInput}
-                        onChange={(e) => {
-                          const clean = e.target.value.replace(/\D/g, '').slice(0, 6);
-                          setOtpInput(clean);
-                          if (otpError) setOtpError(null);
-                        }}
-                        style={{
-                          letterSpacing: '4px',
-                          fontSize: '1.1rem',
-                          textAlign: 'center',
-                          fontWeight: 700,
-                          width: 130,
-                          padding: '6px 10px',
-                          borderRadius: 6,
-                          border: otpError ? '2px solid #DC2626' : '1px solid #86EFAC',
-                          background: '#FFF'
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="farmer-btn farmer-btn-primary"
-                        disabled={otpInput.length !== 6 || isVerifyingOtp}
-                        onClick={handleVerifyOtp}
-                        style={{ padding: '7px 14px', fontSize: '0.84rem' }}
-                      >
-                        {isVerifyingOtp ? 'Verifying...' : '✓ Verify Code'}
-                      </button>
-                      <button
-                        type="button"
-                        className="farmer-btn farmer-btn-outline"
-                        onClick={() => {
-                          setFormData((prev) => ({ ...prev, mobileNumber: profile.mobileNumber }));
-                          resetVerification();
-                          setOtpInput('');
-                        }}
-                        style={{ padding: '7px 10px', fontSize: '0.8rem' }}
-                      >
-                        Revert
-                      </button>
-                    </div>
-
-                    {otpError && (
-                      <div style={{ color: '#DC2626', fontSize: '0.78rem', fontWeight: 600 }}>
-                        ❌ {otpError}
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#166534' }}>
-                      <span>Didn&apos;t receive code?</span>
-                      {canResend ? (
-                        <button
-                          type="button"
-                          onClick={handleResendOtp}
-                          disabled={isSendingOtp}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#166534',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            textDecoration: 'underline',
-                          }}
-                        >
-                          Resend OTP
-                        </button>
-                      ) : (
-                        <span>Resend in {otpCooldown}s</span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="farmer-form-group" style={{ flex: 1 }}>
-                <label>Email Address</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email || ''}
-                  onChange={handleChange}
-                  disabled={!isEditing}
-                />
-              </div>
-            </div>
-
-            {/* Section 2: Farm Location & Land Area */}
-            <h4
-              style={{
-                margin: '24px 0 16px',
-                fontSize: '1.05rem',
-                color: 'var(--farmer-dark)',
-                borderBottom: '1px solid var(--farmer-border)',
-                paddingBottom: 8,
-              }}
-            >
-              2. Farm Location &amp; Landholding
-            </h4>
-
-            <div className="farmer-form-row">
-              <div className="farmer-form-group">
-                <label>Farm / Plantation Name *</label>
-                <input
-                  type="text"
-                  name="farmName"
-                  value={formData.farmName || ''}
-                  onChange={handleChange}
-                  disabled={!isEditing}
-                  required
-                />
-              </div>
-
-              <div className="farmer-form-group">
-                <label>Total Land Area *</label>
-                <input
-                  type="text"
-                  name="totalLandArea"
-                  value={formData.totalLandArea || ''}
-                  onChange={handleChange}
-                  disabled={!isEditing}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="farmer-form-row">
-              <div className="farmer-form-group">
-                <label>Village *</label>
-                <input
-                  type="text"
-                  name="village"
-                  value={formData.village || ''}
-                  onChange={handleChange}
-                  disabled={!isEditing}
-                />
-              </div>
-
-              <div className="farmer-form-group">
-                <label>Mandal / Tehsil *</label>
-                <input
-                  type="text"
-                  name="mandal"
-                  value={formData.mandal || ''}
-                  onChange={handleChange}
-                  disabled={!isEditing}
-                />
-              </div>
-            </div>
-
-            <div className="farmer-form-row">
-              <div className="farmer-form-group">
-                <label>District *</label>
-                <input
-                  type="text"
-                  name="district"
-                  value={formData.district || ''}
-                  onChange={handleChange}
-                  disabled={!isEditing}
-                />
-              </div>
-
-              <div className="farmer-form-row" style={{ gap: 12 }}>
-                <div className="farmer-form-group">
-                  <label>State *</label>
-                  <input
-                    type="text"
-                    name="state"
-                    value={formData.state || ''}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                  />
-                </div>
-                <div className="farmer-form-group">
-                  <label>PIN Code *</label>
-                  <input
-                    type="text"
-                    name="pinCode"
-                    value={formData.pinCode || ''}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="farmer-form-group">
-              <label>Complete Dispatch &amp; Farm Address *</label>
-              <textarea
-                rows={2}
-                name="completeAddress"
-                value={formData.completeAddress || ''}
+            <div className="flex gap-2">
+              <input
+                type="tel"
+                name="mobileNumber"
+                value={formData.mobileNumber || ''}
                 onChange={handleChange}
                 disabled={!isEditing}
+                placeholder="10-digit mobile number"
+                className="flex-1 px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
               />
+              {isEditing && hasPhoneChanged && !isPhoneCurrentlyVerified && (
+                <button
+                  type="button"
+                  onClick={handleSendOtp}
+                  disabled={formCleanPhone.length !== 10 || isSendingOtp || otpCooldown > 0}
+                  className="px-3.5 py-2.5 rounded-xl bg-[#0F766E] hover:bg-[#115E59] text-white text-xs font-bold transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+                >
+                  {isSendingOtp ? 'Sending...' : otpCooldown > 0 ? `Resend (${otpCooldown}s)` : 'Send OTP'}
+                </button>
+              )}
             </div>
 
-            {isEditing && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
-                <button
-                  type="button"
-                  className="farmer-btn farmer-btn-outline"
-                  onClick={handleCancelEditing}
-                  disabled={isSavingProfile}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="farmer-btn farmer-btn-primary"
-                  disabled={isSavingProfile || (hasPhoneChanged && !isPhoneCurrentlyVerified)}
-                  style={{
-                    opacity: hasPhoneChanged && !isPhoneCurrentlyVerified ? 0.6 : 1,
-                    cursor: hasPhoneChanged && !isPhoneCurrentlyVerified ? 'not-allowed' : 'pointer'
-                  }}
-                  title={hasPhoneChanged && !isPhoneCurrentlyVerified ? 'Please verify your new mobile number with OTP first' : ''}
-                >
-                  {isSavingProfile ? 'Saving...' : '💾 Save Profile Changes'}
-                </button>
-              </div>
+            {phoneValidationError && (
+              <p className="text-xs text-red-600 mt-1 font-medium">{phoneValidationError}</p>
             )}
-          </form>
 
-          {/* Section 3: Bank Details for Settlement (Independent Form & API) */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              margin: '32px 0 16px',
-              borderBottom: '1px solid var(--farmer-border)',
-              paddingBottom: 8,
-            }}
-          >
-            <h4
-              style={{
-                margin: 0,
-                fontSize: '1.05rem',
-                color: 'var(--farmer-dark)',
-              }}
-            >
-              3. Bank Details (For Direct Trade Settlement)
-            </h4>
-            {!isEditingBank ? (
-              <button
-                type="button"
-                className="farmer-btn farmer-btn-outline"
-                onClick={handleStartEditingBank}
-                style={{ padding: '5px 12px', fontSize: '0.82rem' }}
-              >
-                ✏️ Edit Bank Details
-              </button>
-            ) : (
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  type="button"
-                  className="farmer-btn farmer-btn-outline"
-                  onClick={handleCancelEditingBank}
-                  disabled={isSavingBank}
-                  style={{ padding: '5px 12px', fontSize: '0.82rem' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="farmer-btn farmer-btn-primary"
-                  onClick={handleSaveBankDetails}
-                  disabled={isSavingBank}
-                  style={{ padding: '5px 12px', fontSize: '0.82rem' }}
-                >
-                  {isSavingBank ? 'Saving...' : '💾 Save Bank Details'}
-                </button>
+            {/* OTP Verification Dropdown Box when OTP is sent */}
+            {isEditing && hasPhoneChanged && !isPhoneCurrentlyVerified && isOtpSent && (
+              <div className="mt-3 p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-3">
+                <div className="flex items-center justify-between text-xs text-amber-900 font-semibold">
+                  <span>Enter 6-digit OTP sent to +91 {formCleanPhone}</span>
+                  {devOtp && (
+                    <span className="font-mono bg-white px-2 py-0.5 rounded border border-amber-300 text-amber-800 font-bold">
+                      Demo Code: {devOtp}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={otpInput}
+                    onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="Enter 6-digit OTP"
+                    className="flex-1 px-3.5 py-2 rounded-xl bg-white border border-amber-300 text-sm font-mono tracking-widest text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    disabled={otpInput.length !== 6 || isVerifyingOtp}
+                    className="px-4 py-2 rounded-xl bg-[#0F766E] hover:bg-[#115E59] text-white text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isVerifyingOtp ? 'Verifying...' : 'Verify'}
+                  </button>
+                </div>
+
+                {otpError && (
+                  <p className="text-xs text-red-600 font-medium">{otpError}</p>
+                )}
+
+                <div className="flex items-center justify-between text-xs text-amber-800">
+                  <span>Didn&apos;t receive OTP?</span>
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={!canResend || isSendingOtp}
+                    className="font-bold text-[#0F766E] hover:underline cursor-pointer disabled:opacity-50"
+                  >
+                    Resend Code {otpCooldown > 0 ? `(${otpCooldown}s)` : ''}
+                  </button>
+                </div>
               </div>
             )}
           </div>
 
-          <form onSubmit={handleSaveBankDetails}>
-            <div className="farmer-form-row">
-              <div className="farmer-form-group">
-                <label>Bank Name</label>
-                <input
-                  type="text"
-                  name="bank_bankName"
-                  value={bankFormData.bankName || ''}
-                  onChange={handleBankChange}
-                  disabled={!isEditingBank}
-                  placeholder="e.g. State Bank of India"
-                />
-              </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              Alternate Contact Number
+            </label>
+            <input
+              type="tel"
+              name="alternateMobile"
+              value={formData.alternateMobile || ''}
+              onChange={handleChange}
+              disabled={!isEditing}
+              placeholder="e.g. +91 94401 23456"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
 
-              <div className="farmer-form-group">
-                <label>Account Number</label>
-                <input
-                  type="text"
-                  name="bank_accountNumber"
-                  value={
-                    isEditingBank
-                      ? bankFormData.accountNumber || bankFormData.fullAccountNumber || ''
-                      : bankFormData.accountNumber || '—'
-                  }
-                  onChange={handleBankChange}
-                  disabled={!isEditingBank}
-                  placeholder="Bank account number"
-                />
-              </div>
+          <div className="md:col-span-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              Email Address (Optional)
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email || ''}
+              onChange={handleChange}
+              disabled={!isEditing}
+              placeholder="farmer@kisanagri.org"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Section 2: Farm & Agricultural Details */}
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-xs space-y-5">
+        <div className="border-b border-[#E2E8F0] pb-3">
+          <h3 className="text-base font-bold text-[#0F766E] tracking-tight">
+            2. Farm Landholding &amp; Agricultural Specifications
+          </h3>
+          <p className="text-xs text-[#64748B] mt-0.5">
+            Geographical location, soil composition, and crop acreage for Mandi crop quota compliance
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              Farm / Enterprise Name
+            </label>
+            <input
+              type="text"
+              name="farmName"
+              value={formData.farmName || ''}
+              onChange={handleChange}
+              disabled={!isEditing}
+              placeholder="e.g. Reddy Agro Farms & Greenfields"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              Total Land Area (Acres)
+            </label>
+            <input
+              type="text"
+              name="totalLandArea"
+              value={formData.totalLandArea || ''}
+              onChange={handleChange}
+              disabled={!isEditing}
+              placeholder="e.g. 18.5 Acres"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              Soil Composition / Type
+            </label>
+            <input
+              type="text"
+              name="soilType"
+              value={formData.soilType || ''}
+              onChange={handleChange}
+              disabled={!isEditing}
+              placeholder="e.g. Black Cotton & Red Loamy"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
+
+          <div className="lg:col-span-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              Primary Harvested Crops
+            </label>
+            <input
+              type="text"
+              name="primaryCrops"
+              value={
+                Array.isArray(formData.primaryCrops)
+                  ? formData.primaryCrops.join(', ')
+                  : formData.primaryCrops || ''
+              }
+              onChange={handleChange}
+              disabled={!isEditing}
+              placeholder="e.g. Paddy (BPT 5204), Turmeric, Groundnut, Cotton"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              Village / Locality
+            </label>
+            <input
+              type="text"
+              name="village"
+              value={formData.village || ''}
+              onChange={handleChange}
+              disabled={!isEditing}
+              placeholder="Village name"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              Mandal / Taluk
+            </label>
+            <input
+              type="text"
+              name="mandal"
+              value={formData.mandal || ''}
+              onChange={handleChange}
+              disabled={!isEditing}
+              placeholder="Mandal name"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              District
+            </label>
+            {isEditing ? (
+              <select
+                name="district"
+                value={formData.district || 'Kurnool'}
+                onChange={handleChange}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all cursor-pointer"
+              >
+                {AP_DISTRICTS.map((dist) => (
+                  <option key={dist} value={dist}>
+                    {dist}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.district || 'Kurnool'}
+                disabled
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#64748B] bg-[#F8FAFC]"
+              />
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              State
+            </label>
+            {isEditing ? (
+              <select
+                name="state"
+                value={formData.state || 'Andhra Pradesh'}
+                onChange={handleChange}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all cursor-pointer"
+              >
+                {INDIAN_STATES.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.state || 'Andhra Pradesh'}
+                disabled
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#64748B] bg-[#F8FAFC]"
+              />
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              PIN Code
+            </label>
+            <input
+              type="text"
+              name="pinCode"
+              value={formData.pinCode || ''}
+              onChange={handleChange}
+              disabled={!isEditing}
+              placeholder="e.g. 518002"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Section 3: Bank Account for Direct Settlements */}
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-xs space-y-5">
+        <div className="border-b border-[#E2E8F0] pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Landmark className="w-5 h-5 text-[#0F766E]" />
+              <h3 className="text-base font-bold text-[#0F766E] tracking-tight">
+                3. Settlement Bank Account Details
+              </h3>
             </div>
+            <p className="text-xs text-[#64748B] mt-0.5">
+              Authorizes direct Mandi ECS, RTGS, and vendor payment deposits into your verified farmer account
+            </p>
+          </div>
 
-            <div className="farmer-form-row">
-              <div className="farmer-form-group">
-                <label>IFSC Code</label>
-                <input
-                  type="text"
-                  name="bank_ifscCode"
-                  value={bankFormData.ifscCode || ''}
-                  onChange={handleBankChange}
-                  disabled={!isEditingBank}
-                  placeholder="SBIN0001245"
-                />
-              </div>
-
-              <div className="farmer-form-group">
-                <label>Branch Name &amp; Account Type</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <input
-                    type="text"
-                    name="bank_branchName"
-                    value={bankFormData.branchName || bankFormData.branch || ''}
-                    onChange={handleBankChange}
-                    disabled={!isEditingBank}
-                    placeholder="Branch Name"
-                  />
-                  <input
-                    type="text"
-                    name="bank_accountType"
-                    value={bankFormData.accountType || 'Savings'}
-                    onChange={handleBankChange}
-                    disabled={!isEditingBank}
-                    placeholder="Account Type (e.g. Savings)"
-                  />
-                </div>
-              </div>
+          {!isEditingBank ? (
+            <button
+              type="button"
+              onClick={handleStartEditingBank}
+              className="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-xl text-xs font-semibold border border-[#E2E8F0] bg-white text-[#0F766E] hover:bg-[#F8FAFC] transition-colors cursor-pointer shrink-0 self-start sm:self-auto"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              <span>Update Bank Account</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleCancelEditingBank}
+                disabled={isSavingBank}
+                className="px-3 h-8 rounded-xl text-xs font-semibold border border-[#E2E8F0] bg-white text-[#64748B] hover:text-[#0F172A] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveBankDetails}
+                disabled={isSavingBank}
+                className="inline-flex items-center gap-1 px-3.5 h-8 rounded-xl text-xs font-semibold bg-[#0F766E] text-white hover:bg-[#115E59] transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                {isSavingBank ? 'Saving...' : 'Save Bank Details'}
+              </button>
             </div>
-          </form>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              Bank Name *
+            </label>
+            <input
+              type="text"
+              name="bank_bankName"
+              value={bankFormData.bankName || ''}
+              onChange={handleBankChange}
+              disabled={!isEditingBank}
+              placeholder="e.g. State Bank of India"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              Account Holder Name *
+            </label>
+            <input
+              type="text"
+              name="bank_accountHolderName"
+              value={bankFormData.accountHolderName || ''}
+              onChange={handleBankChange}
+              disabled={!isEditingBank}
+              placeholder="Full name as printed on passbook"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              Account Number *
+            </label>
+            <input
+              type="text"
+              name="bank_accountNumber"
+              value={bankFormData.accountNumber || ''}
+              onChange={handleBankChange}
+              disabled={!isEditingBank}
+              placeholder="e.g. 3084920194820"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm font-mono text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              IFSC Code *
+            </label>
+            <input
+              type="text"
+              name="bank_ifscCode"
+              value={bankFormData.ifscCode || ''}
+              onChange={handleBankChange}
+              disabled={!isEditingBank}
+              placeholder="e.g. SBIN0000842"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm font-mono uppercase text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              Branch Name
+            </label>
+            <input
+              type="text"
+              name="bank_branchName"
+              value={bankFormData.branchName || ''}
+              onChange={handleBankChange}
+              disabled={!isEditingBank}
+              placeholder="e.g. Kurnool Main Mandi Branch"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5">
+              UPI VPA ID (Optional)
+            </label>
+            <input
+              type="text"
+              name="bank_upiId"
+              value={bankFormData.upiId || ''}
+              onChange={handleBankChange}
+              disabled={!isEditingBank}
+              placeholder="farmer@sbi"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
+            />
+          </div>
         </div>
       </div>
 
       {/* Change Password Modal */}
       {isPasswordModalOpen && (
-        <div className="farmer-modal-overlay" role="dialog" aria-modal="true">
-          <div className="farmer-modal-content">
-            <div className="farmer-modal-header">
-              <h3>Change Farmer Account Password</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0]">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#CCFBF1] text-[#0F766E] flex items-center justify-center">
+                  <Lock className="w-4 h-4 stroke-[2]" />
+                </div>
+                <h3 className="text-base font-bold text-[#0F172A]">
+                  Change Account Password
+                </h3>
+              </div>
               <button
                 type="button"
-                className="farmer-modal-close"
                 onClick={() => setIsPasswordModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleChangePassword}>
-              <div className="farmer-modal-body">
-                {passwordError && (
-                  <div
-                    style={{
-                      padding: '8px 12px',
-                      background: '#FEF2F2',
-                      border: '1px solid #FCA5A5',
-                      borderRadius: 8,
-                      color: '#DC2626',
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      marginBottom: 12,
-                    }}
-                  >
-                    ❌ {passwordError}
-                  </div>
-                )}
-
-                <div className="farmer-form-group">
-                  <label>Current Password *</label>
-                  <input
-                    type="password"
-                    placeholder="Enter current password"
-                    value={passwordForm.currentPassword}
-                    onChange={(e) =>
-                      setPasswordForm((prev) => ({
-                        ...prev,
-                        currentPassword: e.target.value,
-                      }))
-                    }
-                    required
-                  />
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              {passwordError && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-semibold">
+                  {passwordError}
                 </div>
+              )}
 
-                <div className="farmer-form-group">
-                  <label>New Password *</label>
-                  <input
-                    type="password"
-                    placeholder="Min 6 characters"
-                    value={passwordForm.newPassword}
-                    onChange={(e) =>
-                      setPasswordForm((prev) => ({
-                        ...prev,
-                        newPassword: e.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="farmer-form-group">
-                  <label>Confirm New Password *</label>
-                  <input
-                    type="password"
-                    placeholder="Re-enter new password"
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) =>
-                      setPasswordForm((prev) => ({
-                        ...prev,
-                        confirmPassword: e.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1">
+                  Current Password *
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) =>
+                    setPasswordForm((p) => ({ ...p, currentPassword: e.target.value }))
+                  }
+                  required
+                  placeholder="Enter current password"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E]"
+                />
               </div>
 
-              <div className="farmer-modal-footer">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1">
+                  New Password *
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) =>
+                    setPasswordForm((p) => ({ ...p, newPassword: e.target.value }))
+                  }
+                  required
+                  minLength={6}
+                  placeholder="At least 6 characters"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1">
+                  Confirm New Password *
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) =>
+                    setPasswordForm((p) => ({ ...p, confirmPassword: e.target.value }))
+                  }
+                  required
+                  placeholder="Re-enter new password"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E]"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2.5 border-t border-[#E2E8F0]">
                 <button
                   type="button"
-                  className="farmer-btn farmer-btn-outline"
                   onClick={() => setIsPasswordModalOpen(false)}
                   disabled={isChangingPassword}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold border border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="farmer-btn farmer-btn-primary"
                   disabled={isChangingPassword}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-[#0F766E] text-white hover:bg-[#115E59] transition-colors cursor-pointer shadow-xs disabled:opacity-50"
                 >
                   {isChangingPassword ? 'Updating...' : 'Update Password'}
                 </button>
@@ -1037,5 +1060,3 @@ function MyProfile() {
     </div>
   );
 }
-
-export default MyProfile;

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  LayoutDashboard,
   Sprout,
   Boxes,
   CheckCircle2,
@@ -12,10 +13,16 @@ import {
   Building2,
   Users,
   ShoppingBag,
+  RefreshCw,
+  MapPin,
+  Calendar,
+  Receipt,
+  Eye,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useFarmer } from '../context/FarmerContext';
-import DataTable from '../components/DataTable';
-import StatusBadge from '../components/StatusBadge';
+import FarmerPageHeader from '../components/FarmerPageHeader';
+import FarmerStatCard from '../components/FarmerStatCard';
 import { formatCurrency, formatDate, buyerCategoryStyles } from '../utils/farmerHelpers';
 
 export default function FarmerDashboard() {
@@ -26,11 +33,11 @@ export default function FarmerDashboard() {
     searchQuery,
     navigateTo,
     setSelectedTransaction,
-    setActiveOtpRequest,
     profile,
   } = useFarmer();
 
   const [activeChartMetric, setActiveChartMetric] = useState('value'); // 'value' or 'quantity'
+  const [lastRefreshed, setLastRefreshed] = useState(() => new Date());
 
   // Summary Metrics Calculated in Real-Time
   const totalCropTypes = crops.length;
@@ -120,95 +127,10 @@ export default function FarmerDashboard() {
     { label: 'Delayed / Audit Pending', amount: 75000, color: '#DC2626', pct: 5 },
   ];
 
-  const recentSalesColumns = [
-    {
-      key: 'id',
-      label: 'Txn ID',
-      render: (val, row) => (
-        <span
-          className="font-bold text-[#0F766E] hover:underline cursor-pointer"
-          onClick={() => setSelectedTransaction(row)}
-        >
-          {val}
-        </span>
-      ),
-    },
-    {
-      key: 'date',
-      label: 'Date',
-      render: (val) => formatDate(val),
-    },
-    {
-      key: 'cropName',
-      label: 'Crop Name',
-      render: (val) => <span className="font-semibold text-slate-900">{val}</span>,
-    },
-    {
-      key: 'buyerName',
-      label: 'Buyer Name',
-      render: (val) => <span className="text-slate-800 font-medium">{val}</span>,
-    },
-    {
-      key: 'buyerCategory',
-      label: 'Buyer Category',
-      render: (val) => {
-        const style = buyerCategoryStyles[val] || { bg: '#F1F5F9', color: '#475569' };
-        return (
-          <span
-            className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold"
-            style={{ backgroundColor: style.bg, color: style.color }}
-          >
-            {val}
-          </span>
-        );
-      },
-    },
-    {
-      key: 'quantity',
-      label: 'Qty Sold',
-      render: (val, row) => `${val} ${row.unit}`,
-    },
-    {
-      key: 'rate',
-      label: 'Rate',
-      render: (val, row) => `${formatCurrency(val)}/${row.unit}`,
-    },
-    {
-      key: 'totalAmount',
-      label: 'Total Amount',
-      render: (val) => (
-        <span className="font-extrabold text-[#0F766E]">{formatCurrency(val)}</span>
-      ),
-    },
-    {
-      key: 'transactionStatus',
-      label: 'Txn Status',
-      badge: 'transactionStatus',
-    },
-    {
-      key: 'otpStatus',
-      label: 'OTP Status',
-      badge: 'otpStatus',
-    },
-    {
-      key: 'expectedPaymentDate',
-      label: 'Expected Payment',
-      render: (val) => formatDate(val),
-    },
-    {
-      key: 'actions',
-      label: 'Action',
-      render: (_, row) => (
-        <button
-          type="button"
-          className="px-3 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-          onClick={() => setSelectedTransaction(row)}
-        >
-          Details
-        </button>
-      ),
-    },
-  ];
+  const handleRefresh = () => {
+    setLastRefreshed(new Date());
+    toast.success('Farmer Dashboard refreshed successfully.');
+  };
 
   return (
     <div className="space-y-6">
@@ -225,448 +147,546 @@ export default function FarmerDashboard() {
         </div>
       )}
 
-      {/* Page Header and Welcome Section */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="space-y-1.5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#CCFBF1] text-[#0F766E] border border-[#0F766E]/20 text-xs font-bold">
-            <span className="w-2 h-2 rounded-full bg-[#0F766E] animate-pulse" />
-            Live Agricultural Trading Portal
-          </div>
-          <h1 className="text-xl md:text-2xl font-extrabold text-slate-900">
-            Welcome back, {profile.farmerName || 'Farmer'}!
-          </h1>
-          <p className="text-xs md:text-sm text-slate-500 max-w-2xl">
-            {profile.farmName || 'Kisan Agro Enterprise'} • {profile.village || 'Dispatch Center'}, {profile.district || 'Andhra Pradesh'}.
-            Mandi rates for Paddy and Chilli are trending upward across AP and Telangana markets today.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => navigateTo('sell')}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-semibold rounded-lg bg-[#0F766E] hover:bg-[#115E59] text-white shadow-xs transition-colors cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            Create Sale Order
-          </button>
-          <button
-            type="button"
-            onClick={() => navigateTo('crops')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs md:text-sm font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-          >
-            <Sprout className="w-4 h-4 text-[#0F766E]" />
-            Manage Crops
-          </button>
-          <button
-            type="button"
-            onClick={() => navigateTo('prices')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs md:text-sm font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-          >
-            <TrendingUp className="w-4 h-4 text-[#0F766E]" />
-            Mandi Prices
-          </button>
-        </div>
-      </div>
-
-      {/* KPI Statistic Cards (6 Standard Summary Cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {/* Card 1 */}
-        <div
-          onClick={() => navigateTo('crops')}
-          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-[#CCFBF1] text-[#0F766E] flex items-center justify-center font-bold">
-              <Sprout className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              +2 Season
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">{totalCropTypes} Crops</div>
-            <div className="text-xs font-semibold text-slate-500">Total Crop Types</div>
-            <div className="text-[11px] text-slate-400 mt-1 truncate">Paddy, Turmeric, Groundnut</div>
-          </div>
-        </div>
-
-        {/* Card 2 */}
-        <div
-          onClick={() => navigateTo('stock')}
-          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-[#CCFBF1] text-[#0F766E] flex items-center justify-center font-bold">
-              <Boxes className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-50 text-slate-600 border border-slate-200">
-              3 Storage Bays
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">{totalAvailableStock} qtl</div>
-            <div className="text-xs font-semibold text-slate-500">Available Stock</div>
-            <div className="text-[11px] text-slate-400 mt-1 truncate">Ready for sale &amp; dispatch</div>
-          </div>
-        </div>
-
-        {/* Card 3 */}
-        <div
-          onClick={() => navigateTo('sales')}
-          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-[#CCFBF1] text-[#0F766E] flex items-center justify-center font-bold">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              +18.4% MoM
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">{totalQuantitySold} qtl</div>
-            <div className="text-xs font-semibold text-slate-500">Quantity Sold</div>
-            <div className="text-[11px] text-slate-400 mt-1 truncate">Dispatched across 8 orders</div>
-          </div>
-        </div>
-
-        {/* Card 4 */}
-        <div
-          onClick={() => navigateTo('sales')}
-          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-[#CCFBF1] text-[#0F766E] flex items-center justify-center font-bold">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              +14.2% Growth
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">{formatCurrency(totalSalesAmount)}</div>
-            <div className="text-xs font-semibold text-slate-500">Total Sales Amount</div>
-            <div className="text-[11px] text-slate-400 mt-1 truncate">Confirmed transactions</div>
-          </div>
-        </div>
-
-        {/* Card 5 */}
-        <div
-          onClick={() => navigateTo('sales')}
-          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center font-bold">
-              <CreditCard className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-              Due in 3 Days
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">{formatCurrency(expectedReceivables)}</div>
-            <div className="text-xs font-semibold text-slate-500">Expected Receivables</div>
-            <div className="text-[11px] text-slate-400 mt-1 truncate">Awaiting bank settlement</div>
-          </div>
-        </div>
-
-        {/* Card 6 */}
-        <div
-          onClick={() => navigateTo('otp')}
-          className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-[#CCFBF1] text-[#0F766E] flex items-center justify-center font-bold">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <span
-              className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                pendingOtpList.length > 0
-                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-              }`}
-            >
-              {pendingOtpList.length > 0 ? 'Action Required' : 'All Clear'}
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">{pendingOtpList.length} Orders</div>
-            <div className="text-xs font-semibold text-slate-500">Pending OTPs</div>
-            <div className="text-[11px] text-slate-400 mt-1 truncate">Buyer verification security</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Pending OTP Confirmations Quick Action Card */}
-      {pendingOtpList.length > 0 && (
-        <div className="bg-white rounded-xl border border-amber-200 p-5 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-sm md:text-base font-bold text-slate-900">
-                  Pending Buyer OTP Confirmations ({pendingOtpList.length})
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Incoming purchase orders require OTP confirmation before reserved stock is deducted.
-                </p>
-              </div>
-            </div>
-
+      {/* Page Header (Matches VendorPageHeader & CustomerPageHeader) */}
+      <FarmerPageHeader
+        title="Farmer Dashboard"
+        subtitle="Overview of your agricultural harvest inventory, active mandi prices, dispatches, and bank settlements."
+        icon={LayoutDashboard}
+        badge="Live Agricultural Trading Portal"
+        actions={
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
               type="button"
-              onClick={() => navigateTo('otp')}
-              className="inline-flex items-center gap-1 text-xs font-bold text-[#0F766E] hover:underline cursor-pointer"
+              onClick={() => navigateTo('sell')}
+              className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-xl text-xs font-semibold bg-[#0F766E] text-white hover:bg-[#115E59] transition-all duration-200 cursor-pointer shadow-xs"
             >
-              View All OTPs ({otpRequests.length})
-              <ArrowRight className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5 stroke-[2] shrink-0" />
+              <span>Create Sale Order</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigateTo('prices')}
+              className="inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-xl text-xs font-semibold bg-[#CCFBF1] text-[#0F766E] border border-[#14B8A6]/30 hover:bg-[#115E59] hover:text-white transition-all duration-200 cursor-pointer shadow-2xs"
+            >
+              <TrendingUp className="w-3.5 h-3.5 stroke-[2] shrink-0" />
+              <span>Mandi Prices</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-xl text-xs font-semibold bg-white text-[#0F766E] border border-[#E2E8F0] hover:bg-slate-50 transition-all duration-200 cursor-pointer shadow-2xs"
+            >
+              <RefreshCw className="w-3.5 h-3.5 stroke-[2] shrink-0" />
+              <span>Refresh</span>
             </button>
           </div>
+        }
+      />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {pendingOtpList.map((otp) => (
-              <div
-                key={otp.id}
-                className="p-4 rounded-xl bg-amber-50/40 border border-amber-200 flex flex-col justify-between gap-3"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-[#0F766E]">{otp.transactionId}</span>
-                    <StatusBadge status={otp.otpStatus} />
-                  </div>
-                  <div className="text-sm font-bold text-slate-900 mt-2">
-                    {otp.crop} • {otp.quantity} {otp.unit}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    Buyer: <strong className="text-slate-700">{otp.buyerName}</strong> ({otp.buyerCategory})
-                  </div>
-                  <div className="text-base font-extrabold text-slate-900 mt-2">
-                    {formatCurrency(otp.totalAmount)}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-2 border-t border-amber-200/60">
-                  <button
-                    type="button"
-                    onClick={() => setActiveOtpRequest(otp)}
-                    className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-[#0F766E] hover:bg-[#115E59] text-white transition-colors cursor-pointer"
-                  >
-                    Confirm OTP
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const match = sales.find((s) => s.id === otp.transactionId);
-                      if (match) setSelectedTransaction(match);
-                    }}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                  >
-                    Details
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 4 Professional Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Chart 1: Monthly Crop Sales Growth */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-            <div>
-              <h3 className="text-sm md:text-base font-bold text-slate-900">
-                Monthly Crop Sales Growth
-              </h3>
-              <p className="text-xs text-slate-500">
-                Quantity (qtl) vs Sales Turnover (₹ in Lakhs)
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-lg border border-slate-200">
-              <button
-                type="button"
-                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
-                  activeChartMetric === 'value'
-                    ? 'bg-[#0F766E] text-white shadow-xs'
-                    : 'text-slate-600 hover:bg-white'
-                }`}
-                onClick={() => setActiveChartMetric('value')}
-              >
-                ₹ Value
-              </button>
-              <button
-                type="button"
-                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
-                  activeChartMetric === 'quantity'
-                    ? 'bg-[#0F766E] text-white shadow-xs'
-                    : 'text-slate-600 hover:bg-white'
-                }`}
-                onClick={() => setActiveChartMetric('quantity')}
-              >
-                Quintals (qtl)
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-end gap-3 h-48 pt-4 border-b border-slate-100 px-2">
-            {monthlyData.map((d) => {
-              const maxVal = activeChartMetric === 'value' ? 12 : 420;
-              const current = activeChartMetric === 'value' ? d.value : d.qty;
-              const heightPct = Math.round((current / maxVal) * 100);
-
-              return (
-                <div key={d.month} className="flex-1 flex flex-col items-center h-full justify-end group">
-                  <span className="text-[11px] font-bold text-[#0F766E] mb-1.5 opacity-90 group-hover:scale-105 transition-transform">
-                    {activeChartMetric === 'value' ? `₹${d.value}L` : `${d.qty}q`}
-                  </span>
-                  <div
-                    style={{ height: `${heightPct}%` }}
-                    className="w-4/5 max-w-[42px] bg-gradient-to-t from-[#115E59] to-[#0F766E] rounded-t-md transition-all group-hover:brightness-110"
-                  />
-                  <span className="text-xs font-semibold text-slate-500 mt-2">
-                    {d.month}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Chart 2: Crop-Wise Sales Volume */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-            <div>
-              <h3 className="text-sm md:text-base font-bold text-slate-900">
-                Crop-Wise Sales Volume
-              </h3>
-              <p className="text-xs text-slate-500">Distribution across harvested crops</p>
-            </div>
-            <span className="text-xs font-bold text-[#0F766E] bg-[#CCFBF1] px-2.5 py-1 rounded-md">
-              Total: 440 qtl
+      {/* Business & Farm Info Bar (Matches Vendor & Middleman info bars) */}
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] px-5 py-3.5 flex flex-wrap items-center justify-between gap-4 text-xs text-[#64748B] shadow-xs">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-5">
+          <div className="inline-flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-[#CCFBF1] text-[#0F766E] flex items-center justify-center shrink-0">
+              <Building2 className="w-4 h-4 stroke-[2]" />
+            </span>
+            <span className="font-bold text-sm text-[#0F766E]">
+              {profile.farmName || 'Kisan Agro Enterprise'}
             </span>
           </div>
 
-          <div className="space-y-3 pt-1">
-            {cropSalesBreakdown.map((item) => (
-              <div key={item.name} className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-900">{item.name}</span>
-                  <span className="text-slate-500">
-                    {item.qty} qtl (₹{item.value} Lakhs) • <strong className="text-slate-800">{item.pct}%</strong>
-                  </span>
-                </div>
-                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    style={{ width: `${item.pct}%`, backgroundColor: item.color }}
-                    className="h-full rounded-full transition-all duration-500"
-                  />
-                </div>
-              </div>
-            ))}
+          <span className="hidden sm:inline-block h-4 w-px bg-[#E2E8F0]" aria-hidden="true" />
+
+          <div className="inline-flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-[#F8FAFC] text-[#0F766E] border border-[#E2E8F0] flex items-center justify-center shrink-0">
+              <MapPin className="w-3.5 h-3.5 stroke-[2]" />
+            </span>
+            <span>
+              Village / Mandal:{' '}
+              <strong className="font-semibold text-[#0F172A]">
+                {profile.village ? `${profile.village}, ${profile.district || 'Kurnool'}` : 'Kurnool Hub'}
+              </strong>
+            </span>
+          </div>
+
+          <span className="hidden sm:inline-block h-4 w-px bg-[#E2E8F0]" aria-hidden="true" />
+
+          <div className="inline-flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-[#F8FAFC] text-[#0F766E] border border-[#E2E8F0] flex items-center justify-center shrink-0">
+              <Calendar className="w-3.5 h-3.5 stroke-[2]" />
+            </span>
+            <span>
+              Current Crop Season:{' '}
+              <strong className="font-semibold text-[#0F172A]">Rabi / Kharif 2026</strong>
+            </span>
           </div>
         </div>
 
-        {/* Chart 3: Sales Channel Distribution */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-            <div>
-              <h3 className="text-sm md:text-base font-bold text-slate-900">
-                Sales Channel Distribution
-              </h3>
-              <p className="text-xs text-slate-500">Middlemen, Vendors &amp; Direct Consumers</p>
-            </div>
-            <span className="text-xs font-semibold text-slate-500">100% Verified Trades</span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            {buyerDistribution.map((b) => {
-              const Icon = b.icon;
-              return (
-                <div
-                  key={b.category}
-                  className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200 text-center flex flex-col items-center justify-center"
-                >
-                  <Icon className="w-5 h-5 mb-1" style={{ color: b.color }} />
-                  <div className="text-xl font-extrabold" style={{ color: b.color }}>
-                    {b.share}%
-                  </div>
-                  <div className="text-xs font-bold text-slate-800 mt-0.5">{b.category}</div>
-                  <div className="text-[11px] text-slate-500">{formatCurrency(b.amount)}</div>
-                  <div className="text-[10px] font-bold text-[#0F766E] mt-1">{b.count} Orders</div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-4 h-2.5 flex rounded-full overflow-hidden">
-            <div style={{ width: '45%', backgroundColor: '#0284C7' }} title="Middlemen: 45%" />
-            <div style={{ width: '38%', backgroundColor: '#7C3AED' }} title="Vendors: 38%" />
-            <div style={{ width: '17%', backgroundColor: '#16A34A' }} title="Customers: 17%" />
-          </div>
-        </div>
-
-        {/* Chart 4: Expected Payments & Cashflow */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-            <div>
-              <h3 className="text-sm md:text-base font-bold text-slate-900">
-                Expected Payments &amp; Settlement Timeline
-              </h3>
-              <p className="text-xs text-slate-500">Automated APMC bank escrow settlement</p>
-            </div>
-          </div>
-
-          <div className="space-y-2.5">
-            {paymentBreakdown.map((p) => (
-              <div
-                key={p.label}
-                className="flex items-center justify-between p-3 rounded-lg bg-slate-50/80 border border-slate-200"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className="w-3 h-3 rounded-full shrink-0"
-                    style={{ backgroundColor: p.color }}
-                  />
-                  <span className="text-xs font-bold text-slate-800">{p.label}</span>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs font-extrabold text-slate-900">
-                    {formatCurrency(p.amount)}
-                  </div>
-                  <span className="text-[10px] text-slate-400">{p.pct}% of monthly revenue</span>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F8FAFC] border border-[#E2E8F0] text-xs font-medium text-[#64748B]">
+          <span className="w-2 h-2 rounded-full bg-[#16A34A]" aria-hidden="true" />
+          <span>Last synced: {lastRefreshed.toLocaleTimeString('en-IN')}</span>
         </div>
       </div>
 
-      {/* Recent Sales Table */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-          <div>
-            <h3 className="text-sm md:text-base font-bold text-slate-900">
-              Recent Sales Transactions
-            </h3>
-            <p className="text-xs text-slate-500">
-              Latest transactions across Middleman, Vendor, and Direct Consumer channels
-            </p>
+      {/* 6 Standard Summary KPI Cards (Using FarmerStatCard matching VendorStatCard) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <FarmerStatCard
+          title="Total Crops"
+          value={`${totalCropTypes} Types`}
+          subtitle="Paddy, Turmeric, Groundnut"
+          icon={Sprout}
+          trend={{ value: '+2 Season', direction: 'up' }}
+          onClick={() => navigateTo('crops')}
+        />
+        <FarmerStatCard
+          title="Available Stock"
+          value={`${totalAvailableStock} qtl`}
+          subtitle="Ready for dispatch"
+          icon={Boxes}
+          onClick={() => navigateTo('crops')}
+        />
+        <FarmerStatCard
+          title="Quantity Sold"
+          value={`${totalQuantitySold} qtl`}
+          subtitle="Dispatched across orders"
+          icon={CheckCircle2}
+          trend={{ value: '+18.4% MoM', direction: 'up' }}
+          onClick={() => navigateTo('sales')}
+        />
+        <FarmerStatCard
+          title="Gross Sales"
+          value={formatCurrency(totalSalesAmount)}
+          subtitle="Total confirmed sales"
+          icon={TrendingUp}
+          onClick={() => navigateTo('sales')}
+        />
+        <FarmerStatCard
+          title="Receivables"
+          value={formatCurrency(expectedReceivables)}
+          subtitle="Pending settlement"
+          icon={CreditCard}
+          trend={{ value: 'Expected', direction: 'up' }}
+          onClick={() => navigateTo('sales')}
+        />
+        <FarmerStatCard
+          title="Buyer OTP Pending"
+          value={`${pendingOtpList.length} Pending`}
+          subtitle="Awaiting authorization"
+          icon={ShieldCheck}
+          trend={pendingOtpList.length > 0 ? { value: 'Action req.', direction: 'down' } : null}
+          onClick={() => navigateTo('otp')}
+        />
+      </div>
+
+      {/* Pending OTP Authorization Alert Bar if any */}
+      {pendingOtpList.length > 0 && (
+        <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-bold text-amber-900">
+                {pendingOtpList.length} Buyer OTP Confirmation{pendingOtpList.length > 1 ? 's' : ''} Awaiting Your Verification
+              </h4>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Buyers have requested dispatch confirmation. Authorize the transaction to trigger instant ledger &amp; bank settlement.
+              </p>
+            </div>
           </div>
           <button
             type="button"
-            onClick={() => navigateTo('sales')}
-            className="inline-flex items-center gap-1 text-xs font-bold text-[#0F766E] hover:underline cursor-pointer"
+            onClick={() => navigateTo('otp')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors cursor-pointer shrink-0 self-start sm:self-center"
           >
-            View Full Sales History ({sales.length})
+            <span>Review OTP Queue</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
+      )}
 
-        <DataTable columns={recentSalesColumns} rows={recentSales} />
+      {/* Charts & Visual Analytics Section (Grid of 2 Columns) */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Chart 1: Monthly Sales & Production Performance */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E2E8F0]">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-[#0F766E] tracking-tight">
+                  Monthly Sales &amp; Production Performance
+                </h3>
+                <p className="text-xs text-[#64748B] mt-0.5">
+                  Last 6 months volume and revenue trends across AP &amp; Telangana Mandis
+                </p>
+              </div>
+
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] shrink-0 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setActiveChartMetric('value')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeChartMetric === 'value'
+                      ? 'bg-[#0F766E] text-white shadow-xs'
+                      : 'text-[#64748B] hover:text-[#0F172A]'
+                  }`}
+                >
+                  Revenue (₹ Lakh)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveChartMetric('quantity')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeChartMetric === 'quantity'
+                      ? 'bg-[#0F766E] text-white shadow-xs'
+                      : 'text-[#64748B] hover:text-[#0F172A]'
+                  }`}
+                >
+                  Quantity (Qtl)
+                </button>
+              </div>
+            </div>
+
+            {/* Visual Bars Container */}
+            <div className="pt-6 pb-2">
+              <div className="flex items-end justify-between gap-3 sm:gap-6 h-48 px-2">
+                {monthlyData.map((d) => {
+                  const maxVal = 12;
+                  const maxQty = 400;
+                  const heightPct =
+                    activeChartMetric === 'value'
+                      ? Math.round((d.value / maxVal) * 100)
+                      : Math.round((d.qty / maxQty) * 100);
+
+                  return (
+                    <div key={d.month} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                      <div className="text-[11px] font-bold text-[#0F766E] opacity-0 group-hover:opacity-100 transition-opacity">
+                        {activeChartMetric === 'value' ? `₹${d.value}L` : `${d.qty}q`}
+                      </div>
+                      <div
+                        style={{ height: `${Math.max(12, heightPct)}%` }}
+                        className="w-full max-w-[42px] rounded-t-xl bg-gradient-to-t from-[#0F766E] to-[#14B8A6] group-hover:brightness-110 transition-all duration-300 shadow-2xs relative"
+                      />
+                      <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider">
+                        {d.month}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-[#E2E8F0] flex items-center justify-between text-xs text-[#64748B]">
+            <span>Average monthly growth rate: <strong className="text-[#0F766E]">+16.8%</strong></span>
+            <button
+              type="button"
+              onClick={() => navigateTo('sales')}
+              className="text-[#0F766E] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>View Full Ledger</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Chart 2: Crop-wise Harvest & Sales Breakdown */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-4 border-b border-[#E2E8F0]">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-[#0F766E] tracking-tight">
+                  Crop Harvest &amp; Revenue Distribution
+                </h3>
+                <p className="text-xs text-[#64748B] mt-0.5">
+                  Breakdown by harvested agricultural commodity
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigateTo('crops')}
+                className="text-xs text-[#0F766E] font-bold hover:underline cursor-pointer"
+              >
+                Manage Crops
+              </button>
+            </div>
+
+            <div className="pt-4 space-y-3.5">
+              {cropSalesBreakdown.map((crop) => (
+                <div key={crop.name} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-[#0F172A]">{crop.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#64748B] font-medium">{crop.qty} qtl</span>
+                      <span className="font-extrabold text-[#0F766E]">₹{crop.value} Lakh</span>
+                      <span className="px-1.5 py-0.2 rounded-md bg-[#F8FAFC] border border-[#E2E8F0] font-bold text-[10px] text-[#64748B]">
+                        {crop.pct}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full h-2.5 rounded-full bg-[#F1F5F9] overflow-hidden">
+                    <div
+                      style={{ width: `${crop.pct}%`, backgroundColor: crop.color }}
+                      className="h-full rounded-full transition-all duration-500"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-[#E2E8F0] flex items-center justify-between text-xs text-[#64748B]">
+            <span>Leading crop: <strong className="text-[#0F172A]">Paddy (BPT 5204 Samba)</strong></span>
+            <span>Total Harvest Value: <strong className="text-[#0F766E]">₹20.68 Lakh</strong></span>
+          </div>
+        </div>
+      </div>
+
+      {/* Distribution & Settlement Status Row (2 Columns) */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Buyer Channel Distribution */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 sm:p-6 shadow-xs">
+          <div className="flex items-center justify-between pb-4 border-b border-[#E2E8F0]">
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-[#0F766E] tracking-tight">
+                Sales by Buyer Channel
+              </h3>
+              <p className="text-xs text-[#64748B] mt-0.5">
+                Procurement volume split between vendors, middlemen, and direct buyers
+              </p>
+            </div>
+            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#CCFBF1] text-[#0F766E]">
+              11 Orders
+            </span>
+          </div>
+
+          <div className="pt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {buyerDistribution.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.category}
+                  className="p-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] flex flex-col justify-between space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <div
+                      style={{ backgroundColor: `${item.color}15`, color: item.color }}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center font-bold"
+                    >
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-extrabold text-[#0F766E]">{item.share}%</span>
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-[#0F172A]">{item.category}</div>
+                    <div className="text-sm font-extrabold text-[#0F766E] mt-0.5">
+                      {formatCurrency(item.amount)}
+                    </div>
+                    <div className="text-[11px] text-[#64748B] mt-0.5">
+                      {item.count} Confirmed Orders
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Payment Settlement Health */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-4 border-b border-[#E2E8F0]">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-[#0F766E] tracking-tight">
+                  Bank Settlement Health
+                </h3>
+                <p className="text-xs text-[#64748B] mt-0.5">
+                  Direct Mandi ECS and RTGS settlement timelines
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-[#16A34A]">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Treasury Active
+              </span>
+            </div>
+
+            <div className="pt-4 space-y-3.5">
+              {paymentBreakdown.map((item) => (
+                <div key={item.label} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-[#0F172A]">{item.label}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-[#0F766E]">
+                        {formatCurrency(item.amount)}
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded-md bg-[#F8FAFC] border border-[#E2E8F0] font-bold text-[10px] text-[#64748B]">
+                        {item.pct}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-[#F1F5F9] overflow-hidden">
+                    <div
+                      style={{ width: `${item.pct}%`, backgroundColor: item.color }}
+                      className="h-full rounded-full transition-all duration-500"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-[#E2E8F0] flex items-center justify-between text-xs text-[#64748B]">
+            <span>Bank: <strong className="text-[#0F172A]">{profile.bankDetails?.bankName || 'State Bank of India'}</strong></span>
+            <span>A/C: <strong className="font-mono text-[#0F766E]">•••• {String(profile.bankDetails?.accountNumber || '4820').slice(-4)}</strong></span>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Sales Transactions Table (Matches VendorDataTable layout & design) */}
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs overflow-hidden">
+        <div className="p-5 border-b border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h3 className="text-base font-bold text-[#0F766E] tracking-tight">
+                Recent Sales Transactions
+              </h3>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#CCFBF1] text-[#0F766E] border border-[#14B8A6]/30">
+                Latest {recentSales.length} Transactions
+              </span>
+            </div>
+            <p className="text-xs text-[#64748B] mt-0.5">
+              Track purchase orders, quantity dispatched, OTP clearance, and payment settlement dates
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => navigateTo('sales')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#E2E8F0] text-xs font-semibold text-[#0F766E] hover:bg-[#F8FAFC] transition-colors cursor-pointer"
+            >
+              <Receipt className="w-3.5 h-3.5" />
+              <span>All Sales History</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-[#64748B] uppercase tracking-wider font-bold">
+                <th className="py-3 px-4">Txn ID</th>
+                <th className="py-3 px-4">Date</th>
+                <th className="py-3 px-4">Crop Name</th>
+                <th className="py-3 px-4">Buyer Name</th>
+                <th className="py-3 px-4">Channel</th>
+                <th className="py-3 px-4">Qty Sold</th>
+                <th className="py-3 px-4">Rate</th>
+                <th className="py-3 px-4">Total Amount</th>
+                <th className="py-3 px-4">Txn Status</th>
+                <th className="py-3 px-4">OTP Status</th>
+                <th className="py-3 px-4">Expected Payment</th>
+                <th className="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E2E8F0]">
+              {recentSales.length === 0 ? (
+                <tr>
+                  <td colSpan="12" className="py-8 text-center text-xs text-[#64748B]">
+                    No sales transactions match your search filter.
+                  </td>
+                </tr>
+              ) : (
+                recentSales.map((row) => {
+                  const channelStyle = buyerCategoryStyles[row.buyerCategory] || {
+                    bg: '#F1F5F9',
+                    color: '#475569',
+                  };
+
+                  return (
+                    <tr
+                      key={row.id}
+                      className="hover:bg-[#CCFBF1]/20 transition-colors"
+                    >
+                      <td className="py-3 px-4 font-mono font-bold text-[#0F766E]">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTransaction(row)}
+                          className="hover:underline cursor-pointer"
+                        >
+                          {row.id}
+                        </button>
+                      </td>
+                      <td className="py-3 px-4 text-[#64748B] whitespace-nowrap">
+                        {formatDate(row.date)}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-[#0F172A] whitespace-nowrap">
+                        {row.cropName}
+                      </td>
+                      <td className="py-3 px-4 font-medium text-[#0F172A] whitespace-nowrap">
+                        {row.buyerName}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span
+                          className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold"
+                          style={{ backgroundColor: channelStyle.bg, color: channelStyle.color }}
+                        >
+                          {row.buyerCategory}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-[#0F172A] whitespace-nowrap">
+                        {row.quantity} {row.unit}
+                      </td>
+                      <td className="py-3 px-4 text-[#64748B] whitespace-nowrap">
+                        {formatCurrency(row.rate)}/{row.unit}
+                      </td>
+                      <td className="py-3 px-4 font-extrabold text-[#0F766E] whitespace-nowrap">
+                        {formatCurrency(row.totalAmount)}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                            row.transactionStatus === 'Confirmed'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}
+                        >
+                          {row.transactionStatus}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                            row.otpStatus === 'Confirmed'
+                              ? 'bg-[#CCFBF1] text-[#0F766E] border border-[#14B8A6]/30'
+                              : row.otpStatus === 'Pending'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {row.otpStatus}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-[#64748B] whitespace-nowrap">
+                        {formatDate(row.expectedPaymentDate)}
+                      </td>
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTransaction(row)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC] hover:text-[#0F766E] transition-colors cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Details</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

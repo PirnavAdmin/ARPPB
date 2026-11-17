@@ -25,29 +25,7 @@
   --topbar-height: 72px;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background-color: var(--farmer-bg);
-  color: var(--farmer-text);
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-}
-
-button, input, select, textarea {
-  font-family: inherit;
-  font-size: 0.95rem;
-}
-
-button {
-  cursor: pointer;
-}
-
-/* App Shell Layout */
+/* App Base Variables & Components */
 .farmer-shell {
   display: flex;
   min-height: 100vh;

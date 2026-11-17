@@ -1,175 +1,293 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  Sprout,
+  TrendingUp,
+  ShoppingBag,
+  Receipt,
+  ShieldCheck,
+  Bell,
+  UserCheck,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  X,
+} from 'lucide-react';
 import { useFarmer } from '../context/FarmerContext';
+import { useAuth } from '../../../hooks/useAuth';
 
-// Clean, consistent agricultural & portal SVG icons
-const navIcons = {
-  dashboard: (
-    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-    </svg>
-  ),
-  crops: (
-    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v18m0-18C8.5 7 5 10 5 14c0 3 2.5 5 7 7m0-18c3.5 4 7 7 7 11 0 3-2.5 5-7 7" />
-    </svg>
-  ),
-  prices: (
-    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
-    </svg>
-  ),
-  sell: (
-    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  sales: (
-    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-    </svg>
-  ),
-  purchases: (
-    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-    </svg>
-  ),
-  stock: (
-    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-    </svg>
-  ),
-  otp: (
-    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-    </svg>
-  ),
-  bell: (
-    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-    </svg>
-  ),
-  profile: (
-    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  ),
-};
+const FARMER_NAV_GROUPS = [
+  {
+    group: 'Overview',
+    items: [
+      { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    ],
+  },
+  {
+    group: 'Farm & Market',
+    items: [
+      { key: 'crops', label: 'My Crops', icon: Sprout },
+      { key: 'prices', label: 'Daily Market Prices', icon: TrendingUp },
+      { key: 'sell', label: 'Sell Products', icon: ShoppingBag },
+      { key: 'sales', label: 'My Sales', icon: Receipt },
+    ],
+  },
+  {
+    group: 'Security & Alerts',
+    items: [
+      { key: 'otp', label: 'OTP Confirmations', icon: ShieldCheck, badgeKey: 'pendingOtp' },
+      { key: 'notifications', label: 'Notifications', icon: Bell, badgeKey: 'unreadNotifications' },
+    ],
+  },
+  {
+    group: 'Account',
+    items: [
+      { key: 'profile', label: 'My Profile', icon: UserCheck },
+    ],
+  },
+];
 
-function FarmerSidebar({ items }) {
+export function FarmerSidebar({
+  isCollapsed = false,
+  onToggleCollapse,
+  isMobileOpen = false,
+  onCloseMobile,
+}) {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const {
     activePage,
     navigateTo,
-    profile,
-    isSidebarCollapsed,
-    setIsSidebarCollapsed,
-    isMobileDrawerOpen,
-    setIsMobileDrawerOpen,
     pendingOtpCount,
     unreadNotificationsCount,
   } = useFarmer();
 
-  return (
-    <>
-      {/* Mobile Backdrop */}
-      {isMobileDrawerOpen && (
-        <div
-          className="farmer-drawer-backdrop"
-          onClick={() => setIsMobileDrawerOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+  const [expandedGroups, setExpandedGroups] = useState({
+    Overview: true,
+    'Farm & Market': true,
+    'Security & Alerts': true,
+    Account: true,
+  });
 
-      <aside
-        className={`farmer-sidebar ${isSidebarCollapsed ? 'collapsed' : ''} ${
-          isMobileDrawerOpen ? 'mobile-open' : ''
-        }`}
-      >
-        {/* Brand Header */}
-        <div className="farmer-sidebar-header">
-          <div className="farmer-brand">
-            <div className="farmer-brand-logo" title="AgriConnect">
-              🌾
-            </div>
-            {!isSidebarCollapsed && (
-              <div className="farmer-brand-title">
-                <strong>AgriConnect</strong>
-                <span>Farmer Portal</span>
+  const toggleGroup = (groupName) => {
+    if (isCollapsed) return;
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupName]: !prev[groupName],
+    }));
+  };
+
+  const getBadgeValue = (badgeKey) => {
+    if (badgeKey === 'pendingOtp') return pendingOtpCount;
+    if (badgeKey === 'unreadNotifications') return unreadNotificationsCount;
+    return 0;
+  };
+
+  const handleNavClick = (pageKey, mobileView) => {
+    navigateTo(pageKey);
+    if (mobileView && onCloseMobile) {
+      onCloseMobile();
+    }
+  };
+
+  const handleLogout = () => {
+    if (onCloseMobile) onCloseMobile();
+    logout();
+    navigate('/login');
+  };
+
+  const renderSidebarContent = (mobileView = false) => {
+    const collapsed = !mobileView && isCollapsed;
+
+    return (
+      <div className="flex flex-col justify-between h-full bg-[#0F766E] text-white select-none overflow-hidden">
+        {/* Top Branding Section (Matches VendorSidebar and CustomerSidebar) */}
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="p-4 border-b border-white/10 flex items-center justify-between gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleNavClick('dashboard', mobileView)}
+              className="flex items-center gap-2.5 overflow-hidden select-none min-w-0 text-left cursor-pointer group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#14B8A6] text-white flex items-center justify-center shrink-0 shadow-md shadow-black/10 group-hover:scale-105 transition-transform">
+                <Sprout className="w-6 h-6 text-white shrink-0" />
               </div>
+              {!collapsed && (
+                <div className="flex flex-col min-w-0">
+                  <span
+                    className="text-base !font-extrabold text-white tracking-tight leading-none truncate"
+                    title="AgriConnect"
+                  >
+                    AgriConnect
+                  </span>
+                  <span className="!text-[10px] uppercase !font-bold tracking-wider text-[#CCFBF1] mt-1 truncate">
+                    Farmer Portal
+                  </span>
+                </div>
+              )}
+            </button>
+
+            {mobileView ? (
+              <button
+                type="button"
+                onClick={onCloseMobile}
+                aria-label="Close navigation menu"
+                className="p-1.5 rounded-lg text-[#CCFBF1] hover:bg-white/10 hover:text-white transition-colors cursor-pointer shrink-0"
+              >
+                <X className="w-5 h-5 shrink-0" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+                aria-label={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+                className="p-1.5 rounded-lg text-[#CCFBF1] hover:bg-white/10 hover:text-white transition-colors cursor-pointer shrink-0"
+              >
+                {collapsed ? (
+                  <ChevronRight className="w-4 h-4 shrink-0" />
+                ) : (
+                  <ChevronLeft className="w-4 h-4 shrink-0" />
+                )}
+              </button>
             )}
           </div>
 
-          <button
-            type="button"
-            className="farmer-collapse-btn"
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label="Toggle sidebar collapse"
-          >
-            <svg
-              width="18"
-              height="18"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              style={{
-                transform: isSidebarCollapsed ? 'rotate(180deg)' : 'none',
-                transition: 'transform 0.2s',
-              }}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-            </svg>
-          </button>
+          {/* Navigation Links (Scrollable, Matches VendorSidebar & CustomerSidebar) */}
+          <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 sidebar-scrollbar">
+            {FARMER_NAV_GROUPS.map((groupObj) => {
+              const isExpanded = expandedGroups[groupObj.group] !== false;
+
+              return (
+                <div key={groupObj.group} className="space-y-1 select-none">
+                  {!collapsed && (
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(groupObj.group)}
+                      aria-expanded={isExpanded}
+                      className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg !text-[11px] !font-bold uppercase tracking-wider text-[#CCFBF1]/80 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                    >
+                      <span className="truncate text-left">{groupObj.group}</span>
+                      {isExpanded ? (
+                        <ChevronDown className="w-3.5 h-3.5 text-[#CCFBF1] shrink-0 transition-transform duration-200" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 text-[#CCFBF1]/80 shrink-0 transition-transform duration-200" />
+                      )}
+                    </button>
+                  )}
+
+                  {(collapsed || isExpanded) && (
+                    <div className="space-y-1">
+                      {groupObj.items.map((item) => {
+                        const IconComponent = item.icon;
+                        const badgeCount = item.badgeKey ? getBadgeValue(item.badgeKey) : 0;
+                        const isActive = activePage === item.key;
+
+                        return (
+                          <button
+                            key={item.key}
+                            type="button"
+                            onClick={() => handleNavClick(item.key, mobileView)}
+                            title={
+                              collapsed
+                                ? `${item.label}${badgeCount ? ` (${badgeCount})` : ''}`
+                                : undefined
+                            }
+                            className={`w-full relative group flex items-center gap-3 px-3 py-2.5 rounded-xl !text-xs sm:!text-sm !font-medium transition-all duration-150 select-none cursor-pointer text-left ${
+                              isActive
+                                ? 'bg-[#CCFBF1] text-[#0F766E] !font-bold shadow-sm border-l-4 border-[#14B8A6]'
+                                : 'text-white bg-transparent hover:bg-[#14B8A6]/20 hover:text-white'
+                            } ${collapsed ? 'justify-center px-2' : ''}`}
+                          >
+                            <IconComponent
+                              className={`shrink-0 transition-colors ${
+                                collapsed ? 'w-5 h-5' : 'w-4 h-4'
+                              } ${
+                                isActive
+                                  ? 'text-[#0F766E]'
+                                  : 'text-[#CCFBF1] group-hover:text-white'
+                              }`}
+                            />
+                            {!collapsed && (
+                              <span className="flex-1 truncate leading-snug">
+                                {item.label}
+                              </span>
+                            )}
+
+                            {!collapsed && badgeCount > 0 && (
+                              <span
+                                className={`px-1.5 py-0.5 !text-[10px] !font-bold rounded-full shadow-xs shrink-0 ${
+                                  isActive
+                                    ? 'bg-[#0F766E] text-white'
+                                    : 'bg-[#14B8A6] text-white'
+                                }`}
+                              >
+                                {badgeCount}
+                              </span>
+                            )}
+
+                            {collapsed && badgeCount > 0 && (
+                              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#14B8A6] ring-2 ring-[#0F766E]" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* Farmer Profile Mini Card */}
-
-        {/* Navigation Menu */}
-        <nav className="farmer-nav-menu" aria-label="Farmer Portal Navigation">
-          {items.map((item) => {
-            const isActive = activePage === item.key;
-            let badge = null;
-            if (item.key === 'otp' && pendingOtpCount > 0) {
-              badge = pendingOtpCount;
-            } else if (item.key === 'notifications' && unreadNotificationsCount > 0) {
-              badge = unreadNotificationsCount;
-            }
-
-            return (
-              <button
-                key={item.key}
-                type="button"
-                className={`farmer-nav-btn ${isActive ? 'active' : ''}`}
-                onClick={() => navigateTo(item.key)}
-                title={item.label}
-              >
-                <span className="farmer-nav-icon">{navIcons[item.icon] || '🌱'}</span>
-                {!isSidebarCollapsed && (
-                  <span className="farmer-nav-label">{item.label}</span>
-                )}
-                {!isSidebarCollapsed && badge !== null && (
-                  <span className="farmer-nav-badge">{badge}</span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Footer Support Info */}
-        {!isSidebarCollapsed && (
-          <div
-            style={{
-              padding: '16px 20px',
-              borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-              fontSize: '0.75rem',
-              color: 'rgba(255, 255, 255, 0.6)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 4,
-            }}
+        {/* Footer / Logout Button */}
+        <div className="p-3 border-t border-white/10 bg-[#0F766E] shrink-0">
+          <button
+            type="button"
+            onClick={handleLogout}
+            title={collapsed ? 'Logout' : undefined}
+            className={`w-full group flex items-center gap-3 px-3 py-2.5 rounded-xl !text-xs sm:!text-sm !font-medium text-[#CCFBF1] hover:bg-[#14B8A6]/20 hover:text-white transition-all duration-150 cursor-pointer ${
+              collapsed ? 'justify-center px-2' : ''
+            }`}
           >
-            <span style={{ fontSize: '0.7rem', marginTop: 4 }}>AgriConnect Platform v2.4</span>
-          </div>
-        )}
+            <LogOut
+              className={`shrink-0 transition-colors ${
+                collapsed ? 'w-5 h-5' : 'w-4 h-4'
+              } text-[#CCFBF1] group-hover:text-white`}
+            />
+            {!collapsed && <span className="truncate">Logout</span>}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <>
+      {/* Fixed Desktop Sidebar */}
+      <aside
+        className={`hidden lg:flex flex-col fixed inset-y-0 left-0 z-30 bg-[#0F766E] border-r border-[#115E59] text-white transition-all duration-300 shadow-lg ${
+          isCollapsed ? 'w-20' : 'w-64'
+        }`}
+      >
+        {renderSidebarContent(false)}
       </aside>
+
+      {/* Responsive Mobile Drawer */}
+      {isMobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div
+            className="fixed inset-0 bg-[#0F172A]/50 backdrop-blur-xs"
+            onClick={onCloseMobile}
+            aria-hidden="true"
+          />
+          <aside className="relative w-64 max-w-[85vw] h-full z-10 bg-[#0F766E] border-r border-[#115E59] shadow-2xl">
+            {renderSidebarContent(true)}
+          </aside>
+        </div>
+      )}
     </>
   );
 }
