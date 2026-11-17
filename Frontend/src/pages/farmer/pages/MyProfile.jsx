@@ -19,6 +19,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useOTPVerification } from '../../../hooks/useOTPVerification';
 import {
   fetchFarmerProfileApi,
+  fetchFarmerBankDetailsApi,
   updateFarmerProfileApi,
   updateFarmerBankDetailsApi,
   changeFarmerPasswordApi,
@@ -75,8 +76,20 @@ export default function MyProfile() {
     setIsLoadingProfile(true);
     try {
       const data = await fetchFarmerProfileApi(resolvedUserId);
+      let bankData = data?.bankDetails;
+      if (!bankData || !bankData.accountHolderName) {
+        const directBank = await fetchFarmerBankDetailsApi(resolvedUserId).catch(() => null);
+        if (directBank && typeof directBank === 'object') {
+          bankData = { ...(bankData || {}), ...directBank };
+        }
+      }
+
       if (data && typeof data === 'object') {
-        const mapped = mapFarmerDtoToProfile(data, profile);
+        const merged = {
+          ...data,
+          ...(bankData ? { bankDetails: bankData } : {}),
+        };
+        const mapped = mapFarmerDtoToProfile(merged, profile);
         updateProfile(mapped, { silent: true });
         setFormData({ ...mapped });
         setBankFormData({ ...(mapped.bankDetails || {}) });
@@ -199,6 +212,13 @@ export default function MyProfile() {
       return;
     }
 
+    const rawAltMobile = String(formData.alternateMobile || '').trim();
+    const cleanAltMobile = rawAltMobile.replace(/\D/g, '').slice(-10);
+    if (rawAltMobile && !/^[6-9]\d{9}$/.test(cleanAltMobile)) {
+      toast.error('Please enter a valid 10-digit alternate contact number starting with 6-9.');
+      return;
+    }
+
     const finalMobile = hasPhoneChanged ? formCleanPhone : (formData.mobileNumber || '');
 
     setIsSavingProfile(true);
@@ -207,6 +227,7 @@ export default function MyProfile() {
         {
           ...formData,
           mobileNumber: finalMobile,
+          alternateMobile: cleanAltMobile || null,
         },
         resolvedUserId
       );
@@ -216,12 +237,14 @@ export default function MyProfile() {
         nextProfile = mapFarmerDtoToProfile(updatedDto, {
           ...profile,
           ...formData,
+          alternateMobile: cleanAltMobile ? `+91 ${cleanAltMobile}` : (formData.alternateMobile || ''),
           mobileNumber: `+91 ${finalMobile.replace(/\D/g, '').slice(-10)}`,
         });
       } else {
         nextProfile = {
           ...profile,
           ...formData,
+          alternateMobile: cleanAltMobile ? `+91 ${cleanAltMobile}` : (formData.alternateMobile || ''),
           mobileNumber: `+91 ${finalMobile.replace(/\D/g, '').slice(-10)}`,
         };
       }
@@ -256,12 +279,69 @@ export default function MyProfile() {
 
   const handleSaveBankDetails = async (e) => {
     if (e) e.preventDefault();
+
+    const holderName = String(bankFormData.accountHolderName || '').trim();
+    const bankName = String(bankFormData.bankName || '').trim();
+    const accountNo = String(bankFormData.accountNumber || '').trim();
+    const ifsc = String(bankFormData.ifscCode || '').trim().toUpperCase();
+    const branch = String(bankFormData.branchName || bankFormData.branch || '').trim();
+    const upi = String(bankFormData.upiId || '').trim();
+
+    if (!bankName) {
+      toast.error('Bank Name is required.');
+      return;
+    }
+    if (!holderName) {
+      toast.error('Account Holder Name is required.');
+      return;
+    }
+    if (!accountNo) {
+      toast.error('Account Number is required.');
+      return;
+    }
+    if (!/^\d{9,18}$/.test(accountNo)) {
+      toast.error('Please enter a valid 9 to 18 digit bank account number.');
+      return;
+    }
+    if (!ifsc) {
+      toast.error('IFSC Code is required.');
+      return;
+    }
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) {
+      toast.error('Please enter a valid 11-character IFSC code (e.g. SBIN0001245).');
+      return;
+    }
+    if (upi && !/^[\w.-]+@[\w-]+$/.test(upi)) {
+      toast.error('Please enter a valid UPI ID (e.g. name@bank) or leave it empty.');
+      return;
+    }
+
     setIsSavingBank(true);
     try {
-      const updatedBankDto = await updateFarmerBankDetailsApi(bankFormData, resolvedUserId);
+      const updatedBankDto = await updateFarmerBankDetailsApi(
+        {
+          ...bankFormData,
+          bankName,
+          accountHolderName: holderName,
+          accountNumber: accountNo,
+          ifscCode: ifsc,
+          branchName: branch,
+          upiId: upi,
+        },
+        resolvedUserId
+      );
+
       const mergedBank = {
         ...profile.bankDetails,
         ...bankFormData,
+        bankName,
+        accountHolderName: holderName,
+        accountNumber: accountNo,
+        fullAccountNumber: accountNo,
+        ifscCode: ifsc,
+        branch,
+        branchName: branch,
+        upiId: upi,
         ...(updatedBankDto && typeof updatedBankDto === 'object' ? updatedBankDto : {}),
       };
 

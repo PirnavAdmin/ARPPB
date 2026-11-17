@@ -5,6 +5,7 @@ export const initialProfile = {
   farmerName: '',
   password: '',
   mobileNumber: '',
+  alternateMobile: '',
   email: '',
   farmName: '',
   village: '',
@@ -14,6 +15,7 @@ export const initialProfile = {
   pinCode: '',
   completeAddress: '',
   totalLandArea: '',
+  soilType: '',
   primaryCrops: '',
   soilHealthCard: '',
   irrigationType: '',
@@ -21,11 +23,14 @@ export const initialProfile = {
   rating: '',
   bankDetails: {
     bankName: '',
+    accountHolderName: '',
     accountNumber: '',
     fullAccountNumber: '',
     ifscCode: '',
     branch: '',
-    accountType: '',
+    branchName: '',
+    accountType: 'Savings',
+    upiId: '',
   },
 };
 

@@ -109,44 +109,6 @@ export const LoginPage = () => {
       } catch {}
     }
 
-    // 1. If farmer tries to log in with an old mobile number that was changed:
-    if (oldFarmerPhones.includes(cleanPhone)) {
-      setSubmitError('This mobile number is no longer active for this farmer account. Please sign in with your updated mobile number.');
-      setIsLoading(false);
-      return;
-    }
-
-    // 2. If farmer logs in with the active farmer mobile number:
-    if (cleanPhone === activeFarmerPhone) {
-      if (formData.password !== farmerPassword) {
-        setSubmitError('Invalid login credentials. Please verify your password.');
-        setIsLoading(false);
-        return;
-      }
-
-      const farmerUser = {
-        userId: 5021,
-        fullName: farmerName,
-        email: 'venkata.reddy@agriconnect.in',
-        mobile: activeFarmerPhone,
-        contactNumber: activeFarmerPhone,
-        phone: activeFarmerPhone,
-        role: 'farmer',
-        entityCode: farmerId,
-      };
-
-      setAuthSession({
-        ...farmerUser,
-        role: 'farmer',
-      });
-
-      setSuccessMessage('Signed in successfully! Redirecting...');
-      setTimeout(() => {
-        navigate('/farmer', { replace: true });
-      }, 600);
-      return;
-    }
-
     try {
       const response = await login({
         contactNumber: formData.contactNumber,
@@ -194,6 +156,38 @@ export const LoginPage = () => {
         navigate(targetDashboard, { replace: true });
       }, 600);
     } catch (err) {
+      // Demo fallback if backend authentication did not succeed and local farmer demo credentials match
+      if (
+        (cleanPhone === activeFarmerPhone || oldFarmerPhones.includes(cleanPhone)) &&
+        (!err?.status || err?.status >= 500 || err?.status === 400 || err?.status === 401)
+      ) {
+        if (oldFarmerPhones.includes(cleanPhone)) {
+          setSubmitError('This mobile number is no longer active for this farmer account. Please sign in with your updated mobile number.');
+          return;
+        }
+        if (formData.password === farmerPassword) {
+          const farmerUser = {
+            userId: 5021,
+            fullName: farmerName,
+            email: 'venkata.reddy@agriconnect.in',
+            mobile: activeFarmerPhone,
+            contactNumber: activeFarmerPhone,
+            phone: activeFarmerPhone,
+            role: 'farmer',
+            entityCode: farmerId,
+          };
+          setAuthSession({
+            ...farmerUser,
+            role: 'farmer',
+          });
+          setSuccessMessage('Signed in successfully! Redirecting...');
+          setTimeout(() => {
+            navigate('/farmer', { replace: true });
+          }, 600);
+          return;
+        }
+      }
+
       if (err?.fieldErrors && Object.keys(err.fieldErrors).length > 0) {
         setErrors((prev) => ({
           ...prev,

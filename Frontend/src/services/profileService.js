@@ -961,9 +961,15 @@ export function mapFarmerDtoToProfile(dto = {}, existingProfile = {}) {
         : `+91 ${dto.mobile}`
       : existingProfile.mobileNumber || '',
     email: dto.email ?? existingProfile.email ?? '',
+    alternateMobile:
+      dto.alternateMobile ??
+      existingProfile.alternateMobile ??
+      '',
     isActive: dto.isActive ?? existingProfile.isActive ?? true,
     farmName: farmLoc.farmName ?? existingProfile.farmName ?? '',
     totalLandArea: farmLoc.totalLandArea ?? existingProfile.totalLandArea ?? '',
+    soilType: farmLoc.soilType ?? dto.soilType ?? existingProfile.soilType ?? '',
+    primaryCrops: farmLoc.primaryCrops ?? dto.primaryCrops ?? existingProfile.primaryCrops ?? '',
     village: farmLoc.village ?? existingProfile.village ?? '',
     mandal: farmLoc.mandal ?? existingProfile.mandal ?? '',
     district: farmLoc.district ?? existingProfile.district ?? '',
@@ -971,16 +977,25 @@ export function mapFarmerDtoToProfile(dto = {}, existingProfile = {}) {
     pinCode: farmLoc.pinCode ?? existingProfile.pinCode ?? '',
     completeAddress: farmLoc.address ?? existingProfile.completeAddress ?? '',
     bankDetails: {
+      accountHolderName:
+        bank.accountHolderName ?? existingProfile.bankDetails?.accountHolderName ?? '',
       bankName: bank.bankName ?? existingProfile.bankDetails?.bankName ?? '',
       accountNumber:
         bank.accountNumber ?? existingProfile.bankDetails?.accountNumber ?? '',
       fullAccountNumber:
         bank.accountNumber ?? existingProfile.bankDetails?.fullAccountNumber ?? '',
       ifscCode: bank.ifscCode ?? existingProfile.bankDetails?.ifscCode ?? '',
-      branch: bank.branchName ?? existingProfile.bankDetails?.branch ?? '',
+      branch:
+        bank.branchName ?? existingProfile.bankDetails?.branch ?? '',
       branchName:
         bank.branchName ?? existingProfile.bankDetails?.branchName ?? '',
-      accountType: bank.accountType ?? existingProfile.bankDetails?.accountType ?? 'Savings',
+      accountType:
+        bank.accountType ?? existingProfile.bankDetails?.accountType ?? 'Savings',
+      upiId:
+        bank.upiId ?? existingProfile.bankDetails?.upiId ?? '',
+      upiVpa:
+        bank.upiId ?? existingProfile.bankDetails?.upiVpa ?? '',
+      isComplete: Boolean(bank.isComplete),
     },
     membership: existingProfile.membership || 'Verified Farmer',
     rating: existingProfile.rating || '',
@@ -1025,24 +1040,60 @@ export async function fetchAllFarmerProfilesApi() {
   }
 }
 
+export async function fetchFarmerBankDetailsApi(userId = null, reveal = false) {
+  try {
+    const params = {};
+    if (userId) params.userId = userId;
+    if (reveal) params.reveal = true;
+
+    const response = await api.get(Endpoints.FARMER_PROFILE.BANK_DETAILS, {
+      baseURL: getProfileBaseURL('farmer'),
+      useProfileBaseURL: true,
+      profileRole: 'farmer',
+      params,
+    });
+    const body = response.data;
+    if (body && body.success === false) {
+      throw new Error(body.message || 'Failed to fetch farmer bank details.');
+    }
+    return body?.data || body;
+  } catch (error) {
+    throw parseProfileApiError(error, 'Failed to fetch farmer bank details.');
+  }
+}
+
 export async function updateFarmerProfileApi(profileData = {}, userId = null) {
   const cleanPhone = String(
     profileData.mobileNumber || profileData.mobile || ''
   )
     .replace(/\D/g, '')
     .slice(-10);
+  const cleanAltPhone = String(
+    profileData.alternateMobile || profileData.alternateMobileNumber || ''
+  )
+    .replace(/\D/g, '')
+    .slice(-10);
+  const cleanPin = String(profileData.pinCode || '').trim();
+
+  const rawPrimaryCrops = profileData.primaryCrops;
+  const cleanPrimaryCrops = Array.isArray(rawPrimaryCrops)
+    ? rawPrimaryCrops.join(', ').trim()
+    : String(rawPrimaryCrops || '').trim();
 
   const payload = {
-    fullName: profileData.farmerName || profileData.fullName || '',
-    mobile: cleanPhone,
-    farmName: profileData.farmName || '',
-    totalLandArea: profileData.totalLandArea || '',
-    village: profileData.village || '',
-    mandal: profileData.mandal || '',
-    district: profileData.district || '',
-    state: profileData.state || '',
-    pinCode: profileData.pinCode || '',
-    address: profileData.completeAddress || profileData.address || '',
+    fullName: String(profileData.farmerName || profileData.fullName || '').trim(),
+    mobile: cleanPhone || null,
+    alternateMobile: /^[6-9]\d{9}$/.test(cleanAltPhone) ? cleanAltPhone : null,
+    farmName: String(profileData.farmName || '').trim() || null,
+    totalLandArea: profileData.totalLandArea ? String(profileData.totalLandArea) : null,
+    soilType: String(profileData.soilType || profileData.soilComposition || '').trim() || null,
+    primaryCrops: cleanPrimaryCrops || null,
+    village: String(profileData.village || '').trim() || null,
+    mandal: String(profileData.mandal || '').trim() || null,
+    district: String(profileData.district || '').trim() || null,
+    state: String(profileData.state || '').trim() || null,
+    pinCode: /^[1-9][0-9]{5}$/.test(cleanPin) ? cleanPin : null,
+    address: String(profileData.completeAddress || profileData.address || '').trim() || null,
   };
 
   try {
@@ -1066,13 +1117,27 @@ export async function updateFarmerProfileApi(profileData = {}, userId = null) {
 }
 
 export async function updateFarmerBankDetailsApi(bankData = {}, userId = null) {
+  const cleanAccountHolder = String(
+    bankData.accountHolderName || bankData.holderName || ''
+  ).trim();
+  const cleanBankName = String(bankData.bankName || '').trim();
+  const cleanAccountNo = String(
+    bankData.accountNumber || bankData.fullAccountNumber || ''
+  ).trim();
+  const cleanIfsc = String(bankData.ifscCode || '').trim().toUpperCase();
+  const cleanBranch = String(bankData.branchName || bankData.branch || '').trim() || null;
+  const cleanAccountType = String(bankData.accountType || 'Savings').trim() || 'Savings';
+  const rawUpi = String(bankData.upiId || bankData.upiVpa || '').trim();
+  const cleanUpi = /^[\w.-]+@[\w-]+$/.test(rawUpi) ? rawUpi : null;
+
   const payload = {
-    bankName: bankData.bankName || '',
-    accountNumber:
-      bankData.accountNumber || bankData.fullAccountNumber || '',
-    ifscCode: bankData.ifscCode || '',
-    branchName: bankData.branchName || bankData.branch || '',
-    accountType: bankData.accountType || 'Savings',
+    bankName: cleanBankName,
+    accountHolderName: cleanAccountHolder,
+    accountNumber: cleanAccountNo,
+    ifscCode: cleanIfsc,
+    branchName: cleanBranch,
+    accountType: cleanAccountType,
+    upiId: cleanUpi,
   };
 
   try {
