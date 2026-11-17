@@ -34,6 +34,30 @@ function readStoredJson(key, fallback) {
   }
 }
 
+function writeStoredJson(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Demo persistence is optional when browser storage is unavailable.
+  }
+}
+
+function clearLegacyStoredDemoOtpCodes() {
+  try {
+    const key = CUSTOMER_STORAGE_KEYS.CONFIRMATIONS;
+    const raw = localStorage.getItem(key);
+    if (!raw) return;
+    const stored = JSON.parse(raw);
+    if (!Array.isArray(stored)) return;
+    writeStoredJson(
+      key,
+      stored.map(({ demoOtpCode, ...confirmation }) => confirmation)
+    );
+  } catch {
+    // Leave malformed or unavailable legacy data untouched.
+  }
+}
+
 function generateSixDigitCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
@@ -53,14 +77,35 @@ function addWorkingDaysISO(startDate, workingDays = 3) {
 
 export function CustomerProvider({ children }) {
   const { user, token, updateUserMobile } = useAuth();
-  const authKey = String(user?.userId || user?.fullName || user?.mobile || user?.contactNumber || '');
+  const authKey = String(
+    user?.userId || user?.entityCode || user?.fullName || user?.mobile || user?.contactNumber || ''
+  );
+  return (
+    <CustomerProviderState
+      key={authKey || 'anonymous-customer'}
+      authKey={authKey}
+      token={token}
+      user={user}
+      updateUserMobile={updateUserMobile}
+    >
+      {children}
+    </CustomerProviderState>
+  );
+}
+
+function CustomerProviderState({ children, authKey, token, user, updateUserMobile }) {
+  const storageKey = (key) => (authKey ? `${key}_${encodeURIComponent(authKey)}` : key);
+
+  useEffect(() => {
+    clearLegacyStoredDemoOtpCodes();
+  }, []);
 
   const [profile, setProfile] = useState(() => {
     const authName = user?.fullName || user?.name || '';
     const authMobile = user?.mobile || user?.contactNumber || '';
     const authEmail = user?.email || '';
     const authCustomerId = user?.entityCode || (user?.userId ? `CUS-${user.userId}` : INITIAL_CUSTOMER_PROFILE.customerId);
-    const saved = readStoredJson(CUSTOMER_STORAGE_KEYS.PROFILE, null);
+    const saved = readStoredJson(storageKey(CUSTOMER_STORAGE_KEYS.PROFILE), null);
 
     const SAMPLE_LABELS = ['Primary Warehouse', 'Godown Branch (Brodipet)'];
     const SAMPLE_DEFAULTS = {
@@ -93,62 +138,49 @@ export function CustomerProvider({ children }) {
     };
   });
 
-  const [trackedAuthKey, setTrackedAuthKey] = useState(authKey);
-  if (authKey && authKey !== trackedAuthKey) {
-    setTrackedAuthKey(authKey);
-    const authName = user?.fullName || user?.name || '';
-    const authMobile = user?.mobile || user?.contactNumber || '';
-    const authEmail = user?.email || '';
-    const authCustomerId = user?.entityCode || (user?.userId ? `CUS-${user.userId}` : profile.customerId);
-    setProfile((prev) => ({
-      ...prev,
-      authKey,
-      customerId: authCustomerId || prev.customerId,
-      fullName: authName || prev.fullName,
-      mobileNumber: authMobile || prev.mobileNumber,
-      email: authEmail !== undefined ? authEmail : prev.email,
-    }));
-  }
-
   const customerName = user?.fullName || user?.name || profile?.fullName || 'Customer';
 
-  const [products] = useState(INITIAL_PRODUCTS);
-  const [cart, setCart] = useState(() => readStoredJson(CUSTOMER_STORAGE_KEYS.CART, INITIAL_CART));
-  const [orders, setOrders] = useState(() => readStoredJson(CUSTOMER_STORAGE_KEYS.ORDERS, INITIAL_ORDERS));
+  const products = INITIAL_PRODUCTS;
+  const [cart, setCart] = useState(() => readStoredJson(storageKey(CUSTOMER_STORAGE_KEYS.CART), INITIAL_CART));
+  const [orders, setOrders] = useState(() => readStoredJson(storageKey(CUSTOMER_STORAGE_KEYS.ORDERS), INITIAL_ORDERS));
   const [purchaseHistory, setPurchaseHistory] = useState(() =>
-    readStoredJson(CUSTOMER_STORAGE_KEYS.PURCHASE_HISTORY, INITIAL_PURCHASE_HISTORY)
+    readStoredJson(storageKey(CUSTOMER_STORAGE_KEYS.PURCHASE_HISTORY), INITIAL_PURCHASE_HISTORY)
   );
   const [confirmations, setConfirmations] = useState(() =>
-    readStoredJson(CUSTOMER_STORAGE_KEYS.CONFIRMATIONS, INITIAL_OTP_CONFIRMATIONS)
+    readStoredJson(storageKey(CUSTOMER_STORAGE_KEYS.CONFIRMATIONS), INITIAL_OTP_CONFIRMATIONS)
   );
   const [notifications, setNotifications] = useState(() =>
-    readStoredJson(CUSTOMER_STORAGE_KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS)
+    readStoredJson(storageKey(CUSTOMER_STORAGE_KEYS.NOTIFICATIONS), INITIAL_NOTIFICATIONS)
   );
 
   // Persist Customer-isolated state to localStorage
   useEffect(() => {
-    localStorage.setItem(CUSTOMER_STORAGE_KEYS.PROFILE, JSON.stringify(profile));
-  }, [profile]);
+    writeStoredJson(storageKey(CUSTOMER_STORAGE_KEYS.PROFILE), profile);
+  }, [profile, authKey]);
 
   useEffect(() => {
-    localStorage.setItem(CUSTOMER_STORAGE_KEYS.CART, JSON.stringify(cart));
-  }, [cart]);
+    writeStoredJson(storageKey(CUSTOMER_STORAGE_KEYS.CART), cart);
+  }, [cart, authKey]);
 
   useEffect(() => {
-    localStorage.setItem(CUSTOMER_STORAGE_KEYS.ORDERS, JSON.stringify(orders));
-  }, [orders]);
+    writeStoredJson(storageKey(CUSTOMER_STORAGE_KEYS.ORDERS), orders);
+  }, [orders, authKey]);
 
   useEffect(() => {
-    localStorage.setItem(CUSTOMER_STORAGE_KEYS.PURCHASE_HISTORY, JSON.stringify(purchaseHistory));
-  }, [purchaseHistory]);
+    writeStoredJson(storageKey(CUSTOMER_STORAGE_KEYS.PURCHASE_HISTORY), purchaseHistory);
+  }, [purchaseHistory, authKey]);
 
   useEffect(() => {
-    localStorage.setItem(CUSTOMER_STORAGE_KEYS.CONFIRMATIONS, JSON.stringify(confirmations));
-  }, [confirmations]);
+    // Demo OTP values stay in memory only; persisting them in localStorage would expose them at rest.
+    writeStoredJson(
+      storageKey(CUSTOMER_STORAGE_KEYS.CONFIRMATIONS),
+      confirmations.map(({ demoOtpCode, ...confirmation }) => confirmation)
+    );
+  }, [confirmations, authKey]);
 
   useEffect(() => {
-    localStorage.setItem(CUSTOMER_STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
-  }, [notifications]);
+    writeStoredJson(storageKey(CUSTOMER_STORAGE_KEYS.NOTIFICATIONS), notifications);
+  }, [notifications, authKey]);
 
   // Cart enriched with product records
   const cartItems = useMemo(() => {
@@ -902,9 +934,13 @@ export function CustomerProvider({ children }) {
   }, [token]);
 
   const resetCustomerDemoData = useCallback(() => {
-    Object.values(CUSTOMER_STORAGE_KEYS).forEach((storageKey) => {
-      localStorage.removeItem(storageKey);
-    });
+    try {
+      Object.values(CUSTOMER_STORAGE_KEYS).forEach((key) => {
+        localStorage.removeItem(storageKey(key));
+      });
+    } catch {
+      // Reset can still restore in-memory demo state when storage is unavailable.
+    }
     setProfile({
       ...INITIAL_CUSTOMER_PROFILE,
       authKey,

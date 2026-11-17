@@ -4,37 +4,28 @@
  * Temporary frontend-only demo OTP logic for mobile number update verification.
  * All functions here are replaceable with real backend API calls later.
  *
- * Backend integration points (to be implemented by backend developer):
- *   - sendOTP(mobileNumber)     -> POST /api/v1/customer/mobile-update/send-otp
- *   - verifyOTP(mobile, otp)    -> POST /api/v1/customer/mobile-update/verify-otp
- *   - updateMobileNumber(mobile)-> POST /api/v1/customer/profile/mobile-number
+ * No Customer mobile-update OTP endpoint contract is available in this
+ * frontend. Replace this adapter only after the backend contract is supplied.
  *
- * Demo OTPs are stored separately from the customer profile and are never
- * persisted as permanent account data.
+ * Demo OTP records are scoped by customer and kept in memory only. This
+ * frontend-only demo flow is not production-secure.
  */
 
-const STORAGE_KEY = 'arppb_customer_mobile_update_otp_v1';
 const OTP_EXPIRY_SECONDS = 300;
 const RESEND_COOLDOWN_SECONDS = 30;
 const MAX_ATTEMPTS = 3;
+const demoOtpRecords = new Map();
 
-function readStored() {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw);
-  } catch {
-    return {};
+try {
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem('arppb_customer_mobile_update_otp_v1');
   }
+} catch {
+  // Storage cleanup is best effort; active demo OTPs remain in memory only.
 }
 
-function writeStored(data) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // Ignore storage quota errors in restricted environments
-  }
-  return data;
+function getRecordKey(customerId, mobileNumber) {
+  return `${customerId || 'customer'}:${mobileNumber}`;
 }
 
 export function generateSixDigitCode() {
@@ -59,11 +50,10 @@ export const mobileOTPService = {
    * Returns the generated code (visible only in frontend dev mode).
    * Backend replacement: call send-otp API instead.
    */
-  sendDemoOTP(mobileNumber) {
+  sendDemoOTP(mobileNumber, customerId) {
     const code = generateSixDigitCode();
     const now = new Date().toISOString();
-    const records = readStored();
-    records[mobileNumber] = {
+    demoOtpRecords.set(getRecordKey(customerId, mobileNumber), {
       mobileNumber,
       demoOtpCode: code,
       createdAt: now,
@@ -72,8 +62,7 @@ export const mobileOTPService = {
       maxAttempts: MAX_ATTEMPTS,
       status: 'pending',
       lastResendAt: now,
-    };
-    writeStored(records);
+    });
     return code;
   },
 
@@ -82,9 +71,9 @@ export const mobileOTPService = {
    * Returns { success: boolean, message: string, errorType: string|null }.
    * Backend replacement: call verify-otp API instead.
    */
-  verifyDemoOTP(mobileNumber, enteredOTP) {
-    const records = readStored();
-    const record = records[mobileNumber];
+  verifyDemoOTP(mobileNumber, enteredOTP, customerId) {
+    const key = getRecordKey(customerId, mobileNumber);
+    const record = demoOtpRecords.get(key);
 
     if (!record) {
       return {
@@ -112,8 +101,7 @@ export const mobileOTPService = {
 
     const now = new Date();
     if (now > new Date(record.expiresAt)) {
-      records[mobileNumber] = { ...record, status: 'expired' };
-      writeStored(records);
+      demoOtpRecords.set(key, { ...record, status: 'expired' });
       return {
         success: false,
         message: 'OTP has expired. Please request a new OTP.',
@@ -135,12 +123,11 @@ export const mobileOTPService = {
       const maxAtt = record.maxAttempts || MAX_ATTEMPTS;
       const exceeded = nextAttempts >= maxAtt;
 
-      records[mobileNumber] = {
+      demoOtpRecords.set(key, {
         ...record,
         attemptsUsed: nextAttempts,
         status: exceeded ? 'failed' : record.status,
-      };
-      writeStored(records);
+      });
 
       return {
         success: false,
@@ -151,12 +138,11 @@ export const mobileOTPService = {
       };
     }
 
-    records[mobileNumber] = {
+    demoOtpRecords.set(key, {
       ...record,
       status: 'verified',
       verifiedAt: now.toISOString(),
-    };
-    writeStored(records);
+    });
 
     return {
       success: true,
@@ -169,20 +155,17 @@ export const mobileOTPService = {
    * Check if a demo OTP record exists and is still pending/valid.
    * Used to pre-fill UI state when reopening the verification modal.
    */
-  getRecord(mobileNumber) {
-    const records = readStored();
-    return records[mobileNumber] || null;
+  getRecord(mobileNumber, customerId) {
+    return demoOtpRecords.get(getRecordKey(customerId, mobileNumber)) || null;
   },
 
   /**
    * Clear the demo OTP record for a mobile number after successful update.
    * Does not touch customer profile data.
    */
-  clearRecord(mobileNumber) {
-    const records = readStored();
-    delete records[mobileNumber];
-    writeStored(records);
+  clearRecord(mobileNumber, customerId) {
+    demoOtpRecords.delete(getRecordKey(customerId, mobileNumber));
   },
 };
 
-export { STORAGE_KEY, OTP_EXPIRY_SECONDS, RESEND_COOLDOWN_SECONDS };
+export { OTP_EXPIRY_SECONDS, RESEND_COOLDOWN_SECONDS };

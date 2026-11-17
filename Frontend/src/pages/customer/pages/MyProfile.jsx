@@ -34,8 +34,8 @@ const EMPTY_ADDRESS = {
   recipientName: '',
   contactNumber: '',
   addressLine: '',
-  district: '',
-  state: '',
+  district: 'Guntur',
+  state: 'Andhra Pradesh',
   pinCode: '',
   isDefault: false,
 };
@@ -439,8 +439,8 @@ export function MyProfile() {
       recipientName: addr.recipientName || '',
       contactNumber: addr.contactNumber || '',
       addressLine: addr.addressLine || '',
-      district: addr.district || '',
-      state: addr.state || '',
+      district: addr.district || 'Guntur',
+      state: addr.state || 'Andhra Pradesh',
       pinCode: addr.pinCode || '',
       isDefault: Boolean(addr.isDefault),
     });
@@ -1308,6 +1308,7 @@ export function MyProfile() {
         newNumber={newMobileNumber}
         phoneNumber={newMobileNumber}
         initialDemoOtp={modalDemoOtp}
+        customerId={profile.customerId}
         onClose={() => setIsOTPModalOpen(false)}
         onSuccess={handleMobileUpdateSuccess}
       />

@@ -28,6 +28,7 @@ import {
 export function MobileOTPVerification({
   isOpen,
   onClose,
+  customerId,
   newNumber,
   phoneNumber,
   initialDemoOtp = '',
@@ -261,6 +262,15 @@ export function MobileOTPVerification({
 
         <div className="p-6 overflow-y-auto flex-1 text-[#0F172A]">
           {/* Dev OTP banner when returned by backend in Development mode */}
+          <div className="mb-4 rounded-lg border border-[#14B8A6]/30 bg-[#CCFBF1]/20 p-3 text-xs">
+            <div className="flex items-start gap-2">
+              <span className="text-[#0F766E] font-semibold">Developer Preview</span>
+              <span className="text-[#64748B]">
+                OTP display is available only when provided by the backend in development mode.
+                Production verification uses the profile service.
+              </span>
+            </div>
+          </div>
           {activeDemoOtp && (
             <div className="mb-4 rounded-lg border border-[#14B8A6]/30 bg-[#CCFBF1]/20 p-3 text-xs flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">

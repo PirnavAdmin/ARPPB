@@ -7,6 +7,38 @@ import CustomerProductCard from '../components/CustomerProductCard';
 import CustomerProductDetailsModal from '../components/CustomerProductDetailsModal';
 import CustomerEmptyState from '../components/CustomerEmptyState';
 
+const CATEGORY_IMAGE_BY_ID = {
+  'food-grains': '/assets/category-images/food-grains.jpg',
+  pulses: '/assets/category-images/pulses.jpg',
+  'oil-seeds': '/assets/category-images/oil-seeds.jpg',
+  'commercial-crops': '/assets/category-images/commercial-crops.jpg',
+  'spices-raw': '/assets/category-images/spices.jpg',
+  'other-raw-materials': '/assets/category-images/other-raw-materials.jpg',
+};
+
+const FOOD_GRAIN_PRODUCT_IMAGE_BY_ID = {
+  'CPROD-101': '/assets/product-images/paddy.jpg',
+  'CPROD-102': '/assets/product-images/wheat.jpg',
+  'CPROD-103': '/assets/product-images/yellow-maize-kernels.jpg',
+};
+
+const REMAINING_CATEGORY_PRODUCT_IMAGE_BY_ID = {
+  'CPROD-104': '/assets/product-images/whole-red-gram.jpg',
+  'CPROD-105': '/assets/product-images/bengal-gram.jpg',
+  'CPROD-106': '/assets/product-images/green-moong.jpg',
+  'CPROD-107': '/assets/product-images/groundnut.jpg',
+  'CPROD-108': '/assets/product-images/soybean.jpg',
+  'CPROD-109': '/assets/product-images/mustard-seeds.jpg',
+  'CPROD-110': '/assets/product-images/sunflower-seeds.jpg',
+  'CPROD-111': '/assets/product-images/cotton.jpg',
+  'CPROD-112': '/assets/product-images/sugarcane.jpg',
+  'CPROD-113': '/assets/product-images/turmeric.jpg',
+  'CPROD-114': '/assets/product-images/red-chillies.jpg',
+  'CPROD-115': '/assets/product-images/coriander-seeds.jpg',
+  'CPROD-116': '/assets/product-images/coconut-copra.jpg',
+  'CPROD-117': '/assets/product-images/paddy-straw-husk.jpg',
+};
+
 export function Categories() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -80,8 +112,10 @@ export function Categories() {
             >
               <div className="relative h-36 w-full overflow-hidden border-b border-[#E2E8F0] bg-[#F8FAFC]">
                 <img
-                  src={cat.image}
+                  src={CATEGORY_IMAGE_BY_ID[cat.id]}
                   alt={cat.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
                 <span className="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-white/95 text-[#0F766E] border border-[#14B8A6]/30 shadow-xs">
@@ -152,7 +186,13 @@ export function Categories() {
             {categoryProducts.map((product) => (
               <CustomerProductCard
                 key={product.id}
-                product={product}
+                product={{
+                  ...product,
+                  image:
+                    FOOD_GRAIN_PRODUCT_IMAGE_BY_ID[product.id] ||
+                    REMAINING_CATEGORY_PRODUCT_IMAGE_BY_ID[product.id] ||
+                    product.image,
+                }}
                 onViewDetails={setSelectedProduct}
                 onAddToCart={addToCart}
               />

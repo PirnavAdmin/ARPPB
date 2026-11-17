@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import {
   Sprout,
@@ -18,7 +19,7 @@ import MainLayout from '../layouts/MainLayout';
 import ProtectedRoute from './ProtectedRoute';
 import VendorRoutes from './VendorRoutes';
 import MiddlemanRoutes from './middleman/MiddlemanRoutes';
-import CustomerRoutes from './CustomerRoutes';
+const CustomerRoutes = lazy(() => import('./CustomerRoutes'));
 import FarmerApp from '../pages/farmer/FarmerApp';
 import { useAuth } from '../hooks/useAuth';
 import { getDashboardPathByRole } from '../context/AuthContext';
@@ -279,7 +280,9 @@ export function AppRoutes() {
           path="/customer/*"
           element={
             <ProtectedRoute allowedRoles={['customer']}>
-              <CustomerRoutes />
+              <Suspense fallback={<div className="p-6 text-sm text-[#64748B]" role="status">Loading Customer Portal...</div>}>
+                <CustomerRoutes />
+              </Suspense>
             </ProtectedRoute>
           }
         />

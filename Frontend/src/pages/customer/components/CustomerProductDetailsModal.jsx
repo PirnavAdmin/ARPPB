@@ -79,6 +79,8 @@ export function CustomerProductDetailsModal({
             <img
               src={product.image}
               alt={product.name}
+              loading="lazy"
+              decoding="async"
               className="w-full h-56 object-cover"
             />
           </div>

@@ -293,7 +293,7 @@ export function OTPConfirmations() {
         return (
           <div className="space-y-1">
             <CustomerStatusBadge status={row.otpStatus} size="xs" />
-            {!isFinal && (
+            {!isFinal && row.demoOtpCode && (
               <span className="block text-[10px] font-mono font-bold text-[#0F766E]">
                 Demo OTP: {row.demoOtpCode}
               </span>
@@ -543,6 +543,7 @@ export function OTPConfirmations() {
 
               {verifyingRecord.otpStatus !== 'Confirmed' &&
                 verifyingRecord.otpStatus !== 'Rejected' && (
+                  verifyingRecord.demoOtpCode ? (
                   <div className="pt-2 border-t border-[#14B8A6]/25 flex items-center justify-between">
                     <span className="text-[#64748B] font-medium">
                       Frontend Mock OTP Code:
@@ -551,6 +552,11 @@ export function OTPConfirmations() {
                       {verifyingRecord.demoOtpCode}
                     </span>
                   </div>
+                  ) : (
+                    <p className="pt-2 border-t border-[#14B8A6]/25 text-xs text-[#64748B]">
+                      Request a new demo OTP to continue this verification.
+                    </p>
+                  )
                 )}
             </div>
 
@@ -614,7 +620,7 @@ export function OTPConfirmations() {
                       }
                       className="flex-1 px-3 py-2 text-sm font-mono font-bold tracking-[0.25em] rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E] disabled:bg-slate-100"
                     />
-                    <button
+                    {verifyingRecord.demoOtpCode && <button
                       type="button"
                       disabled={
                         !isReceivingPartyAuthorized ||
@@ -625,7 +631,7 @@ export function OTPConfirmations() {
                       className="px-3 py-2 text-xs font-semibold rounded-lg bg-[#CCFBF1] text-[#0F766E] hover:bg-[#14B8A6] hover:text-white disabled:opacity-40 transition-colors cursor-pointer"
                     >
                       Auto-Fill Demo OTP
-                    </button>
+                    </button>}
                   </div>
                 </div>
 
