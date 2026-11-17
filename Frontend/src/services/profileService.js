@@ -317,6 +317,7 @@ export function mapVendorDtoToProfile(dto = {}, existingVendor = {}) {
 
   const existingBank = existingVendor.bankDetails || {};
   const dtoBank = dto.bankDetails || {};
+  const dtoBiz = dto.business || {};
 
   return {
     ...existingVendor,
@@ -326,39 +327,64 @@ export function mapVendorDtoToProfile(dto = {}, existingVendor = {}) {
       dto.vendorCode ||
       dto.vendorPortalId ||
       dto.vendorId ||
+      dtoBiz.vendorId ||
       existingVendor.vendorId ||
       'VND-AP-2026-001',
     businessName:
       dto.businessName ??
+      dtoBiz.businessName ??
       dto.registeredBusinessName ??
       existingVendor.businessName ??
       '',
     ownerName:
-      dto.ownerName ?? dto.fullName ?? existingVendor.ownerName ?? '',
+      dto.ownerName ??
+      dtoBiz.ownerName ??
+      dto.fullName ??
+      existingVendor.ownerName ??
+      '',
     mobileNumber:
-      dto.mobileNumber ?? dto.mobile ?? existingVendor.mobileNumber ?? '',
-    email: dto.email ?? existingVendor.email ?? '',
+      dto.mobileNumber ??
+      dto.mobile ??
+      dtoBiz.mobile ??
+      existingVendor.mobileNumber ??
+      '',
+    email: dto.email ?? dtoBiz.email ?? existingVendor.email ?? '',
     gstNumber:
-      dto.gstNumber ?? dto.gstin ?? existingVendor.gstNumber ?? '',
+      dto.gstNumber ??
+      dto.gstin ??
+      dtoBiz.gstin ??
+      existingVendor.gstNumber ??
+      '',
     businessRegNumber:
       dto.businessRegNumber ??
+      dtoBiz.businessRegistrationNumber ??
       dto.registrationNumber ??
       dto.registrationLicenseNo ??
       existingVendor.businessRegNumber ??
       '',
-    apmcLicense: dto.apmcLicense ?? existingVendor.apmcLicense ?? '',
-    businessType: dto.businessType ?? existingVendor.businessType ?? '',
+    apmcLicense:
+      dto.apmcLicense ??
+      dto.apmcLicenseNumber ??
+      existingVendor.apmcLicense ??
+      '',
+    businessType:
+      dto.businessType ?? dtoBiz.businessType ?? existingVendor.businessType ?? '',
     businessAddress:
       dto.businessAddress ??
+      dtoBiz.businessAddress ??
       dto.premisesAddress ??
       dto.address ??
       existingVendor.businessAddress ??
       '',
-    district: dto.district ?? existingVendor.district ?? '',
-    state: dto.state ?? existingVendor.state ?? '',
-    pinCode: dto.pinCode ?? existingVendor.pinCode ?? '',
+    district: dto.district ?? dtoBiz.district ?? existingVendor.district ?? '',
+    state: dto.state ?? dtoBiz.state ?? existingVendor.state ?? '',
+    pinCode: dto.pinCode ?? dtoBiz.pinCode ?? existingVendor.pinCode ?? '',
     logoUrl:
-      dto.logoUrl ?? dto.businessLogoUrl ?? existingVendor.logoUrl ?? '',
+      dto.logoUrl ??
+      dtoBiz.logoUrl ??
+      dto.businessLogoUrl ??
+      existingVendor.logoUrl ??
+      '',
     bankDetails: {
       ...existingBank,
       accountHolderName:
@@ -379,8 +405,8 @@ export function mapVendorDtoToProfile(dto = {}, existingVendor = {}) {
         dtoBank.branchName ?? dto.branchName ?? existingBank.branchName ?? '',
     },
     updatedAt:
-      dto.updatedAt
-        ? String(dto.updatedAt).slice(0, 10)
+      dto.updatedAt || dtoBiz.lastUpdatedAt
+        ? String(dto.updatedAt || dtoBiz.lastUpdatedAt).slice(0, 10)
         : existingVendor.updatedAt,
   };
 }
@@ -467,6 +493,7 @@ export async function updateVendorBankDetailsApi(bankDetails = {}) {
     accountNumber: String(bankDetails.accountNumber || '').trim(),
     ifscCode: String(bankDetails.ifscCode || '').trim().toUpperCase(),
     branchName: String(bankDetails.branchName || '').trim(),
+    confirmUpdate: true,
   };
 
   try {
@@ -502,7 +529,7 @@ export async function sendVendorMobileChangeOtp(newMobile) {
     try {
       response = await api.post(
         Endpoints.VENDOR_PROFILE.REQUEST_MOBILE_OTP,
-        { newMobileNumber: cleanPhone, newMobile: cleanPhone, mobileNumber: cleanPhone, mobile: cleanPhone },
+        { newMobile: cleanPhone },
         reqConfig
       );
     } catch (firstErr) {
@@ -567,10 +594,7 @@ export async function verifyVendorMobileChangeOtp(newMobile, otp) {
       response = await api.post(
         Endpoints.VENDOR_PROFILE.VERIFY_MOBILE_OTP,
         {
-          newMobileNumber: cleanPhone,
           newMobile: cleanPhone,
-          mobileNumber: cleanPhone,
-          mobile: cleanPhone,
           otp: cleanOtp,
         },
         reqConfig
