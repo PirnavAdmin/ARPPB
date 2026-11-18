@@ -43,7 +43,9 @@ export function BrowseProducts() {
   const [searchQuery, setSearchQuery] = useState(navState.initialSearch || '');
   const debouncedSearch = useDebounce(searchQuery, 200);
 
-  const [productCategory, setProductCategory] = useState(navState.initialCategory || 'All');
+  const [productCategory, setProductCategory] = useState(
+    navState.initialCategory || navState.selectedCategory || 'All'
+  );
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [productLocation, setProductLocation] = useState(navState.initialLocation || 'All');
@@ -60,6 +62,7 @@ export function BrowseProducts() {
     if (incoming) {
       if (incoming.initialSearch !== undefined) setSearchQuery(incoming.initialSearch);
       if (incoming.initialCategory !== undefined) setProductCategory(incoming.initialCategory);
+      if (incoming.selectedCategory !== undefined) setProductCategory(incoming.selectedCategory);
       if (incoming.initialLocation !== undefined) setProductLocation(incoming.initialLocation);
       if (incoming.initialSort !== undefined) setSortBy(incoming.initialSort);
     }
@@ -147,14 +150,14 @@ export function BrowseProducts() {
   const filterConfig = [
     {
       key: 'productCategory',
-      label: 'Product Category',
+      label: 'Categories',
       value: productCategory,
       onChange: (val) => {
         setProductCategory(val);
         pagination.goToPage(1);
       },
       options: [
-        { label: 'All Product Categories', value: 'All' },
+        { label: 'All Categories', value: 'All' },
         ...categories.map((c) => ({ label: c.name, value: c.name })),
       ],
     },

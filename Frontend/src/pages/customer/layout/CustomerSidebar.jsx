@@ -4,7 +4,6 @@ import {
   Sprout,
   LayoutDashboard,
   ShoppingBag,
-  Layers,
   ShoppingCart,
   Truck,
   History,
@@ -42,12 +41,6 @@ const SIDEBAR_GROUPS = [
         label: 'Browse Products',
         path: '/customer/products',
         icon: ShoppingBag,
-      },
-      {
-        id: 'categories',
-        label: 'Categories',
-        path: '/customer/categories',
-        icon: Layers,
       },
       {
         id: 'cart',
