@@ -76,6 +76,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IOtpRepository, OtpRepository>();
 builder.Services.AddScoped<IFarmerProfileRepository, FarmerProfileRepository>();
 builder.Services.AddScoped<IVendorProfileRepository, VendorProfileRepository>();
+builder.Services.AddScoped<IMiddlemanNotificationRepository, MiddlemanNotificationRepository>();
 
 // SERVICE REGISTRATIONS
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
@@ -93,6 +94,7 @@ builder.Services.AddScoped<IFarmerProfileService, FarmerProfileService>();
 builder.Services.AddScoped<IMiddlemanProfileService, MiddlemanProfileService>();
 builder.Services.AddScoped<IVendorProfileService, VendorProfileService>();
 builder.Services.AddScoped<IVendorMobileChangeService, VendorMobileChangeService>();
+builder.Services.AddScoped<IMiddlemanNotificationService, MiddlemanNotificationService>();
 
 // JWT registration
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
