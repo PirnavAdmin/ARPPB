@@ -31,6 +31,25 @@ const PRODUCT_IMAGE_BY_ID = {
   'CPROD-115': '/assets/product-images/coriander-seeds.jpg',
   'CPROD-116': '/assets/product-images/coconut-copra.jpg',
   'CPROD-117': '/assets/product-images/paddy-straw-husk.jpg',
+  // Vendor Finished Products
+  'PROD-0001': '/assets/product-images/paddy.jpg',
+  'PROD-0002': '/assets/product-images/groundnut.jpg',
+  'PROD-0003': '/assets/product-images/wheat.jpg',
+  'PROD-0004': '/assets/product-images/red-chillies.jpg',
+  'PROD-0005': '/assets/product-images/yellow-maize.jpg',
+  'PROD-0006': '/assets/product-images/turmeric.jpg',
+  'PROD-0007': '/assets/product-images/paddy-straw-husk.jpg',
+  // Vendor Raw Material Inventory Batches
+  'STK-0001': '/assets/product-images/paddy.jpg',
+  'STK-0002': '/assets/product-images/groundnut.jpg',
+  'STK-0003': '/assets/product-images/red-chillies.jpg',
+  'STK-0004': '/assets/product-images/yellow-maize.jpg',
+  'STK-0005': '/assets/product-images/turmeric.jpg',
+  'STK-0006': '/assets/product-images/cotton.jpg',
+  'STK-0007': '/assets/product-images/whole-red-gram.jpg',
+  'STK-0008': '/assets/product-images/wheat.jpg',
+  'STK-0009': '/assets/product-images/paddy.jpg',
+  'STK-0010': '/assets/product-images/groundnut.jpg',
 };
 
 export function BrowseProducts() {
@@ -103,10 +122,18 @@ export function BrowseProducts() {
       if (q) {
         const hit = [
           p.name,
+          p.rawProductName,
+          p.cropVariety,
           p.category,
           p.location,
           p.qualityGrade,
           p.batchCode,
+          p.brandName,
+          p.sourceRawMaterial,
+          p.sellerName,
+          p.sourceSupplierName,
+          p.productType,
+          p.description,
         ].some((field) => String(field || '').toLowerCase().includes(q));
         if (!hit) return false;
       }
@@ -305,7 +332,7 @@ export function BrowseProducts() {
             {pagination.paginatedData.map((product) => (
               <CustomerProductCard
                 key={product.id}
-                product={{ ...product, image: PRODUCT_IMAGE_BY_ID[product.id] }}
+                product={{ ...product, image: PRODUCT_IMAGE_BY_ID[product.id] || product.image }}
                 onViewDetails={setSelectedProduct}
                 onAddToCart={addToCart}
               />
@@ -330,7 +357,14 @@ export function BrowseProducts() {
       )}
 
       <CustomerProductDetailsModal
-        product={selectedProduct}
+        product={
+          selectedProduct
+            ? {
+                ...selectedProduct,
+                image: PRODUCT_IMAGE_BY_ID[selectedProduct.id] || selectedProduct.image,
+              }
+            : null
+        }
         isOpen={Boolean(selectedProduct)}
         onClose={() => setSelectedProduct(null)}
         onAddToCart={addToCart}

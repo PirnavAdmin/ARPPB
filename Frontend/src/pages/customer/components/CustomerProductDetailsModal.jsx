@@ -117,6 +117,11 @@ export function CustomerProductDetailsModal({
             <span className="px-2.5 py-0.5 rounded-md bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] font-mono text-xs font-semibold">
               {product.batchCode}
             </span>
+            {product.productType && (
+              <span className="px-2.5 py-0.5 rounded-md bg-[#F1F5F9] text-[#334155] border border-[#CBD5E1] text-xs font-semibold">
+                {product.productType}
+              </span>
+            )}
           </div>
 
           <p className="text-sm text-[#64748B] leading-relaxed">
@@ -171,7 +176,7 @@ export function CustomerProductDetailsModal({
                 Product Category
               </span>
               <p className="font-bold text-[#0F172A]">{product.category}</p>
-              <p className="text-[#64748B]">Raw Agricultural Commodity</p>
+              <p className="text-[#64748B]">{product.productType || 'Raw Agricultural Commodity'}</p>
             </div>
 
             <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">

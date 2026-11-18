@@ -5,7 +5,6 @@ import { CustomerContext } from './context';
 import {
   CUSTOMER_STORAGE_KEYS,
   CATEGORY_CATALOG,
-  INITIAL_PRODUCTS,
   INITIAL_CUSTOMER_PROFILE,
   INITIAL_CART,
   INITIAL_ORDERS,
@@ -13,6 +12,11 @@ import {
   INITIAL_OTP_CONFIRMATIONS,
   INITIAL_NOTIFICATIONS,
 } from '../data/customerData';
+import { STORAGE_KEYS } from '../../../utils/constants';
+import { readStorage } from '../../../services/api';
+import { INITIAL_INVENTORY as VENDOR_INITIAL_INVENTORY } from '../../../data/mockInventory';
+import { INITIAL_PRODUCTS as VENDOR_INITIAL_PRODUCTS } from '../../../data/mockProducts';
+import { getCombinedCustomerProducts } from '../data/vendorProductAdapter';
 import { useAuth } from '../../../hooks/useAuth';
 import {
   fetchCustomerProfile,
@@ -140,7 +144,53 @@ function CustomerProviderState({ children, authKey, token, user, updateUserMobil
 
   const customerName = user?.fullName || user?.name || profile?.fullName || 'Customer';
 
-  const products = INITIAL_PRODUCTS;
+  const [vendorProductsRaw, setVendorProductsRaw] = useState(() =>
+    readStorage(STORAGE_KEYS.PRODUCTS, VENDOR_INITIAL_PRODUCTS)
+  );
+  const [vendorInventoryRaw, setVendorInventoryRaw] = useState(() =>
+    readStorage(STORAGE_KEYS.INVENTORY, VENDOR_INITIAL_INVENTORY)
+  );
+
+  useEffect(() => {
+    const handleSync = () => {
+      const latestProducts = readStorage(STORAGE_KEYS.PRODUCTS, VENDOR_INITIAL_PRODUCTS);
+      setVendorProductsRaw((prev) => {
+        if (JSON.stringify(prev) !== JSON.stringify(latestProducts)) {
+          return latestProducts;
+        }
+        return prev;
+      });
+
+      const latestInventory = readStorage(STORAGE_KEYS.INVENTORY, VENDOR_INITIAL_INVENTORY);
+      setVendorInventoryRaw((prev) => {
+        if (JSON.stringify(prev) !== JSON.stringify(latestInventory)) {
+          return latestInventory;
+        }
+        return prev;
+      });
+    };
+
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('focus', handleSync);
+    window.addEventListener('arppb_products_updated', handleSync);
+    window.addEventListener('arppb_inventory_updated', handleSync);
+    document.addEventListener('visibilitychange', handleSync);
+
+    const interval = setInterval(handleSync, 3000);
+
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('focus', handleSync);
+      window.removeEventListener('arppb_products_updated', handleSync);
+      window.removeEventListener('arppb_inventory_updated', handleSync);
+      document.removeEventListener('visibilitychange', handleSync);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const products = useMemo(() => {
+    return getCombinedCustomerProducts(vendorProductsRaw, vendorInventoryRaw);
+  }, [vendorProductsRaw, vendorInventoryRaw]);
   const [cart, setCart] = useState(() => readStoredJson(storageKey(CUSTOMER_STORAGE_KEYS.CART), INITIAL_CART));
   const [orders, setOrders] = useState(() => readStoredJson(storageKey(CUSTOMER_STORAGE_KEYS.ORDERS), INITIAL_ORDERS));
   const [purchaseHistory, setPurchaseHistory] = useState(() =>
