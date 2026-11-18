@@ -25,6 +25,12 @@ namespace AgriPurchaseBilling.Infrastructure.Data
         public DbSet<MiddlemanProfile> MiddlemanProfiles => Set<MiddlemanProfile>();
         public DbSet<VendorProfile> VendorProfiles => Set<VendorProfile>();
         public DbSet<VendorBankAccount> VendorBankAccounts => Set<VendorBankAccount>();
+        public DbSet<MiddlemanLedger> MiddlemanLedgers => Set<MiddlemanLedger>();
+        public DbSet<MiddlemanInventory> MiddlemanInventories => Set<MiddlemanInventory>();
+        public DbSet<MiddlemanConfirmation> MiddlemanConfirmations => Set<MiddlemanConfirmation>();
+        public DbSet<MiddlemanPurchase> MiddlemanPurchases => Set<MiddlemanPurchase>();
+        public DbSet<MiddlemanSale> MiddlemanSales => Set<MiddlemanSale>();
+        public DbSet<MiddlemanNotification> MiddlemanNotifications => Set<MiddlemanNotification>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
