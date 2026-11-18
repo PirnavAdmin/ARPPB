@@ -1,0 +1,400 @@
+﻿using AgriPurchaseBilling.Application.DTOs;
+using AgriPurchaseBilling.Application.Interfaces;
+using AgriPurchaseBilling.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+
+namespace Backend.AgriPurchaseBilling.Api.Controllers
+{
+    /// <summary>
+    /// Customer My Profile Controller providing end-to-end management of customer account
+    /// profile information and saved delivery addresses.
+    /// </summary>
+    [ApiController]
+    [Authorize(Roles = "Customer")]
+    [Route("api/customer/profile")]
+    [Produces("application/json")]
+    public class CustomerProfileController : ControllerBase
+    {
+        private readonly ICustomerProfileService _profileService;
+        private readonly ILogger<CustomerProfileController> _logger;
+
+        public CustomerProfileController(ICustomerProfileService profileService, ILogger<CustomerProfileController> logger)
+        {
+            _profileService = profileService;
+            _logger = logger;
+        }
+
+        private (long? CustomerId, bool IsForbidden) GetCurrentCustomerId()
+        {
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value
+                         ?? User.FindFirst("role")?.Value;
+
+            // If role is present, ensure caller has Customer role
+            if (!string.IsNullOrEmpty(roleClaim) &&
+                !string.Equals(roleClaim, "Customer", StringComparison.OrdinalIgnoreCase))
+            {
+                return (null, true);
+            }
+
+            var claimValue = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                          ?? User.FindFirstValue("sub")
+                          ?? User.FindFirstValue("id");
+
+            if (long.TryParse(claimValue, out var id) && id > 0)
+            {
+                return (id, false);
+            }
+
+            return (null, false);
+        }
+
+        /// <summary>
+        /// API 1: Get Customer Profile (including profile details and saved delivery addresses)
+        /// GET /api/customer/profile
+        /// </summary>
+        [HttpGet]
+        [ProducesResponseType(typeof(ApiResponse<CustomerProfileDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ApiResponse<CustomerProfileDto>>> GetProfile(CancellationToken cancellationToken)
+        {
+            var (customerId, isForbidden) = GetCurrentCustomerId();
+            if (isForbidden)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<CustomerProfileDto>.ErrorResponse("Forbidden: Only customers can access this resource."));
+            }
+
+            if (!customerId.HasValue)
+            {
+                return Unauthorized(ApiResponse<CustomerProfileDto>.ErrorResponse("Authentication required. Please log in."));
+            }
+
+            _logger.LogInformation("GET /api/customer/profile for CustomerId: {CustomerId}", customerId.Value);
+            var result = await _profileService.GetProfileAsync(customerId.Value, cancellationToken);
+
+            if (result == null)
+            {
+                return NotFound(ApiResponse<CustomerProfileDto>.ErrorResponse("Customer profile not found."));
+            }
+
+            return Ok(ApiResponse<CustomerProfileDto>.SuccessResponse(result, "Customer profile retrieved successfully."));
+        }
+
+        /// <summary>
+        /// API 2: Update Customer Profile
+        /// PUT /api/customer/profile
+        /// </summary>
+        [HttpPut]
+        [ProducesResponseType(typeof(ApiResponse<CustomerProfileDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<ApiResponse<CustomerProfileDto>>> UpdateProfile(
+            [FromBody] UpdateCustomerProfileDto request,
+            CancellationToken cancellationToken = default)
+        {
+            var (customerId, isForbidden) = GetCurrentCustomerId();
+            if (isForbidden)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<CustomerProfileDto>.ErrorResponse("Forbidden: Only customers can access this resource."));
+            }
+
+            if (!customerId.HasValue)
+            {
+                return Unauthorized(ApiResponse<CustomerProfileDto>.ErrorResponse("Authentication required. Please log in."));
+            }
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                return BadRequest(ApiResponse<CustomerProfileDto>.ErrorResponse("Validation failed.", errors));
+            }
+
+            try
+            {
+                _logger.LogInformation("PUT /api/customer/profile for CustomerId: {CustomerId}", customerId.Value);
+                var result = await _profileService.UpdateProfileAsync(customerId.Value, request, cancellationToken);
+
+                if (result == null)
+                {
+                    return NotFound(ApiResponse<CustomerProfileDto>.ErrorResponse("Customer profile not found."));
+                }
+
+                return Ok(ApiResponse<CustomerProfileDto>.SuccessResponse(result, "Customer profile updated successfully."));
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ApiResponse<CustomerProfileDto>.ErrorResponse(ex.Message));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ApiResponse<CustomerProfileDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// API 2a: Send Mobile Change Mock OTP
+        /// POST /api/customer/profile/mobile/send-otp
+        /// </summary>
+        [HttpPost("mobile/send-otp")]
+        [ProducesResponseType(typeof(ApiResponse<MobileChangeOtpResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
+        public async Task<ActionResult<ApiResponse<MobileChangeOtpResponseDto>>> SendMobileChangeOtp(
+            [FromBody] SendMobileChangeOtpDto request,
+            CancellationToken cancellationToken = default)
+        {
+            var (customerId, isForbidden) = GetCurrentCustomerId();
+            if (isForbidden)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<MobileChangeOtpResponseDto>.ErrorResponse("Forbidden: Only customers can access this resource."));
+            }
+
+            if (!customerId.HasValue)
+            {
+                return Unauthorized(ApiResponse<MobileChangeOtpResponseDto>.ErrorResponse("Authentication required. Please log in."));
+            }
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                return BadRequest(ApiResponse<MobileChangeOtpResponseDto>.ErrorResponse("Validation failed.", errors));
+            }
+
+            try
+            {
+                _logger.LogInformation("POST /api/customer/profile/mobile/send-otp for CustomerId: {CustomerId}", customerId.Value);
+                var result = await _profileService.SendMobileChangeOtpAsync(customerId.Value, request, cancellationToken);
+                return Ok(ApiResponse<MobileChangeOtpResponseDto>.SuccessResponse(result, "OTP generated successfully."));
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ApiResponse<MobileChangeOtpResponseDto>.ErrorResponse(ex.Message));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ApiResponse<MobileChangeOtpResponseDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// API 2b: Verify Mobile Change Mock OTP
+        /// POST /api/customer/profile/mobile/verify-otp
+        /// </summary>
+        [HttpPost("mobile/verify-otp")]
+        [ProducesResponseType(typeof(ApiResponse<CustomerProfileDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
+        public async Task<ActionResult<ApiResponse<CustomerProfileDto>>> VerifyMobileChangeOtp(
+            [FromBody] VerifyMobileChangeOtpDto request,
+            CancellationToken cancellationToken = default)
+        {
+            var (customerId, isForbidden) = GetCurrentCustomerId();
+            if (isForbidden)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<CustomerProfileDto>.ErrorResponse("Forbidden: Only customers can access this resource."));
+            }
+
+            if (!customerId.HasValue)
+            {
+                return Unauthorized(ApiResponse<CustomerProfileDto>.ErrorResponse("Authentication required. Please log in."));
+            }
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                return BadRequest(ApiResponse<CustomerProfileDto>.ErrorResponse("Validation failed.", errors));
+            }
+
+            try
+            {
+                _logger.LogInformation("POST /api/customer/profile/mobile/verify-otp for CustomerId: {CustomerId}", customerId.Value);
+                var result = await _profileService.VerifyMobileChangeOtpAsync(customerId.Value, request, cancellationToken);
+                return Ok(ApiResponse<CustomerProfileDto>.SuccessResponse(result, "Mobile number updated successfully."));
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ApiResponse<CustomerProfileDto>.ErrorResponse(ex.Message));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ApiResponse<CustomerProfileDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// API 3: Add Delivery Address
+        /// POST /api/customer/profile/addresses
+        /// </summary>
+        [HttpPost("addresses")]
+        [ProducesResponseType(typeof(ApiResponse<CustomerDeliveryAddressDto>), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<ApiResponse<CustomerDeliveryAddressDto>>> AddDeliveryAddress(
+            [FromBody] CreateCustomerDeliveryAddressDto request,
+            CancellationToken cancellationToken = default)
+        {
+            var (customerId, isForbidden) = GetCurrentCustomerId();
+            if (isForbidden)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<CustomerDeliveryAddressDto>.ErrorResponse("Forbidden: Only customers can access this resource."));
+            }
+
+            if (!customerId.HasValue)
+            {
+                return Unauthorized(ApiResponse<CustomerDeliveryAddressDto>.ErrorResponse("Authentication required. Please log in."));
+            }
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                return BadRequest(ApiResponse<CustomerDeliveryAddressDto>.ErrorResponse("Validation failed.", errors));
+            }
+
+            try
+            {
+                _logger.LogInformation("POST /api/customer/profile/addresses for CustomerId: {CustomerId}", customerId.Value);
+                var result = await _profileService.AddDeliveryAddressAsync(customerId.Value, request, cancellationToken);
+
+                if (result == null)
+                {
+                    return BadRequest(ApiResponse<CustomerDeliveryAddressDto>.ErrorResponse("Failed to create delivery address."));
+                }
+
+                return StatusCode(StatusCodes.Status201Created, ApiResponse<CustomerDeliveryAddressDto>.SuccessResponse(result, "Delivery address added successfully."));
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ApiResponse<CustomerDeliveryAddressDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// API 5: Update Delivery Address
+        /// PUT /api/customer/profile/addresses/{id}
+        /// </summary>
+        [HttpPut("addresses/{id:long}")]
+        [ProducesResponseType(typeof(ApiResponse<CustomerDeliveryAddressDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ApiResponse<CustomerDeliveryAddressDto>>> UpdateDeliveryAddress(
+            [FromRoute] long id,
+            [FromBody] UpdateCustomerDeliveryAddressDto request,
+            CancellationToken cancellationToken = default)
+        {
+            var (customerId, isForbidden) = GetCurrentCustomerId();
+            if (isForbidden)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<CustomerDeliveryAddressDto>.ErrorResponse("Forbidden: Only customers can access this resource."));
+            }
+
+            if (!customerId.HasValue)
+            {
+                return Unauthorized(ApiResponse<CustomerDeliveryAddressDto>.ErrorResponse("Authentication required. Please log in."));
+            }
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                return BadRequest(ApiResponse<CustomerDeliveryAddressDto>.ErrorResponse("Validation failed.", errors));
+            }
+
+            try
+            {
+                _logger.LogInformation("PUT /api/customer/profile/addresses/{Id} for CustomerId: {CustomerId}", id, customerId.Value);
+                var result = await _profileService.UpdateDeliveryAddressAsync(id, customerId.Value, request, cancellationToken);
+
+                if (result == null)
+                {
+                    return NotFound(ApiResponse<CustomerDeliveryAddressDto>.ErrorResponse("Delivery address not found or not owned by you."));
+                }
+
+                return Ok(ApiResponse<CustomerDeliveryAddressDto>.SuccessResponse(result, "Delivery address updated successfully."));
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ApiResponse<CustomerDeliveryAddressDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// API 6: Delete Delivery Address
+        /// DELETE /api/customer/profile/addresses/{id}
+        /// </summary>
+        [HttpDelete("addresses/{id:long}")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ApiResponse<object>>> DeleteDeliveryAddress(
+            [FromRoute] long id,
+            CancellationToken cancellationToken = default)
+        {
+            var (customerId, isForbidden) = GetCurrentCustomerId();
+            if (isForbidden)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.ErrorResponse("Forbidden: Only customers can access this resource."));
+            }
+
+            if (!customerId.HasValue)
+            {
+                return Unauthorized(ApiResponse<object>.ErrorResponse("Authentication required. Please log in."));
+            }
+
+            _logger.LogInformation("DELETE /api/customer/profile/addresses/{Id} for CustomerId: {CustomerId}", id, customerId.Value);
+            var success = await _profileService.DeleteDeliveryAddressAsync(id, customerId.Value, cancellationToken);
+
+            if (!success)
+            {
+                return NotFound(ApiResponse<object>.ErrorResponse("Delivery address not found or not owned by you."));
+            }
+
+            return Ok(ApiResponse<object>.SuccessResponse(new { id, deleted = true }, "Delivery address deleted successfully."));
+        }
+
+        /// <summary>
+        /// API 6: Set Default Delivery Address
+        /// PATCH /api/customer/profile/addresses/{id}/default
+        /// </summary>
+        [HttpPatch("addresses/{id:long}/default")]
+        [ProducesResponseType(typeof(ApiResponse<CustomerDeliveryAddressDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ApiResponse<CustomerDeliveryAddressDto>>> SetDefaultDeliveryAddress(
+            [FromRoute] long id,
+            CancellationToken cancellationToken = default)
+        {
+            var (customerId, isForbidden) = GetCurrentCustomerId();
+            if (isForbidden)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<CustomerDeliveryAddressDto>.ErrorResponse("Forbidden: Only customers can access this resource."));
+            }
+
+            if (!customerId.HasValue)
+            {
+                return Unauthorized(ApiResponse<CustomerDeliveryAddressDto>.ErrorResponse("Authentication required. Please log in."));
+            }
+
+            _logger.LogInformation("PATCH /api/customer/profile/addresses/{Id}/default for CustomerId: {CustomerId}", id, customerId.Value);
+            var result = await _profileService.SetDefaultDeliveryAddressAsync(id, customerId.Value, cancellationToken);
+
+            if (result == null)
+            {
+                return NotFound(ApiResponse<CustomerDeliveryAddressDto>.ErrorResponse("Delivery address not found or not owned by you."));
+            }
+
+            return Ok(ApiResponse<CustomerDeliveryAddressDto>.SuccessResponse(result, "Default delivery address updated successfully."));
+        }
+    }
+}

@@ -1,0 +1,322 @@
+﻿using AgriPurchaseBilling.Application.DTOs;
+using AgriPurchaseBilling.Application.Interfaces;
+using AgriPurchaseBilling.Application.Security;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using System.Text.RegularExpressions;
+
+namespace AgriPurchaseBilling.Application.Services
+{
+    public class CustomerProfileService : ICustomerProfileService
+    {
+        private readonly ICustomerProfileRepository _repository;
+        private readonly ILogger<CustomerProfileService> _logger;
+        private readonly IHostEnvironment _environment;
+
+        public CustomerProfileService(
+            ICustomerProfileRepository repository,
+            ILogger<CustomerProfileService> logger,
+            IHostEnvironment environment)
+        {
+            _repository = repository;
+            _logger = logger;
+            _environment = environment;
+        }
+
+        public async Task<CustomerProfileDto?> GetProfileAsync(long customerId, CancellationToken cancellationToken = default)
+        {
+            if (customerId <= 0)
+            {
+                throw new ArgumentException("Customer ID must be greater than zero.", nameof(customerId));
+            }
+
+            _logger.LogInformation("Service: Fetching profile for CustomerId: {CustomerId}", customerId);
+            var profile = await _repository.GetProfileAsync(customerId, cancellationToken);
+            if (profile != null)
+            {
+                profile.Addresses = await _repository.GetDeliveryAddressesAsync(customerId, cancellationToken);
+            }
+            return profile;
+        }
+
+        public async Task<CustomerProfileDto?> UpdateProfileAsync(long customerId, UpdateCustomerProfileDto dto, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(dto);
+
+            if (customerId <= 0)
+            {
+                throw new ArgumentException("Customer ID must be greater than zero.", nameof(customerId));
+            }
+
+            ValidateProfileDto(dto);
+
+            // Reject direct changes to mobile number unless verified through MobileChange OTP flow
+            var currentMobile = await _repository.GetCurrentCustomerMobileAsync(customerId, cancellationToken);
+            if (!string.IsNullOrEmpty(currentMobile) &&
+                !string.Equals(currentMobile.Trim(), dto.MobileNumber.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Direct mobile number changes are not allowed. Please use the mobile verification (OTP) flow to update your mobile number.");
+            }
+
+            _logger.LogInformation("Service: Updating profile for CustomerId: {CustomerId}", customerId);
+            var profile = await _repository.UpdateProfileAsync(customerId, dto, cancellationToken);
+            if (profile != null)
+            {
+                profile.Addresses = await _repository.GetDeliveryAddressesAsync(customerId, cancellationToken);
+            }
+            return profile;
+        }
+
+        public async Task<List<CustomerDeliveryAddressDto>> GetDeliveryAddressesAsync(long customerId, CancellationToken cancellationToken = default)
+        {
+            if (customerId <= 0)
+            {
+                throw new ArgumentException("Customer ID must be greater than zero.", nameof(customerId));
+            }
+
+            _logger.LogInformation("Service: Fetching delivery addresses for CustomerId: {CustomerId}", customerId);
+            return await _repository.GetDeliveryAddressesAsync(customerId, cancellationToken);
+        }
+
+        public async Task<CustomerDeliveryAddressDto?> AddDeliveryAddressAsync(long customerId, CreateCustomerDeliveryAddressDto dto, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(dto);
+
+            if (customerId <= 0)
+            {
+                throw new ArgumentException("Customer ID must be greater than zero.", nameof(customerId));
+            }
+
+            ValidateAddressDto(dto.Label, dto.RecipientName, dto.ContactNumber, dto.AddressLine, dto.District, dto.State, dto.PinCode);
+
+            _logger.LogInformation("Service: Adding delivery address for CustomerId: {CustomerId}", customerId);
+            return await _repository.AddDeliveryAddressAsync(customerId, dto, cancellationToken);
+        }
+
+        public async Task<CustomerDeliveryAddressDto?> UpdateDeliveryAddressAsync(long addressId, long customerId, UpdateCustomerDeliveryAddressDto dto, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(dto);
+
+            if (addressId <= 0)
+            {
+                throw new ArgumentException("Address ID must be greater than zero.", nameof(addressId));
+            }
+
+            if (customerId <= 0)
+            {
+                throw new ArgumentException("Customer ID must be greater than zero.", nameof(customerId));
+            }
+
+            ValidateAddressDto(dto.Label, dto.RecipientName, dto.ContactNumber, dto.AddressLine, dto.District, dto.State, dto.PinCode);
+
+            _logger.LogInformation("Service: Updating delivery address {AddressId} for CustomerId: {CustomerId}", addressId, customerId);
+            return await _repository.UpdateDeliveryAddressAsync(addressId, customerId, dto, cancellationToken);
+        }
+
+        public async Task<bool> DeleteDeliveryAddressAsync(long addressId, long customerId, CancellationToken cancellationToken = default)
+        {
+            if (addressId <= 0)
+            {
+                throw new ArgumentException("Address ID must be greater than zero.", nameof(addressId));
+            }
+
+            if (customerId <= 0)
+            {
+                throw new ArgumentException("Customer ID must be greater than zero.", nameof(customerId));
+            }
+
+            _logger.LogInformation("Service: Deleting delivery address {AddressId} for CustomerId: {CustomerId}", addressId, customerId);
+            return await _repository.DeleteDeliveryAddressAsync(addressId, customerId, cancellationToken);
+        }
+
+        public async Task<CustomerDeliveryAddressDto?> SetDefaultDeliveryAddressAsync(long addressId, long customerId, CancellationToken cancellationToken = default)
+        {
+            if (addressId <= 0)
+            {
+                throw new ArgumentException("Address ID must be greater than zero.", nameof(addressId));
+            }
+
+            if (customerId <= 0)
+            {
+                throw new ArgumentException("Customer ID must be greater than zero.", nameof(customerId));
+            }
+
+            _logger.LogInformation("Service: Setting default delivery address {AddressId} for CustomerId: {CustomerId}", addressId, customerId);
+            return await _repository.SetDefaultDeliveryAddressAsync(addressId, customerId, cancellationToken);
+        }
+
+        public async Task<MobileChangeOtpResponseDto> SendMobileChangeOtpAsync(long customerId, SendMobileChangeOtpDto dto, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(dto);
+
+            if (customerId <= 0)
+            {
+                throw new ArgumentException("Customer ID must be greater than zero.", nameof(customerId));
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.NewMobileNumber) || !Regex.IsMatch(dto.NewMobileNumber.Trim(), @"^[0-9]{10}$"))
+            {
+                throw new ArgumentException("New mobile number must be a valid 10-digit Indian number.");
+            }
+
+            var cleanNewMobile = dto.NewMobileNumber.Trim();
+
+            // 1. Reject if new mobile is same as current mobile
+            var currentMobile = await _repository.GetCurrentCustomerMobileAsync(customerId, cancellationToken);
+            if (!string.IsNullOrEmpty(currentMobile) && string.Equals(currentMobile.Trim(), cleanNewMobile, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("New mobile number cannot be the same as your current mobile number.");
+            }
+
+            // 2. Reject if new mobile belongs to another registered user
+            var isRegistered = await _repository.IsMobileRegisteredToAnotherUserAsync(cleanNewMobile, customerId, cancellationToken);
+            if (isRegistered)
+            {
+                throw new InvalidOperationException("This mobile number is already registered to another user.");
+            }
+
+            // 3. Generate 6-digit OTP and store hashed record
+            string rawOtp = OtpSecurityHelper.Generate6DigitOtp();
+            string hashedOtp = OtpSecurityHelper.HashOtp(rawOtp);
+            DateTime expiresAt = DateTime.UtcNow.AddMinutes(5);
+
+            await _repository.SaveMobileChangeOtpAsync(customerId, cleanNewMobile, hashedOtp, expiresAt, cancellationToken);
+
+            _logger.LogInformation("Service: Generated MobileChange OTP for CustomerId: {CustomerId}", customerId);
+
+            var response = new MobileChangeOtpResponseDto
+            {
+                Message = "Mock OTP generated successfully. It expires in 5 minutes.",
+                ExpiresInMinutes = 5
+            };
+
+            if (_environment.IsDevelopment())
+            {
+                response.DevOtp = $"DEV-{rawOtp}";
+            }
+
+            return response;
+        }
+
+        public async Task<CustomerProfileDto> VerifyMobileChangeOtpAsync(long customerId, VerifyMobileChangeOtpDto dto, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(dto);
+
+            if (customerId <= 0)
+            {
+                throw new ArgumentException("Customer ID must be greater than zero.", nameof(customerId));
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.NewMobileNumber) || !Regex.IsMatch(dto.NewMobileNumber.Trim(), @"^[0-9]{10}$"))
+            {
+                throw new ArgumentException("New mobile number must be a valid 10-digit Indian number.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Otp) || dto.Otp.Trim().Length != 6 || !dto.Otp.Trim().All(char.IsDigit))
+            {
+                throw new ArgumentException("Enter a valid 6-digit OTP.");
+            }
+
+            var cleanNewMobile = dto.NewMobileNumber.Trim();
+            var cleanOtp = dto.Otp.Trim();
+
+            // 1. Fetch latest MobileChange OTP for customer and target mobile
+            var record = await _repository.GetLatestMobileChangeOtpAsync(customerId, cleanNewMobile, cancellationToken);
+            if (record == null)
+            {
+                throw new ArgumentException("OTP not found or not requested for this mobile number. Please generate a new OTP.");
+            }
+
+            // 2. Check maximum attempts (limit: 3)
+            const int maxAttempts = 3;
+            if (record.Attempts >= maxAttempts)
+            {
+                throw new InvalidOperationException("Maximum OTP verification attempts (3) exceeded. Please generate a new OTP.");
+            }
+
+            // 3. Check expiry (5 minutes)
+            if (record.ExpiresAt <= DateTime.UtcNow)
+            {
+                throw new InvalidOperationException("OTP has expired. Please generate a new OTP.");
+            }
+
+            // 4. Verify OTP hash
+            bool isValid = OtpSecurityHelper.VerifyOtp(cleanOtp, record.OtpHash);
+            if (!isValid)
+            {
+                await _repository.IncrementOtpAttemptsAsync(record.Id, cancellationToken);
+                int remainingAttempts = maxAttempts - (record.Attempts + 1);
+
+                if (remainingAttempts <= 0)
+                {
+                    throw new InvalidOperationException("Invalid OTP. Maximum attempts reached. Please request a new OTP.");
+                }
+
+                throw new ArgumentException($"Invalid OTP. {remainingAttempts} attempt(s) remaining.");
+            }
+
+            // 5. Success: update Users.Mobile and consume OTP
+            var updatedProfile = await _repository.UpdateCustomerMobileAfterVerificationAsync(customerId, cleanNewMobile, record.Id, cancellationToken);
+            if (updatedProfile == null)
+            {
+                throw new InvalidOperationException("Customer profile not found or failed to update.");
+            }
+
+            updatedProfile.Addresses = await _repository.GetDeliveryAddressesAsync(customerId, cancellationToken);
+
+            _logger.LogInformation("Service: Successfully verified OTP and updated mobile number for CustomerId: {CustomerId}", customerId);
+            return updatedProfile;
+        }
+
+        private static void ValidateProfileDto(UpdateCustomerProfileDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.FullName))
+                throw new ArgumentException("Full Name is required.");
+
+            if (string.IsNullOrWhiteSpace(dto.MobileNumber) || !Regex.IsMatch(dto.MobileNumber.Trim(), @"^[0-9]{10}$"))
+                throw new ArgumentException("A valid 10-digit mobile number is required.");
+
+            if (!string.IsNullOrWhiteSpace(dto.Email) && !Regex.IsMatch(dto.Email.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                throw new ArgumentException("Invalid email address format.");
+
+            if (!string.IsNullOrWhiteSpace(dto.AlternateMobileNumber) && !Regex.IsMatch(dto.AlternateMobileNumber.Trim(), @"^[0-9]{10}$"))
+                throw new ArgumentException("Alternate mobile number must be a valid 10-digit number.");
+
+            if (string.IsNullOrWhiteSpace(dto.Address))
+                throw new ArgumentException("Address is required.");
+
+            if (string.IsNullOrWhiteSpace(dto.District))
+                throw new ArgumentException("District is required.");
+
+            if (string.IsNullOrWhiteSpace(dto.State))
+                throw new ArgumentException("State is required.");
+
+            if (string.IsNullOrWhiteSpace(dto.PinCode) || !Regex.IsMatch(dto.PinCode.Trim(), @"^[0-9]{6}$"))
+                throw new ArgumentException("PIN Code must be exactly 6 digits.");
+        }
+
+        private static void ValidateAddressDto(string label, string recipient, string contact, string line, string district, string state, string pin)
+        {
+            if (string.IsNullOrWhiteSpace(label))
+                throw new ArgumentException("Address label is required.");
+
+            if (string.IsNullOrWhiteSpace(recipient))
+                throw new ArgumentException("Contact person / recipient name is required.");
+
+            if (string.IsNullOrWhiteSpace(contact) || !Regex.IsMatch(contact.Trim(), @"^[0-9]{10}$"))
+                throw new ArgumentException("A valid 10-digit contact number is required.");
+
+            if (string.IsNullOrWhiteSpace(line))
+                throw new ArgumentException("Full address line is required.");
+
+            if (string.IsNullOrWhiteSpace(district))
+                throw new ArgumentException("District is required.");
+
+            if (string.IsNullOrWhiteSpace(state))
+                throw new ArgumentException("State is required.");
+
+            if (string.IsNullOrWhiteSpace(pin) || !Regex.IsMatch(pin.Trim(), @"^[0-9]{6}$"))
+                throw new ArgumentException("PIN Code must be exactly 6 digits.");
+        }
+    }
+}

@@ -1,0 +1,276 @@
+﻿using AgriPurchaseBilling.Application.DTOs;
+using AgriPurchaseBilling.Application.Interfaces;
+using AgriPurchaseBilling.Domain.Entities;
+using AgriPurchaseBilling.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+
+namespace AgriPurchaseBilling.Infrastructure.Repositories
+{
+    public class FarmerProfileRepository : IFarmerProfileRepository
+    {
+        private readonly AppDbContext _context;
+
+        public FarmerProfileRepository(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<List<FarmerProfileResponseDto>> GetAllProfilesAsync(
+            CancellationToken cancellationToken = default)
+        {
+            var farmers = await _context.Farmers
+                .AsNoTracking()
+                .Include(f => f.User)
+                .Include(f => f.BankAccount)
+                .ToListAsync(cancellationToken);
+
+            return farmers.Select(MapToResponseDto).ToList();
+        }
+
+        public async Task<FarmerProfileResponseDto?> GetProfileByUserIdAsync(
+            long userId,
+            CancellationToken cancellationToken = default)
+        {
+            var farmer = await _context.Farmers
+                .AsNoTracking()
+                .Include(f => f.User)
+                .Include(f => f.BankAccount)
+                .FirstOrDefaultAsync(f => f.UserId == userId, cancellationToken);
+
+            return farmer != null ? MapToResponseDto(farmer) : null;
+        }
+
+        public async Task<FarmerProfileResponseDto?> GetProfileByFarmerIdAsync(
+            long farmerId,
+            CancellationToken cancellationToken = default)
+        {
+            var farmer = await _context.Farmers
+                .AsNoTracking()
+                .Include(f => f.User)
+                .Include(f => f.BankAccount)
+                .FirstOrDefaultAsync(f => f.Id == farmerId, cancellationToken);
+
+            return farmer != null ? MapToResponseDto(farmer) : null;
+        }
+
+        public async Task<Farmer?> GetFarmerByUserIdAsync(
+            long userId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.Farmers
+                .Include(f => f.User)
+                .Include(f => f.BankAccount)
+                .FirstOrDefaultAsync(f => f.UserId == userId, cancellationToken);
+        }
+
+        public async Task<Farmer?> GetFarmerByIdAsync(
+            long farmerId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.Farmers
+                .Include(f => f.User)
+                .Include(f => f.BankAccount)
+                .FirstOrDefaultAsync(f => f.Id == farmerId, cancellationToken);
+        }
+
+        public async Task<User?> GetUserByIdAsync(
+            long userId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        }
+
+        public async Task<FarmerBankAccount?> GetBankAccountByFarmerIdAsync(
+            long farmerId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.FarmerBankAccounts
+                .FirstOrDefaultAsync(b => b.FarmerId == farmerId, cancellationToken);
+        }
+
+        public async Task<bool> UpdateProfileAsync(
+            long userId,
+            UpdateFarmerProfileRequestDto request,
+            CancellationToken cancellationToken = default)
+        {
+            var farmer = await _context.Farmers
+                .Include(f => f.User)
+                .FirstOrDefaultAsync(f => f.UserId == userId, cancellationToken);
+
+            if (farmer == null) return false;
+
+            // Update User FullName
+            if (!string.IsNullOrWhiteSpace(request.FullName))
+            {
+                farmer.User.FullName = request.FullName.Trim();
+                farmer.User.UpdatedAt = DateTime.UtcNow;
+            }
+
+            // Update Farmer location & farm info
+            farmer.FarmName = request.FarmName?.Trim();
+            farmer.TotalLandArea = request.TotalLandArea?.Trim();
+            farmer.Village = request.Village?.Trim();
+            farmer.Mandal = request.Mandal?.Trim();
+            farmer.District = request.District?.Trim();
+            farmer.State = request.State?.Trim();
+            farmer.PinCode = request.PinCode?.Trim();
+            farmer.Address = request.Address?.Trim();
+            farmer.Mobile = farmer.User.Mobile;
+            farmer.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
+        public async Task<bool> UpdateBankDetailsAsync(
+            long farmerId,
+            UpdateBankDetailsRequestDto request,
+            CancellationToken cancellationToken = default)
+        {
+            var bankAccount = await _context.FarmerBankAccounts
+                .FirstOrDefaultAsync(b => b.FarmerId == farmerId, cancellationToken);
+
+            if (bankAccount == null)
+            {
+                bankAccount = new FarmerBankAccount
+                {
+                    FarmerId = farmerId,
+                    BankName = request.BankName?.Trim(),
+                    AccountNumber = request.AccountNumber?.Trim(),
+                    IfscCode = request.IfscCode?.Trim().ToUpperInvariant(),
+                    BranchName = request.BranchName?.Trim(),
+                    AccountType = request.AccountType?.Trim() ?? "Savings",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                await _context.FarmerBankAccounts.AddAsync(bankAccount, cancellationToken);
+            }
+            else
+            {
+                bankAccount.BankName = request.BankName?.Trim();
+                bankAccount.AccountNumber = request.AccountNumber?.Trim();
+                bankAccount.IfscCode = request.IfscCode?.Trim().ToUpperInvariant();
+                bankAccount.BranchName = request.BranchName?.Trim();
+                bankAccount.AccountType = request.AccountType?.Trim() ?? bankAccount.AccountType;
+                bankAccount.UpdatedAt = DateTime.UtcNow;
+            }
+
+            // Also sync fallback columns on Farmers table for legacy queries
+            var farmer = await _context.Farmers.FirstOrDefaultAsync(f => f.Id == farmerId, cancellationToken);
+            if (farmer != null)
+            {
+                farmer.BankName = bankAccount.BankName;
+                farmer.AccountNumber = bankAccount.AccountNumber;
+                farmer.IfscCode = bankAccount.IfscCode;
+                farmer.BranchName = bankAccount.BranchName;
+                farmer.AccountType = bankAccount.AccountType;
+                farmer.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
+        public async Task<bool> UpdateMobileWithHistoryAsync(
+            long userId,
+            string newMobile,
+            CancellationToken cancellationToken = default)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+            if (user == null) return false;
+
+            string oldMobile = user.Mobile;
+
+            // Record history
+            var history = new UserMobileHistory
+            {
+                UserId = userId,
+                OldMobile = oldMobile,
+                NewMobile = newMobile,
+                OldMobileStatus = "Inactive",
+                NewMobileStatus = "Active",
+                ChangedAt = DateTime.UtcNow
+            };
+            await _context.UserMobileHistories.AddAsync(history, cancellationToken);
+
+            // Update active mobile in Users
+            user.Mobile = newMobile;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            // Sync active mobile in Farmers
+            var farmer = await _context.Farmers.FirstOrDefaultAsync(f => f.UserId == userId, cancellationToken);
+            if (farmer != null)
+            {
+                farmer.Mobile = newMobile;
+                farmer.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
+        public async Task<bool> UpdatePasswordAsync(
+            long userId,
+            string newPasswordHash,
+            CancellationToken cancellationToken = default)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+            if (user == null) return false;
+
+            user.PasswordHash = newPasswordHash;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
+        private static FarmerProfileResponseDto MapToResponseDto(Farmer f)
+        {
+            string bankName = f.BankAccount?.BankName ?? f.BankName ?? string.Empty;
+            string accountNumber = f.BankAccount?.AccountNumber ?? f.AccountNumber ?? string.Empty;
+            string ifscCode = f.BankAccount?.IfscCode ?? f.IfscCode ?? string.Empty;
+            string branchName = f.BankAccount?.BranchName ?? f.BranchName ?? string.Empty;
+            string accountType = f.BankAccount?.AccountType ?? f.AccountType ?? "Savings";
+
+            return new FarmerProfileResponseDto
+            {
+                UserId = f.UserId,
+                FarmerId = f.Id,
+                FarmerCode = f.FarmerCode,
+                FullName = f.User?.FullName ?? string.Empty,
+                Mobile = f.User?.Mobile ?? f.Mobile ?? string.Empty,
+                Email = f.User?.Email,
+                IsActive = f.User?.IsActive ?? true,
+                FarmLocation = new FarmLocationDto
+                {
+                    FarmName = f.FarmName,
+                    TotalLandArea = f.TotalLandArea,
+                    Village = f.Village,
+                    Mandal = f.Mandal,
+                    District = f.District,
+                    State = f.State,
+                    PinCode = f.PinCode,
+                    Address = f.Address
+                },
+                BankDetails = new BankDetailsDto
+                {
+                    BankName = bankName,
+                    AccountNumber = MaskAccountNumber(accountNumber),
+                    IfscCode = ifscCode,
+                    BranchName = branchName,
+                    AccountType = accountType
+                }
+            };
+        }
+
+        private static string MaskAccountNumber(string? accNo)
+        {
+            if (string.IsNullOrWhiteSpace(accNo)) return string.Empty;
+            accNo = accNo.Trim();
+            if (accNo.Length <= 4) return accNo;
+            return new string('X', accNo.Length - 4) + accNo[^4..];
+        }
+    }
+}

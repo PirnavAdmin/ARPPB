@@ -1,0 +1,110 @@
+﻿using System.Text.RegularExpressions;
+using AgriPurchaseBilling.Application.DTOs;
+using AgriPurchaseBilling.Application.Interfaces;
+
+namespace AgriPurchaseBilling.Application.Services
+{
+    public sealed class VendorMobileChangeService : IVendorMobileChangeService
+    {
+        private static readonly TimeSpan ResendCooldown = TimeSpan.FromSeconds(30);
+        private readonly IVendorProfileRepository _repository;
+        private readonly IOtpService _otpService;
+
+        public VendorMobileChangeService(
+            IVendorProfileRepository repository,
+            IOtpService otpService)
+        {
+            _repository = repository;
+            _otpService = otpService;
+        }
+
+        public async Task<VendorMobileChangeOtpDto?> RequestAsync(
+            long userId,
+            string newMobile,
+            CancellationToken cancellationToken = default)
+        {
+            var profile = await _repository.GetOrCreateProfileByUserIdAsync(userId, cancellationToken);
+            if (profile == null) return null;
+
+            newMobile = newMobile.Trim();
+            if (!Regex.IsMatch(newMobile, @"^[6-9][0-9]{9}$"))
+            {
+                throw new ArgumentException("Mobile must be a valid 10-digit number.", nameof(newMobile));
+            }
+            if (newMobile == profile.Mobile)
+            {
+                throw new ArgumentException("New mobile number is the same as the current number.", nameof(newMobile));
+            }
+            if (await _repository.IsMobileInUseAsync(userId, newMobile, cancellationToken))
+            {
+                throw new ArgumentException("This mobile number is already registered.", nameof(newMobile));
+            }
+            if (await _repository.HasRecentMobileChangeOtpAsync(
+                    userId, newMobile, DateTime.UtcNow.Subtract(ResendCooldown), cancellationToken))
+            {
+                throw new ArgumentException(
+                    $"Please wait {ResendCooldown.TotalSeconds:0} seconds before requesting another OTP.");
+            }
+
+            var otpResult = await _otpService.GenerateVendorMobileChangeOtpAsync(
+                userId, newMobile, cancellationToken);
+            if (!otpResult.Success)
+            {
+                throw new InvalidOperationException(otpResult.Message);
+            }
+
+            return new VendorMobileChangeOtpDto
+            {
+                VendorCode = profile.VendorCode,
+                MaskedNewMobile = $"XXXXXX{newMobile[^4..]}",
+                ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+                ExpiresInSeconds = 300,
+                DevOtp = otpResult.DevOtp
+            };
+        }
+
+        public async Task<VendorMobileChangeResultDto?> VerifyAsync(
+            long userId,
+            string newMobile,
+            string otp,
+            CancellationToken cancellationToken = default)
+        {
+            var profile = await _repository.GetOrCreateProfileByUserIdAsync(userId, cancellationToken);
+            if (profile == null) return null;
+
+            newMobile = newMobile.Trim();
+            otp = otp.Trim();
+            if (!Regex.IsMatch(newMobile, @"^[6-9][0-9]{9}$"))
+            {
+                throw new ArgumentException("Mobile must be a valid 10-digit number.", nameof(newMobile));
+            }
+            if (await _repository.IsMobileInUseAsync(userId, newMobile, cancellationToken))
+            {
+                throw new ArgumentException("This mobile number is already registered.", nameof(newMobile));
+            }
+
+            var verifyResult = await _otpService.VerifyVendorMobileChangeOtpAsync(
+                userId, newMobile, otp, cancellationToken);
+            if (!verifyResult.Success)
+            {
+                throw new ArgumentException(verifyResult.Message, nameof(otp));
+            }
+
+            if (!await _repository.UpdateMobileWithHistoryAsync(userId, newMobile, cancellationToken))
+            {
+                throw new InvalidOperationException("Vendor mobile number could not be updated.");
+            }
+
+            await _otpService.ConsumeVendorMobileChangeOtpAsync(
+                userId, newMobile, cancellationToken);
+
+            return new VendorMobileChangeResultDto
+            {
+                VendorCode = profile.VendorCode,
+                OldMobile = profile.Mobile,
+                NewMobile = newMobile,
+                VerifiedAt = DateTime.UtcNow
+            };
+        }
+    }
+}

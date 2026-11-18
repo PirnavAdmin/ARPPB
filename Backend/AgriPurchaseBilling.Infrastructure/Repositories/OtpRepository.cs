@@ -1,126 +1,127 @@
-
 using Microsoft.EntityFrameworkCore;
 using AgriPurchaseBilling.Application.Interfaces;
 using AgriPurchaseBilling.Domain.Entities;
 using AgriPurchaseBilling.Infrastructure.Data;
 
-namespace AgriPurchaseBilling.Infrastructure.Repositories;
-
-public class OtpRepository : IOtpRepository
+namespace AgriPurchaseBilling.Infrastructure.Repositories
 {
-    private readonly AppDbContext _context;
 
-    public OtpRepository(AppDbContext context)
+    public class OtpRepository : IOtpRepository
     {
-        _context = context;
-    }
+        private readonly AppDbContext _context;
 
-    public async Task SaveOtpAsync(
-        UserOtp otp,
-        CancellationToken cancellationToken = default)
-    {
-        // Remove previous OTPs for the same email/mobile and purpose.
-        var existingOtps = await _context.UserOtps
-            .Where(x =>
-                x.Purpose == otp.Purpose &&
-                (
-                    (otp.Email != null &&
-                     x.Email != null &&
-                     x.Email.ToLower() == otp.Email.ToLower())
-                    ||
-                    (otp.Mobile != null &&
-                     x.Mobile != null &&
-                     x.Mobile == otp.Mobile)
-                ))
-            .ToListAsync(cancellationToken);
+        public OtpRepository(AppDbContext context)
+        {
+            _context = context;
+        }
 
-        _context.UserOtps.RemoveRange(existingOtps);
+        public async Task SaveOtpAsync(
+            UserOtp otp,
+            CancellationToken cancellationToken = default)
+        {
+            // Remove previous OTPs for the same email/mobile and purpose.
+            var existingOtps = await _context.UserOtps
+                .Where(x =>
+                    x.Purpose == otp.Purpose &&
+                    (
+                        (otp.Email != null &&
+                         x.Email != null &&
+                         x.Email.ToLower() == otp.Email.ToLower())
+                        ||
+                        (otp.Mobile != null &&
+                         x.Mobile != null &&
+                         x.Mobile == otp.Mobile)
+                    ))
+                .ToListAsync(cancellationToken);
 
-        await _context.UserOtps.AddAsync(
-            otp, cancellationToken);
+            _context.UserOtps.RemoveRange(existingOtps);
 
-        await _context.SaveChangesAsync(cancellationToken);
-    }
+            await _context.UserOtps.AddAsync(
+                otp, cancellationToken);
 
-    public async Task<UserOtp?> GetLatestOtpAsync(
-        string destination,
-        string purpose,
-        CancellationToken cancellationToken = default)
-    {
-        destination = destination.Trim();
+            await _context.SaveChangesAsync(cancellationToken);
+        }
 
-        return await _context.UserOtps
-            .Where(x =>
-                x.Purpose == purpose &&
-                (
-                    (x.Email != null &&
-                     x.Email.ToLower() == destination.ToLower())
-                    ||
-                    (x.Mobile != null &&
-                     x.Mobile == destination)
-                ))
-            .OrderByDescending(x => x.CreatedAt)
-            .ThenByDescending(x => x.Id)
-            .FirstOrDefaultAsync(cancellationToken);
-    }
+        public async Task<UserOtp?> GetLatestOtpAsync(
+            string destination,
+            string purpose,
+            CancellationToken cancellationToken = default)
+        {
+            destination = destination.Trim();
 
-    public async Task IncrementAttemptsAsync(
-        int otpId,
-        CancellationToken cancellationToken = default)
-    {
-        var otp = await _context.UserOtps
-            .FirstOrDefaultAsync(
-                x => x.Id == otpId,
-                cancellationToken);
+            return await _context.UserOtps
+                .Where(x =>
+                    x.Purpose == purpose &&
+                    (
+                        (x.Email != null &&
+                         x.Email.ToLower() == destination.ToLower())
+                        ||
+                        (x.Mobile != null &&
+                         x.Mobile == destination)
+                    ))
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
 
-        if (otp == null)
-            return;
+        public async Task IncrementAttemptsAsync(
+            int otpId,
+            CancellationToken cancellationToken = default)
+        {
+            var otp = await _context.UserOtps
+                .FirstOrDefaultAsync(
+                    x => x.Id == otpId,
+                    cancellationToken);
 
-        otp.Attempts++;
+            if (otp == null)
+                return;
 
-        await _context.SaveChangesAsync(cancellationToken);
-    }
+            otp.Attempts++;
 
-    public async Task<bool> MarkVerifiedAsync(
-        int otpId,
-        CancellationToken cancellationToken = default)
-    {
-        var otp = await _context.UserOtps
-            .FirstOrDefaultAsync(
-                x => x.Id == otpId,
-                cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
 
-        if (otp == null)
-            return false;
+        public async Task<bool> MarkVerifiedAsync(
+            int otpId,
+            CancellationToken cancellationToken = default)
+        {
+            var otp = await _context.UserOtps
+                .FirstOrDefaultAsync(
+                    x => x.Id == otpId,
+                    cancellationToken);
 
-        otp.VerifiedAt = DateTime.UtcNow;
+            if (otp == null)
+                return false;
 
-        await _context.SaveChangesAsync(cancellationToken);
+            otp.VerifiedAt = DateTime.UtcNow;
 
-        return true;
-    }
+            await _context.SaveChangesAsync(cancellationToken);
 
-    public async Task ConsumeOtpAsync(
-        string destination,
-        string purpose,
-        CancellationToken cancellationToken = default)
-    {
-        destination = destination.Trim();
+            return true;
+        }
 
-        var otps = await _context.UserOtps
-            .Where(x =>
-                x.Purpose == purpose &&
-                (
-                    (x.Email != null &&
-                     x.Email.ToLower() == destination.ToLower())
-                    ||
-                    (x.Mobile != null &&
-                     x.Mobile == destination)
-                ))
-            .ToListAsync(cancellationToken);
+        public async Task ConsumeOtpAsync(
+            string destination,
+            string purpose,
+            CancellationToken cancellationToken = default)
+        {
+            destination = destination.Trim();
 
-        _context.UserOtps.RemoveRange(otps);
+            var otps = await _context.UserOtps
+                .Where(x =>
+                    x.Purpose == purpose &&
+                    (
+                        (x.Email != null &&
+                         x.Email.ToLower() == destination.ToLower())
+                        ||
+                        (x.Mobile != null &&
+                         x.Mobile == destination)
+                    ))
+                .ToListAsync(cancellationToken);
 
-        await _context.SaveChangesAsync(cancellationToken);
+            _context.UserOtps.RemoveRange(otps);
+
+            await _context.SaveChangesAsync(cancellationToken);
+        }
     }
 }

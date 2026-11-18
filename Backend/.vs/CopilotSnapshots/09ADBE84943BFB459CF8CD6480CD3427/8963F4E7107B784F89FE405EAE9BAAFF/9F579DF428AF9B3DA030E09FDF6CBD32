@@ -1,0 +1,104 @@
+﻿using AgriPurchaseBilling.Application.DTOs;
+using AgriPurchaseBilling.Application.Interfaces;
+using AgriPurchaseBilling.Domain.Entities;
+using AgriPurchaseBilling.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace AgriPurchaseBilling.Infrastructure.Services
+{
+    public class MiddlemanProfileService : IMiddlemanProfileService
+    {
+        private readonly AppDbContext _context;
+        public MiddlemanProfileService(AppDbContext context) => _context = context;
+
+        public async Task<MiddlemanProfileDto?> GetByUserIdAsync(long userId, CancellationToken ct)
+        {
+            var profile = await _context.MiddlemanProfiles.AsNoTracking()
+                .Include(x => x.User)
+                .FirstOrDefaultAsync(x => x.UserId == userId, ct);
+            return profile == null ? null : Map(profile);
+        }
+
+        public async Task<MiddlemanProfileDto?> GetByIdAsync(long profileId, CancellationToken ct)
+        {
+            var profile = await _context.MiddlemanProfiles.AsNoTracking()
+                .Include(x => x.User)
+                .FirstOrDefaultAsync(x => x.Id == profileId, ct);
+            return profile == null ? null : Map(profile);
+        }
+
+        public async Task<MiddlemanProfileDto?> UpdateAsync(long profileId, long userId, UpdateMiddlemanProfileRequest request, CancellationToken ct)
+        {
+            var profile = await _context.MiddlemanProfiles
+                .Include(x => x.User)
+                .FirstOrDefaultAsync(x => x.Id == profileId && x.UserId == userId, ct);
+            if (profile == null) return null;
+
+            profile.RegisteredBusinessName = request.RegisteredBusinessName.Trim();
+            profile.RegistrationLicenseNo = Clean(request.RegistrationLicenseNo);
+            profile.Gstin = Clean(request.Gstin)?.ToUpperInvariant();
+            profile.PremisesAddress = Clean(request.PremisesAddress);
+            profile.VillageArea = Clean(request.VillageArea);
+            profile.District = Clean(request.District);
+            profile.State = Clean(request.State);
+            profile.PinCode = Clean(request.PinCode);
+            profile.AccountHolderName = Clean(request.AccountHolderName);
+            profile.BankName = Clean(request.BankName);
+            profile.AccountNumber = Clean(request.AccountNumber);
+            profile.IfscCode = Clean(request.IfscCode)?.ToUpperInvariant();
+            profile.BranchName = Clean(request.BranchName);
+
+            // Save contact information in both the profile row and Users,
+            // so profile display and authentication use the same values.
+            profile.OwnerName = request.OwnerName.Trim();
+            profile.Mobile = request.Mobile.Trim();
+            profile.Email = Clean(request.Email);
+
+            profile.User.FullName = profile.OwnerName;
+            profile.User.Mobile = profile.Mobile;
+            profile.User.Email = profile.Email;
+            var now = DateTime.UtcNow;
+            profile.User.UpdatedAt = now;
+            profile.UpdatedAt = now;
+
+            // Keep the Middleman master record's audit timestamp in sync.
+            var middleman = await _context.Middleman
+                .FirstOrDefaultAsync(x => x.UserId == userId, ct);
+            if (middleman != null)
+                middleman.UpdatedAt = now;
+
+            // Business details are stored in MiddlemanProfiles;
+            // contact details are mirrored in MiddlemanProfiles and Users.
+            await _context.SaveChangesAsync(ct);
+            return Map(profile);
+        }
+
+        private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+        private static MiddlemanProfileDto Map(MiddlemanProfile p) => new()
+        {
+            Id = p.Id,
+            UserId = p.UserId,
+            MiddlemanPortalId = p.MiddlemanPortalId,
+            BusinessLogoUrl = p.BusinessLogoUrl,
+            RegisteredBusinessName = p.RegisteredBusinessName ?? string.Empty,
+            RegistrationLicenseNo = p.RegistrationLicenseNo,
+            Gstin = p.Gstin,
+            OwnerName = p.OwnerName,
+            Mobile = p.Mobile,
+            Email = p.Email,
+            PremisesAddress = p.PremisesAddress,
+            VillageArea = p.VillageArea,
+            District = p.District,
+            State = p.State,
+            PinCode = p.PinCode,
+            AccountHolderName = p.AccountHolderName,
+            BankName = p.BankName,
+            AccountNumber = p.AccountNumber,
+            IfscCode = p.IfscCode,
+            BranchName = p.BranchName,
+            CreatedAt = p.CreatedAt,
+            UpdatedAt = p.UpdatedAt
+        };
+    }
+}

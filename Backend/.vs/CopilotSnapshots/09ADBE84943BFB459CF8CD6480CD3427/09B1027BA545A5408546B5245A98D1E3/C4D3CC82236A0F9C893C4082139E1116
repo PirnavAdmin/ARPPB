@@ -1,0 +1,15 @@
+﻿using AgriPurchaseBilling.Application.DTOs;
+using AgriPurchaseBilling.Domain.Entities;
+
+namespace AgriPurchaseBilling.Application.Interfaces
+{
+    public interface IVendorProfileRepository
+    {
+        Task<VendorProfile?> GetOrCreateProfileByUserIdAsync(long userId, CancellationToken cancellationToken = default);
+        Task<VendorBankAccount?> GetPrimaryBankAsync(long vendorProfileId, CancellationToken cancellationToken = default);
+        Task<bool> UpsertBankAsync(long vendorProfileId, UpdateVendorBankDetailsRequest request, CancellationToken cancellationToken = default);
+        Task<bool> IsMobileInUseAsync(long userId, string mobile, CancellationToken cancellationToken = default);
+        Task<bool> HasRecentMobileChangeOtpAsync(long userId, DateTime sinceUtc, CancellationToken cancellationToken = default);
+        Task<bool> UpdateMobileWithHistoryAsync(long userId, string mobile, CancellationToken cancellationToken = default);
+    }
+}

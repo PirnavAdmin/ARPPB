@@ -1,0 +1,301 @@
+﻿using AgriPurchaseBilling.Application.DTOs;
+using AgriPurchaseBilling.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+
+namespace Backend.AgriPurchaseBilling.Api.Controllers
+{
+    [ApiController]
+    [Authorize]
+    [Route("api/v1/farmer/profile")]
+    [Produces("application/json")]
+    public class FarmerProfileController : ControllerBase
+    {
+        private readonly IFarmerProfileService _farmerProfileService;
+
+        public FarmerProfileController(IFarmerProfileService farmerProfileService)
+        {
+            _farmerProfileService = farmerProfileService;
+        }
+
+        /// <summary>
+        /// Fetches all registered Farmer profiles.
+        /// </summary>
+        /// <param name="cancellationToken">Cancellation Token</param>
+        /// <returns>List of all farmer profiles.</returns>
+        [HttpGet("all")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<List<FarmerProfileResponseDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllProfiles(CancellationToken cancellationToken)
+        {
+            var result = await _farmerProfileService.GetAllProfilesAsync(cancellationToken);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Fetches a single Farmer profile (Personal, Farm Location &amp; Land, and Bank details).
+        /// If authenticated, automatically resolves userId from the login session.
+        /// In testing mode, userId can be provided optionally.
+        /// </summary>
+        /// <param name="userId">Optional: User ID of the farmer (automatically determined if authenticated).</param>
+        /// <param name="cancellationToken">Cancellation Token</param>
+        /// <returns>Complete farmer profile.</returns>
+        [HttpGet]
+        [Authorize(Roles = "Farmer")]
+        [ProducesResponseType(typeof(ApiResponse<FarmerProfileResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<FarmerProfileResponseDto>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<FarmerProfileResponseDto>), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetProfile(
+            [FromQuery] long? userId = null,
+            CancellationToken cancellationToken = default)
+        {
+            long resolvedUserId = ResolveUserId(userId);
+            if (resolvedUserId <= 0)
+            {
+                return BadRequest(ApiResponse<FarmerProfileResponseDto>.Fail(
+                    "User ID is required. Please provide a userId parameter or authenticate."));
+            }
+
+            var result = await _farmerProfileService.GetProfileAsync(resolvedUserId, cancellationToken);
+            if (!result.Success)
+            {
+                return NotFound(result);
+            }
+
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Updates the Farmer's personal name, farm name, land area, and address details.
+        /// </summary>
+        /// <param name="userId">Optional: User ID of the farmer (automatically determined if authenticated).</param>
+        /// <param name="request">Updated profile payload.</param>
+        /// <param name="cancellationToken">Cancellation Token</param>
+        /// <returns>Updated profile details.</returns>
+        [HttpPut]
+        [Authorize(Roles = "Farmer")]
+        [ProducesResponseType(typeof(ApiResponse<FarmerProfileResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<FarmerProfileResponseDto>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<FarmerProfileResponseDto>), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateProfile(
+            [FromQuery] long? userId = null,
+            [FromBody] UpdateFarmerProfileRequestDto? request = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (request == null)
+            {
+                return BadRequest(ApiResponse<FarmerProfileResponseDto>.Fail("Request body cannot be empty."));
+            }
+
+            long resolvedUserId = ResolveUserId(userId);
+            if (resolvedUserId <= 0)
+            {
+                return BadRequest(ApiResponse<FarmerProfileResponseDto>.Fail(
+                    "User ID is required. Please provide a userId parameter or authenticate."));
+            }
+
+            var result = await _farmerProfileService.UpdateProfileAsync(resolvedUserId, request, cancellationToken);
+            if (!result.Success)
+            {
+                if (result.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                {
+                    return NotFound(result);
+                }
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Updates the Farmer's bank account details in the isolated FarmerBankAccounts table.
+        /// </summary>
+        /// <param name="userId">Optional: User ID of the farmer (automatically determined if authenticated).</param>
+        /// <param name="request">Updated bank account payload.</param>
+        /// <param name="cancellationToken">Cancellation Token</param>
+        /// <returns>Updated bank details.</returns>
+        [HttpPut("bank-details")]
+        [Authorize(Roles = "Farmer")]
+        [ProducesResponseType(typeof(ApiResponse<BankDetailsDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<BankDetailsDto>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<BankDetailsDto>), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateBankDetails(
+            [FromQuery] long? userId = null,
+            [FromBody] UpdateBankDetailsRequestDto? request = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (request == null)
+            {
+                return BadRequest(ApiResponse<BankDetailsDto>.Fail("Request body cannot be empty."));
+            }
+
+            long resolvedUserId = ResolveUserId(userId);
+            if (resolvedUserId <= 0)
+            {
+                return BadRequest(ApiResponse<BankDetailsDto>.Fail(
+                    "User ID is required. Please provide a userId parameter or authenticate."));
+            }
+
+            var result = await _farmerProfileService.UpdateBankDetailsAsync(resolvedUserId, request, cancellationToken);
+            if (!result.Success)
+            {
+                if (result.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                {
+                    return NotFound(result);
+                }
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Sends a 6-digit verification OTP to a NEW mobile number when a farmer requests to change their number.
+        /// </summary>
+        /// <param name="userId">Optional: User ID of the farmer (automatically determined if authenticated).</param>
+        /// <param name="request">Payload containing the 10-digit new mobile number.</param>
+        /// <param name="cancellationToken">Cancellation Token</param>
+        /// <returns>Status message with devOtp in development mode.</returns>
+        [HttpPost("change-mobile/send-otp")]
+        [Authorize(Roles = "Farmer")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> SendMobileChangeOtp(
+            [FromQuery] long? userId = null,
+            [FromBody] SendMobileChangeOtpRequestDto? request = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (request == null)
+            {
+                return BadRequest(ApiResponse<string>.Fail("Request payload cannot be empty."));
+            }
+
+            long resolvedUserId = ResolveUserId(userId);
+            if (resolvedUserId <= 0)
+            {
+                return BadRequest(ApiResponse<string>.Fail(
+                    "User ID is required. Please provide a userId parameter or authenticate."));
+            }
+
+            var result = await _farmerProfileService.SendMobileChangeOtpAsync(resolvedUserId, request.NewMobile, cancellationToken);
+            if (!result.Success)
+            {
+                if (result.Message.Contains("already registered", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Conflict(result);
+                }
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Verifies the OTP sent to the NEW mobile number and permanently updates the farmer's primary mobile.
+        /// The old mobile is archived as Inactive in UserMobileHistories and the new mobile becomes Active.
+        /// </summary>
+        /// <param name="userId">Optional: User ID of the farmer (automatically determined if authenticated).</param>
+        /// <param name="request">Payload containing new mobile number and the received OTP.</param>
+        /// <param name="cancellationToken">Cancellation Token</param>
+        /// <returns>Confirmation message.</returns>
+        [HttpPost("change-mobile/verify-otp")]
+        [Authorize(Roles = "Farmer")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> VerifyMobileChangeOtp(
+            [FromQuery] long? userId = null,
+            [FromBody] VerifyMobileChangeOtpRequestDto? request = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (request == null)
+            {
+                return BadRequest(ApiResponse<string>.Fail("Request payload cannot be empty."));
+            }
+
+            long resolvedUserId = ResolveUserId(userId);
+            if (resolvedUserId <= 0)
+            {
+                return BadRequest(ApiResponse<string>.Fail(
+                    "User ID is required. Please provide a userId parameter or authenticate."));
+            }
+
+            var result = await _farmerProfileService.VerifyMobileChangeOtpAsync(resolvedUserId, request.NewMobile, request.Otp, cancellationToken);
+            if (!result.Success)
+            {
+                if (result.Message.Contains("already registered", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Conflict(result);
+                }
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Changes the Farmer's account password.
+        /// Verifies current password before updating to the new password.
+        /// </summary>
+        /// <param name="userId">Optional: User ID of the farmer (automatically determined if authenticated).</param>
+        /// <param name="request">Payload containing current password, new password, and confirm password.</param>
+        /// <param name="cancellationToken">Cancellation Token</param>
+        /// <returns>Success confirmation message.</returns>
+        [HttpPost("change-password")]
+        [Authorize(Roles = "Farmer")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ChangePassword(
+            [FromQuery] long? userId = null,
+            [FromBody] ChangeFarmerPasswordRequestDto? request = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (request == null)
+            {
+                return BadRequest(ApiResponse<string>.Fail("Request body cannot be empty."));
+            }
+
+            long resolvedUserId = ResolveUserId(userId);
+            if (resolvedUserId <= 0)
+            {
+                return BadRequest(ApiResponse<string>.Fail(
+                    "User ID is required. Please provide a userId parameter or authenticate."));
+            }
+
+            var result = await _farmerProfileService.ChangePasswordAsync(resolvedUserId, request, cancellationToken);
+            if (!result.Success)
+            {
+                if (result.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                {
+                    return NotFound(result);
+                }
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+
+        private long ResolveUserId(long? queryUserId)
+        {
+            // 1. If authenticated, extract user ID from standard claims
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                           ?? User.FindFirst("id")?.Value
+                           ?? User.FindFirst("userId")?.Value
+                           ?? User.FindFirst("sub")?.Value;
+
+                if (!string.IsNullOrEmpty(idClaim) && long.TryParse(idClaim, out var authUserId))
+                {
+                    return authUserId;
+                }
+            }
+
+            // Query-string IDs are intentionally not trusted; profile operations are self-service only.
+            return 0;
+        }
+    }
+}

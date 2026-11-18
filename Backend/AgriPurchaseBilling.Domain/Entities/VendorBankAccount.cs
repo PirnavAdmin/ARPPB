@@ -1,0 +1,17 @@
+namespace AgriPurchaseBilling.Domain.Entities
+{
+    public class VendorBankAccount
+    {
+        public long Id { get; set; }
+        public long VendorProfileId { get; set; }
+        public required string AccountHolderName { get; set; }
+        public required string BankName { get; set; }
+        public required string BranchName { get; set; }
+        public required string AccountNumber { get; set; }
+        public required string IfscCode { get; set; }
+        public bool IsPrimary { get; set; } = true;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public VendorProfile VendorProfile { get; set; } = null!;
+    }
+}

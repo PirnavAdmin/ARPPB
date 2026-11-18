@@ -1,13 +1,16 @@
-namespace AgriPurchaseBilling.Domain.Entities;
-
-public class Vendor
+namespace AgriPurchaseBilling.Domain.Entities
 {
-    public long Id { get; set; }
-    public long UserId { get; set; }
-    public required string VendorCode { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation property
-    public User User { get; set; } = null!;
+    public class Vendor
+    {
+        public long Id { get; set; }
+        public long UserId { get; set; }
+        public required string VendorCode { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        // Navigation properties
+        public User User { get; set; } = null!;
+        public VendorProfile? Profile { get; set; }
+    }
 }

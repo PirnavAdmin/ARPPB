@@ -1,7 +1,9 @@
-namespace AgriPurchaseBilling.Application.Interfaces;
-
-public interface IPasswordHasher
+namespace AgriPurchaseBilling.Application.Interfaces
 {
-    string HashPassword(string password);
-    bool VerifyPassword(string password, string hashedPassword);
+
+    public interface IPasswordHasher
+    {
+        string HashPassword(string password);
+        bool VerifyPassword(string password, string hashedPassword);
+    }
 }

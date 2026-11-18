@@ -1,279 +1,529 @@
-
 using Microsoft.EntityFrameworkCore;
 using AgriPurchaseBilling.Domain.Entities;
 
-namespace AgriPurchaseBilling.Infrastructure.Data;
-
-public class AppDbContext : DbContext
+namespace AgriPurchaseBilling.Infrastructure.Data
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options)
-        : base(options)
+
+    public class AppDbContext : DbContext
     {
-    }
-
-    public DbSet<User> Users => Set<User>();
-    public DbSet<Farmer> Farmers => Set<Farmer>();
-    public DbSet<Customer> Customers => Set<Customer>();
-    public DbSet<Supplier> Suppliers => Set<Supplier>();
-    public DbSet<Vendor> Vendors => Set<Vendor>();
-    public DbSet<UserOtp> UserOtps => Set<UserOtp>();
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
-
-        // Users
-        modelBuilder.Entity<User>(entity =>
+        public AppDbContext(DbContextOptions<AppDbContext> options)
+            : base(options)
         {
-            entity.ToTable("Users");
+        }
 
-            entity.HasKey(e => e.Id);
+        public DbSet<User> Users => Set<User>();
+        public DbSet<Farmer> Farmers => Set<Farmer>();
+        public DbSet<Customer> Customers => Set<Customer>();
+        public DbSet<CustomerProfileEntity> CustomerProfiles => Set<CustomerProfileEntity>();
+        public DbSet<CustomerDeliveryAddressEntity> CustomerDeliveryAddresses => Set<CustomerDeliveryAddressEntity>();
+        public DbSet<Middleman> Middleman => Set<Middleman>();
+        public DbSet<Vendor> Vendors => Set<Vendor>();
+        public DbSet<UserOtp> UserOtps => Set<UserOtp>();
+        public DbSet<FarmerBankAccount> FarmerBankAccounts => Set<FarmerBankAccount>();
+        public DbSet<FarmerMobileHistory> FarmerMobileHistories => Set<FarmerMobileHistory>();
+        public DbSet<UserMobileHistory> UserMobileHistories => Set<UserMobileHistory>();
+        public DbSet<MiddlemanProfile> MiddlemanProfiles => Set<MiddlemanProfile>();
+        public DbSet<VendorProfile> VendorProfiles => Set<VendorProfile>();
+        public DbSet<VendorBankAccount> VendorBankAccounts => Set<VendorBankAccount>();
 
-            entity.Property(e => e.Id)
-                .HasColumnName("Id")
-                .ValueGeneratedOnAdd();
-
-            entity.Property(e => e.FullName)
-                .HasColumnName("FullName")
-                .IsRequired()
-                .HasMaxLength(100);
-
-            entity.Property(e => e.Email)
-                .HasColumnName("Email")
-                .IsRequired(false)
-                .HasMaxLength(100);
-
-            entity.HasIndex(e => e.Email)
-                .IsUnique();
-
-            entity.Property(e => e.Mobile)
-                .HasColumnName("Mobile")
-                .IsRequired()
-                .HasMaxLength(10);
-
-            entity.HasIndex(e => e.Mobile)
-                .IsUnique();
-
-            entity.Property(e => e.PasswordHash)
-                .HasColumnName("PasswordHash")
-                .IsRequired()
-                .HasMaxLength(255);
-
-            entity.Property(e => e.Role)
-                .HasColumnName("Role")
-                .IsRequired()
-                .HasMaxLength(20)
-                .HasConversion<string>();
-
-            entity.Property(e => e.IsActive)
-                .HasColumnName("IsActive")
-                .HasDefaultValue(true);
-
-            entity.Property(e => e.CreatedAt)
-                .HasColumnName("CreatedAt")
-                .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
-
-            entity.Property(e => e.UpdatedAt)
-                .HasColumnName("UpdatedAt")
-                .HasDefaultValueSql(
-                    "CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
-
-            entity.Property(e => e.FailedLoginAttempts)
-                .HasColumnName("failed_login_attempts")
-                .HasDefaultValue(0);
-
-            entity.Property(e => e.LockoutEnd)
-                .HasColumnName("lockout_end");
-        });
-
-        // Farmers
-        modelBuilder.Entity<Farmer>(entity =>
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            entity.ToTable("Farmers");
-            entity.HasKey(e => e.Id);
+            base.OnModelCreating(modelBuilder);
 
-            entity.Property(e => e.Id)
-                .ValueGeneratedOnAdd();
+            // Users
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.ToTable("Users");
 
-            entity.Property(e => e.FarmerCode)
-                .IsRequired()
-                .HasMaxLength(30);
+                entity.HasKey(e => e.Id);
 
-            entity.HasIndex(e => e.FarmerCode)
-                .IsUnique()
-                .HasDatabaseName("IX_Farmers_FarmerCode");
+                entity.Property(e => e.Id)
+                    .HasColumnName("Id")
+                    .ValueGeneratedOnAdd();
 
-            entity.Property(e => e.UserId).IsRequired();
+                entity.Property(e => e.FullName)
+                    .HasColumnName("FullName")
+                    .IsRequired()
+                    .HasMaxLength(100);
 
-            entity.HasIndex(e => e.UserId)
-                .IsUnique()
-                .HasDatabaseName("IX_Farmers_UserId");
+                entity.Property(e => e.Email)
+                    .HasColumnName("Email")
+                    .IsRequired(false)
+                    .HasMaxLength(100);
 
-            entity.HasOne(e => e.User)
-                .WithOne(u => u.Farmer)
-                .HasForeignKey<Farmer>(e => e.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(e => e.Email)
+                    .IsUnique();
 
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                entity.Property(e => e.Mobile)
+                    .HasColumnName("Mobile")
+                    .IsRequired()
+                    .HasMaxLength(10);
 
-            entity.Property(e => e.UpdatedAt)
-                .HasDefaultValueSql(
-                    "CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
-        });
+                entity.HasIndex(e => e.Mobile)
+                    .IsUnique();
 
-        // Customers
-        modelBuilder.Entity<Customer>(entity =>
-        {
-            entity.ToTable("Customers");
-            entity.HasKey(e => e.Id);
+                entity.Property(e => e.PasswordHash)
+                    .HasColumnName("PasswordHash")
+                    .IsRequired()
+                    .HasMaxLength(255);
 
-            entity.Property(e => e.Id)
-                .ValueGeneratedOnAdd();
+                entity.Property(e => e.Role)
+                    .HasColumnName("Role")
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasConversion<string>();
 
-            entity.Property(e => e.CustomerCode)
-                .IsRequired()
-                .HasMaxLength(30);
+                entity.Property(e => e.IsActive)
+                    .HasColumnName("IsActive")
+                    .HasDefaultValue(true);
 
-            entity.HasIndex(e => e.CustomerCode)
-                .IsUnique()
-                .HasDatabaseName("IX_Customers_CustomerCode");
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("CreatedAt")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
-            entity.Property(e => e.UserId).IsRequired();
+                entity.Property(e => e.UpdatedAt)
+                    .HasColumnName("UpdatedAt")
+                    .HasDefaultValueSql(
+                        "CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
 
-            entity.HasIndex(e => e.UserId)
-                .IsUnique()
-                .HasDatabaseName("IX_Customers_UserId");
+                entity.Property(e => e.FailedLoginAttempts)
+                    .HasColumnName("failed_login_attempts")
+                    .HasDefaultValue(0);
 
-            entity.HasOne(e => e.User)
-                .WithOne(u => u.Customer)
-                .HasForeignKey<Customer>(e => e.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                entity.Property(e => e.LockoutEnd)
+                    .HasColumnName("lockout_end");
+            });
 
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+            // Farmers
+            modelBuilder.Entity<Farmer>(entity =>
+            {
+                entity.ToTable("Farmers");
+                entity.HasKey(e => e.Id);
 
-            entity.Property(e => e.UpdatedAt)
-                .HasDefaultValueSql(
-                    "CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
-        });
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
 
-        // Suppliers
-        modelBuilder.Entity<Supplier>(entity =>
-        {
-            entity.ToTable("Suppliers");
-            entity.HasKey(e => e.Id);
+                entity.Property(e => e.FarmerCode)
+                    .IsRequired()
+                    .HasMaxLength(30);
 
-            entity.Property(e => e.Id)
-                .ValueGeneratedOnAdd();
+                entity.HasIndex(e => e.FarmerCode)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Farmers_FarmerCode");
 
-            entity.Property(e => e.SupplierCode)
-                .IsRequired()
-                .HasMaxLength(30);
+                entity.Property(e => e.UserId).IsRequired();
 
-            entity.HasIndex(e => e.SupplierCode)
-                .IsUnique()
-                .HasDatabaseName("IX_Suppliers_SupplierCode");
+                entity.HasIndex(e => e.UserId)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Farmers_UserId");
 
-            entity.Property(e => e.UserId).IsRequired();
+                entity.HasOne(e => e.User)
+                    .WithOne(u => u.Farmer)
+                    .HasForeignKey<Farmer>(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasIndex(e => e.UserId)
-                .IsUnique()
-                .HasDatabaseName("IX_Suppliers_UserId");
+                // Farm Location & Landholding
+                entity.Property(e => e.FarmName).HasMaxLength(150);
+                entity.Property(e => e.TotalLandArea).HasMaxLength(100);
+                entity.Property(e => e.SoilType).HasMaxLength(100);
+                entity.Property(e => e.PrimaryCrops).HasMaxLength(255);
+                entity.Property(e => e.Village).HasMaxLength(100);
+                entity.Property(e => e.Mandal).HasMaxLength(100);
+                entity.Property(e => e.District).HasMaxLength(100);
+                entity.Property(e => e.State).HasMaxLength(100);
+                entity.Property(e => e.PinCode).HasMaxLength(10);
+                entity.Property(e => e.Address).HasMaxLength(500);
+                entity.Property(e => e.Mobile).HasMaxLength(10);
+                entity.Property(e => e.AlternateMobile).HasMaxLength(10);
+                entity.HasOne(e => e.BankAccount)
+                    .WithOne(b => b.Farmer)
+                    .HasForeignKey<FarmerBankAccount>(b => b.FarmerId)
+                    .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(e => e.User)
-                .WithOne(u => u.Supplier)
-                .HasForeignKey<Supplier>(e => e.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                entity.Property(e => e.UpdatedAt)
+                    .HasDefaultValueSql(
+                        "CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+            });
 
-            entity.Property(e => e.UpdatedAt)
-                .HasDefaultValueSql(
-                    "CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
-        });
 
-        // Vendors
-        modelBuilder.Entity<Vendor>(entity =>
-        {
-            entity.ToTable("Vendors");
-            entity.HasKey(e => e.Id);
+            // Customers
+            modelBuilder.Entity<Customer>(entity =>
+            {
+                entity.ToTable("Customers");
+                entity.HasKey(e => e.Id);
 
-            entity.Property(e => e.Id)
-                .ValueGeneratedOnAdd();
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
 
-            entity.Property(e => e.VendorCode)
-                .IsRequired()
-                .HasMaxLength(30);
+                entity.Property(e => e.CustomerCode)
+                    .IsRequired()
+                    .HasMaxLength(30);
 
-            entity.HasIndex(e => e.VendorCode)
-                .IsUnique()
-                .HasDatabaseName("IX_Vendors_VendorCode");
+                entity.HasIndex(e => e.CustomerCode)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Customers_CustomerCode");
 
-            entity.Property(e => e.UserId).IsRequired();
+                entity.Property(e => e.UserId).IsRequired();
 
-            entity.HasIndex(e => e.UserId)
-                .IsUnique()
-                .HasDatabaseName("IX_Vendors_UserId");
+                entity.HasIndex(e => e.UserId)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Customers_UserId");
 
-            entity.HasOne(e => e.User)
-                .WithOne(u => u.Vendor)
-                .HasForeignKey<Vendor>(e => e.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.User)
+                    .WithOne(u => u.Customer)
+                    .HasForeignKey<Customer>(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
 
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
-            entity.Property(e => e.UpdatedAt)
-                .HasDefaultValueSql(
-                    "CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
-        });
+                entity.Property(e => e.UpdatedAt)
+                    .HasDefaultValueSql(
+                        "CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+            });
 
-        // OTP verification
-        modelBuilder.Entity<UserOtp>(entity =>
-        {
-            entity.ToTable("otp_verifications");
+            // CustomerProfiles
+            modelBuilder.Entity<CustomerProfileEntity>(entity =>
+            {
+                entity.ToTable("customer_profiles");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.UserId).HasColumnName("user_id").IsRequired();
+                entity.HasIndex(e => e.UserId).IsUnique().HasDatabaseName("UQ_customer_profiles_user_id");
+                entity.Property(e => e.AlternateMobile).HasColumnName("alternate_mobile").HasMaxLength(15);
+                entity.Property(e => e.Address).HasColumnName("address").HasMaxLength(500).HasDefaultValue(string.Empty);
+                entity.Property(e => e.District).HasColumnName("district").HasMaxLength(100).HasDefaultValue(string.Empty);
+                entity.Property(e => e.State).HasColumnName("state").HasMaxLength(100).HasDefaultValue(string.Empty);
+                entity.Property(e => e.PinCode).HasColumnName("pin_code").HasMaxLength(10).HasDefaultValue(string.Empty);
+                entity.Property(e => e.ProfilePhoto).HasColumnName("profile_photo");
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+            });
 
-            entity.HasKey(e => e.Id);
 
-            entity.Property(e => e.Id)
-                .HasColumnName("id")
-                .ValueGeneratedOnAdd();
+            // Middleman
+            modelBuilder.Entity<Middleman>(entity =>
+            {
+                entity.ToTable("Middleman");
+                entity.HasKey(e => e.Id);
 
-            entity.Property(e => e.Email)
-                .HasColumnName("email")
-                .IsRequired(false)
-                .HasMaxLength(150);
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
 
-            entity.Property(e => e.Mobile)
-                .HasColumnName("mobile")
-                .HasMaxLength(15);
+                entity.Property(e => e.MiddlemanPortalId)
+                    .IsRequired()
+                    .HasMaxLength(30);
 
-            entity.Property(e => e.OtpHash)
-                .HasColumnName("otp_hash")
-                .IsRequired()
-                .HasMaxLength(255);
+                entity.HasIndex(e => e.MiddlemanPortalId)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Middleman_MiddlemanPortalId");
 
-            entity.Property(e => e.Purpose)
-                .HasColumnName("purpose")
-                .IsRequired()
-                .HasMaxLength(50);
+                entity.Property(e => e.UserId).IsRequired();
 
-            entity.Property(e => e.ExpiresAt)
-                .HasColumnName("expires_at")
-                .IsRequired();
+                entity.HasIndex(e => e.UserId)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Middleman_UserId");
 
-            entity.Property(e => e.Attempts)
-                .HasColumnName("attempts")
-                .HasDefaultValue(0);
+                entity.HasOne(e => e.User)
+                    .WithOne(u => u.Middleman)
+                    .HasForeignKey<Middleman>(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
 
-            entity.Property(e => e.VerifiedAt)
-                .HasColumnName("verified_at");
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
-            entity.Property(e => e.CreatedAt)
-                .HasColumnName("created_at")
-                .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
-        });
+                entity.Property(e => e.UpdatedAt)
+                    .HasDefaultValueSql(
+                        "CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+            });
+
+
+            // MiddlemanProfile
+            modelBuilder.Entity<MiddlemanProfile>(entity =>
+            {
+                entity.ToTable("MiddlemanProfiles");
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.MiddlemanPortalId)
+                    .IsRequired()
+                    .HasMaxLength(30);
+
+                entity.HasIndex(e => e.MiddlemanPortalId)
+                    .IsUnique()
+                    .HasDatabaseName("IX_MiddlemanProfiles_PortalId");
+
+                entity.Property(e => e.UserId).IsRequired();
+
+                entity.HasIndex(e => e.UserId)
+                    .IsUnique()
+                    .HasDatabaseName("IX_MiddlemanProfiles_UserId");
+
+                entity.HasOne(e => e.User)
+                    .WithOne(u => u.MiddlemanProfile)
+                    .HasForeignKey<MiddlemanProfile>(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Contact details are mirrored here for the profile record and
+                // synchronized with the central Users authentication record.
+                entity.Property(e => e.OwnerName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                entity.Property(e => e.Mobile)
+                    .IsRequired()
+                    .HasMaxLength(10);
+                entity.Property(e => e.Email)
+                    .IsRequired(false)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.BusinessLogoUrl).HasMaxLength(500);
+                entity.Property(e => e.RegisteredBusinessName)
+                    .HasMaxLength(150);
+
+                entity.Property(e => e.RegistrationLicenseNo).HasMaxLength(100);
+                entity.Property(e => e.Gstin).HasMaxLength(15);
+                entity.Property(e => e.PremisesAddress).HasMaxLength(500);
+                entity.Property(e => e.VillageArea).HasMaxLength(100);
+                entity.Property(e => e.District).HasMaxLength(100);
+                entity.Property(e => e.State).HasMaxLength(100);
+                entity.Property(e => e.PinCode).HasMaxLength(6);
+                entity.Property(e => e.AccountHolderName).HasMaxLength(150);
+                entity.Property(e => e.BankName).HasMaxLength(100);
+                entity.Property(e => e.AccountNumber).HasMaxLength(34);
+                entity.Property(e => e.IfscCode).HasMaxLength(11);
+                entity.Property(e => e.BranchName).HasMaxLength(100);
+
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                entity.Property(e => e.UpdatedAt)
+                    .HasDefaultValueSql(
+                        "CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+            });
+
+
+            // Vendors
+            modelBuilder.Entity<Vendor>(entity =>
+            {
+                entity.ToTable("Vendors");
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.VendorCode)
+                    .IsRequired()
+                    .HasMaxLength(30);
+
+                entity.HasIndex(e => e.VendorCode)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Vendors_VendorCode");
+
+                entity.Property(e => e.UserId).IsRequired();
+
+                entity.HasIndex(e => e.UserId)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Vendors_UserId");
+
+                entity.HasOne(e => e.User)
+                    .WithOne(u => u.Vendor)
+                    .HasForeignKey<Vendor>(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                entity.Property(e => e.UpdatedAt)
+                    .HasDefaultValueSql(
+                        "CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+            });
+
+
+            // Vendor profile tables are separate from the existing vendor identity table.
+            modelBuilder.Entity<VendorProfile>(entity =>
+            {
+                entity.ToTable("vendor_profiles");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.VendorId).HasColumnName("vendor_id");
+                entity.Property(e => e.VendorCode).HasColumnName("vendor_code").IsRequired().HasMaxLength(30);
+                entity.HasIndex(e => e.VendorCode).IsUnique().HasDatabaseName("UX_vendor_profiles_code");
+                entity.HasIndex(e => e.VendorId).IsUnique().HasDatabaseName("UX_vendor_profiles_vendor_id");
+                entity.Property(e => e.BusinessName).HasColumnName("business_name").IsRequired().HasMaxLength(200);
+                entity.Property(e => e.OwnerName).HasColumnName("owner_name").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Mobile).HasColumnName("mobile").IsRequired().HasMaxLength(10);
+                entity.Property(e => e.Email).HasColumnName("email").IsRequired().HasMaxLength(150);
+                entity.Property(e => e.Gstin).HasColumnName("gstin").IsRequired(false).HasMaxLength(15);
+                entity.Property(e => e.BusinessRegNumber).HasColumnName("business_reg_number").IsRequired().HasMaxLength(50);
+                entity.Property(e => e.BusinessType).HasColumnName("business_type").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.BusinessAddress).HasColumnName("business_address").IsRequired().HasMaxLength(500);
+                entity.Property(e => e.District).HasColumnName("district").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.State).HasColumnName("state").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.PinCode).HasColumnName("pin_code").IsRequired().HasMaxLength(6);
+                entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+                entity.Property(e => e.IsVerified).HasColumnName("is_verified").HasDefaultValue(false);
+                entity.Property(e => e.OtpSecurityEnabled).HasColumnName("otp_security_enabled").HasDefaultValue(true);
+                entity.Property(e => e.GstBillingEnabled).HasColumnName("gst_billing_enabled").HasDefaultValue(true);
+                entity.Property(e => e.ComplianceUpdatedAt).HasColumnName("compliance_updated_at");
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+                entity.HasOne(e => e.Vendor)
+                    .WithOne(v => v.Profile)
+                    .HasForeignKey<VendorProfile>(e => e.VendorId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<VendorBankAccount>(entity =>
+            {
+                entity.ToTable("vendor_bank_accounts");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.VendorProfileId).HasColumnName("vendor_profile_id").IsRequired();
+                entity.HasIndex(e => e.VendorProfileId).HasDatabaseName("IX_vendor_bank_accounts_profile");
+                entity.Property(e => e.AccountHolderName).HasColumnName("account_holder_name").IsRequired().HasMaxLength(200);
+                entity.Property(e => e.BankName).HasColumnName("bank_name").IsRequired().HasMaxLength(150);
+                entity.Property(e => e.BranchName).HasColumnName("branch_name").IsRequired().HasMaxLength(150);
+                entity.Property(e => e.AccountNumber).HasColumnName("account_number").IsRequired().HasMaxLength(20);
+                entity.Property(e => e.IfscCode).HasColumnName("ifsc_code").IsRequired().HasMaxLength(11);
+                entity.Property(e => e.IsPrimary).HasColumnName("is_primary").HasDefaultValue(true);
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+                entity.HasOne(e => e.VendorProfile)
+                    .WithMany()
+                    .HasForeignKey(e => e.VendorProfileId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // OTP verification
+            modelBuilder.Entity<UserOtp>(entity =>
+            {
+                entity.ToTable("otp_verifications");
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Id)
+                    .HasColumnName("id")
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.Email)
+                    .HasColumnName("email")
+                    .IsRequired(false)
+                    .HasMaxLength(150);
+
+                entity.Property(e => e.Mobile)
+                    .HasColumnName("mobile")
+                    .HasMaxLength(15);
+
+                entity.Property(e => e.OtpHash)
+                    .HasColumnName("otp_hash")
+                    .IsRequired()
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.Purpose)
+                    .HasColumnName("purpose")
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.ExpiresAt)
+                    .HasColumnName("expires_at")
+                    .IsRequired();
+
+                entity.Property(e => e.Attempts)
+                    .HasColumnName("attempts")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.VerifiedAt)
+                    .HasColumnName("verified_at");
+
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("created_at")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+            });
+
+            // FarmerBankAccounts
+            modelBuilder.Entity<FarmerBankAccount>(entity =>
+            {
+                entity.ToTable("FarmerBankAccounts");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+                entity.Property(e => e.FarmerId).IsRequired();
+                entity.HasIndex(e => e.FarmerId).IsUnique().HasDatabaseName("IX_FarmerBankAccounts_FarmerId");
+                entity.Property(e => e.BankName).HasMaxLength(100);
+                entity.Property(e => e.AccountHolderName).HasMaxLength(200);
+                entity.Property(e => e.AccountNumber).HasMaxLength(50);
+                entity.Property(e => e.IfscCode).HasMaxLength(20);
+                entity.Property(e => e.BranchName).HasMaxLength(100);
+                entity.Property(e => e.AccountType).HasMaxLength(50);
+                entity.Property(e => e.UpiId).HasMaxLength(100);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+            });
+
+            // FarmerMobileHistories
+            modelBuilder.Entity<FarmerMobileHistory>(entity =>
+            {
+                entity.ToTable("FarmerMobileHistories");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+                entity.Property(e => e.FarmerId).IsRequired();
+                entity.Property(e => e.UserId).IsRequired();
+                entity.Property(e => e.OldMobile).IsRequired().HasMaxLength(10);
+                entity.Property(e => e.NewMobile).IsRequired().HasMaxLength(10);
+                entity.Property(e => e.OldMobileStatus).IsRequired().HasMaxLength(20).HasDefaultValue("Inactive");
+                entity.Property(e => e.NewMobileStatus).IsRequired().HasMaxLength(20).HasDefaultValue("Active");
+                entity.Property(e => e.ChangedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                entity.HasOne(e => e.Farmer)
+                    .WithMany()
+                    .HasForeignKey(e => e.FarmerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // CustomerDeliveryAddresses
+            modelBuilder.Entity<CustomerDeliveryAddressEntity>(entity =>
+            {
+                entity.ToTable("customer_delivery_addresses");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.UserId).HasColumnName("user_id").IsRequired();
+                entity.Property(e => e.AddressName).HasColumnName("address_name").HasMaxLength(150).IsRequired();
+                entity.Property(e => e.ContactPerson).HasColumnName("contact_person").HasMaxLength(100).IsRequired();
+                entity.Property(e => e.PhoneNumber).HasColumnName("phone_number").HasMaxLength(15).IsRequired();
+                entity.Property(e => e.FullAddress).HasColumnName("full_address").HasMaxLength(500).IsRequired();
+                entity.Property(e => e.District).HasColumnName("district").HasMaxLength(100).IsRequired();
+                entity.Property(e => e.State).HasColumnName("state").HasMaxLength(100).IsRequired();
+                entity.Property(e => e.PinCode).HasColumnName("pin_code").HasMaxLength(10).IsRequired();
+                entity.Property(e => e.IsDefault).HasColumnName("is_default").HasDefaultValue(false);
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+                entity.HasIndex(e => new { e.UserId, e.IsDefault }).HasDatabaseName("IX_customer_delivery_addresses_user_default");
+            });
+
+            // UserMobileHistories
+            modelBuilder.Entity<UserMobileHistory>(entity =>
+            {
+                entity.ToTable("UserMobileHistories");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+                entity.Property(e => e.UserId).IsRequired();
+                entity.Property(e => e.OldMobile).IsRequired().HasMaxLength(10);
+                entity.Property(e => e.NewMobile).IsRequired().HasMaxLength(10);
+                entity.Property(e => e.OldMobileStatus).IsRequired().HasMaxLength(20).HasDefaultValue("Inactive");
+                entity.Property(e => e.NewMobileStatus).IsRequired().HasMaxLength(20).HasDefaultValue("Active");
+                entity.Property(e => e.ChangedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                entity.HasOne(e => e.User)
+                    .WithMany(u => u.MobileHistories)
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+        }
     }
 }

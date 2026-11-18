@@ -1,13 +1,31 @@
-namespace AgriPurchaseBilling.Domain.Entities;
-
-public class Farmer
+namespace AgriPurchaseBilling.Domain.Entities
 {
-    public long Id { get; set; }
-    public long UserId { get; set; }
-    public required string FarmerCode { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation property
-    public User User { get; set; } = null!;
+    public class Farmer
+    {
+        public long Id { get; set; }
+        public long UserId { get; set; }
+        public required string FarmerCode { get; set; }
+        public string? Mobile { get; set; }
+        public string? AlternateMobile { get; set; }
+
+        // Farm Location & Landholding
+        public string? FarmName { get; set; }
+        public string? TotalLandArea { get; set; }
+        public string? SoilType { get; set; }
+        public string? PrimaryCrops { get; set; }
+        public string? Village { get; set; }
+        public string? Mandal { get; set; }
+        public string? District { get; set; }
+        public string? State { get; set; }
+        public string? PinCode { get; set; }
+        public string? Address { get; set; }
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        // Navigation properties
+        public User User { get; set; } = null!;
+        public FarmerBankAccount? BankAccount { get; set; }
+    }
 }

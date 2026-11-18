@@ -1,0 +1,404 @@
+using AgriPurchaseBilling.Application.DTOs;
+using AgriPurchaseBilling.Application.Interfaces;
+using AgriPurchaseBilling.Domain.Entities;
+using AgriPurchaseBilling.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System.Data;
+using System.Data.Common;
+
+namespace AgriPurchaseBilling.Infrastructure.Repositories
+{
+    /// <summary>
+    /// Customer Profile Repository executing MySQL Stored Procedures with safe parameterization.
+    /// Supports both customer profile retrieval/persistence and delivery address management.
+    /// </summary>
+    public class CustomerProfileRepository : ICustomerProfileRepository
+    {
+        private readonly AppDbContext _context;
+        private readonly ILogger<CustomerProfileRepository> _logger;
+
+        public CustomerProfileRepository(AppDbContext context, ILogger<CustomerProfileRepository> logger)
+        {
+            _context = context;
+            _logger = logger;
+        }
+
+        private async Task<DbConnection> GetOpenConnectionAsync(CancellationToken cancellationToken)
+        {
+            var conn = _context.Database.GetDbConnection();
+            if (conn.State != ConnectionState.Open)
+            {
+                await conn.OpenAsync(cancellationToken);
+            }
+            return conn;
+        }
+
+        /// <summary>
+        /// Executes sp_GetCustomerProfile to retrieve profile info for authenticated customer.
+        /// </summary>
+        public async Task<CustomerProfileDto?> GetProfileAsync(long customerId, CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("Repository: Calling sp_GetCustomerProfile for CustomerId: {CustomerId}", customerId);
+
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_GetCustomerProfile(@p_user_id);";
+
+            var pUser = cmd.CreateParameter();
+            pUser.ParameterName = "@p_user_id";
+            pUser.Value = customerId;
+            cmd.Parameters.Add(pUser);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                return MapCustomerProfile(reader);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Executes sp_UpdateCustomerProfile to update Users table and upsert customer_profiles table.
+        /// </summary>
+        public async Task<CustomerProfileDto?> UpdateProfileAsync(long customerId, UpdateCustomerProfileDto dto, CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("Repository: Calling sp_UpdateCustomerProfile for CustomerId: {CustomerId}", customerId);
+
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_UpdateCustomerProfile(@p_user_id, @p_full_name, @p_mobile, @p_email, @p_profile_photo, @p_alternate_mobile, @p_address, @p_district, @p_state, @p_pin_code);";
+
+            AddParam(cmd, "@p_user_id", customerId);
+            AddParam(cmd, "@p_full_name", dto.FullName.Trim());
+            AddParam(cmd, "@p_mobile", dto.MobileNumber.Trim());
+            AddParam(cmd, "@p_email", string.IsNullOrWhiteSpace(dto.Email) ? (object)DBNull.Value : dto.Email.Trim().ToLowerInvariant());
+            AddParam(cmd, "@p_profile_photo", string.IsNullOrWhiteSpace(dto.ProfilePhoto) ? (object)DBNull.Value : dto.ProfilePhoto);
+            AddParam(cmd, "@p_alternate_mobile", string.IsNullOrWhiteSpace(dto.AlternateMobileNumber) ? (object)DBNull.Value : dto.AlternateMobileNumber.Trim());
+            AddParam(cmd, "@p_address", dto.Address.Trim());
+            AddParam(cmd, "@p_district", dto.District.Trim());
+            AddParam(cmd, "@p_state", dto.State.Trim());
+            AddParam(cmd, "@p_pin_code", dto.PinCode.Trim());
+
+            try
+            {
+                using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+                if (await reader.ReadAsync(cancellationToken))
+                {
+                    return MapCustomerProfile(reader);
+                }
+            }
+            catch (DbException ex) when (ex.SqlState == "45000" || ex.Message.Contains("Duplicate entry", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(ex.Message, ex);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Executes sp_GetCustomerDeliveryAddresses to retrieve all addresses for customer.
+        /// </summary>
+        public async Task<List<CustomerDeliveryAddressDto>> GetDeliveryAddressesAsync(long customerId, CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("Repository: Calling sp_GetCustomerDeliveryAddresses for CustomerId: {CustomerId}", customerId);
+
+            var result = new List<CustomerDeliveryAddressDto>();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_GetCustomerDeliveryAddresses(@p_user_id);";
+
+            AddParam(cmd, "@p_user_id", customerId);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                result.Add(MapDeliveryAddress(reader));
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Executes sp_AddCustomerDeliveryAddress to insert address with default reassignment.
+        /// </summary>
+        public async Task<CustomerDeliveryAddressDto?> AddDeliveryAddressAsync(long customerId, CreateCustomerDeliveryAddressDto dto, CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("Repository: Calling sp_AddCustomerDeliveryAddress for CustomerId: {CustomerId}", customerId);
+
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_AddCustomerDeliveryAddress(@p_user_id, @p_address_name, @p_contact_person, @p_phone_number, @p_full_address, @p_district, @p_state, @p_pin_code, @p_is_default);";
+
+            AddParam(cmd, "@p_user_id", customerId);
+            AddParam(cmd, "@p_address_name", dto.Label.Trim());
+            AddParam(cmd, "@p_contact_person", dto.RecipientName.Trim());
+            AddParam(cmd, "@p_phone_number", dto.ContactNumber.Trim());
+            AddParam(cmd, "@p_full_address", dto.AddressLine.Trim());
+            AddParam(cmd, "@p_district", dto.District.Trim());
+            AddParam(cmd, "@p_state", dto.State.Trim());
+            AddParam(cmd, "@p_pin_code", dto.PinCode.Trim());
+            AddParam(cmd, "@p_is_default", dto.IsDefault);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                return MapDeliveryAddress(reader);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Executes sp_UpdateCustomerDeliveryAddress verifying ownership.
+        /// </summary>
+        public async Task<CustomerDeliveryAddressDto?> UpdateDeliveryAddressAsync(long addressId, long customerId, UpdateCustomerDeliveryAddressDto dto, CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("Repository: Calling sp_UpdateCustomerDeliveryAddress for AddressId: {AddressId}, CustomerId: {CustomerId}", addressId, customerId);
+
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_UpdateCustomerDeliveryAddress(@p_address_id, @p_user_id, @p_address_name, @p_contact_person, @p_phone_number, @p_full_address, @p_district, @p_state, @p_pin_code, @p_is_default);";
+
+            AddParam(cmd, "@p_address_id", addressId);
+            AddParam(cmd, "@p_user_id", customerId);
+            AddParam(cmd, "@p_address_name", dto.Label.Trim());
+            AddParam(cmd, "@p_contact_person", dto.RecipientName.Trim());
+            AddParam(cmd, "@p_phone_number", dto.ContactNumber.Trim());
+            AddParam(cmd, "@p_full_address", dto.AddressLine.Trim());
+            AddParam(cmd, "@p_district", dto.District.Trim());
+            AddParam(cmd, "@p_state", dto.State.Trim());
+            AddParam(cmd, "@p_pin_code", dto.PinCode.Trim());
+            AddParam(cmd, "@p_is_default", dto.IsDefault);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                return MapDeliveryAddress(reader);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Executes sp_DeleteCustomerDeliveryAddress verifying ownership.
+        /// </summary>
+        public async Task<bool> DeleteDeliveryAddressAsync(long addressId, long customerId, CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("Repository: Calling sp_DeleteCustomerDeliveryAddress for AddressId: {AddressId}, CustomerId: {CustomerId}", addressId, customerId);
+
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_DeleteCustomerDeliveryAddress(@p_address_id, @p_user_id);";
+
+            AddParam(cmd, "@p_address_id", addressId);
+            AddParam(cmd, "@p_user_id", customerId);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                var rowsAffected = Convert.ToInt32(reader["rowsAffected"]);
+                return rowsAffected > 0;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Executes sp_SetDefaultCustomerDeliveryAddress verifying ownership and updating defaults.
+        /// </summary>
+        public async Task<CustomerDeliveryAddressDto?> SetDefaultDeliveryAddressAsync(long addressId, long customerId, CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("Repository: Calling sp_SetDefaultCustomerDeliveryAddress for AddressId: {AddressId}, CustomerId: {CustomerId}", addressId, customerId);
+
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_SetDefaultCustomerDeliveryAddress(@p_address_id, @p_user_id);";
+
+            AddParam(cmd, "@p_address_id", addressId);
+            AddParam(cmd, "@p_user_id", customerId);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                return MapDeliveryAddress(reader);
+            }
+
+            return null;
+        }
+
+        private static void AddParam(DbCommand cmd, string name, object value)
+        {
+            var p = cmd.CreateParameter();
+            p.ParameterName = name;
+            p.Value = value;
+            cmd.Parameters.Add(p);
+        }
+
+        private static CustomerProfileDto MapCustomerProfile(DbDataReader reader)
+        {
+            return new CustomerProfileDto
+            {
+                CustomerId = Convert.ToInt64(reader["customerId"]),
+                FullName = reader["fullName"]?.ToString() ?? string.Empty,
+                MobileNumber = reader["mobileNumber"]?.ToString() ?? string.Empty,
+                Email = reader["email"] is DBNull ? null : reader["email"]?.ToString(),
+                ProfilePhoto = reader["profilePhoto"] is DBNull ? null : reader["profilePhoto"]?.ToString(),
+                AlternateMobileNumber = reader["alternateMobileNumber"] is DBNull ? null : reader["alternateMobileNumber"]?.ToString(),
+                Address = reader["address"] is DBNull ? string.Empty : reader["address"]?.ToString() ?? string.Empty,
+                District = reader["district"] is DBNull ? string.Empty : reader["district"]?.ToString() ?? string.Empty,
+                State = reader["state"] is DBNull ? string.Empty : reader["state"]?.ToString() ?? string.Empty,
+                PinCode = reader["pinCode"] is DBNull ? string.Empty : reader["pinCode"]?.ToString() ?? string.Empty
+            };
+        }
+
+        private static CustomerDeliveryAddressDto MapDeliveryAddress(DbDataReader reader)
+        {
+            return new CustomerDeliveryAddressDto
+            {
+                Id = Convert.ToInt64(reader["id"]),
+                Label = reader["label"]?.ToString() ?? string.Empty,
+                RecipientName = reader["recipientName"]?.ToString() ?? string.Empty,
+                ContactNumber = reader["contactNumber"]?.ToString() ?? string.Empty,
+                AddressLine = reader["addressLine"]?.ToString() ?? string.Empty,
+                District = reader["district"]?.ToString() ?? string.Empty,
+                State = reader["state"]?.ToString() ?? string.Empty,
+                PinCode = reader["pinCode"]?.ToString() ?? string.Empty,
+                IsDefault = Convert.ToBoolean(reader["isDefault"])
+            };
+        }
+
+        public async Task<string?> GetCurrentCustomerMobileAsync(long customerId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .Where(u => u.Id == customerId)
+                .Select(u => u.Mobile)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public async Task<bool> IsMobileRegisteredToAnotherUserAsync(string mobile, long excludeCustomerId, CancellationToken cancellationToken = default)
+        {
+            var cleanMobile = mobile.Trim();
+            return await _context.Users
+                .AnyAsync(u => u.Mobile == cleanMobile && u.Id != excludeCustomerId, cancellationToken);
+        }
+
+        public async Task SaveMobileChangeOtpAsync(long customerId, string newMobile, string otpHashed, DateTime expiresAt, CancellationToken cancellationToken = default)
+        {
+            var cleanMobile = newMobile.Trim();
+            var userTag = $"user:{customerId}";
+
+            // Remove any previous pending MobileChange OTPs for this user or target mobile
+            var existing = await _context.UserOtps
+                .Where(x => x.Purpose == "MobileChange" && (x.Email == userTag || x.Mobile == cleanMobile))
+                .ToListAsync(cancellationToken);
+
+            if (existing.Count > 0)
+            {
+                _context.UserOtps.RemoveRange(existing);
+            }
+
+            var record = new UserOtp
+            {
+                Email = userTag,
+                Mobile = cleanMobile,
+                OtpHash = otpHashed,
+                Purpose = "MobileChange",
+                ExpiresAt = expiresAt,
+                Attempts = 0,
+                VerifiedAt = null,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _context.UserOtps.AddAsync(record, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        public async Task<CustomerOtpVerificationEntity?> GetLatestMobileChangeOtpAsync(long customerId, string newMobile, CancellationToken cancellationToken = default)
+        {
+            var cleanMobile = newMobile.Trim();
+            var userTag = $"user:{customerId}";
+
+            var record = await _context.UserOtps
+                .Where(x => x.Purpose == "MobileChange" && x.Email == userTag && x.Mobile == cleanMobile)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (record == null)
+            {
+                return null;
+            }
+
+            return new CustomerOtpVerificationEntity
+            {
+                Id = record.Id,
+                Email = record.Email,
+                Mobile = record.Mobile,
+                OtpHash = record.OtpHash,
+                Purpose = record.Purpose,
+                ExpiresAt = record.ExpiresAt,
+                Attempts = record.Attempts,
+                VerifiedAt = record.VerifiedAt,
+                CreatedAt = record.CreatedAt
+            };
+        }
+
+        public async Task IncrementOtpAttemptsAsync(int otpId, CancellationToken cancellationToken = default)
+        {
+            var record = await _context.UserOtps.FirstOrDefaultAsync(x => x.Id == otpId, cancellationToken);
+            if (record != null)
+            {
+                record.Attempts++;
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        public async Task<CustomerProfileDto?> UpdateCustomerMobileAfterVerificationAsync(long customerId, string newMobile, int otpId, CancellationToken cancellationToken = default)
+        {
+            var cleanMobile = newMobile.Trim();
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == customerId, cancellationToken);
+            if (user == null)
+            {
+                return null;
+            }
+
+            // Duplicate check right before update
+            var isDuplicate = await _context.Users
+                .AnyAsync(u => u.Mobile == cleanMobile && u.Id != customerId, cancellationToken);
+            if (isDuplicate)
+            {
+                throw new InvalidOperationException("Mobile number is already registered to another user.");
+            }
+
+            var oldMobile = user.Mobile;
+            user.Mobile = cleanMobile;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            // Record mobile change history in UserMobileHistories
+            _context.UserMobileHistories.Add(new UserMobileHistory
+            {
+                UserId = customerId,
+                OldMobile = oldMobile,
+                NewMobile = cleanMobile,
+                OldMobileStatus = "Inactive",
+                NewMobileStatus = "Active",
+                ChangedAt = DateTime.UtcNow
+            });
+
+            // Consume OTP record upon successful mobile update
+            var otpRecord = await _context.UserOtps.FirstOrDefaultAsync(x => x.Id == otpId, cancellationToken);
+            if (otpRecord != null)
+            {
+                _context.UserOtps.Remove(otpRecord);
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            // Return the fresh profile
+            return await GetProfileAsync(customerId, cancellationToken);
+        }
+    }
+}

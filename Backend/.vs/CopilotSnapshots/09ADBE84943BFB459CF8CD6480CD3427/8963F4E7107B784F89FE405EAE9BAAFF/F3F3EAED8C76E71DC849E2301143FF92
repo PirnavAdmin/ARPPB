@@ -1,0 +1,14 @@
+﻿namespace AgriPurchaseBilling.Application.Exceptions
+{
+    public sealed class SmsDeliveryException : InvalidOperationException
+    {
+        public SmsDeliveryException(string message) : base(message)
+        {
+        }
+
+        public SmsDeliveryException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
+    }
+}

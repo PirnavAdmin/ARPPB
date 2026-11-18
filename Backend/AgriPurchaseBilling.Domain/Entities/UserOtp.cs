@@ -1,26 +1,27 @@
-
-namespace AgriPurchaseBilling.Domain.Entities;
-
-public class UserOtp
+namespace AgriPurchaseBilling.Domain.Entities
 {
-    public int Id { get; set; }
 
-    // Email is optional
-    public string? Email { get; set; }
+    public class UserOtp
+    {
+        public int Id { get; set; }
 
-    // Mobile is optional
-    public string? Mobile { get; set; }
+        // Email is optional
+        public string? Email { get; set; }
 
-    // Hashed OTP
-    public required string OtpHash { get; set; }
+        // Mobile is optional
+        public string? Mobile { get; set; }
 
-    public required string Purpose { get; set; }
+        // Hashed OTP
+        public required string OtpHash { get; set; }
 
-    public DateTime ExpiresAt { get; set; }
+        public required string Purpose { get; set; }
 
-    public int Attempts { get; set; }
+        public DateTime ExpiresAt { get; set; }
 
-    public DateTime? VerifiedAt { get; set; }
+        public int Attempts { get; set; }
 
-    public DateTime CreatedAt { get; set; }
+        public DateTime? VerifiedAt { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+    }
 }

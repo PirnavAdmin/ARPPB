@@ -1,10 +1,11 @@
 using AgriPurchaseBilling.Application.DTOs;
 
-namespace AgriPurchaseBilling.Application.Interfaces;
-
-public interface ILoginService
+namespace AgriPurchaseBilling.Application.Interfaces
 {
-    Task<ApiResponse<LoginResponseDto>> LoginAsync(
-        LoginRequestDto request,
-        CancellationToken cancellationToken = default);
+    public interface ILoginService
+    {
+        Task<ApiResponse<LoginResponseDto>> LoginAsync(
+            LoginRequestDto request,
+            CancellationToken cancellationToken = default);
+    }
 }

@@ -1,36 +1,39 @@
-
 using AgriPurchaseBilling.Domain.Enums;
 
-namespace AgriPurchaseBilling.Domain.Entities;
-
-public class User
+namespace AgriPurchaseBilling.Domain.Entities
 {
-    public long Id { get; set; }
 
-    public required string FullName { get; set; }
+    public class User
+    {
+        public long Id { get; set; }
 
-    // Email is optional
-    public string? Email { get; set; }
+        public required string FullName { get; set; }
 
-    // Mobile number is mandatory
-    public required string Mobile { get; set; }
+        // Email is optional
+        public string? Email { get; set; }
 
-    public required string PasswordHash { get; set; }
+        // Mobile number is mandatory
+        public required string Mobile { get; set; }
 
-    public UserRole Role { get; set; }
+        public required string PasswordHash { get; set; }
 
-    public bool IsActive { get; set; } = true;
+        public UserRole Role { get; set; }
 
-    // Login protection
-    public int FailedLoginAttempts { get; set; } = 0;
-    public DateTime? LockoutEnd { get; set; }
+        public bool IsActive { get; set; } = true;
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        // Login protection
+        public int FailedLoginAttempts { get; set; } = 0;
+        public DateTime? LockoutEnd { get; set; }
 
-    // Navigation properties
-    public Farmer? Farmer { get; set; }
-    public Customer? Customer { get; set; }
-    public Supplier? Supplier { get; set; }
-    public Vendor? Vendor { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        // Navigation properties
+        public Farmer? Farmer { get; set; }
+        public Customer? Customer { get; set; }
+        public Middleman? Middleman { get; set; }
+        public MiddlemanProfile? MiddlemanProfile { get; set; }
+        public Vendor? Vendor { get; set; }
+        public ICollection<UserMobileHistory> MobileHistories { get; set; } = new List<UserMobileHistory>();
+    }
 }

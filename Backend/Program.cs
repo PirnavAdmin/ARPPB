@@ -1,21 +1,57 @@
-
-using System.Text.Json.Serialization;
-using FluentValidation;
-using FluentValidation.AspNetCore;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
-
 using AgriPurchaseBilling.Application.Interfaces;
 using AgriPurchaseBilling.Application.Services;
 using AgriPurchaseBilling.Application.Validators;
-
+using AgriPurchaseBilling.Infrastructure.Configuration;
 using AgriPurchaseBilling.Infrastructure.Data;
 using AgriPurchaseBilling.Infrastructure.Repositories;
 using AgriPurchaseBilling.Infrastructure.Services;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using System.Security.Claims;
+using System.Text.Json.Serialization;
+using System.Security.Cryptography;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. DATABASE CONNECTION
+
+// AUTOMATIC JWT SECRET GENERATION
+
+var configuredJwtSecret =
+    builder.Configuration["JwtSettings:SecretKey"];
+
+string jwtSecret;
+
+if (!string.IsNullOrWhiteSpace(configuredJwtSecret) &&
+    !configuredJwtSecret.StartsWith(
+        "REPLACE_WITH_",
+        StringComparison.OrdinalIgnoreCase))
+{
+    // Use an existing configured secret.
+    jwtSecret = configuredJwtSecret;
+}
+else if (builder.Environment.IsDevelopment())
+{
+    // Automatically generate and save a secret for development.
+    jwtSecret = GetOrCreateJwtSecret();
+
+    // Make the generated secret available to the entire application.
+    builder.Configuration["JwtSettings:SecretKey"] = jwtSecret;
+
+    Console.WriteLine(
+        "ARPPB: JWT secret loaded successfully.");
+}
+else
+{
+    throw new InvalidOperationException(
+        "Configure a secure JWT secret for production.");
+}
+
+
+// DATABASE CONNECTION
 var connectionString =
     builder.Configuration.GetConnectionString("DefaultConnection");
 
@@ -25,28 +61,47 @@ if (string.IsNullOrWhiteSpace(connectionString))
         "Database connection string is missing.");
 }
 
+var serverVersion = new MariaDbServerVersion(
+    new Version(11, 8, 9));
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(
         connectionString,
-        ServerVersion.AutoDetect(connectionString)));
+        serverVersion));
+builder.Services.AddCustomerProfileModule();
 
-// 2. REPOSITORY REGISTRATIONS
+// REPOSITORY REGISTRATIONS
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IOtpRepository, OtpRepository>();
+builder.Services.AddScoped<IFarmerProfileRepository, FarmerProfileRepository>();
+builder.Services.AddScoped<IVendorProfileRepository, VendorProfileRepository>();
 
-// 3. SERVICE REGISTRATIONS
+// SERVICE REGISTRATIONS
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<ILoginService, LoginService>();
-builder.Services.AddScoped<IOtpService, OtpService>();
+builder.Services.AddScoped<IOtpService>(serviceProvider =>
+    new OtpService(
+        serviceProvider.GetRequiredService<IOtpRepository>(),
+        serviceProvider.GetRequiredService<IPasswordHasher>(),
+        serviceProvider.GetRequiredService<IUserRepository>(),
+        serviceProvider.GetRequiredService<IEmailService>(),
+        builder.Environment.IsDevelopment()));
 builder.Services.AddScoped<IForgotPasswordService, ForgotPasswordService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+builder.Services.AddScoped<IFarmerProfileService, FarmerProfileService>();
+builder.Services.AddScoped<IMiddlemanProfileService, MiddlemanProfileService>();
+builder.Services.AddScoped<IVendorProfileService, VendorProfileService>();
+builder.Services.AddScoped<IVendorMobileChangeService, VendorMobileChangeService>();
 
-// 4. FLUENT VALIDATION
+// JWT registration
+builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+
+// FLUENT VALIDATION
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
 
-// 5. CONTROLLERS AND JSON
+// CONTROLLERS AND JSON
 builder.Services
     .AddControllers()
     .AddJsonOptions(options =>
@@ -55,11 +110,57 @@ builder.Services
             new JsonStringEnumConverter());
     });
 
-// 6. AUTHORIZATION
+// JWT AUTHENTICATION
+
+byte[] jwtKeyBytes =
+    Convert.FromBase64String(jwtSecret);
+
+if (jwtKeyBytes.Length < 32)
+{
+    throw new InvalidOperationException(
+        "JWT key must contain at least 32 random bytes.");
+}
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme =
+        JwtBearerDefaults.AuthenticationScheme;
+
+    options.DefaultChallengeScheme =
+        JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters =
+        new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+
+            ValidIssuer =
+                builder.Configuration["JwtSettings:Issuer"],
+
+            ValidAudience =
+                builder.Configuration["JwtSettings:Audience"],
+
+            IssuerSigningKey =
+                new SymmetricSecurityKey(jwtKeyBytes),
+
+            RoleClaimType = ClaimTypes.Role,
+            NameClaimType = ClaimTypes.Name,
+
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+});
+
 builder.Services.AddAuthorization();
 
-// 7. SWAGGER SERVICES
+
+// SWAGGER SERVICES
 builder.Services.AddEndpointsApiExplorer();
+
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -69,12 +170,42 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1",
         Description = "Registration, login, OTP and password recovery APIs."
     });
+
+    // JWT Bearer Authentication
+    options.AddSecurityDefinition("Bearer",
+        new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            In = ParameterLocation.Header,
+            Description = "Enter your JWT access token."
+        });
+
+    // Apply JWT Authentication globally in Swagger
+    options.AddSecurityRequirement(
+        new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    }
+                },
+                Array.Empty<string>()
+            }
+        });
 });
 
-// 8. BUILD APPLICATION
+
+// BUILD APPLICATION
 var app = builder.Build();
 
-// 9. SWAGGER MIDDLEWARE
+// SWAGGER MIDDLEWARE
 app.UseSwagger();
 
 app.UseSwaggerUI(options =>
@@ -85,12 +216,89 @@ app.UseSwaggerUI(options =>
         "ARPPB API v1");
 });
 
-// 10. APPLICATION MIDDLEWARE
+// APPLICATION MIDDLEWARE
 // HTTPS redirection is omitted while testing on HTTP port 5034.
+app.UseAuthentication();
 app.UseAuthorization();
 
-// 11. MAP CONTROLLERS
+// MAP CONTROLLERS
 app.MapControllers();
 
-// 12. RUN
+// REDIRECT ROOT TO SWAGGER UI
+app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
+
+// RUN
 app.Run();
+
+
+static string GetOrCreateJwtSecret()
+{
+    string folderPath = Path.Combine(
+        Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData),
+        "ARPPB");
+
+    string filePath = Path.Combine(
+        folderPath,
+        "jwt-signing-key.txt");
+
+    Directory.CreateDirectory(folderPath);
+
+    // Reuse existing key.
+    if (File.Exists(filePath))
+    {
+        string existingKey = File.ReadAllText(filePath).Trim();
+
+        byte[] existingBytes =
+            Convert.FromBase64String(existingKey);
+
+        if (existingBytes.Length < 32)
+        {
+            throw new InvalidOperationException(
+                "Existing JWT key is invalid.");
+        }
+
+        return existingKey;
+    }
+
+    // Generate a new 32-byte random key.
+    byte[] keyBytes = new byte[32];
+
+    using (var rng = RandomNumberGenerator.Create())
+    {
+        rng.GetBytes(keyBytes);
+    }
+
+    string generatedKey =
+        Convert.ToBase64String(keyBytes);
+
+    // Create the file only if it does not already exist.
+    try
+    {
+        using (var stream = new FileStream(
+            filePath,
+            FileMode.CreateNew,
+            FileAccess.Write,
+            FileShare.None))
+        using (var writer = new StreamWriter(stream))
+        {
+            writer.Write(generatedKey);
+        }
+
+        Console.WriteLine(
+            "ARPPB: New JWT secret generated and saved.");
+    }
+    catch (IOException) when (File.Exists(filePath))
+    {
+        // Another application instance may have created it.
+        generatedKey = File.ReadAllText(filePath).Trim();
+
+        if (Convert.FromBase64String(generatedKey).Length < 32)
+        {
+            throw new InvalidOperationException(
+                "Existing JWT key is invalid.");
+        }
+    }
+
+    return generatedKey;
+}

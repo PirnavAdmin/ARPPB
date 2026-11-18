@@ -1,0 +1,242 @@
+﻿-- Customer profile and delivery-address setup (MySQL 8+).
+-- Run against the same database configured by ConnectionStrings:DefaultConnection.
+
+CREATE TABLE IF NOT EXISTS `customer_profiles` (
+  `Id` BIGINT NOT NULL AUTO_INCREMENT,
+  `UserId` BIGINT NOT NULL,
+  `AlternateMobile` VARCHAR(15) NULL,
+  `Address` VARCHAR(500) NOT NULL DEFAULT '',
+  `District` VARCHAR(100) NOT NULL DEFAULT '',
+  `State` VARCHAR(100) NOT NULL DEFAULT '',
+  `PinCode` VARCHAR(10) NOT NULL DEFAULT '',
+  `ProfilePhoto` LONGTEXT NULL,
+  `CreatedAt` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `UpdatedAt` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`Id`),
+  UNIQUE KEY `UQ_customer_profiles_user_id` (`UserId`),
+  CONSTRAINT `FK_customer_profiles_users` FOREIGN KEY (`UserId`) REFERENCES `Users` (`Id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `customer_delivery_addresses` (
+  `Id` BIGINT NOT NULL AUTO_INCREMENT,
+  `UserId` BIGINT NOT NULL,
+  `AddressName` VARCHAR(150) NOT NULL,
+  `ContactPerson` VARCHAR(100) NOT NULL,
+  `PhoneNumber` VARCHAR(15) NOT NULL,
+  `FullAddress` VARCHAR(500) NOT NULL,
+  `District` VARCHAR(100) NOT NULL,
+  `State` VARCHAR(100) NOT NULL,
+  `PinCode` VARCHAR(10) NOT NULL,
+  `IsDefault` TINYINT(1) NOT NULL DEFAULT 0,
+  `CreatedAt` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `UpdatedAt` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`Id`),
+  KEY `IX_customer_delivery_addresses_user_default` (`UserId`, `IsDefault`),
+  CONSTRAINT `FK_customer_delivery_addresses_users` FOREIGN KEY (`UserId`) REFERENCES `Users` (`Id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- AuthenticationOtpSetup.sql also creates this table. Keep this guarded definition
+-- for deployments that run only the customer-profile setup script.
+CREATE TABLE IF NOT EXISTS `otp_verifications` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `email` VARCHAR(150) NULL,
+  `mobile` VARCHAR(15) NULL,
+  `otp_hash` VARCHAR(255) NOT NULL,
+  `purpose` VARCHAR(50) NOT NULL,
+  `expires_at` DATETIME(6) NOT NULL,
+  `attempts` INT NOT NULL DEFAULT 0,
+  `verified_at` DATETIME(6) NULL,
+  `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY `IX_otp_email_purpose` (`email`, `purpose`),
+  KEY `IX_otp_mobile_purpose` (`mobile`, `purpose`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP PROCEDURE IF EXISTS `sp_GetCustomerProfile`;
+DROP PROCEDURE IF EXISTS `sp_UpdateCustomerProfile`;
+DROP PROCEDURE IF EXISTS `sp_GetCustomerDeliveryAddresses`;
+DROP PROCEDURE IF EXISTS `sp_AddCustomerDeliveryAddress`;
+DROP PROCEDURE IF EXISTS `sp_UpdateCustomerDeliveryAddress`;
+DROP PROCEDURE IF EXISTS `sp_DeleteCustomerDeliveryAddress`;
+DROP PROCEDURE IF EXISTS `sp_SetDefaultCustomerDeliveryAddress`;
+
+DELIMITER $$
+
+CREATE PROCEDURE `sp_GetCustomerProfile`(IN p_user_id BIGINT)
+BEGIN
+  SELECT u.`Id` AS customerId,
+		 u.`FullName` AS fullName,
+		 u.`Mobile` AS mobileNumber,
+		 u.`Email` AS email,
+		 cp.`ProfilePhoto` AS profilePhoto,
+		 cp.`AlternateMobile` AS alternateMobileNumber,
+		 COALESCE(cp.`Address`, '') AS address,
+		 COALESCE(cp.`District`, '') AS district,
+		 COALESCE(cp.`State`, '') AS state,
+		 COALESCE(cp.`PinCode`, '') AS pinCode
+  FROM `Users` u
+  LEFT JOIN `customer_profiles` cp ON cp.`UserId` = u.`Id`
+  WHERE u.`Id` = p_user_id AND LOWER(u.`Role`) = 'customer'
+  LIMIT 1;
+END$$
+
+CREATE PROCEDURE `sp_UpdateCustomerProfile`(
+  IN p_user_id BIGINT,
+  IN p_full_name VARCHAR(100),
+  IN p_mobile VARCHAR(15),
+  IN p_email VARCHAR(100),
+  IN p_profile_photo LONGTEXT,
+  IN p_alternate_mobile VARCHAR(15),
+  IN p_address VARCHAR(500),
+  IN p_district VARCHAR(100),
+  IN p_state VARCHAR(100),
+  IN p_pin_code VARCHAR(10))
+BEGIN
+  DECLARE v_current_mobile VARCHAR(15);
+  SELECT `Mobile` INTO v_current_mobile
+  FROM `Users`
+  WHERE `Id` = p_user_id AND LOWER(`Role`) = 'customer'
+  LIMIT 1;
+
+  IF v_current_mobile IS NULL THEN
+	SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Customer account not found.';
+  END IF;
+  IF NOT (v_current_mobile <=> p_mobile) THEN
+	SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Mobile number must be changed through OTP verification.';
+  END IF;
+  IF p_email IS NOT NULL AND EXISTS (
+	SELECT 1 FROM `Users` WHERE `Email` = p_email AND `Id` <> p_user_id
+  ) THEN
+	SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Email address is already registered.';
+  END IF;
+
+  UPDATE `Users`
+  SET `FullName` = p_full_name, `Email` = p_email, `UpdatedAt` = UTC_TIMESTAMP(6)
+  WHERE `Id` = p_user_id;
+
+  INSERT INTO `customer_profiles`
+	(`UserId`, `ProfilePhoto`, `AlternateMobile`, `Address`, `District`, `State`, `PinCode`, `CreatedAt`, `UpdatedAt`)
+  VALUES
+	(p_user_id, p_profile_photo, p_alternate_mobile, p_address, p_district, p_state, p_pin_code, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6))
+  ON DUPLICATE KEY UPDATE
+	`ProfilePhoto` = VALUES(`ProfilePhoto`),
+	`AlternateMobile` = VALUES(`AlternateMobile`),
+	`Address` = VALUES(`Address`),
+	`District` = VALUES(`District`),
+	`State` = VALUES(`State`),
+	`PinCode` = VALUES(`PinCode`),
+	`UpdatedAt` = UTC_TIMESTAMP(6);
+
+  CALL `sp_GetCustomerProfile`(p_user_id);
+END$$
+
+CREATE PROCEDURE `sp_GetCustomerDeliveryAddresses`(IN p_user_id BIGINT)
+BEGIN
+  SELECT `Id` AS id,
+		 `AddressName` AS label,
+		 `ContactPerson` AS recipientName,
+		 `PhoneNumber` AS contactNumber,
+		 `FullAddress` AS addressLine,
+		 `District` AS district,
+		 `State` AS state,
+		 `PinCode` AS pinCode,
+		 `IsDefault` AS isDefault
+  FROM `customer_delivery_addresses`
+  WHERE `UserId` = p_user_id
+  ORDER BY `IsDefault` DESC, `Id` DESC;
+END$$
+
+CREATE PROCEDURE `sp_AddCustomerDeliveryAddress`(
+  IN p_user_id BIGINT,
+  IN p_address_name VARCHAR(150),
+  IN p_contact_person VARCHAR(100),
+  IN p_phone_number VARCHAR(15),
+  IN p_full_address VARCHAR(500),
+  IN p_district VARCHAR(100),
+  IN p_state VARCHAR(100),
+  IN p_pin_code VARCHAR(10),
+  IN p_is_default BOOLEAN)
+BEGIN
+  DECLARE v_address_id BIGINT;
+  IF NOT EXISTS (SELECT 1 FROM `Users` WHERE `Id` = p_user_id AND LOWER(`Role`) = 'customer') THEN
+	SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Customer account not found.';
+  END IF;
+
+  IF p_is_default THEN
+	UPDATE `customer_delivery_addresses` SET `IsDefault` = 0, `UpdatedAt` = UTC_TIMESTAMP(6) WHERE `UserId` = p_user_id;
+  END IF;
+
+  INSERT INTO `customer_delivery_addresses`
+	(`UserId`, `AddressName`, `ContactPerson`, `PhoneNumber`, `FullAddress`, `District`, `State`, `PinCode`, `IsDefault`, `CreatedAt`, `UpdatedAt`)
+  VALUES
+	(p_user_id, p_address_name, p_contact_person, p_phone_number, p_full_address, p_district, p_state, p_pin_code, p_is_default, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6));
+  SET v_address_id = LAST_INSERT_ID();
+
+  SELECT `Id` AS id, `AddressName` AS label, `ContactPerson` AS recipientName,
+		 `PhoneNumber` AS contactNumber, `FullAddress` AS addressLine,
+		 `District` AS district, `State` AS state, `PinCode` AS pinCode,
+		 `IsDefault` AS isDefault
+  FROM `customer_delivery_addresses` WHERE `Id` = v_address_id;
+END$$
+
+CREATE PROCEDURE `sp_UpdateCustomerDeliveryAddress`(
+  IN p_address_id BIGINT,
+  IN p_user_id BIGINT,
+  IN p_address_name VARCHAR(150),
+  IN p_contact_person VARCHAR(100),
+  IN p_phone_number VARCHAR(15),
+  IN p_full_address VARCHAR(500),
+  IN p_district VARCHAR(100),
+  IN p_state VARCHAR(100),
+  IN p_pin_code VARCHAR(10),
+  IN p_is_default BOOLEAN)
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM `customer_delivery_addresses` WHERE `Id` = p_address_id AND `UserId` = p_user_id) THEN
+	SELECT NULL AS id, NULL AS label, NULL AS recipientName, NULL AS contactNumber,
+		   NULL AS addressLine, NULL AS district, NULL AS state, NULL AS pinCode, NULL AS isDefault
+	WHERE FALSE;
+  ELSE
+	IF p_is_default THEN
+	  UPDATE `customer_delivery_addresses` SET `IsDefault` = 0, `UpdatedAt` = UTC_TIMESTAMP(6) WHERE `UserId` = p_user_id;
+	END IF;
+	UPDATE `customer_delivery_addresses`
+	SET `AddressName` = p_address_name, `ContactPerson` = p_contact_person,
+		`PhoneNumber` = p_phone_number, `FullAddress` = p_full_address,
+		`District` = p_district, `State` = p_state, `PinCode` = p_pin_code,
+		`IsDefault` = p_is_default, `UpdatedAt` = UTC_TIMESTAMP(6)
+	WHERE `Id` = p_address_id AND `UserId` = p_user_id;
+
+	SELECT `Id` AS id, `AddressName` AS label, `ContactPerson` AS recipientName,
+		   `PhoneNumber` AS contactNumber, `FullAddress` AS addressLine,
+		   `District` AS district, `State` AS state, `PinCode` AS pinCode,
+		   `IsDefault` AS isDefault
+	FROM `customer_delivery_addresses` WHERE `Id` = p_address_id AND `UserId` = p_user_id;
+  END IF;
+END$$
+
+CREATE PROCEDURE `sp_DeleteCustomerDeliveryAddress`(IN p_address_id BIGINT, IN p_user_id BIGINT)
+BEGIN
+  DELETE FROM `customer_delivery_addresses` WHERE `Id` = p_address_id AND `UserId` = p_user_id;
+  SELECT ROW_COUNT() AS rowsAffected;
+END$$
+
+CREATE PROCEDURE `sp_SetDefaultCustomerDeliveryAddress`(IN p_address_id BIGINT, IN p_user_id BIGINT)
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM `customer_delivery_addresses` WHERE `Id` = p_address_id AND `UserId` = p_user_id) THEN
+	SELECT NULL AS id, NULL AS label, NULL AS recipientName, NULL AS contactNumber,
+		   NULL AS addressLine, NULL AS district, NULL AS state, NULL AS pinCode, NULL AS isDefault
+	WHERE FALSE;
+  ELSE
+	UPDATE `customer_delivery_addresses` SET `IsDefault` = 0, `UpdatedAt` = UTC_TIMESTAMP(6) WHERE `UserId` = p_user_id;
+	UPDATE `customer_delivery_addresses` SET `IsDefault` = 1, `UpdatedAt` = UTC_TIMESTAMP(6)
+	WHERE `Id` = p_address_id AND `UserId` = p_user_id;
+
+	SELECT `Id` AS id, `AddressName` AS label, `ContactPerson` AS recipientName,
+		   `PhoneNumber` AS contactNumber, `FullAddress` AS addressLine,
+		   `District` AS district, `State` AS state, `PinCode` AS pinCode,
+		   `IsDefault` AS isDefault
+	FROM `customer_delivery_addresses` WHERE `Id` = p_address_id AND `UserId` = p_user_id;
+  END IF;
+END$$
+
+DELIMITER ;
