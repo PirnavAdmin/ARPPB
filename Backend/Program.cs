@@ -205,14 +205,23 @@ builder.Services.AddSwaggerGen(options =>
 // BUILD APPLICATION
 var app = builder.Build();
 
+// Honor ngrok / reverse-proxy headers so Swagger works on both local and public URLs
+app.UseForwardedHeaders(new Microsoft.AspNetCore.Builder.ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+                     | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+                     | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedHost
+});
+
 // SWAGGER MIDDLEWARE
 app.UseSwagger();
 
 app.UseSwaggerUI(options =>
 {
     options.RoutePrefix = "swagger";
+    // Relative path (no leading slash) works under both localhost and ngrok
     options.SwaggerEndpoint(
-        "/swagger/v1/swagger.json",
+        "v1/swagger.json",
         "ARPPB API v1");
 });
 
