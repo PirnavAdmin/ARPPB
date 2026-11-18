@@ -1,5 +1,7 @@
-namespace AgriPurchaseBilling.Application.Interfaces;
-public interface IEmailService
+namespace AgriPurchaseBilling.Application.Interfaces
 {
-    Task SendEmailAsync(string to, string subject, string htmlBody, CancellationToken cancellationToken = default);
+    public interface IEmailService
+    {
+        Task SendEmailAsync(string to, string subject, string htmlBody, CancellationToken cancellationToken = default);
+    }
 }

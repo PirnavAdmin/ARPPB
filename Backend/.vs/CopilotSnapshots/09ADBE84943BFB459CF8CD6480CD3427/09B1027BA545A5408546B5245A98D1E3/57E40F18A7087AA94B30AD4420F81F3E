@@ -1,0 +1,350 @@
+﻿using System.Security.Cryptography;
+using AgriPurchaseBilling.Application.DTOs;
+using AgriPurchaseBilling.Application.Interfaces;
+using AgriPurchaseBilling.Domain.Entities;
+
+namespace AgriPurchaseBilling.Application.Services
+{
+
+    public sealed class OtpService : IOtpService
+    {
+        private const int OtpExpiryMinutes = 5;
+        private const int MaxAttempts = 5;
+        private const string PasswordResetPurpose = "PasswordReset";
+        private const string RegistrationPurpose = "Registration";
+
+        private readonly IOtpRepository _otpRepository;
+        private readonly IPasswordHasher _passwordHasher;
+        private readonly IUserRepository _userRepository;
+        private readonly IEmailService _emailService;
+        private readonly bool _isDevelopment;
+
+        public OtpService(
+            IOtpRepository otpRepository,
+            IPasswordHasher passwordHasher,
+            IUserRepository userRepository,
+            IEmailService emailService,
+            bool isDevelopment)
+        {
+            _otpRepository = otpRepository;
+            _passwordHasher = passwordHasher;
+            _userRepository = userRepository;
+            _emailService = emailService;
+            _isDevelopment = isDevelopment;
+        }
+
+        public async Task<ApiResponse<string>> GenerateRegistrationOtpAsync(
+            string mobile, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(mobile) || !System.Text.RegularExpressions.Regex.IsMatch(mobile.Trim(), @"^[0-9]{10}$"))
+                return ApiResponse<string>.Fail("Enter a valid 10-digit mobile number.");
+            mobile = mobile.Trim();
+            if (await _userRepository.ExistsByMobileAsync(mobile, cancellationToken))
+                return ApiResponse<string>.Fail("This mobile number is already registered.");
+            return await GenerateForDestinationAsync(null, mobile, RegistrationPurpose, cancellationToken);
+        }
+
+        public Task<ApiResponse<string>> VerifyRegistrationOtpAsync(
+            string mobile, string otp, CancellationToken cancellationToken = default) =>
+            VerifyForDestinationAsync(mobile, otp, RegistrationPurpose, cancellationToken);
+
+        public async Task<bool> IsRegistrationOtpVerifiedAsync(
+            string mobile, CancellationToken cancellationToken = default)
+        {
+            var record = await _otpRepository.GetLatestOtpAsync(mobile.Trim(), RegistrationPurpose, cancellationToken);
+            return record != null && record.VerifiedAt != null &&
+                   record.ExpiresAt > DateTime.UtcNow && record.Attempts < MaxAttempts;
+        }
+
+        public async Task ConsumeRegistrationOtpAsync(
+            string mobile, CancellationToken cancellationToken = default)
+        {
+            if (!await IsRegistrationOtpVerifiedAsync(mobile, cancellationToken))
+                throw new InvalidOperationException("A verified registration OTP is required.");
+            await _otpRepository.ConsumeOtpAsync(mobile.Trim(), RegistrationPurpose, cancellationToken);
+        }
+
+        public async Task<ApiResponse<string>> GenerateOtpAsync(
+            GenerateOtpRequestDto request, CancellationToken cancellationToken = default)
+        {
+            bool hasEmail = !string.IsNullOrWhiteSpace(request.Email);
+            bool hasMobile = !string.IsNullOrWhiteSpace(request.Mobile);
+            if (hasEmail == hasMobile)
+                return ApiResponse<string>.Fail("Provide either an email address or a mobile number.");
+
+            if (hasMobile && !_isDevelopment)
+            {
+                return ApiResponse<string>.Fail(
+                    "SMS delivery is not configured. Contact the administrator to enable mobile OTP delivery.");
+            }
+
+            string destination = hasEmail ? request.Email!.Trim().ToLowerInvariant() : request.Mobile!.Trim();
+            var user = hasEmail
+                ? await _userRepository.GetByEmailAsync(destination, cancellationToken)
+                : await _userRepository.GetByMobileAsync(destination, cancellationToken);
+            if (user == null || !user.IsActive)
+                return ApiResponse<string>.Ok("If the account exists, an OTP will be sent.", "OTP request processed.");
+
+            return await GenerateForDestinationAsync(
+                hasEmail ? destination : null, hasMobile ? destination : null,
+                PasswordResetPurpose, cancellationToken);
+        }
+
+        public Task<ApiResponse<string>> VerifyOtpAsync(
+            VerifyOtpRequestDto request, CancellationToken cancellationToken = default)
+        {
+            bool hasEmail = !string.IsNullOrWhiteSpace(request.Email);
+            bool hasMobile = !string.IsNullOrWhiteSpace(request.Mobile);
+            if (hasEmail == hasMobile)
+                return Task.FromResult(ApiResponse<string>.Fail("Provide either email or mobile number."));
+            string destination = hasEmail ? request.Email!.Trim().ToLowerInvariant() : request.Mobile!.Trim();
+            return VerifyForDestinationAsync(destination, request.Otp, PasswordResetPurpose, cancellationToken);
+        }
+
+        public async Task<bool> IsPasswordResetOtpVerifiedAsync(string destination, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(destination)) return false;
+            var record = await _otpRepository.GetLatestOtpAsync(destination.Trim(), PasswordResetPurpose, cancellationToken);
+            return record != null && record.VerifiedAt != null &&
+                   record.ExpiresAt > DateTime.UtcNow && record.Attempts < MaxAttempts;
+        }
+
+        public async Task ConsumeVerifiedOtpAsync(string destination, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(destination)) throw new ArgumentException("Email or mobile is required.", nameof(destination));
+            destination = destination.Trim();
+            var record = await _otpRepository.GetLatestOtpAsync(destination, PasswordResetPurpose, cancellationToken);
+            if (record == null || record.VerifiedAt == null || record.ExpiresAt <= DateTime.UtcNow)
+                throw new InvalidOperationException("A valid verified OTP is required before it can be consumed.");
+            await _otpRepository.ConsumeOtpAsync(destination, PasswordResetPurpose, cancellationToken);
+        }
+
+        private async Task<ApiResponse<string>> GenerateForDestinationAsync(
+            string? email, string? mobile, string purpose, CancellationToken cancellationToken)
+        {
+            if (!_isDevelopment && email == null)
+            {
+                return ApiResponse<string>.Fail(
+                    "SMS delivery is not configured. Contact the administrator to enable mobile OTP delivery.");
+            }
+
+            string otp = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+            var record = new UserOtp
+            {
+                Email = email,
+                Mobile = mobile,
+                OtpHash = _passwordHasher.HashPassword(otp),
+                Purpose = purpose,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(OtpExpiryMinutes),
+                Attempts = 0,
+                VerifiedAt = null,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _otpRepository.SaveOtpAsync(record, cancellationToken);
+
+            if (!_isDevelopment && email != null)
+            {
+                await _emailService.SendEmailAsync(
+                    email,
+                    "Your ARPPB verification code",
+                    $"<p>Your ARPPB verification code is <strong>{otp}</strong>.</p><p>It expires in {OtpExpiryMinutes} minutes.</p>",
+                    cancellationToken);
+            }
+
+            var response = ApiResponse<string>.Ok(
+                "If the account exists, an OTP will be sent.", "OTP request processed.");
+            if (_isDevelopment) response.DevOtp = otp;
+            return response;
+        }
+
+        private async Task<ApiResponse<string>> VerifyForDestinationAsync(
+            string destination, string otp, string purpose, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(destination) || string.IsNullOrWhiteSpace(otp))
+                return ApiResponse<string>.Fail("Destination and OTP are required.");
+            destination = destination.Trim(); otp = otp.Trim();
+            if (otp.Length != 6 || !otp.All(char.IsDigit))
+                return ApiResponse<string>.Fail("Enter a valid six-digit OTP.");
+            var record = await _otpRepository.GetLatestOtpAsync(destination, purpose, cancellationToken);
+            if (record == null) return ApiResponse<string>.Fail("OTP not found. Please generate a new OTP.");
+            if (record.ExpiresAt <= DateTime.UtcNow || record.Attempts >= MaxAttempts)
+            {
+                await _otpRepository.ConsumeOtpAsync(destination, purpose, cancellationToken);
+                return ApiResponse<string>.Fail(record.ExpiresAt <= DateTime.UtcNow ? "OTP has expired." : "Maximum OTP attempts exceeded.");
+            }
+            if (record.VerifiedAt != null)
+            {
+                return _passwordHasher.VerifyPassword(otp, record.OtpHash)
+                    ? ApiResponse<string>.Ok("OTP verified successfully.")
+                    : ApiResponse<string>.Fail("Invalid OTP.");
+            }
+            if (!_passwordHasher.VerifyPassword(otp, record.OtpHash))
+            {
+                await _otpRepository.IncrementAttemptsAsync(record.Id, cancellationToken);
+                return ApiResponse<string>.Fail(record.Attempts + 1 >= MaxAttempts ? "Invalid OTP. Maximum attempts reached." : "Invalid OTP.");
+            }
+            if (!await _otpRepository.MarkVerifiedAsync(record.Id, cancellationToken))
+                return ApiResponse<string>.Fail("OTP verification failed. Please try again.");
+            return ApiResponse<string>.Ok("OTP verified successfully.");
+        }
+
+        // The OTP purpose is bound to the authenticated user ID so that an OTP requested for one Farmer cannot be used by another Farmer.
+        public async Task<ApiResponse<string>> GenerateMobileChangeOtpAsync(
+            long userId, string newMobile, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(newMobile) || !System.Text.RegularExpressions.Regex.IsMatch(newMobile.Trim(), @"^[0-9]{10}$"))
+                return ApiResponse<string>.Fail("Enter a valid 10-digit mobile number.");
+
+            newMobile = newMobile.Trim();
+            if (await _userRepository.ExistsByMobileAsync(newMobile, cancellationToken))
+                return ApiResponse<string>.Fail("This mobile number is already registered with another account.");
+
+            return await GenerateForDestinationAsync(
+                null, newMobile, FarmerMobileChangePurpose(userId), cancellationToken);
+        }
+
+        public Task<ApiResponse<string>> VerifyMobileChangeOtpAsync(
+            long userId, string newMobile, string otp,
+            CancellationToken cancellationToken = default) =>
+            VerifyForDestinationAsync(
+                newMobile, otp, FarmerMobileChangePurpose(userId), cancellationToken);
+
+        public async Task ConsumeMobileChangeOtpAsync(
+            long userId, string newMobile, CancellationToken cancellationToken = default)
+        {
+            string purpose = FarmerMobileChangePurpose(userId);
+            var record = await _otpRepository.GetLatestOtpAsync(
+                newMobile.Trim(), purpose, cancellationToken);
+            if (record == null || record.VerifiedAt == null ||
+                record.ExpiresAt <= DateTime.UtcNow || record.Attempts >= MaxAttempts)
+            {
+                throw new InvalidOperationException(
+                    "A valid verified mobile-change OTP is required.");
+            }
+
+            await _otpRepository.ConsumeOtpAsync(
+                newMobile.Trim(), purpose, cancellationToken);
+        }
+
+        private static string FarmerMobileChangePurpose(long userId) =>
+            $"FarmerMobileChange:{userId}";
+
+        private static string MiddlemanMobileChangePurpose(long userId) =>
+            $"MiddlemanMobileChange:{userId}";
+
+        private static string VendorMobileChangePurpose(long userId) =>
+            $"VendorMobileChange:{userId}";
+
+        public async Task<ApiResponse<string>> GenerateVendorMobileChangeOtpAsync(
+            long userId, string newMobile, CancellationToken cancellationToken = default)
+        {
+            if (userId <= 0 || string.IsNullOrWhiteSpace(newMobile) ||
+                !System.Text.RegularExpressions.Regex.IsMatch(newMobile.Trim(), @"^[6-9][0-9]{9}$"))
+            {
+                return ApiResponse<string>.Fail("Enter a valid 10-digit mobile number.");
+            }
+
+            newMobile = newMobile.Trim();
+            if (await _userRepository.ExistsByMobileAsync(newMobile, cancellationToken))
+            {
+                return ApiResponse<string>.Fail("This mobile number is already registered.");
+            }
+
+            return await GenerateForDestinationAsync(
+                null, newMobile, VendorMobileChangePurpose(userId), cancellationToken);
+        }
+
+        public Task<ApiResponse<string>> VerifyVendorMobileChangeOtpAsync(
+            long userId, string newMobile, string otp,
+            CancellationToken cancellationToken = default)
+        {
+            if (userId <= 0 || string.IsNullOrWhiteSpace(newMobile))
+            {
+                return Task.FromResult(ApiResponse<string>.Fail("Vendor and new mobile number are required."));
+            }
+
+            return VerifyForDestinationAsync(
+                newMobile.Trim(), otp, VendorMobileChangePurpose(userId), cancellationToken);
+        }
+
+        public async Task<bool> IsVendorMobileChangeOtpVerifiedAsync(
+            long userId, string newMobile, CancellationToken cancellationToken = default)
+        {
+            if (userId <= 0 || string.IsNullOrWhiteSpace(newMobile)) return false;
+
+            var record = await _otpRepository.GetLatestOtpAsync(
+                newMobile.Trim(), VendorMobileChangePurpose(userId), cancellationToken);
+
+            return record != null && record.VerifiedAt != null &&
+                   record.ExpiresAt > DateTime.UtcNow && record.Attempts < MaxAttempts;
+        }
+
+        public async Task ConsumeVendorMobileChangeOtpAsync(
+            long userId, string newMobile, CancellationToken cancellationToken = default)
+        {
+            if (!await IsVendorMobileChangeOtpVerifiedAsync(userId, newMobile, cancellationToken))
+            {
+                throw new InvalidOperationException("A valid verified vendor mobile-change OTP is required.");
+            }
+
+            await _otpRepository.ConsumeOtpAsync(
+                newMobile.Trim(), VendorMobileChangePurpose(userId), cancellationToken);
+        }
+
+        public async Task<ApiResponse<string>> GenerateMiddlemanMobileChangeOtpAsync(
+            long userId, string newMobile, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(newMobile) ||
+                !System.Text.RegularExpressions.Regex.IsMatch(newMobile.Trim(), @"^[0-9]{10}$"))
+                return ApiResponse<string>.Fail("Enter a valid 10-digit mobile number.");
+
+            newMobile = newMobile.Trim();
+
+            if (await _userRepository.ExistsByMobileAsync(newMobile, cancellationToken))
+                return ApiResponse<string>.Fail("This mobile number is already registered.");
+
+            return await GenerateForDestinationAsync(
+                null, newMobile, MiddlemanMobileChangePurpose(userId), cancellationToken);
+        }
+
+        public Task<ApiResponse<string>> VerifyMiddlemanMobileChangeOtpAsync(
+            long userId, string newMobile, string otp,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(newMobile))
+                return Task.FromResult(ApiResponse<string>.Fail("New mobile number is required."));
+
+            return VerifyForDestinationAsync(
+                newMobile.Trim(), otp, MiddlemanMobileChangePurpose(userId), cancellationToken);
+        }
+
+        public async Task<bool> IsMiddlemanMobileChangeOtpVerifiedAsync(
+            long userId, string newMobile,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(newMobile)) return false;
+
+            var record = await _otpRepository.GetLatestOtpAsync(
+                newMobile.Trim(), MiddlemanMobileChangePurpose(userId), cancellationToken);
+
+            return record != null &&
+                   record.VerifiedAt != null &&
+                   record.ExpiresAt > DateTime.UtcNow &&
+                   record.Attempts < MaxAttempts;
+        }
+
+        public async Task ConsumeMiddlemanMobileChangeOtpAsync(
+            long userId, string newMobile,
+            CancellationToken cancellationToken = default)
+        {
+            if (!await IsMiddlemanMobileChangeOtpVerifiedAsync(
+                    userId, newMobile, cancellationToken))
+                throw new InvalidOperationException(
+                    "A valid verified mobile-change OTP is required.");
+
+            await _otpRepository.ConsumeOtpAsync(
+                newMobile.Trim(), MiddlemanMobileChangePurpose(userId), cancellationToken);
+        }
+
+    }
+}

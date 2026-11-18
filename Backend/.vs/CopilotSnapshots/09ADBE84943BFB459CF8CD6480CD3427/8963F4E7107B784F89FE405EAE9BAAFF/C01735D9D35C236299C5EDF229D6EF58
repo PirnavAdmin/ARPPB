@@ -1,0 +1,112 @@
+﻿using AgriPurchaseBilling.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace AgriPurchaseBilling.Infrastructure.Data
+{
+    /// <summary>
+    /// Dedicated DbContext for the Customer My Profile Module.
+    /// Contains only the entity mappings and tables required by Customer My Profile.
+    /// Can be used directly or merged into an existing application DbContext.
+    /// </summary>
+    public class CustomerDbContext : DbContext
+    {
+        public CustomerDbContext(DbContextOptions<CustomerDbContext> options)
+            : base(options)
+        {
+        }
+
+        /// <summary>
+        /// Master Users table (maps to existing Users table).
+        /// </summary>
+        public DbSet<CustomerUser> Users => Set<CustomerUser>();
+
+        /// <summary>
+        /// Extended profile information (maps to customer_profiles table).
+        /// </summary>
+        public DbSet<CustomerProfileEntity> CustomerProfiles => Set<CustomerProfileEntity>();
+
+        /// <summary>
+        /// Delivery addresses (maps to customer_delivery_addresses table).
+        /// </summary>
+        public DbSet<CustomerDeliveryAddressEntity> CustomerDeliveryAddresses => Set<CustomerDeliveryAddressEntity>();
+
+        /// <summary>
+        /// OTP verification records (maps to otp_verifications table).
+        /// </summary>
+        public DbSet<CustomerOtpVerificationEntity> OtpVerifications => Set<CustomerOtpVerificationEntity>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            // 1. CustomerUser -> Users (Master user mapping)
+            modelBuilder.Entity<CustomerUser>(entity =>
+            {
+                entity.ToTable("Users");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.FullName).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.Email).HasMaxLength(100);
+                entity.Property(e => e.Mobile).HasMaxLength(10).IsRequired();
+                entity.Property(e => e.Role).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.CreatedAt);
+                entity.Property(e => e.UpdatedAt);
+            });
+
+            // 2. CustomerProfileEntity -> customer_profiles
+            modelBuilder.Entity<CustomerProfileEntity>(entity =>
+            {
+                entity.ToTable("customer_profiles");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.UserId).IsRequired();
+                entity.HasIndex(e => e.UserId).IsUnique().HasDatabaseName("UQ_customer_profiles_user_id");
+                entity.Property(e => e.AlternateMobile).HasMaxLength(15);
+                entity.Property(e => e.Address).HasMaxLength(500).IsRequired();
+                entity.Property(e => e.District).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.State).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.PinCode).HasMaxLength(10).IsRequired();
+                entity.Property(e => e.ProfilePhoto);
+                entity.Property(e => e.CreatedAt).IsRequired();
+                entity.Property(e => e.UpdatedAt).IsRequired();
+            });
+
+            // 3. CustomerDeliveryAddressEntity -> customer_delivery_addresses
+            modelBuilder.Entity<CustomerDeliveryAddressEntity>(entity =>
+            {
+                entity.ToTable("customer_delivery_addresses");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.UserId).IsRequired();
+                entity.Property(e => e.AddressName).HasMaxLength(150).IsRequired();
+                entity.Property(e => e.ContactPerson).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.PhoneNumber).HasMaxLength(15).IsRequired();
+                entity.Property(e => e.FullAddress).HasMaxLength(500).IsRequired();
+                entity.Property(e => e.District).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.State).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.PinCode).HasMaxLength(10).IsRequired();
+                entity.Property(e => e.IsDefault).HasDefaultValue(false);
+                entity.Property(e => e.CreatedAt).IsRequired();
+                entity.Property(e => e.UpdatedAt).IsRequired();
+                entity.HasIndex(e => new { e.UserId, e.IsDefault }).HasDatabaseName("IX_customer_delivery_addresses_user_default");
+            });
+
+            // 4. CustomerOtpVerificationEntity -> otp_verifications
+            modelBuilder.Entity<CustomerOtpVerificationEntity>(entity =>
+            {
+                entity.ToTable("otp_verifications");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.Email).HasColumnName("email").HasMaxLength(150);
+                entity.Property(e => e.Mobile).HasColumnName("mobile").HasMaxLength(15);
+                entity.Property(e => e.OtpHash).HasColumnName("otp_hash").HasMaxLength(255).IsRequired();
+                entity.Property(e => e.Purpose).HasColumnName("purpose").HasMaxLength(50).IsRequired();
+                entity.Property(e => e.ExpiresAt).HasColumnName("expires_at").IsRequired();
+                entity.Property(e => e.Attempts).HasColumnName("attempts").HasDefaultValue(0);
+                entity.Property(e => e.VerifiedAt).HasColumnName("verified_at");
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                entity.HasIndex(e => new { e.Email, e.Purpose }).HasDatabaseName("IX_otp_email_purpose");
+                entity.HasIndex(e => new { e.Mobile, e.Purpose }).HasDatabaseName("IX_otp_mobile_purpose");
+            });
+        }
+    }
+}

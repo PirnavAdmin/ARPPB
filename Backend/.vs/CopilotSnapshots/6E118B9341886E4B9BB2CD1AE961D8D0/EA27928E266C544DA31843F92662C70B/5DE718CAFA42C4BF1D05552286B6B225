@@ -1,0 +1,35 @@
+﻿namespace AgriPurchaseBilling.Domain.Entities
+{
+
+    public class Farmer
+    {
+        public long Id { get; set; }
+        public long UserId { get; set; }
+        public required string FarmerCode { get; set; }
+        public string? Mobile { get; set; }
+
+        // Farm Location & Landholding
+        public string? FarmName { get; set; }
+        public string? TotalLandArea { get; set; }
+        public string? Village { get; set; }
+        public string? Mandal { get; set; }
+        public string? District { get; set; }
+        public string? State { get; set; }
+        public string? PinCode { get; set; }
+        public string? Address { get; set; }
+
+        // Legacy/Inline Bank Details (kept for fallback compatibility)
+        public string? BankName { get; set; }
+        public string? AccountNumber { get; set; }
+        public string? IfscCode { get; set; }
+        public string? BranchName { get; set; }
+        public string? AccountType { get; set; }
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        // Navigation properties
+        public User User { get; set; } = null!;
+        public FarmerBankAccount? BankAccount { get; set; }
+    }
+}

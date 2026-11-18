@@ -1,0 +1,91 @@
+-- Add the legacy farmer bank-detail columns expected by AppDbContext.
+-- Run this against the same MySQL database used by the API.
+-- Existing values and columns are preserved.
+
+SET @db_name = DATABASE();
+
+SET @column_exists = (
+	SELECT COUNT(*)
+	FROM INFORMATION_SCHEMA.COLUMNS
+	WHERE TABLE_SCHEMA = @db_name
+	  AND TABLE_NAME = 'Farmers'
+	  AND COLUMN_NAME = 'BankName'
+);
+SET @sql = IF(
+	@column_exists = 0,
+	'ALTER TABLE `Farmers` ADD COLUMN `BankName` VARCHAR(100) NULL',
+	'SELECT ''Farmers.BankName already exists'' AS status'
+);
+PREPARE arppb_stmt FROM @sql;
+EXECUTE arppb_stmt;
+DEALLOCATE PREPARE arppb_stmt;
+
+SET @column_exists = (
+	SELECT COUNT(*)
+	FROM INFORMATION_SCHEMA.COLUMNS
+	WHERE TABLE_SCHEMA = @db_name
+	  AND TABLE_NAME = 'Farmers'
+	  AND COLUMN_NAME = 'AccountNumber'
+);
+SET @sql = IF(
+	@column_exists = 0,
+	'ALTER TABLE `Farmers` ADD COLUMN `AccountNumber` VARCHAR(50) NULL',
+	'SELECT ''Farmers.AccountNumber already exists'' AS status'
+);
+PREPARE arppb_stmt FROM @sql;
+EXECUTE arppb_stmt;
+DEALLOCATE PREPARE arppb_stmt;
+
+SET @column_exists = (
+	SELECT COUNT(*)
+	FROM INFORMATION_SCHEMA.COLUMNS
+	WHERE TABLE_SCHEMA = @db_name
+	  AND TABLE_NAME = 'Farmers'
+	  AND COLUMN_NAME = 'IfscCode'
+);
+SET @sql = IF(
+	@column_exists = 0,
+	'ALTER TABLE `Farmers` ADD COLUMN `IfscCode` VARCHAR(20) NULL',
+	'SELECT ''Farmers.IfscCode already exists'' AS status'
+);
+PREPARE arppb_stmt FROM @sql;
+EXECUTE arppb_stmt;
+DEALLOCATE PREPARE arppb_stmt;
+
+SET @column_exists = (
+	SELECT COUNT(*)
+	FROM INFORMATION_SCHEMA.COLUMNS
+	WHERE TABLE_SCHEMA = @db_name
+	  AND TABLE_NAME = 'Farmers'
+	  AND COLUMN_NAME = 'BranchName'
+);
+SET @sql = IF(
+	@column_exists = 0,
+	'ALTER TABLE `Farmers` ADD COLUMN `BranchName` VARCHAR(100) NULL',
+	'SELECT ''Farmers.BranchName already exists'' AS status'
+);
+PREPARE arppb_stmt FROM @sql;
+EXECUTE arppb_stmt;
+DEALLOCATE PREPARE arppb_stmt;
+
+SET @column_exists = (
+	SELECT COUNT(*)
+	FROM INFORMATION_SCHEMA.COLUMNS
+	WHERE TABLE_SCHEMA = @db_name
+	  AND TABLE_NAME = 'Farmers'
+	  AND COLUMN_NAME = 'AccountType'
+);
+SET @sql = IF(
+	@column_exists = 0,
+	'ALTER TABLE `Farmers` ADD COLUMN `AccountType` VARCHAR(50) NULL',
+	'SELECT ''Farmers.AccountType already exists'' AS status'
+);
+PREPARE arppb_stmt FROM @sql;
+EXECUTE arppb_stmt;
+DEALLOCATE PREPARE arppb_stmt;
+
+SHOW COLUMNS FROM `Farmers` LIKE 'BankName';
+SHOW COLUMNS FROM `Farmers` LIKE 'AccountNumber';
+SHOW COLUMNS FROM `Farmers` LIKE 'IfscCode';
+SHOW COLUMNS FROM `Farmers` LIKE 'BranchName';
+SHOW COLUMNS FROM `Farmers` LIKE 'AccountType';

@@ -1,0 +1,60 @@
+﻿using System.Net.Http.Headers;
+using System.Text;
+using AgriPurchaseBilling.Application.Interfaces;
+using Microsoft.Extensions.Configuration;
+
+namespace AgriPurchaseBilling.Infrastructure.Services
+{
+    public sealed class TwilioSmsService : ISmsService
+    {
+        private readonly HttpClient _httpClient;
+        private readonly IConfiguration _configuration;
+
+        public TwilioSmsService(HttpClient httpClient, IConfiguration configuration)
+        {
+            _httpClient = httpClient;
+            _configuration = configuration;
+        }
+
+        public async Task SendSmsAsync(string to, string message, CancellationToken cancellationToken = default)
+        {
+            var accountSid = _configuration["SmsSettings:AccountSid"];
+            var authToken = _configuration["SmsSettings:AuthToken"];
+            var fromNumber = _configuration["SmsSettings:FromNumber"];
+            var messagingServiceSid = _configuration["SmsSettings:MessagingServiceSid"];
+
+            if (string.IsNullOrWhiteSpace(accountSid) ||
+                string.IsNullOrWhiteSpace(authToken) ||
+                (string.IsNullOrWhiteSpace(fromNumber) && string.IsNullOrWhiteSpace(messagingServiceSid)))
+            {
+                throw new InvalidOperationException("SMS delivery is not configured. Configure SmsSettings in application configuration.");
+            }
+
+            var requestUri = $"https://api.twilio.com/2010-04-01/Accounts/{Uri.EscapeDataString(accountSid)}/Messages.json";
+            using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
+            var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{accountSid}:{authToken}"));
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+
+            var formValues = new List<KeyValuePair<string, string>>
+            {
+                new("To", to),
+                new("Body", message)
+            };
+            if (!string.IsNullOrWhiteSpace(messagingServiceSid))
+            {
+                formValues.Add(new KeyValuePair<string, string>("MessagingServiceSid", messagingServiceSid));
+            }
+            else
+            {
+                formValues.Add(new KeyValuePair<string, string>("From", fromNumber!));
+            }
+
+            request.Content = new FormUrlEncodedContent(formValues);
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"SMS provider rejected the message (HTTP {(int)response.StatusCode}).");
+            }
+        }
+    }
+}
