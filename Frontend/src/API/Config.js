@@ -11,6 +11,11 @@ export const FARMER_CROPS_API_BASE_URL =
     import.meta.env?.VITE_FARMER_CROPS_API_BASE_URL ||
     "https://pogo-musty-monument.ngrok-free.dev";
 
+export const FARMER_SALES_API_BASE_URL =
+    import.meta.env?.VITE_FARMER_SALES_API_BASE_URL ||
+    import.meta.env?.VITE_FARMER_API_BASE_URL ||
+    FARMER_CROPS_API_BASE_URL;
+
 export const REMOTE_API_BASE_URL = COMMON_API_BASE_URL;
 
 // In the browser on localhost (Vite dev/preview), use relative URLs ("")
@@ -54,6 +59,13 @@ export function getFarmerCropsBaseURL() {
     return FARMER_CROPS_API_BASE_URL;
 }
 
+/**
+ * Resolves the Base URL for Farmer Sales APIs.
+ */
+export function getFarmerSalesBaseURL() {
+    return FARMER_SALES_API_BASE_URL;
+}
+
 const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
@@ -75,8 +87,11 @@ api.interceptors.request.use(
 
         if (config._retriedViaProxy || isBrowserLocalhost) {
             config.baseURL = "";
-        } else if (typeof config.url === "string" && config.url.startsWith("/api/v1/farmer/crops")) {
-            config.baseURL = FARMER_CROPS_API_BASE_URL;
+        } else if (
+            typeof config.url === "string" &&
+            (config.url.startsWith("/api/v1/farmer/crops") || config.url.startsWith("/api/v1/farmer/sales"))
+        ) {
+            config.baseURL = FARMER_SALES_API_BASE_URL;
         } else {
             config.baseURL = COMMON_API_BASE_URL;
         }

@@ -13,6 +13,8 @@ function OTPModal({ request, onClose }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   const inputRefs = useRef([]);
 
@@ -89,16 +91,37 @@ function OTPModal({ request, onClose }) {
 
   const fullCode = otpDigits.join('');
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (fullCode.length !== 6) {
       setErrorMsg('Please enter the complete 6-digit OTP code.');
       return;
     }
-    const success = verifyOTP(request.id, fullCode);
-    if (!success) {
-      setErrorMsg('Verification failed. Please check the code and try again.');
-    } else {
-      onClose();
+    setIsVerifying(true);
+    setErrorMsg('');
+    try {
+      const success = await verifyOTP(request.id, fullCode);
+      if (success) {
+        onClose();
+      } else {
+        setErrorMsg('Verification failed. Please check the code and try again.');
+      }
+    } catch (err) {
+      setErrorMsg(err?.message || 'Verification failed. Please check the code and try again.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setIsResending(true);
+    setErrorMsg('');
+    try {
+      await resendOTP(request.id);
+      setResendCooldown(30);
+    } catch (err) {
+      setErrorMsg(err?.message || 'Failed to resend OTP code.');
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -239,21 +262,18 @@ function OTPModal({ request, onClose }) {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => {
-                      resendOTP(request.id);
-                      setResendCooldown(30);
-                      setErrorMsg('');
-                    }}
+                    onClick={handleResend}
+                    disabled={isResending}
                     style={{
                       background: 'none',
                       border: 'none',
                       color: 'var(--farmer-primary)',
                       fontWeight: 700,
-                      cursor: 'pointer',
+                      cursor: isResending ? 'not-allowed' : 'pointer',
                       fontSize: '0.86rem',
                     }}
                   >
-                    🔄 Resend OTP Code
+                    {isResending ? '⏳ Sending OTP...' : '🔄 Resend OTP Code'}
                   </button>
                 )}
               </div>
@@ -298,9 +318,9 @@ function OTPModal({ request, onClose }) {
                 type="button"
                 className="farmer-btn farmer-btn-primary"
                 onClick={handleVerify}
-                disabled={fullCode.length !== 6 || countdown <= 0}
+                disabled={fullCode.length !== 6 || countdown <= 0 || isVerifying}
               >
-                Confirm Transaction
+                {isVerifying ? 'Verifying...' : 'Confirm Transaction'}
               </button>
             </>
           ) : (

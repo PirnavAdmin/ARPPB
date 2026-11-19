@@ -61,6 +61,14 @@ const Endpoints = {
         ADD_STOCK: (id) => `/api/v1/farmer/crops/${id}/add-stock`,
     },
 
+    FARMER_SALES: {
+        BASE: "/api/v1/farmer/sales",
+        OPTIONS: "/api/v1/farmer/sales/options",
+        BY_ID: (id) => `/api/v1/farmer/sales/${id}`,
+        VERIFY_OTP: (id) => `/api/v1/farmer/sales/${id}/verify-otp`,
+        RESEND_OTP: (id) => `/api/v1/farmer/sales/${id}/resend-otp`,
+    },
+
     MIDDLEMAN_FARMERS: {
         BASE: "/api/v1/middleman/farmers",
         BY_ID: (id) => `/api/v1/middleman/farmers/${id}`,

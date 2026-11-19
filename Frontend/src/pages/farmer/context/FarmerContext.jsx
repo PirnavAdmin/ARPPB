@@ -25,6 +25,15 @@ import {
   addCropYieldApi,
   DEFAULT_CROP_OPTIONS,
 } from '../../../services/farmerCropService';
+import {
+  fetchFarmerSalesApi,
+  fetchFarmerSaleByIdApi,
+  fetchSalesOptionsApi,
+  createFarmerSaleApi,
+  verifyFarmerSaleOtpApi,
+  resendFarmerSaleOtpApi,
+  DEFAULT_SALES_OPTIONS,
+} from '../../../services/farmerSalesService';
 
 const FarmerContext = createContext(null);
 const STORAGE_KEY = 'agri-farmer-portal-state-v1';
@@ -148,6 +157,9 @@ export function FarmerProvider({ children }) {
   const [cropsError, setCropsError] = useState(null);
   const [marketPrices, setMarketPrices] = useState(() => persistedState?.marketPrices ?? initialMarketPrices);
   const [sales, setSales] = useState(() => persistedState?.sales ?? initialSales);
+  const [salesOptions, setSalesOptions] = useState(DEFAULT_SALES_OPTIONS);
+  const [isSalesLoading, setIsSalesLoading] = useState(false);
+  const [salesError, setSalesError] = useState(null);
   const [purchases, setPurchases] = useState(() => persistedState?.purchases ?? initialPurchases);
   const [stockRecords, setStockRecords] = useState(() => persistedState?.stockRecords ?? initialStockRecords);
   const [otpRequests, setOtpRequests] = useState(() => persistedState?.otpRequests ?? initialOTPRequests);
@@ -301,10 +313,48 @@ export function FarmerProvider({ children }) {
     }
   }, []);
 
+  // Sales API Integration
+  const loadSalesFromApi = useCallback(async (filters = {}) => {
+    setIsSalesLoading(true);
+    setSalesError(null);
+    try {
+      const apiSales = await fetchFarmerSalesApi({
+        category: filters.category,
+        cropId: filters.cropId,
+        status: filters.status,
+        search: filters.search,
+        userId: user?.userId,
+      });
+      if (Array.isArray(apiSales)) {
+        setSales(apiSales);
+      }
+      return apiSales;
+    } catch (error) {
+      console.warn('Farmer sales API fetch error:', error?.message);
+      setSalesError(error?.message || 'Failed to sync sales with server.');
+      return null;
+    } finally {
+      setIsSalesLoading(false);
+    }
+  }, [user?.userId]);
+
+  const loadSalesOptionsFromApi = useCallback(async () => {
+    try {
+      const opts = await fetchSalesOptionsApi();
+      if (opts) {
+        setSalesOptions(opts);
+      }
+    } catch (error) {
+      console.warn('Sales options fetch error:', error?.message);
+    }
+  }, []);
+
   useEffect(() => {
     loadCropOptionsFromApi();
     loadCropsFromApi();
-  }, [loadCropOptionsFromApi, loadCropsFromApi]);
+    loadSalesOptionsFromApi();
+    loadSalesFromApi();
+  }, [loadCropOptionsFromApi, loadCropsFromApi, loadSalesOptionsFromApi, loadSalesFromApi]);
 
   // Crop CRUD Actions
   const addCrop = useCallback(async (newCropData) => {
@@ -478,7 +528,7 @@ export function FarmerProvider({ children }) {
   }, [crops, user?.userId, showToast]);
 
   // Sell Products: Create Sale Transaction
-  const createSale = useCallback((saleForm) => {
+  const createSale = useCallback(async (saleForm) => {
     const cropId = saleForm.cropId || crops.find((c) => c.name.toLowerCase() === (saleForm.cropName || '').toLowerCase())?.id;
     const crop = crops.find((c) => matchesCropRecord(c, cropId, saleForm.cropName));
     const qty = Number(saleForm.sellingQuantity);
@@ -500,8 +550,22 @@ export function FarmerProvider({ children }) {
       return null;
     }
 
-    const txId = generateTransactionId();
-    const otpCode = generateOTP();
+    let apiSaleResult = null;
+    try {
+      apiSaleResult = await createFarmerSaleApi(
+        { ...saleForm, cropId: crop.id, cropName: crop.name, totalAmount: total },
+        user?.userId,
+        profile
+      );
+    } catch (apiError) {
+      console.warn('Backend create sale error:', apiError?.message);
+    }
+
+    const txId = apiSaleResult?.id
+      ? (String(apiSaleResult.id).startsWith('TXN') ? String(apiSaleResult.id) : `TXN-2026-${String(apiSaleResult.id).padStart(3, '0')}`)
+      : generateTransactionId();
+    const backendSaleId = apiSaleResult?.id || null;
+    const otpCode = apiSaleResult?.devOtp || generateOTP();
     const today = new Date().toISOString().split('T')[0];
     const expectedPayDate = calculateExpectedPaymentDate(new Date(), 3);
     const expiresAt = Date.now() + 10 * 60 * 1000;
@@ -509,6 +573,7 @@ export function FarmerProvider({ children }) {
     // 1. Create Transaction (Pending Confirmation)
     const newTransaction = {
       id: txId,
+      saleId: backendSaleId,
       date: today,
       cropId: crop.id,
       cropName: crop.name,
@@ -546,7 +611,7 @@ export function FarmerProvider({ children }) {
 
     setStockRecords((prev) =>
       prev.map((s) => {
-        if (s.id === `STK-${crop.id.slice(-3)}` || matchesCropRecord(s, crop.id, crop.name)) {
+        if (s.id === `STK-${String(crop.id).slice(-3)}` || matchesCropRecord(s, crop.id, crop.name)) {
           return {
             ...s,
             reservedQuantity: (s.reservedQuantity || 0) + qty,
@@ -561,6 +626,7 @@ export function FarmerProvider({ children }) {
     // 3. Create OTP Confirmation Request
     const newOtpRequest = {
       id: `OTP-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+      saleId: backendSaleId,
       transactionId: txId,
       buyerName: newTransaction.buyerName,
       buyerCategory: newTransaction.buyerCategory,
@@ -599,26 +665,24 @@ export function FarmerProvider({ children }) {
     ]);
 
     showToast(
-      `Sale ${txId} created! Buyer confirmation is required before stock is finalized.`,
+      `Sale ${txId} created! OTP has been generated for confirmation.`,
       'info',
       8000
     );
 
     return { transaction: newTransaction, otpRequest: newOtpRequest };
-  }, [crops, profile, showToast]);
+  }, [crops, profile, user?.userId, showToast]);
 
   // Verify OTP Confirmation Action
-  const verifyOTP = useCallback((otpId, enteredCode) => {
-    const otpReq = otpRequests.find((o) => o.id === otpId);
+  const verifyOTP = useCallback(async (otpId, enteredCode) => {
+    const otpReq = otpRequests.find((o) => o.id === otpId || o.transactionId === otpId || o.saleId === otpId);
     if (!otpReq) {
       showToast('OTP request not found.', 'error');
       return false;
     }
 
-    if (otpReq.direction === 'farmer_initiated') {
-      showToast('This OTP was generated for buyer confirmation and cannot be verified by the farmer.', 'warning');
-      return false;
-    }
+    const linkedSale = sales.find((s) => s.id === otpReq.transactionId || s.id === otpReq.saleId || s.saleId === otpReq.saleId);
+    const targetSaleId = linkedSale?.saleId || otpReq.saleId || linkedSale?.id || otpReq.transactionId;
 
     if (otpReq.otpStatus !== 'Pending') {
       showToast(`This OTP request is already ${otpReq.otpStatus.toLowerCase()}.`, 'warning');
@@ -634,7 +698,29 @@ export function FarmerProvider({ children }) {
       return false;
     }
 
-    if (enteredCode !== otpReq.otpCode) {
+    // Call backend verify OTP API if targetSaleId is available
+    let backendVerified = false;
+    if (targetSaleId) {
+      try {
+        await verifyFarmerSaleOtpApi(targetSaleId, enteredCode, user?.userId);
+        backendVerified = true;
+      } catch (apiError) {
+        console.warn('Backend verify OTP API returned error:', apiError?.message);
+        if (enteredCode !== otpReq.otpCode) {
+          const nextAttemptsLeft = Math.max(0, Number(otpReq.attemptsLeft || 0) - 1);
+          const nextStatus = nextAttemptsLeft <= 0 ? 'Expired' : otpReq.otpStatus;
+          setOtpRequests((prev) =>
+            prev.map((o) =>
+              o.id === otpId ? { ...o, otpStatus: nextStatus, attemptsLeft: nextAttemptsLeft } : o
+            )
+          );
+          showToast(apiError?.message || `Invalid OTP. ${nextAttemptsLeft} attempt(s) remaining.`, 'error');
+          return false;
+        }
+      }
+    }
+
+    if (!backendVerified && enteredCode !== otpReq.otpCode) {
       const nextAttemptsLeft = Math.max(0, Number(otpReq.attemptsLeft || 0) - 1);
       const nextStatus = nextAttemptsLeft <= 0 ? 'Expired' : otpReq.otpStatus;
       setOtpRequests((prev) =>
@@ -645,10 +731,9 @@ export function FarmerProvider({ children }) {
 
       if (nextAttemptsLeft <= 0) {
         showToast('Maximum verification attempts exceeded. OTP expired.', 'error');
-        return false;
+      } else {
+        showToast(`Invalid OTP. ${nextAttemptsLeft} attempt(s) remaining.`, 'error');
       }
-
-      showToast(`Invalid OTP. ${nextAttemptsLeft} attempt(s) remaining.`, 'error');
       return false;
     }
 
@@ -662,7 +747,7 @@ export function FarmerProvider({ children }) {
 
     setSales((prev) =>
       prev.map((s) => {
-        if (s.id === otpReq.transactionId) {
+        if (s.id === otpReq.transactionId || s.id === otpReq.saleId || s.saleId === otpReq.saleId) {
           return {
             ...s,
             transactionStatus: 'Confirmed',
@@ -730,17 +815,12 @@ export function FarmerProvider({ children }) {
 
     setActiveOtpRequest(null);
     return true;
-  }, [otpRequests, showToast]);
+  }, [otpRequests, sales, user?.userId, showToast]);
 
   // Reject OTP Transaction Action
   const rejectOTP = useCallback((otpId, reason = 'Transaction rejected by user') => {
     const otpReq = otpRequests.find((o) => o.id === otpId);
     if (!otpReq) return;
-
-    if (otpReq.direction === 'farmer_initiated') {
-      showToast('Buyer confirmation requests cannot be rejected by the farmer.', 'warning');
-      return;
-    }
 
     setOtpRequests((prev) =>
       prev.map((o) => (o.id === otpId ? { ...o, otpStatus: 'Rejected' } : o))
@@ -749,7 +829,7 @@ export function FarmerProvider({ children }) {
     // 2. Mark Transaction as Rejected
     setSales((prev) =>
       prev.map((s) => {
-        if (s.id === otpReq.transactionId) {
+        if (s.id === otpReq.transactionId || s.id === otpReq.saleId) {
           return {
             ...s,
             transactionStatus: 'Rejected',
@@ -762,33 +842,31 @@ export function FarmerProvider({ children }) {
     );
 
     // 3. Release reserved stock back to available
-    if (otpReq.direction === 'farmer_initiated') {
-      setCrops((prev) =>
-        prev.map((c) => {
-          if (c.name.toLowerCase() === otpReq.crop.toLowerCase()) {
-            return {
-              ...c,
-              reservedQuantity: Math.max(0, (c.reservedQuantity || 0) - otpReq.quantity),
-              availableQuantity: c.availableQuantity + otpReq.quantity,
-            };
-          }
-          return c;
-        })
-      );
+    setCrops((prev) =>
+      prev.map((c) => {
+        if (c.name.toLowerCase() === otpReq.crop.toLowerCase()) {
+          return {
+            ...c,
+            reservedQuantity: Math.max(0, (c.reservedQuantity || 0) - otpReq.quantity),
+            availableQuantity: c.availableQuantity + otpReq.quantity,
+          };
+        }
+        return c;
+      })
+    );
 
-      setStockRecords((prev) =>
-        prev.map((s) => {
-          if (s.cropName.toLowerCase() === otpReq.crop.toLowerCase()) {
-            return {
-              ...s,
-              reservedQuantity: Math.max(0, (s.reservedQuantity || 0) - otpReq.quantity),
-              availableQuantity: s.availableQuantity + otpReq.quantity,
-            };
-          }
-          return s;
-        })
-      );
-    }
+    setStockRecords((prev) =>
+      prev.map((s) => {
+        if (s.cropName.toLowerCase() === otpReq.crop.toLowerCase()) {
+          return {
+            ...s,
+            reservedQuantity: Math.max(0, (s.reservedQuantity || 0) - otpReq.quantity),
+            availableQuantity: s.availableQuantity + otpReq.quantity,
+          };
+        }
+        return s;
+      })
+    );
 
     // 4. Notification
     setNotifications((prev) => [
@@ -811,8 +889,21 @@ export function FarmerProvider({ children }) {
   }, [otpRequests, showToast]);
 
   // Resend OTP Action
-  const resendOTP = useCallback((otpId) => {
-    const newCode = generateOTP();
+  const resendOTP = useCallback(async (otpId) => {
+    const otpReq = otpRequests.find((o) => o.id === otpId);
+    const linkedSale = sales.find((s) => s.id === otpReq?.transactionId || s.id === otpReq?.saleId);
+    const targetSaleId = linkedSale?.saleId || otpReq?.saleId || linkedSale?.id || otpReq?.transactionId;
+
+    let resendResult = null;
+    if (targetSaleId) {
+      try {
+        resendResult = await resendFarmerSaleOtpApi(targetSaleId, user?.userId);
+      } catch (err) {
+        console.warn('Backend resend OTP error:', err?.message);
+      }
+    }
+
+    const newCode = resendResult?.devOtp || generateOTP();
     const newExpiresAt = Date.now() + 10 * 60 * 1000;
     setOtpRequests((prev) =>
       prev.map((o) =>
@@ -829,7 +920,7 @@ export function FarmerProvider({ children }) {
       )
     );
     showToast('A fresh OTP was sent to the receiving party.', 'info', 6000);
-  }, [showToast]);
+  }, [otpRequests, sales, user?.userId, showToast]);
 
   // Add Purchase Action
   const addPurchase = useCallback((purchaseData) => {
@@ -884,6 +975,11 @@ export function FarmerProvider({ children }) {
 
       // Sales
       sales,
+      salesOptions,
+      isSalesLoading,
+      salesError,
+      refreshSales: loadSalesFromApi,
+      fetchSaleById: fetchFarmerSaleByIdApi,
       createSale,
 
       // Purchases
@@ -935,6 +1031,10 @@ export function FarmerProvider({ children }) {
       addHarvestStock,
       marketPrices,
       sales,
+      salesOptions,
+      isSalesLoading,
+      salesError,
+      loadSalesFromApi,
       createSale,
       purchases,
       addPurchase,
