@@ -69,6 +69,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         connectionString,
         serverVersion));
 builder.Services.AddCustomerProfileModule();
+builder.Services.AddFarmerCropsModule();
 
 // REPOSITORY REGISTRATIONS
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
@@ -238,8 +239,8 @@ app.UseAuthorization();
 // MAP CONTROLLERS
 app.MapControllers();
 
-// REDIRECT ROOT TO SWAGGER UI
-app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
+// REDIRECT ROOT TO SWAGGER UI (Supports GET and HEAD for tunnel/health probes)
+app.MapMethods("/", new[] { "GET", "HEAD" }, () => Results.Redirect("/swagger")).ExcludeFromDescription();
 
 // RUN
 app.Run();
