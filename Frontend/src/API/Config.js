@@ -6,10 +6,19 @@ export const ROLE_TOKENS_STORAGE_KEY = "arppb_role_tokens_v1";
 
 export const COMMON_API_BASE_URL =
     import.meta.env?.VITE_API_BASE_URL ||
+<<<<<<< HEAD
     "https://zodiac-excursion-rendition.ngrok-free.dev";
 
 export const FARMER_CROPS_API_BASE_URL = COMMON_API_BASE_URL;
 export const FARMER_SALES_API_BASE_URL = COMMON_API_BASE_URL;
+=======
+    "https://flatterer-exalted-anthem.ngrok-free.dev";
+
+export const FARMER_CROPS_API_BASE_URL =
+    import.meta.env?.VITE_FARMER_CROPS_API_BASE_URL ||
+    "https://pogo-musty-monument.ngrok-free.dev";
+
+>>>>>>> 1a46069a873afff77115f1df3fc7928f7e8cd4c7
 export const REMOTE_API_BASE_URL = COMMON_API_BASE_URL;
 
 // In the browser on localhost (Vite dev/preview), use relative URLs ("")
@@ -268,6 +277,7 @@ export function getFarmerCropsBaseURL() {
     return COMMON_API_BASE_URL;
 }
 
+<<<<<<< HEAD
 /**
  * Resolves the Base URL for Farmer Sales APIs.
  */
@@ -275,6 +285,8 @@ export function getFarmerSalesBaseURL() {
     return COMMON_API_BASE_URL;
 }
 
+=======
+>>>>>>> 1a46069a873afff77115f1df3fc7928f7e8cd4c7
 const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
@@ -314,6 +326,11 @@ api.interceptors.request.use(
 
         if (config._retriedViaProxy || isBrowserLocalhost) {
             config.baseURL = "";
+<<<<<<< HEAD
+=======
+        } else if (typeof config.url === "string" && config.url.startsWith("/api/v1/farmer/crops")) {
+            config.baseURL = FARMER_CROPS_API_BASE_URL;
+>>>>>>> 1a46069a873afff77115f1df3fc7928f7e8cd4c7
         } else {
             config.baseURL = COMMON_API_BASE_URL;
         }

@@ -4,18 +4,7 @@ import DataTable from '../components/DataTable';
 import { formatCurrency, formatDate, buyerCategoryStyles } from '../utils/farmerHelpers';
 
 function MySales() {
-  const {
-    sales,
-    searchQuery,
-    setSelectedTransaction,
-    setActiveOtpRequest,
-    otpRequests,
-    navigateTo,
-    refreshSales,
-    isSalesLoading,
-    salesError,
-    fetchSaleById,
-  } = useFarmer();
+  const { sales, searchQuery, setSelectedTransaction, setActiveOtpRequest, otpRequests, navigateTo } = useFarmer();
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState('All');
@@ -219,15 +208,6 @@ function MySales() {
         <div className="farmer-header-actions">
           <button
             type="button"
-            className="farmer-btn farmer-btn-outline"
-            onClick={() => refreshSales && refreshSales()}
-            disabled={isSalesLoading}
-            title="Sync sales with backend server"
-          >
-            {isSalesLoading ? '⏳ Syncing...' : '🔄 Sync'}
-          </button>
-          <button
-            type="button"
             className="farmer-btn farmer-btn-primary"
             onClick={() => navigateTo('sell')}
           >
@@ -235,34 +215,6 @@ function MySales() {
           </button>
         </div>
       </div>
-
-      {/* Sync / Error Banner if any */}
-      {salesError && (
-        <div
-          style={{
-            padding: '12px 18px',
-            marginBottom: 20,
-            borderRadius: 10,
-            background: '#FEF2F2',
-            border: '1px solid #FCA5A5',
-            color: '#991B1B',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: '0.88rem',
-          }}
-        >
-          <span>⚠️ {salesError}</span>
-          <button
-            type="button"
-            className="farmer-btn farmer-btn-outline farmer-btn-sm"
-            onClick={() => refreshSales && refreshSales()}
-            disabled={isSalesLoading}
-          >
-            🔄 Retry Sync
-          </button>
-        </div>
-      )}
 
       {/* Summary KPI Strip */}
       <div

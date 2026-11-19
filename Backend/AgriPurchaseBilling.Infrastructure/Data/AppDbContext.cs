@@ -28,6 +28,8 @@ namespace AgriPurchaseBilling.Infrastructure.Data
         public DbSet<MiddlemanLedger> MiddlemanLedgers => Set<MiddlemanLedger>();
         public DbSet<MiddlemanInventory> MiddlemanInventories => Set<MiddlemanInventory>();
         public DbSet<MiddlemanFarmer> MiddlemanFarmers => Set<MiddlemanFarmer>();
+        public DbSet<MiddlemanVendor> MiddlemanVendors => Set<MiddlemanVendor>();
+        public DbSet<MiddlemanVendorSale> MiddlemanVendorSales => Set<MiddlemanVendorSale>();
         public DbSet<MiddlemanConfirmation> MiddlemanConfirmations => Set<MiddlemanConfirmation>();
         public DbSet<MiddlemanPurchase> MiddlemanPurchases => Set<MiddlemanPurchase>();
         public DbSet<MiddlemanSale> MiddlemanSales => Set<MiddlemanSale>();
