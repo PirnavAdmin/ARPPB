@@ -1,14 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useFarmer } from '../context/FarmerContext';
 import { formatCurrency, calculateExpectedPaymentDate, formatDate } from '../utils/farmerHelpers';
-import { DEFAULT_SALES_OPTIONS } from '../../../services/farmerSalesService';
 
 function SalesForm({ onSaleCreated }) {
-  const { crops, profile, createSale, setActiveOtpRequest, salesOptions } = useFarmer();
-
-  const options = salesOptions || DEFAULT_SALES_OPTIONS;
-  const buyerCategories = options.buyerCategories?.length ? options.buyerCategories : DEFAULT_SALES_OPTIONS.buyerCategories;
-  const qualityGrades = options.qualityGrades?.length ? options.qualityGrades : DEFAULT_SALES_OPTIONS.qualityGrades;
+  const { crops, profile, createSale, setActiveOtpRequest } = useFarmer();
 
   const [formData, setFormData] = useState({
     buyerCategory: 'Middleman',
@@ -26,8 +21,6 @@ function SalesForm({ onSaleCreated }) {
 
   const [errors, setErrors] = useState({});
   const [createdResult, setCreatedResult] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState(null);
 
   // Find currently selected crop object
   const selectedCrop = crops.find(
@@ -51,9 +44,6 @@ function SalesForm({ onSaleCreated }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
-    if (submitError) {
-      setSubmitError(null);
     }
   };
 
@@ -89,28 +79,19 @@ function SalesForm({ onSaleCreated }) {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!validate() || isSubmitting) return;
+    if (!validate()) return;
 
-    setIsSubmitting(true);
-    setSubmitError(null);
-    try {
-      const result = await createSale(formData);
-      if (result) {
-        setCreatedResult(result);
-        if (onSaleCreated) onSaleCreated(result);
-      }
-    } catch (err) {
-      setSubmitError(err?.message || 'Failed to create sale order. Please check your inputs.');
-    } finally {
-      setIsSubmitting(false);
+    const result = createSale(formData);
+    if (result) {
+      setCreatedResult(result);
+      if (onSaleCreated) onSaleCreated(result);
     }
   };
 
   const handleResetForm = () => {
     setCreatedResult(null);
-    setSubmitError(null);
     setFormData({
       buyerCategory: 'Middleman',
       buyerName: '',
@@ -199,66 +180,35 @@ function SalesForm({ onSaleCreated }) {
         <div className="farmer-card" style={{ padding: '24px' }}>
           <h3 style={{ margin: '0 0 16px', fontSize: '1.25rem' }}>Create Farmer Sale Order</h3>
 
-          {submitError && (
-            <div
-              style={{
-                padding: '12px 16px',
-                marginBottom: '18px',
-                borderRadius: '8px',
-                background: '#FEF2F2',
-                border: '1px solid #F87171',
-                color: '#991B1B',
-                fontSize: '0.88rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <span>⚠️ {submitError}</span>
-              <button
-                type="button"
-                onClick={() => setSubmitError(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991B1B' }}
-              >
-                ✕
-              </button>
-            </div>
-          )}
-
           <form onSubmit={handleSubmit}>
             {/* Buyer Category Segmented Buttons */}
             <div className="farmer-form-group">
               <label>Buyer Category *</label>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${buyerCategories.length}, 1fr)`, gap: 10 }}>
-                {buyerCategories.map((catItem) => {
-                  const cat = catItem.code || catItem;
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                      disabled={isSubmitting}
-                      onClick={() => setFormData((prev) => ({ ...prev, buyerCategory: cat }))}
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: 10,
-                        border: formData.buyerCategory === cat ? '2px solid var(--farmer-primary)' : '1px solid var(--farmer-border)',
-                        backgroundColor: formData.buyerCategory === cat ? 'var(--farmer-light)' : '#FCFDFC',
-                        color: formData.buyerCategory === cat ? 'var(--farmer-dark)' : 'var(--farmer-text)',
-                        fontWeight: formData.buyerCategory === cat ? 700 : 500,
-                        cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                        textAlign: 'center',
-                        fontSize: '0.9rem',
-                        transition: 'all 0.2s',
-                        opacity: isSubmitting ? 0.7 : 1,
-                      }}
-                    >
-                      {cat === 'Middleman' && '🤝 '}
-                      {cat === 'Vendor' && '🏭 '}
-                      {cat === 'Customer' && '🛒 '}
-                      {cat}
-                    </button>
-                  );
-                })}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                {['Middleman', 'Vendor', 'Customer'].map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, buyerCategory: cat }))}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      border: formData.buyerCategory === cat ? '2px solid var(--farmer-primary)' : '1px solid var(--farmer-border)',
+                      backgroundColor: formData.buyerCategory === cat ? 'var(--farmer-light)' : '#FCFDFC',
+                      color: formData.buyerCategory === cat ? 'var(--farmer-dark)' : 'var(--farmer-text)',
+                      fontWeight: formData.buyerCategory === cat ? 700 : 500,
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      fontSize: '0.9rem',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    {cat === 'Middleman' && '🤝 '}
+                    {cat === 'Vendor' && '🏭 '}
+                    {cat === 'Customer' && '🛒 '}
+                    {cat}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -312,16 +262,10 @@ function SalesForm({ onSaleCreated }) {
 
               <div className="farmer-form-group">
                 <label>Quality Grade</label>
-                <select name="qualityGrade" value={formData.qualityGrade} onChange={handleChange} disabled={isSubmitting}>
-                  {qualityGrades.map((g) => {
-                    const code = g.code || g;
-                    const label = g.label || code;
-                    return (
-                      <option key={code} value={code}>
-                        {label}
-                      </option>
-                    );
-                  })}
+                <select name="qualityGrade" value={formData.qualityGrade} onChange={handleChange}>
+                  <option value="Grade A">Grade A (Premium)</option>
+                  <option value="Grade B">Grade B (Standard)</option>
+                  <option value="Grade C">Grade C (Commercial)</option>
                 </select>
               </div>
             </div>
@@ -398,16 +342,11 @@ function SalesForm({ onSaleCreated }) {
                 type="button"
                 className="farmer-btn farmer-btn-outline"
                 onClick={handleResetForm}
-                disabled={isSubmitting}
               >
                 Clear Form
               </button>
-              <button
-                type="submit"
-                className="farmer-btn farmer-btn-primary"
-                disabled={isSubmitting || !selectedCrop || (selectedCrop && selectedCrop.availableQuantity <= 0)}
-              >
-                {isSubmitting ? '📤 Creating Sale & Generating OTP...' : '📤 Submit Sale & Send OTP Request'}
+              <button type="submit" className="farmer-btn farmer-btn-primary">
+                📤 Submit Sale & Send OTP Request
               </button>
             </div>
           </form>
