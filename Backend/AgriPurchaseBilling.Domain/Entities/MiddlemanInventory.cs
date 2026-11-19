@@ -68,6 +68,12 @@ namespace AgriPurchaseBilling.Domain.Entities
         [MaxLength(30)]
         public string Unit { get; set; } = "Quintal";
 
+        [Column("purchase_rate")]
+        public decimal PurchaseRate { get; set; }
+
+        [Column("allocated_charges")]
+        public decimal AllocatedCharges { get; set; }
+
         [Column("average_cost")]
         public decimal AverageCost { get; set; }
 
