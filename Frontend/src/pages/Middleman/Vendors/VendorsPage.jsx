@@ -63,9 +63,6 @@ export const VendorsPage = ({ initialOpenRegister = false }) => {
   const totalItems = filteredVendors.length;
   const paginatedVendors = filteredVendors.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-<<<<<<< HEAD
-  const handleSaveVendor = async (formData) => {
-=======
   const handleCloseForm = () => {
     setIsFormOpen(false);
     setEditingVendor(null);
@@ -74,8 +71,7 @@ export const VendorsPage = ({ initialOpenRegister = false }) => {
     }
   };
 
-  const handleSaveVendor = (formData) => {
->>>>>>> 1a46069a873afff77115f1df3fc7928f7e8cd4c7
+  const handleSaveVendor = async (formData) => {
     if (editingVendor) {
       await updateVendor(editingVendor.vendorId, formData);
     } else {

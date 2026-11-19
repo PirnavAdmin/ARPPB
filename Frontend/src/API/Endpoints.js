@@ -99,7 +99,6 @@ const API_ENDPOINTS = {
     updateBatch: (id) => `/api/v1/middleman/inventory/batches/${id}`,
   },
 
-<<<<<<< HEAD
   // =========================
   // MIDDLEMAN LEDGER
   // =========================
@@ -349,28 +348,30 @@ const API_ENDPOINTS = {
     delete: (id) => `/api/v1/vendor/sales/${id}`,
     submit: (id) => `/api/v1/vendor/sales/${id}/submit`,
   },
-=======
-    MIDDLEMAN_FARMERS: {
-        BASE: "/api/v1/middleman/farmers",
-        BY_ID: (id) => `/api/v1/middleman/farmers/${id}`,
-        HISTORY: (id) => `/api/v1/middleman/farmers/${id}/history`,
-    },
 
-    MIDDLEMAN_PURCHASES: {
-        BASE: "/api/v1/middleman/purchases",
-        BY_ID: (id) => `/api/v1/middleman/purchases/${id}`,
-    },
+  // =========================
+  // MIDDLEMAN VENDORS & SALES ALIASES
+  // =========================
+  MIDDLEMAN_FARMERS: {
+    BASE: "/api/v1/middleman/farmers",
+    BY_ID: (id) => `/api/v1/middleman/farmers/${id}`,
+    HISTORY: (id) => `/api/v1/middleman/farmers/${id}/history`,
+  },
 
-    MIDDLEMAN_VENDORS: {
-        BASE: "/api/v1/middleman/vendors",
-        BY_ID: (id) => `/api/v1/middleman/vendors/${id}`,
-    },
+  MIDDLEMAN_PURCHASES: {
+    BASE: "/api/v1/middleman/purchases",
+    BY_ID: (id) => `/api/v1/middleman/purchases/${id}`,
+  },
 
-    MIDDLEMAN_VENDOR_SALES: {
-        BASE: "/api/v1/middleman/vendor-sales",
-        BY_ID: (id) => `/api/v1/middleman/vendor-sales/${id}`,
-    },
->>>>>>> 1a46069a873afff77115f1df3fc7928f7e8cd4c7
+  MIDDLEMAN_VENDORS: {
+    BASE: "/api/v1/middleman/vendors",
+    BY_ID: (id) => `/api/v1/middleman/vendors/${id}`,
+  },
+
+  MIDDLEMAN_VENDOR_SALES: {
+    BASE: "/api/v1/middleman/vendor-sales",
+    BY_ID: (id) => `/api/v1/middleman/vendor-sales/${id}`,
+  },
 };
 
 export default API_ENDPOINTS;

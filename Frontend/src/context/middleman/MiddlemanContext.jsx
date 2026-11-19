@@ -29,7 +29,6 @@ import {
   createMiddlemanPurchaseApi,
 } from '../../services/middlemanPurchaseService';
 import {
-<<<<<<< HEAD
   fetchMiddlemanInventoryBatchesApi,
   fetchMiddlemanInventoryApi,
   fetchMiddlemanInventorySummaryApi,
@@ -46,14 +45,13 @@ import {
   fetchMiddlemanSalesVendorsApi,
   fetchMiddlemanDashboardApi,
 } from '../../services/middleman';
-=======
+import {
   fetchMiddlemanVendorsApi,
   registerMiddlemanVendorApi,
   updateMiddlemanVendorApi,
   fetchMiddlemanVendorSalesApi,
   createMiddlemanVendorSaleApi,
 } from '../../services/middlemanVendorService';
->>>>>>> 1a46069a873afff77115f1df3fc7928f7e8cd4c7
 
 const STORAGE_KEY = 'agriconnect_middleman_state_v1';
 
@@ -341,11 +339,25 @@ export const MiddlemanProvider = ({ children }) => {
     }
   }, []);
 
-  // Fetch Middleman Vendor Sales & Dashboard from backend API
+  // Fetch Middleman Vendors from backend API (GET /api/v1/middleman/vendors)
+  const refreshVendors = useCallback(async () => {
+    try {
+      const apiVendors = await fetchMiddlemanVendorsApi();
+      if (apiVendors && Array.isArray(apiVendors) && apiVendors.length > 0) {
+        setVendors(apiVendors);
+      }
+    } catch {
+      // fallback smoothly to existing state
+    }
+  }, []);
+
+  // Fetch Middleman Vendor Sales & Dashboard from backend API (GET /api/v1/middleman/vendor-sales)
   const refreshVendorSales = useCallback(async () => {
     try {
       fetchMiddlemanDashboardApi().catch(() => null);
-      const apiSales = await fetchMiddlemanSalesVendorsApi();
+      const apiSales =
+        (await fetchMiddlemanVendorSalesApi()) ||
+        (await fetchMiddlemanSalesVendorsApi());
       if (apiSales && Array.isArray(apiSales) && apiSales.length > 0) {
         setVendorSales(apiSales);
         setVendors((prev) => {
@@ -379,59 +391,30 @@ export const MiddlemanProvider = ({ children }) => {
     }
   }, []);
 
-  // Fetch Middleman Vendors from backend API (GET /api/v1/middleman/vendors)
-  const refreshVendors = useCallback(async () => {
-    if (!token || (user?.role && user.role !== 'middleman')) return;
-    try {
-      const apiVendors = await fetchMiddlemanVendorsApi();
-      if (apiVendors && Array.isArray(apiVendors) && apiVendors.length > 0) {
-        setVendors(apiVendors);
-      }
-    } catch {
-      // fallback smoothly to existing state
-    }
-  }, [token, user?.role]);
-
-  // Fetch Middleman Vendor Sales from backend API (GET /api/v1/middleman/vendor-sales)
-  const refreshVendorSales = useCallback(async () => {
-    if (!token || (user?.role && user.role !== 'middleman')) return;
-    try {
-      const apiSales = await fetchMiddlemanVendorSalesApi();
-      if (apiSales && Array.isArray(apiSales) && apiSales.length > 0) {
-        setVendorSales(apiSales);
-      }
-    } catch {
-      // fallback smoothly to existing state
-    }
-  }, [token, user?.role]);
-
   useEffect(() => {
     Promise.resolve().then(() => {
       refreshProfile();
       refreshFarmers();
       refreshPurchases();
-<<<<<<< HEAD
+      refreshVendors();
       refreshInventory();
       refreshLedger();
       refreshNotifications();
       refreshVendorSales();
     });
   }, [
+    token,
+    user?.role,
     authKey,
     refreshProfile,
     refreshFarmers,
     refreshPurchases,
+    refreshVendors,
     refreshInventory,
     refreshLedger,
     refreshNotifications,
     refreshVendorSales,
   ]);
-=======
-      refreshVendors();
-      refreshVendorSales();
-    });
-  }, [token, user?.role, authKey, refreshProfile, refreshFarmers, refreshPurchases, refreshVendors, refreshVendorSales]);
->>>>>>> 1a46069a873afff77115f1df3fc7928f7e8cd4c7
 
   // Profile actions (PUT /api/v1/middleman-profile/{id})
   const updateProfile = useCallback(async (data) => {
@@ -533,7 +516,17 @@ export const MiddlemanProvider = ({ children }) => {
     };
     setVendors((prev) => [newVendor, ...prev]);
 
-<<<<<<< HEAD
+    try {
+      const saved = await registerMiddlemanVendorApi(data);
+      if (saved && (saved.vendorId || saved.id)) {
+        setVendors((prev) =>
+          prev.map((v) => (v.vendorId === newVendor.vendorId ? { ...v, ...saved } : v))
+        );
+      }
+    } catch (err) {
+      console.warn('Syncing vendor to backend API had non-blocking issue:', err);
+    }
+
     // Persist vendor transaction record in ledger if initial amounts present
     if (data.initialBalance || data.outstandingReceivables) {
       createMiddlemanLedgerApi({
@@ -549,18 +542,6 @@ export const MiddlemanProvider = ({ children }) => {
         outstandingAmount: Number(data.initialBalance || data.outstandingReceivables || 0),
         status: 'Pending',
       }).catch(() => {});
-=======
-    if (token) {
-      registerMiddlemanVendorApi(data)
-        .then((saved) => {
-          if (saved && saved.vendorId) {
-            setVendors((prev) =>
-              prev.map((v) => (v.vendorId === newVendor.vendorId ? { ...v, ...saved } : v))
-            );
-          }
-        })
-        .catch((err) => console.warn('Syncing vendor to backend API had non-blocking issue:', err));
->>>>>>> 1a46069a873afff77115f1df3fc7928f7e8cd4c7
     }
 
     addNotification({
@@ -572,16 +553,21 @@ export const MiddlemanProvider = ({ children }) => {
       actionUrl: '/middleman/vendors',
     });
     return newVendor;
-  }, [addNotification, token]);
+  }, [addNotification]);
 
-  const updateVendor = useCallback((id, data) => {
+  const updateVendor = useCallback(async (id, data) => {
     setVendors((prev) => prev.map((v) => (v.vendorId === id ? { ...v, ...data } : v)));
-    if (token) {
-      updateMiddlemanVendorApi(id, data).catch((err) =>
-        console.warn('Updating vendor in backend API had non-blocking issue:', err)
-      );
+    try {
+      const saved = await updateMiddlemanVendorApi(id, data);
+      if (saved && (saved.vendorId || saved.id)) {
+        setVendors((prev) =>
+          prev.map((v) => (v.vendorId === id ? { ...v, ...saved } : v))
+        );
+      }
+    } catch (err) {
+      console.warn('Updating vendor in backend API had non-blocking issue:', err);
     }
-  }, [token]);
+  }, []);
 
   // Customer actions
   const addCustomer = useCallback((data) => {
@@ -688,7 +674,17 @@ export const MiddlemanProvider = ({ children }) => {
 
     setVendorSales((prev) => [newSale, ...prev]);
 
-<<<<<<< HEAD
+    try {
+      const saved = await createMiddlemanVendorSaleApi({ ...data, isDraft });
+      if (saved && (saved.saleId || saved.saleCode || saved.id)) {
+        setVendorSales((prev) =>
+          prev.map((s) => (s.saleId === saleId ? { ...s, ...saved } : s))
+        );
+      }
+    } catch (err) {
+      console.warn('Syncing vendor sale to backend API had non-blocking issue:', err);
+    }
+
     // Persist Vendor Sale transaction in the financial ledger
     const ledgerPayload = {
       date: data.salesDate || new Date().toISOString().slice(0, 10),
@@ -713,21 +709,6 @@ export const MiddlemanProvider = ({ children }) => {
         }
       })
       .catch((err) => console.warn('Saving vendor sale to ledger issue:', err));
-=======
-    if (token) {
-      createMiddlemanVendorSaleApi({ ...data, isDraft })
-        .then((saved) => {
-          if (saved && (saved.saleId || saved.saleCode)) {
-            setVendorSales((prev) =>
-              prev.map((s) => (s.saleId === saleId ? { ...s, ...saved } : s))
-            );
-          }
-        })
-        .catch((err) =>
-          console.warn('Syncing vendor sale to backend API had non-blocking issue:', err)
-        );
-    }
->>>>>>> 1a46069a873afff77115f1df3fc7928f7e8cd4c7
 
     if (!isDraft) {
       const confId = generateId('CONF-V');
