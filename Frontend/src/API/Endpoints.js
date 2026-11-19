@@ -60,6 +60,17 @@ const Endpoints = {
         BY_ID: (id) => `/api/v1/farmer/crops/${id}`,
         ADD_STOCK: (id) => `/api/v1/farmer/crops/${id}/add-stock`,
     },
+
+    MIDDLEMAN_FARMERS: {
+        BASE: "/api/v1/middleman/farmers",
+        BY_ID: (id) => `/api/v1/middleman/farmers/${id}`,
+        HISTORY: (id) => `/api/v1/middleman/farmers/${id}/history`,
+    },
+
+    MIDDLEMAN_PURCHASES: {
+        BASE: "/api/v1/middleman/purchases",
+        BY_ID: (id) => `/api/v1/middleman/purchases/${id}`,
+    },
 };
 
 export default Endpoints;

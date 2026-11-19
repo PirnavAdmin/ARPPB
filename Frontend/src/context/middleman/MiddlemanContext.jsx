@@ -19,6 +19,15 @@ import {
   updateMiddlemanProfile,
   mapMiddlemanDtoToProfile,
 } from '../../services/profileService';
+import {
+  fetchMiddlemanFarmersApi,
+  registerMiddlemanFarmerApi,
+  updateMiddlemanFarmerApi,
+} from '../../services/middlemanFarmerService';
+import {
+  fetchMiddlemanPurchasesApi,
+  createMiddlemanPurchaseApi,
+} from '../../services/middlemanPurchaseService';
 
 const STORAGE_KEY = 'agriconnect_middleman_state_v1';
 
@@ -236,12 +245,40 @@ export const MiddlemanProvider = ({ children }) => {
     }
   }, [token, user, updateUserMobile]);
 
+  // Fetch Middleman Farmers from backend API (GET /api/v1/middleman/farmers)
+  const refreshFarmers = useCallback(async () => {
+    if (!token || (user?.role && user.role !== 'middleman')) return;
+    try {
+      const apiFarmers = await fetchMiddlemanFarmersApi();
+      if (apiFarmers && Array.isArray(apiFarmers) && apiFarmers.length > 0) {
+        setFarmers(apiFarmers);
+      }
+    } catch {
+      // fallback smoothly to existing state
+    }
+  }, [token, user?.role]);
+
+  // Fetch Middleman Purchases from backend API (GET /api/v1/middleman/purchases)
+  const refreshPurchases = useCallback(async () => {
+    if (!token || (user?.role && user.role !== 'middleman')) return;
+    try {
+      const apiPurchases = await fetchMiddlemanPurchasesApi();
+      if (apiPurchases && Array.isArray(apiPurchases) && apiPurchases.length > 0) {
+        setPurchases(apiPurchases);
+      }
+    } catch {
+      // fallback smoothly to existing state
+    }
+  }, [token, user?.role]);
+
   useEffect(() => {
     if (!token || user?.role !== 'middleman') return;
     Promise.resolve().then(() => {
       refreshProfile();
+      refreshFarmers();
+      refreshPurchases();
     });
-  }, [token, user?.role, authKey, refreshProfile]);
+  }, [token, user?.role, authKey, refreshProfile, refreshFarmers, refreshPurchases]);
 
   // Profile actions (PUT /api/v1/middleman-profile/{id})
   const updateProfile = useCallback(async (data) => {
@@ -289,6 +326,19 @@ export const MiddlemanProvider = ({ children }) => {
       ...data,
     };
     setFarmers((prev) => [newFarmer, ...prev]);
+
+    if (token) {
+      registerMiddlemanFarmerApi(data)
+        .then((saved) => {
+          if (saved && saved.farmerId) {
+            setFarmers((prev) =>
+              prev.map((f) => (f.farmerId === newFarmer.farmerId ? { ...f, ...saved } : f))
+            );
+          }
+        })
+        .catch((err) => console.warn('Syncing farmer to backend API had non-blocking issue:', err));
+    }
+
     addNotification({
       title: 'Farmer Registered',
       description: `Farmer ${newFarmer.name} from ${newFarmer.village} was added.`,
@@ -298,11 +348,16 @@ export const MiddlemanProvider = ({ children }) => {
       actionUrl: '/middleman/farmers',
     });
     return newFarmer;
-  }, [addNotification]);
+  }, [addNotification, token]);
 
   const updateFarmer = useCallback((id, data) => {
     setFarmers((prev) => prev.map((f) => (f.farmerId === id ? { ...f, ...data } : f)));
-  }, []);
+    if (token) {
+      updateMiddlemanFarmerApi(id, data).catch((err) =>
+        console.warn('Updating farmer in backend API had non-blocking issue:', err)
+      );
+    }
+  }, [token]);
 
   // Vendor actions
   const addVendor = useCallback((data) => {
@@ -369,6 +424,20 @@ export const MiddlemanProvider = ({ children }) => {
 
     setPurchases((prev) => [newPurchase, ...prev]);
 
+    if (token) {
+      createMiddlemanPurchaseApi({ ...data, isDraft })
+        .then((saved) => {
+          if (saved && (saved.purchaseId || saved.purchaseCode)) {
+            setPurchases((prev) =>
+              prev.map((p) => (p.purchaseId === purchaseId ? { ...p, ...saved } : p))
+            );
+          }
+        })
+        .catch((err) =>
+          console.warn('Syncing purchase to backend API had non-blocking issue:', err)
+        );
+    }
+
     if (!isDraft) {
       // Create pending confirmation record
       const confId = generateId('CONF-F');
@@ -407,7 +476,7 @@ export const MiddlemanProvider = ({ children }) => {
     }
 
     return newPurchase;
-  }, [addNotification]);
+  }, [addNotification, token]);
 
   // Vendor Sale Actions
   const createVendorSale = useCallback((data, isDraft = false) => {
