@@ -10,6 +10,7 @@ namespace AgriPurchaseBilling.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/middleman/dashboard")]
+    [Tags("Middleman - Dashboard")]
     [Authorize(Roles = "Middleman,Admin")]
     public class MiddlemanDashboardController : ControllerBase
     {

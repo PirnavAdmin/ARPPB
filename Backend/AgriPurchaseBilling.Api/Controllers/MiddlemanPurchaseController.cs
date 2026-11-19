@@ -11,7 +11,7 @@ namespace AgriPurchaseBilling.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/middleman/purchases")]
-    [Route("api/middleman/purchases")]
+    [Tags("Middleman - Purchases")]
     [Authorize(Roles = "Middleman,Admin")]
     public class MiddlemanPurchaseController : ControllerBase
     {

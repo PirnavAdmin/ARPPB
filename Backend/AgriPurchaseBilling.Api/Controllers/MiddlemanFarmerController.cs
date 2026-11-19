@@ -11,7 +11,7 @@ namespace AgriPurchaseBilling.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/middleman/farmers")]
-    [Route("api/middleman/farmers")]
+    [Tags("Middleman - Farmers")]
     [Authorize(Roles = "Middleman,Admin")]
     public class MiddlemanFarmerController : ControllerBase
     {

@@ -10,6 +10,7 @@ namespace AgriPurchaseBilling.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/middleman/ledger")]
+    [Tags("Middleman - Ledger")]
     [Authorize(Roles = "Middleman,Admin")]
     public class MiddlemanLedgerController : ControllerBase
     {
