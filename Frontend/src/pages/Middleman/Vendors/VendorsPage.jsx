@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useMiddleman } from '../../../context/middleman';
 import { MiddlemanPageHeader } from '../components/layout/MiddlemanPageHeader';
@@ -12,8 +12,9 @@ import { Pagination } from '../components/common/Pagination';
 import { SectionCard } from '../components/common/SectionCard';
 import { VENDOR_BUSINESS_TYPES } from '../../../data/mock/middleman/vendorData';
 
-export const VendorsPage = () => {
+export const VendorsPage = ({ initialOpenRegister = false }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { vendors, addVendor, updateVendor, vendorSales } = useMiddleman();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,9 +23,21 @@ export const VendorsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
 
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const shouldOpenRegister =
+    initialOpenRegister ||
+    location.pathname.endsWith('/register') ||
+    location.pathname.endsWith('/add') ||
+    Boolean(location.state?.openRegister);
+
+  const [isFormOpen, setIsFormOpen] = useState(shouldOpenRegister);
   const [editingVendor, setEditingVendor] = useState(null);
   const [viewingVendor, setViewingVendor] = useState(null);
+
+  useEffect(() => {
+    if (shouldOpenRegister) {
+      setIsFormOpen(true);
+    }
+  }, [shouldOpenRegister]);
 
   const districts = useMemo(() => {
     return Array.from(new Set(vendors.map((v) => v.district).filter(Boolean)));
@@ -50,14 +63,21 @@ export const VendorsPage = () => {
   const totalItems = filteredVendors.length;
   const paginatedVendors = filteredVendors.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setEditingVendor(null);
+    if (location.pathname.endsWith('/register') || location.pathname.endsWith('/add')) {
+      navigate('/middleman/vendors', { replace: true });
+    }
+  };
+
   const handleSaveVendor = (formData) => {
     if (editingVendor) {
       updateVendor(editingVendor.vendorId, formData);
     } else {
       addVendor(formData);
     }
-    setIsFormOpen(false);
-    setEditingVendor(null);
+    handleCloseForm();
   };
 
   return (
@@ -71,11 +91,12 @@ export const VendorsPage = () => {
             onClick={() => {
               setEditingVendor(null);
               setIsFormOpen(true);
+              navigate('/middleman/vendors/register');
             }}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-[#0F766E] text-white hover:bg-[#115E59] shadow-sm cursor-pointer transition-all"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Vendor</span>
+            <span>+ Add Vendor</span>
           </button>
         }
       />
@@ -149,10 +170,7 @@ export const VendorsPage = () => {
               initialData={editingVendor}
               isEdit={Boolean(editingVendor)}
               onSave={handleSaveVendor}
-              onCancel={() => {
-                setIsFormOpen(false);
-                setEditingVendor(null);
-              }}
+              onCancel={handleCloseForm}
             />
           </div>
         </div>

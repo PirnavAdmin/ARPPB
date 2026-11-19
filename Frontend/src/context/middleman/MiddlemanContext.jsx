@@ -28,6 +28,13 @@ import {
   fetchMiddlemanPurchasesApi,
   createMiddlemanPurchaseApi,
 } from '../../services/middlemanPurchaseService';
+import {
+  fetchMiddlemanVendorsApi,
+  registerMiddlemanVendorApi,
+  updateMiddlemanVendorApi,
+  fetchMiddlemanVendorSalesApi,
+  createMiddlemanVendorSaleApi,
+} from '../../services/middlemanVendorService';
 
 const STORAGE_KEY = 'agriconnect_middleman_state_v1';
 
@@ -271,14 +278,42 @@ export const MiddlemanProvider = ({ children }) => {
     }
   }, [token, user?.role]);
 
+  // Fetch Middleman Vendors from backend API (GET /api/v1/middleman/vendors)
+  const refreshVendors = useCallback(async () => {
+    if (!token || (user?.role && user.role !== 'middleman')) return;
+    try {
+      const apiVendors = await fetchMiddlemanVendorsApi();
+      if (apiVendors && Array.isArray(apiVendors) && apiVendors.length > 0) {
+        setVendors(apiVendors);
+      }
+    } catch {
+      // fallback smoothly to existing state
+    }
+  }, [token, user?.role]);
+
+  // Fetch Middleman Vendor Sales from backend API (GET /api/v1/middleman/vendor-sales)
+  const refreshVendorSales = useCallback(async () => {
+    if (!token || (user?.role && user.role !== 'middleman')) return;
+    try {
+      const apiSales = await fetchMiddlemanVendorSalesApi();
+      if (apiSales && Array.isArray(apiSales) && apiSales.length > 0) {
+        setVendorSales(apiSales);
+      }
+    } catch {
+      // fallback smoothly to existing state
+    }
+  }, [token, user?.role]);
+
   useEffect(() => {
     if (!token || user?.role !== 'middleman') return;
     Promise.resolve().then(() => {
       refreshProfile();
       refreshFarmers();
       refreshPurchases();
+      refreshVendors();
+      refreshVendorSales();
     });
-  }, [token, user?.role, authKey, refreshProfile, refreshFarmers, refreshPurchases]);
+  }, [token, user?.role, authKey, refreshProfile, refreshFarmers, refreshPurchases, refreshVendors, refreshVendorSales]);
 
   // Profile actions (PUT /api/v1/middleman-profile/{id})
   const updateProfile = useCallback(async (data) => {
@@ -370,6 +405,19 @@ export const MiddlemanProvider = ({ children }) => {
       ...data,
     };
     setVendors((prev) => [newVendor, ...prev]);
+
+    if (token) {
+      registerMiddlemanVendorApi(data)
+        .then((saved) => {
+          if (saved && saved.vendorId) {
+            setVendors((prev) =>
+              prev.map((v) => (v.vendorId === newVendor.vendorId ? { ...v, ...saved } : v))
+            );
+          }
+        })
+        .catch((err) => console.warn('Syncing vendor to backend API had non-blocking issue:', err));
+    }
+
     addNotification({
       title: 'Vendor Registered',
       description: `Vendor ${newVendor.businessName} was added.`,
@@ -379,11 +427,16 @@ export const MiddlemanProvider = ({ children }) => {
       actionUrl: '/middleman/vendors',
     });
     return newVendor;
-  }, [addNotification]);
+  }, [addNotification, token]);
 
   const updateVendor = useCallback((id, data) => {
     setVendors((prev) => prev.map((v) => (v.vendorId === id ? { ...v, ...data } : v)));
-  }, []);
+    if (token) {
+      updateMiddlemanVendorApi(id, data).catch((err) =>
+        console.warn('Updating vendor in backend API had non-blocking issue:', err)
+      );
+    }
+  }, [token]);
 
   // Customer actions
   const addCustomer = useCallback((data) => {
@@ -492,6 +545,20 @@ export const MiddlemanProvider = ({ children }) => {
 
     setVendorSales((prev) => [newSale, ...prev]);
 
+    if (token) {
+      createMiddlemanVendorSaleApi({ ...data, isDraft })
+        .then((saved) => {
+          if (saved && (saved.saleId || saved.saleCode)) {
+            setVendorSales((prev) =>
+              prev.map((s) => (s.saleId === saleId ? { ...s, ...saved } : s))
+            );
+          }
+        })
+        .catch((err) =>
+          console.warn('Syncing vendor sale to backend API had non-blocking issue:', err)
+        );
+    }
+
     if (!isDraft) {
       const confId = generateId('CONF-V');
       const confirmationItem = {
@@ -529,7 +596,7 @@ export const MiddlemanProvider = ({ children }) => {
     }
 
     return newSale;
-  }, [addNotification]);
+  }, [addNotification, token]);
 
   // Customer Sale Actions
   const createCustomerSale = useCallback((data, isDraft = false) => {
@@ -582,7 +649,7 @@ export const MiddlemanProvider = ({ children }) => {
     }
 
     return newSale;
-  }, [addNotification]);
+  }, [addNotification, token]);
 
   // Centralized OTP Confirmation Action (Simulated Verified Interaction)
   const confirmTransaction = useCallback((confirmationId) => {
@@ -1011,17 +1078,21 @@ export const MiddlemanProvider = ({ children }) => {
     updateProfile,
     refreshProfile,
     farmers,
+    refreshFarmers,
     addFarmer,
     updateFarmer,
     vendors,
+    refreshVendors,
     addVendor,
     updateVendor,
     customers,
     addCustomer,
     updateCustomer,
     purchases,
+    refreshPurchases,
     createPurchase,
     vendorSales,
+    refreshVendorSales,
     createVendorSale,
     customerSales,
     createCustomerSale,

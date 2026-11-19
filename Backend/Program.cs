@@ -102,6 +102,7 @@ builder.Services.AddScoped<IMiddlemanDashboardService, MiddlemanDashboardService
 builder.Services.AddScoped<IMiddlemanInventoryService, MiddlemanInventoryService>();
 builder.Services.AddScoped<IMiddlemanFarmerService, MiddlemanFarmerService>();
 builder.Services.AddScoped<IMiddlemanPurchaseService, MiddlemanPurchaseService>();
+builder.Services.AddScoped<IMiddlemanVendorService, MiddlemanVendorService>();
 
 // JWT registration
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
