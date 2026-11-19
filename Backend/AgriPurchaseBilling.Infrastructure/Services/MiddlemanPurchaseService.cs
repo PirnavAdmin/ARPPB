@@ -141,7 +141,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 TotalAmount = totalAmount,
                 PurchaseDate = request.PurchaseDate ?? DateTime.UtcNow,
                 ExpectedPaymentDate = request.ExpectedPaymentDate,
-                PickupLocation = request.PickupLocation,
+                PickupLocation = string.IsNullOrWhiteSpace(request.PickupLocation) ? request.FarmerLocation : request.PickupLocation,
                 DeliveryDate = request.DeliveryDate,
                 Status = status,
                 OtpStatus = otpStatus,

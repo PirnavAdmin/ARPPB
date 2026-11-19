@@ -23,6 +23,7 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string? CompleteAddress { get; set; }
 
         public List<string> Crops { get; set; } = new();
+        public List<string> AvailableCrops => Crops;
 
         public string? Notes { get; set; }
 
@@ -69,7 +70,11 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string? State { get; set; } = "Andhra Pradesh";
         public string? PinCode { get; set; }
         public string? CompleteAddress { get; set; }
-        public List<string>? Crops { get; set; }
+
+        private List<string>? _crops;
+        public List<string>? Crops { get => _crops; set => _crops = value; }
+        public List<string>? AvailableCrops { get => _crops; set => _crops = value; }
+
         public string? Notes { get; set; }
     }
 
@@ -84,7 +89,11 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string? State { get; set; }
         public string? PinCode { get; set; }
         public string? CompleteAddress { get; set; }
-        public List<string>? Crops { get; set; }
+
+        private List<string>? _crops;
+        public List<string>? Crops { get => _crops; set => _crops = value; }
+        public List<string>? AvailableCrops { get => _crops; set => _crops = value; }
+
         public string? Notes { get; set; }
         public string? Status { get; set; }
     }

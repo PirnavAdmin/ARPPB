@@ -18,6 +18,7 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string CropName { get; set; } = string.Empty;
         public string Variety { get; set; } = "Standard";
         public string QualityGrade { get; set; } = "Grade A";
+        public string Quality => QualityGrade;
 
         public decimal Quantity { get; set; }
         public string Unit { get; set; } = "Quintal";
@@ -27,10 +28,13 @@ namespace AgriPurchaseBilling.Application.DTOs
 
         public decimal Subtotal { get; set; }
         public decimal TransportationCharges { get; set; }
+        public decimal Transportation => TransportationCharges;
         public decimal LoadingCharges { get; set; }
+        public decimal Loading => LoadingCharges;
         public decimal OtherCharges { get; set; }
         public decimal AdditionalCharges { get; set; }
         public decimal TotalAmount { get; set; }
+        public decimal AverageCostPerUnit => Quantity > 0 ? Math.Round(TotalAmount / Quantity, 2) : 0;
 
         public DateTime PurchaseDate { get; set; }
         public DateTime? ExpectedPaymentDate { get; set; }
@@ -52,18 +56,30 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string FarmerId { get; set; } = string.Empty;
         public string? FarmerName { get; set; }
         public string? FarmerMobile { get; set; }
+        public string? FarmerLocation { get; set; }
 
         public string CropName { get; set; } = string.Empty;
         public string? Variety { get; set; } = "Standard";
-        public string? QualityGrade { get; set; } = "Grade A";
+
+        private string? _quality = "Grade A";
+        public string? QualityGrade { get => _quality; set => _quality = value; }
+        public string? Quality { get => _quality; set => _quality = value; }
 
         public decimal Quantity { get; set; }
         public string Unit { get; set; } = "Quintal";
-        public decimal PricePerQuintal { get; set; }
-        public decimal Rate => PricePerQuintal;
 
-        public decimal TransportationCharges { get; set; } = 0;
-        public decimal LoadingCharges { get; set; } = 0;
+        private decimal _rate;
+        public decimal PricePerQuintal { get => _rate; set => _rate = value; }
+        public decimal Rate { get => _rate; set => _rate = value; }
+
+        private decimal _transportation = 0;
+        public decimal TransportationCharges { get => _transportation; set => _transportation = value; }
+        public decimal Transportation { get => _transportation; set => _transportation = value; }
+
+        private decimal _loading = 0;
+        public decimal LoadingCharges { get => _loading; set => _loading = value; }
+        public decimal Loading { get => _loading; set => _loading = value; }
+
         public decimal OtherCharges { get; set; } = 0;
 
         public DateTime? PurchaseDate { get; set; }
