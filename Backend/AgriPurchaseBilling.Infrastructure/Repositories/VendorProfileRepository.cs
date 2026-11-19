@@ -63,7 +63,7 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
                     OwnerName = user.FullName,
                     Mobile = user.Mobile,
                     Email = user.Email ?? string.Empty,
-                    Gstin = null,
+                    Gstin = string.Empty,
                     BusinessRegNumber = string.Empty,
                     BusinessType = string.Empty,
                     BusinessAddress = string.Empty,
@@ -110,66 +110,55 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
             return profile;
         }
 
+        public Task<List<VendorProfile>> GetAllProfilesAsync(
+            CancellationToken cancellationToken = default) =>
+            _context.VendorProfiles.AsNoTracking()
+                .OrderBy(x => x.Id)
+                .ToListAsync(cancellationToken);
+
+        public Task<VendorProfile?> GetProfileByIdAsync(
+            long id,
+            CancellationToken cancellationToken = default) =>
+            _context.VendorProfiles.AsNoTracking()
+                .Include(x => x.Vendor)
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
         public async Task<VendorProfile?> UpdateProfileAsync(
-            long userId,
+            long id,
             UpdateVendorProfileRequest request,
             CancellationToken cancellationToken = default)
         {
-            var profile = await GetOrCreateProfileByUserIdAsync(userId, cancellationToken);
+            var profile = await _context.VendorProfiles.FirstOrDefaultAsync(
+                x => x.Id == id,
+                cancellationToken);
             if (profile == null)
             {
                 return null;
             }
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-
-            string? normalizedGstin = string.IsNullOrWhiteSpace(request.Gstin)
-                ? null
-                : request.Gstin.Trim().ToUpperInvariant();
-
             profile.BusinessName = request.BusinessName.Trim();
+            profile.Gstin = request.Gstin.Trim().ToUpperInvariant();
+            profile.BusinessRegNumber = request.BusinessRegistrationNumber.Trim();
+            profile.ApmcLicenseNumber = string.IsNullOrWhiteSpace(request.ApmcLicenseNumber)
+                ? null
+                : request.ApmcLicenseNumber.Trim();
+            profile.BusinessType = request.BusinessType.Trim();
             profile.BusinessAddress = request.BusinessAddress.Trim();
             profile.District = request.District.Trim();
             profile.State = request.State.Trim();
             profile.PinCode = request.PinCode.Trim();
-
-            if (!string.IsNullOrWhiteSpace(request.BusinessRegistrationNumber))
-            {
-                profile.BusinessRegNumber = request.BusinessRegistrationNumber.Trim();
-            }
-
-            profile.BusinessType = (request.BusinessType ?? string.Empty).Trim();
-
-            // Handle Email update if provided
-            if (!string.IsNullOrWhiteSpace(request.Email))
-            {
-                string cleanEmail = request.Email.Trim().ToLowerInvariant();
-                if (user != null)
-                {
-                    bool emailTaken = await _context.Users.AnyAsync(
-                        u => u.Email == cleanEmail && u.Id != userId, cancellationToken);
-                    if (emailTaken)
-                    {
-                        throw new InvalidOperationException($"Email address '{cleanEmail}' is already registered.");
-                    }
-                    user.Email = cleanEmail;
-                    user.UpdatedAt = DateTime.UtcNow;
-                }
-                profile.Email = cleanEmail;
-            }
-
-            if (profile.Gstin != normalizedGstin)
-            {
-                profile.Gstin = normalizedGstin;
-                profile.GstBillingEnabled = normalizedGstin != null;
-                profile.ComplianceUpdatedAt = DateTime.UtcNow;
-            }
-
             profile.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync(cancellationToken);
             return profile;
         }
+
+        public Task<List<VendorBankAccount>> GetAllPrimaryBanksAsync(
+            CancellationToken cancellationToken = default) =>
+            _context.VendorBankAccounts.AsNoTracking()
+                .Where(x => x.IsPrimary)
+                .OrderBy(x => x.Id)
+                .ToListAsync(cancellationToken);
 
         public Task<VendorBankAccount?> GetPrimaryBankAsync(
             long vendorProfileId,

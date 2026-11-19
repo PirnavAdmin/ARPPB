@@ -2681,23 +2681,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Admin\\.nuget\\packages\\": {},
+    "C:\\Users\\ADMIN\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "c:\\Users\\Admin\\Downloads\\ARPPB-Git\\Backend\\AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj",
+      "projectUniqueName": "C:\\Users\\ADMIN\\Music\\ARPPB_GIT\\Backend\\AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj",
       "projectName": "AgriPurchaseBilling.Infrastructure",
-      "projectPath": "c:\\Users\\Admin\\Downloads\\ARPPB-Git\\Backend\\AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj",
-      "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-      "outputPath": "c:\\Users\\Admin\\Downloads\\ARPPB-Git\\Backend\\AgriPurchaseBilling.Infrastructure\\obj\\",
+      "projectPath": "C:\\Users\\ADMIN\\Music\\ARPPB_GIT\\Backend\\AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj",
+      "packagesPath": "C:\\Users\\ADMIN\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\ADMIN\\Music\\ARPPB_GIT\\Backend\\AgriPurchaseBilling.Infrastructure\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\ADMIN\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -2706,6 +2706,7 @@
       ],
       "sources": {
         "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -2713,11 +2714,11 @@
           "framework": "net8.0",
           "targetAlias": "net8.0",
           "projectReferences": {
-            "c:\\Users\\Admin\\Downloads\\ARPPB-Git\\Backend\\AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj": {
-              "projectPath": "c:\\Users\\Admin\\Downloads\\ARPPB-Git\\Backend\\AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj"
+            "C:\\Users\\ADMIN\\Music\\ARPPB_GIT\\Backend\\AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj": {
+              "projectPath": "C:\\Users\\ADMIN\\Music\\ARPPB_GIT\\Backend\\AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj"
             },
-            "c:\\Users\\Admin\\Downloads\\ARPPB-Git\\Backend\\AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj": {
-              "projectPath": "c:\\Users\\Admin\\Downloads\\ARPPB-Git\\Backend\\AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj"
+            "C:\\Users\\ADMIN\\Music\\ARPPB_GIT\\Backend\\AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj": {
+              "projectPath": "C:\\Users\\ADMIN\\Music\\ARPPB_GIT\\Backend\\AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj"
             }
           }
         }

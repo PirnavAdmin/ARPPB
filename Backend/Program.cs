@@ -70,6 +70,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         serverVersion));
 builder.Services.AddCustomerProfileModule();
 builder.Services.AddFarmerCropsModule();
+builder.Services.AddVendorOperationsModule(connectionString);
 
 // REPOSITORY REGISTRATIONS
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();

@@ -9,8 +9,9 @@ namespace AgriPurchaseBilling.Domain.Entities
         public required string OwnerName { get; set; }
         public required string Mobile { get; set; }
         public string Email { get; set; } = string.Empty;
-        public string? Gstin { get; set; }
+        public string? Gstin { get; set; } = string.Empty;
         public string BusinessRegNumber { get; set; } = string.Empty;
+        public string? ApmcLicenseNumber { get; set; }
         public string BusinessType { get; set; } = string.Empty;
         public string BusinessAddress { get; set; } = string.Empty;
         public string District { get; set; } = string.Empty;

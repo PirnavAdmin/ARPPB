@@ -1,0 +1,12 @@
+using AgriPurchaseBilling.Application.DTOs;
+
+namespace AgriPurchaseBilling.Application.Interfaces
+{
+    public interface IVendorProfileService
+    {
+        Task<VendorProfileDto?> GetMyProfileAsync(long userId, CancellationToken cancellationToken = default);
+        Task<VendorBankDetailsDto?> GetBankDetailsAsync(long userId, bool reveal, CancellationToken cancellationToken = default);
+        Task<VendorBankDetailsDto?> UpdateBankDetailsAsync(long userId, UpdateVendorBankDetailsRequest request, CancellationToken cancellationToken = default);
+        Task<VendorProfileDto?> UpdateProfileAsync(long userId, UpdateVendorProfileRequest request, CancellationToken cancellationToken = default);
+    }
+}

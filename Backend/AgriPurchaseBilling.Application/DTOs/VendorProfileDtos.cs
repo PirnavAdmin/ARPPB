@@ -1,9 +1,10 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace AgriPurchaseBilling.Application.DTOs
 {
     public class VendorProfileDto
     {
+        public long Id { get; set; }
         public string VendorCode { get; set; } = string.Empty;
         public string BusinessName { get; set; } = string.Empty;
         public string Initials { get; set; } = string.Empty;
@@ -13,6 +14,7 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string BusinessDescription { get; set; } = string.Empty;
         public string Location { get; set; } = string.Empty;
         public string Gstin { get; set; } = string.Empty;
+        public string ApmcLicenseNumber { get; set; } = string.Empty;
         public VendorComplianceDto Compliance { get; set; } = new();
         public VendorBusinessProfileDto Business { get; set; } = new();
         public VendorBankDetailsDto? BankDetails { get; set; }
@@ -52,6 +54,38 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string IfscCode { get; set; } = string.Empty;
     }
 
+    // Owner name, email and mobile are not editable here: owner name/email are synced from the
+    // user account and mobile changes go through the OTP-verified mobile-change flow.
+    public class UpdateVendorProfileRequest
+    {
+        [Required, StringLength(200)]
+        public string BusinessName { get; set; } = string.Empty;
+
+        [RegularExpression(@"^[A-Za-z0-9]{15}$", ErrorMessage = "GSTIN must be 15 alphanumeric characters.")]
+        public string Gstin { get; set; } = string.Empty;
+
+        [StringLength(50)]
+        public string BusinessRegistrationNumber { get; set; } = string.Empty;
+
+        [StringLength(50)]
+        public string? ApmcLicenseNumber { get; set; }
+
+        [StringLength(100)]
+        public string BusinessType { get; set; } = string.Empty;
+
+        [StringLength(500)]
+        public string BusinessAddress { get; set; } = string.Empty;
+
+        [StringLength(100)]
+        public string District { get; set; } = string.Empty;
+
+        [StringLength(100)]
+        public string State { get; set; } = string.Empty;
+
+        [RegularExpression(@"^[0-9]{6}$", ErrorMessage = "PIN code must be 6 digits.")]
+        public string PinCode { get; set; } = string.Empty;
+    }
+
     public class UpdateVendorBankDetailsRequest
     {
         [Required, StringLength(200)]
@@ -70,66 +104,5 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string IfscCode { get; set; } = string.Empty;
 
         public bool ConfirmUpdate { get; set; }
-    }
-
-    public class UpdateVendorProfileRequest
-    {
-        [Required(ErrorMessage = "Business name is required.")]
-        [StringLength(200, ErrorMessage = "Business name cannot exceed 200 characters.")]
-        public string BusinessName { get; set; } = string.Empty;
-
-        [EmailAddress(ErrorMessage = "Invalid email address format.")]
-        [StringLength(150, ErrorMessage = "Email cannot exceed 150 characters.")]
-        public string? Email { get; set; }
-
-        [RegularExpression(@"^[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}[1-9A-Za-z]{1}[Zz][0-9A-Za-z]{1}$", ErrorMessage = "GSTIN format is invalid. Must be a valid 15-character GSTIN.")]
-        public string? Gstin { get; set; }
-
-        [Required(ErrorMessage = "Business address is required.")]
-        [StringLength(500, ErrorMessage = "Business address cannot exceed 500 characters.")]
-        public string BusinessAddress { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "District is required.")]
-        [StringLength(100, ErrorMessage = "District cannot exceed 100 characters.")]
-        public string District { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "State is required.")]
-        [StringLength(100, ErrorMessage = "State cannot exceed 100 characters.")]
-        public string State { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "PIN code is required.")]
-        [RegularExpression(@"^[1-9][0-9]{5}$", ErrorMessage = "PIN code must be a valid 6-digit postal code.")]
-        public string PinCode { get; set; } = string.Empty;
-
-        private string? _businessRegistrationNumber;
-
-        [StringLength(50, ErrorMessage = "Business registration number cannot exceed 50 characters.")]
-        public string? BusinessRegistrationNumber
-        {
-            get => _businessRegistrationNumber;
-            set => _businessRegistrationNumber = value;
-        }
-
-        // Aliases to seamlessly support frontend naming variations:
-        public string? BusinessRegNumber
-        {
-            get => _businessRegistrationNumber;
-            set { if (string.IsNullOrWhiteSpace(_businessRegistrationNumber)) _businessRegistrationNumber = value; }
-        }
-
-        public string? BusinessRegistrationNo
-        {
-            get => _businessRegistrationNumber;
-            set { if (string.IsNullOrWhiteSpace(_businessRegistrationNumber)) _businessRegistrationNumber = value; }
-        }
-
-        public string? RegistrationNumber
-        {
-            get => _businessRegistrationNumber;
-            set { if (string.IsNullOrWhiteSpace(_businessRegistrationNumber)) _businessRegistrationNumber = value; }
-        }
-
-        [StringLength(100, ErrorMessage = "Business type cannot exceed 100 characters.")]
-        public string? BusinessType { get; set; }
     }
 }

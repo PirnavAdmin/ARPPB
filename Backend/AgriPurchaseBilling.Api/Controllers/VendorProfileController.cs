@@ -24,51 +24,49 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         [HttpGet]
-        [ProducesResponseType(typeof(ApiResponse<VendorProfileDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetMyProfile(CancellationToken cancellationToken)
+        [ProducesResponseType(typeof(ApiResponse<List<VendorProfileDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllProfiles(CancellationToken cancellationToken)
         {
-            if (CurrentUserId is not long userId) return Unauthorized();
+            var profiles = await _profileService.GetAllProfilesAsync(cancellationToken);
+            return Ok(ApiResponse<List<VendorProfileDto>>.Ok(
+                profiles, "Vendor profiles retrieved successfully."));
+        }
 
-            var profile = await _profileService.GetMyProfileAsync(userId, cancellationToken);
+        [HttpGet("{id:long}")]
+        [ProducesResponseType(typeof(ApiResponse<VendorProfileDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<VendorProfileDto>), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetProfileById(long id, CancellationToken cancellationToken)
+        {
+            var profile = await _profileService.GetProfileByIdAsync(id, cancellationToken);
             return profile == null
                 ? NotFound(ApiResponse<VendorProfileDto>.Fail("Vendor profile not found."))
                 : Ok(ApiResponse<VendorProfileDto>.Ok(profile, "Vendor profile retrieved successfully."));
         }
 
-        [HttpPut]
+        [HttpPut("{id:long}")]
         [ProducesResponseType(typeof(ApiResponse<VendorProfileDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ApiResponse<VendorProfileDto>), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(ApiResponse<VendorProfileDto>), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponse<VendorProfileDto>), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ApiResponse<VendorProfileDto>), StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdateProfile(
+        public async Task<IActionResult> UpdateProfileById(
+            long id,
             [FromBody] UpdateVendorProfileRequest request,
             CancellationToken cancellationToken)
         {
             if (CurrentUserId is not long userId) return Unauthorized();
 
-            if (!ModelState.IsValid)
-            {
-                var errors = ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage)
-                    .ToList();
-                return BadRequest(ApiResponse<VendorProfileDto>.Fail("Validation failed.", errors));
-            }
-
             try
             {
-                var updated = await _profileService.UpdateProfileAsync(userId, request, cancellationToken);
-                return updated == null
+                var profile = await _profileService.UpdateProfileByIdAsync(
+                    userId, id, request, cancellationToken);
+                return profile == null
                     ? NotFound(ApiResponse<VendorProfileDto>.Fail("Vendor profile not found."))
-                    : Ok(ApiResponse<VendorProfileDto>.Ok(updated, "Vendor profile updated successfully."));
+                    : Ok(ApiResponse<VendorProfileDto>.Ok(profile, "Vendor profile updated successfully."));
             }
-            catch (ArgumentException ex)
+            catch (UnauthorizedAccessException ex)
             {
-                return BadRequest(ApiResponse<VendorProfileDto>.Fail(ex.Message));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(ApiResponse<VendorProfileDto>.Fail(ex.Message));
+                return StatusCode(
+                    StatusCodes.Status403Forbidden,
+                    ApiResponse<VendorProfileDto>.Fail(ex.Message));
             }
         }
 
