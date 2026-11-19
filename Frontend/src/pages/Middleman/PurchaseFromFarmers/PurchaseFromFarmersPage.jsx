@@ -12,13 +12,13 @@ export const PurchaseFromFarmersPage = () => {
 
   const [submittedTxn, setSubmittedTxn] = useState(null);
 
-  const handleSubmitPurchase = (payload) => {
-    const created = createPurchase(payload, false);
+  const handleSubmitPurchase = async (payload) => {
+    const created = await createPurchase(payload, false);
     setSubmittedTxn(created);
   };
 
-  const handleSaveDraft = (payload) => {
-    const created = createPurchase(payload, true);
+  const handleSaveDraft = async (payload) => {
+    const created = await createPurchase(payload, true);
     setSubmittedTxn(created);
   };
 

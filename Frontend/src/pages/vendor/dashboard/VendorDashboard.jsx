@@ -16,6 +16,10 @@ import PendingConfirmations from './PendingConfirmations';
 import { isDateInRange, formatDate } from '../../../utils/formatDate';
 import { round2, safeNumber } from '../../../utils/calculations';
 import { exportToCSV } from '../../../utils/exportUtils';
+import {
+  exportVendorDashboardTransactionsApi,
+  searchVendorDashboardApi,
+} from '../../../services/vendorApiService';
 
 export function VendorDashboard() {
   const { vendorUser } = useAuth();
@@ -29,6 +33,7 @@ export function VendorDashboard() {
     orders,
     sales,
     financialSummary,
+    refreshVendorPortalData,
   } = useVendor();
 
   const [datePreset, setDatePreset] = useState('all');
@@ -184,10 +189,15 @@ export function VendorDashboard() {
 
   const handleRefresh = () => {
     setLastRefreshed(new Date());
+    if (typeof refreshVendorPortalData === 'function') {
+      refreshVendorPortalData();
+    }
+    searchVendorDashboardApi('');
     toast.success('Dashboard metrics and charts refreshed.');
   };
 
   const handleExportReport = () => {
+    exportVendorDashboardTransactionsApi({ preset: datePreset, startDate: customStart, endDate: customEnd });
     const reportRows = [
       { metric: 'Total Farmers', value: dashboardMetrics.totalFarmers },
       { metric: 'Total Middlemen', value: dashboardMetrics.totalMiddlemen },

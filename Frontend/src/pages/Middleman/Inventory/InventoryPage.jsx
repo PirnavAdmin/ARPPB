@@ -11,6 +11,7 @@ import { FilterDropdown } from '../components/common/FilterDropdown';
 import { Pagination } from '../components/common/Pagination';
 import { SectionCard } from '../components/common/SectionCard';
 import { CROP_LIST, QUALITY_GRADES } from '../../../utils/middleman/transactionHelpers';
+import { fetchMiddlemanInventoryBatchByIdApi } from '../../../services/middleman';
 
 export const InventoryPage = () => {
   const navigate = useNavigate();
@@ -114,7 +115,16 @@ export const InventoryPage = () => {
       <SectionCard bodyClassName="p-0">
         <InventoryTable
           batches={paginatedBatches}
-          onViewBatch={(batch) => setViewingBatch(batch)}
+          onViewBatch={async (batch) => {
+            setViewingBatch(batch);
+            const id = batch?.id || batch?.stockId;
+            if (id) {
+              const detail = await fetchMiddlemanInventoryBatchByIdApi(id);
+              if (detail) {
+                setViewingBatch((prev) => (prev ? { ...prev, ...detail } : prev));
+              }
+            }
+          }}
         />
 
         <Pagination

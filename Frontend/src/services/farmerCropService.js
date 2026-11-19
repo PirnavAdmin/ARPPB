@@ -263,7 +263,7 @@ export const DEFAULT_CROP_OPTIONS = {
  */
 export async function fetchCropOptionsApi() {
   try {
-    const response = await api.get(Endpoints.FARMER_CROPS.OPTIONS);
+    const response = await api.get(Endpoints.FarmerCrops.getOptions);
     const body = response?.data;
     const optionsData = body?.data || body;
     if (optionsData && (optionsData.categories || optionsData.seasons)) {
@@ -301,7 +301,7 @@ export async function fetchCropsApi({ category, season, search, userId } = {}) {
   }
 
   try {
-    const response = await api.get(Endpoints.FARMER_CROPS.BASE, { params });
+    const response = await api.get(Endpoints.FarmerCrops.getAll, { params });
     const body = response?.data;
     const list = Array.isArray(body?.data) ? body.data : Array.isArray(body) ? body : [];
     return list.map((item) => mapCropDtoToCrop(item));
@@ -319,7 +319,7 @@ export async function fetchCropByIdApi(id, userId) {
   const params = userId ? { userId } : {};
 
   try {
-    const response = await api.get(Endpoints.FARMER_CROPS.BY_ID(id), { params });
+    const response = await api.get(Endpoints.FarmerCrops.getById(id), { params });
     const body = response?.data;
     const data = body?.data || body;
     return mapCropDtoToCrop(data);
@@ -337,7 +337,7 @@ export async function createCropApi(cropFormData, userId, profile) {
   const params = userId ? { userId } : {};
 
   try {
-    const response = await api.post(Endpoints.FARMER_CROPS.BASE, payload, { params });
+    const response = await api.post(Endpoints.FarmerCrops.create, payload, { params });
     const body = response?.data;
     const data = body?.data || body;
     return mapCropDtoToCrop(data);
@@ -356,7 +356,7 @@ export async function updateCropApi(id, cropFormData, userId, profile) {
   const params = userId ? { userId } : {};
 
   try {
-    const response = await api.put(Endpoints.FARMER_CROPS.BY_ID(id), payload, { params });
+    const response = await api.put(Endpoints.FarmerCrops.update(id), payload, { params });
     const body = response?.data;
     const data = body?.data || body;
     return mapCropDtoToCrop(data);
@@ -374,7 +374,7 @@ export async function deleteCropApi(id, userId) {
   const params = userId ? { userId } : {};
 
   try {
-    const response = await api.delete(Endpoints.FARMER_CROPS.BY_ID(id), { params });
+    const response = await api.delete(Endpoints.FarmerCrops.delete(id), { params });
     return response?.data || { success: true };
   } catch (error) {
     throw parseCropApiError(error, `Failed to delete crop #${id}.`);
@@ -396,7 +396,7 @@ export async function addCropYieldApi(id, additionalQuantity, userId) {
   const params = userId ? { userId } : {};
 
   try {
-    const response = await api.patch(Endpoints.FARMER_CROPS.ADD_STOCK(id), payload, { params });
+    const response = await api.patch(Endpoints.FarmerCrops.addStock(id), payload, { params });
     const body = response?.data;
     const data = body?.data || body;
     return mapCropDtoToCrop(data);

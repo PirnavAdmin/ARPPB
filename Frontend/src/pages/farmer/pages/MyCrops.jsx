@@ -5,7 +5,7 @@ import CropForm from '../components/CropForm';
 import DataTable from '../components/DataTable';
 import StatusBadge from '../components/StatusBadge';
 import { formatCurrency, formatDate } from '../utils/farmerHelpers';
-import { DEFAULT_CROP_OPTIONS } from '../../../services/farmerCropService';
+import { DEFAULT_CROP_OPTIONS, fetchCropByIdApi } from '../../../services/farmerCropService';
 
 function MyCrops() {
   const {
@@ -64,6 +64,22 @@ function MyCrops() {
       return matchSearch && matchCategory && matchSeason;
     });
   }, [crops, searchQuery, categoryFilter, seasonFilter]);
+
+  const handleViewCrop = async (crop) => {
+    setViewingCrop(crop);
+    const id = crop?.id;
+    const isBackendId = typeof id === 'number' || (!isNaN(Number(id)) && !String(id).includes('CROP-'));
+    if (isBackendId) {
+      try {
+        const freshCrop = await fetchCropByIdApi(Number(id));
+        if (freshCrop && freshCrop.id) {
+          setViewingCrop((prev) => (prev && prev.id === crop.id ? { ...prev, ...freshCrop } : prev));
+        }
+      } catch {
+        // Fallback to existing crop details
+      }
+    }
+  };
 
   const handleSaveCrop = async (formData) => {
     if (editingCrop) {
@@ -149,7 +165,7 @@ function MyCrops() {
           <button
             type="button"
             className="farmer-btn farmer-btn-outline farmer-btn-sm"
-            onClick={() => setViewingCrop(row)}
+            onClick={() => handleViewCrop(row)}
             title="View Details"
           >
             Details
@@ -415,7 +431,7 @@ function MyCrops() {
             <CropCard
               key={crop.id}
               crop={crop}
-              onView={(c) => setViewingCrop(c)}
+              onView={(c) => handleViewCrop(c)}
               onEdit={(c) => setEditingCrop(c)}
               onUpdateStock={(c) => setStockModalCrop(c)}
               onDelete={(id) => deleteCrop(id)}

@@ -1,6 +1,7 @@
 import { useVendor } from '../../../hooks/useVendor';
 import { OTP_STATUSES } from '../../../utils/constants';
 import SharedOtpConfirmations from '../../../components/shared/otp-confirmations/OtpConfirmations';
+import { fetchVendorConfirmationByIdApi } from '../../../services/vendorApiService';
 
 const VENDOR_OTP_TABS = [
   { id: 'Farmer', label: 'Farmer Confirmations' },
@@ -17,6 +18,7 @@ export default function OTPConfirmations() {
   } = useVendor();
 
   const handleVerifyOtp = ({ otpId, transactionId, enteredCode }) => {
+    fetchVendorConfirmationByIdApi(otpId || transactionId);
     return verifyTransactionOtp({
       otpId,
       transactionId,
@@ -25,6 +27,7 @@ export default function OTPConfirmations() {
   };
 
   const handleResendOtp = (otpId) => {
+    fetchVendorConfirmationByIdApi(otpId);
     return resendTransactionOtp(otpId);
   };
 

@@ -13,6 +13,10 @@ import InventoryTable from './InventoryTable';
 import InventoryDetails from './InventoryDetails';
 import StockMovementHistory from './StockMovementHistory';
 import { CROP_OPTIONS, QUALITY_GRADES } from '../../../utils/constants';
+import {
+  fetchVendorRawMaterialByIdApi,
+  exportVendorRawMaterialsApi,
+} from '../../../services/vendorApiService';
 
 export function RawMaterialInventory() {
   const navigate = useNavigate();
@@ -37,6 +41,13 @@ export function RawMaterialInventory() {
       setCropFilter(preselectedCrop);
     }
   }, [preselectedCrop]);
+
+  useEffect(() => {
+    if (selectedBatch?.id) {
+      fetchVendorRawMaterialByIdApi(selectedBatch.id);
+      exportVendorRawMaterialsApi({ stockId: selectedBatch.id });
+    }
+  }, [selectedBatch]);
 
   const lowStockBatches = useMemo(
     () =>

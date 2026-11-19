@@ -77,11 +77,9 @@ export default function MyProfile() {
     try {
       const data = await fetchFarmerProfileApi(resolvedUserId);
       let bankData = data?.bankDetails;
-      if (!bankData || !bankData.accountHolderName) {
-        const directBank = await fetchFarmerBankDetailsApi(resolvedUserId).catch(() => null);
-        if (directBank && typeof directBank === 'object') {
-          bankData = { ...(bankData || {}), ...directBank };
-        }
+      const directBank = await fetchFarmerBankDetailsApi(resolvedUserId, true).catch(() => null);
+      if (directBank && typeof directBank === 'object') {
+        bankData = { ...(bankData || {}), ...directBank };
       }
 
       if (data && typeof data === 'object') {
@@ -334,6 +332,7 @@ export default function MyProfile() {
       const mergedBank = {
         ...profile.bankDetails,
         ...bankFormData,
+        ...(updatedBankDto && typeof updatedBankDto === 'object' ? updatedBankDto : {}),
         bankName,
         accountHolderName: holderName,
         accountNumber: accountNo,
@@ -342,7 +341,6 @@ export default function MyProfile() {
         branch,
         branchName: branch,
         upiId: upi,
-        ...(updatedBankDto && typeof updatedBankDto === 'object' ? updatedBankDto : {}),
       };
 
       const updatedProfile = {

@@ -30,6 +30,13 @@ import PurchaseForm from '../purchases/PurchaseForm';
 import { AP_DISTRICTS, INDIAN_STATES } from '../../../utils/constants';
 import { formatCurrency, formatNumber } from '../../../utils/formatCurrency';
 import { generateNextId } from '../../../utils/generateTransactionId';
+import {
+  fetchVendorMiddlemanByIdApi,
+  fetchVendorMiddlemanTransactionsApi,
+  fetchVendorMiddlemanPaymentsApi,
+  fetchVendorMiddlemanOtpConfirmationsApi,
+  exportVendorMiddlemenApi,
+} from '../../../services/vendorApiService';
 
 export function Middlemen() {
   const location = useLocation();
@@ -92,6 +99,11 @@ export function Middlemen() {
     const params = { middlemanId };
     if (tab && tab !== 'overview') params.tab = tab;
     setSearchParams(params, { state: { fromDirectory: true } });
+    fetchVendorMiddlemanByIdApi(middlemanId);
+    fetchVendorMiddlemanTransactionsApi(middlemanId);
+    fetchVendorMiddlemanPaymentsApi(middlemanId);
+    fetchVendorMiddlemanOtpConfirmationsApi(middlemanId);
+    exportVendorMiddlemenApi({ middlemanId });
   };
 
   // Return to the Middlemen table (search, filters, pagination and scroll are preserved)

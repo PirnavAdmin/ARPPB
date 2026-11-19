@@ -136,7 +136,7 @@ export const register = async ({
   };
 
   try {
-    const response = await api.post(Endpoints.REGISTRATION.REGISTER, payload);
+    const response = await api.post(Endpoints.Registration.register, payload);
     const body = response.data;
 
     if (body && body.success === false) {
@@ -198,7 +198,7 @@ export const login = async ({ contactNumber, identifier, password, rememberMe })
   };
 
   try {
-    const response = await api.post(Endpoints.AUTH.LOGIN, payload);
+    const response = await api.post(Endpoints.Auth.login, payload);
     const body = response.data;
 
     if (body && body.success === false) {
@@ -262,7 +262,7 @@ export const sendForgotPasswordOTP = async ({ phone, mobile, email }) => {
   const payload = cleanEmail ? { email: cleanEmail } : { mobile: cleanMobile };
 
   try {
-    const response = await api.post(Endpoints.AUTH.FORGOT_PASSWORD, payload);
+    const response = await api.post(Endpoints.Auth.forgotPassword, payload);
     const body = response.data;
 
     if (body && body.success === false) {
@@ -313,7 +313,7 @@ export const verifyForgotPasswordOTP = async ({ phone, mobile, email, otp }) => 
     : { mobile: cleanMobile, otp: cleanOtp };
 
   try {
-    const response = await api.post(Endpoints.AUTH.VERIFY_OTP, payload);
+    const response = await api.post(Endpoints.Auth.verifyOtp, payload);
     const body = response.data;
 
     if (body && body.success === false) {
@@ -364,7 +364,7 @@ export const resetPassword = async ({
   };
 
   try {
-    const response = await api.post(Endpoints.AUTH.RESET_PASSWORD, payload);
+    const response = await api.post(Endpoints.Auth.resetPassword, payload);
     const body = response.data;
 
     if (body && body.success === false) {
@@ -394,7 +394,7 @@ export const resetPassword = async ({
  */
 export const fetchAuthenticatedProfile = async () => {
   try {
-    const response = await api.get(Endpoints.ROLE_ACCESS.PROFILE);
+    const response = await api.get(Endpoints.RoleAccess.profile);
     const body = response.data;
     return {
       success: Boolean(body?.success ?? true),
@@ -426,11 +426,11 @@ export const verifyRoleAccess = async (role) => {
     .replace(/[\s_-]+/g, '');
 
   const roleEndpointMap = {
-    farmer: Endpoints.ROLE_ACCESS.FARMER,
-    customer: Endpoints.ROLE_ACCESS.CUSTOMER,
-    middleman: Endpoints.ROLE_ACCESS.MIDDLEMAN,
-    supplier: Endpoints.ROLE_ACCESS.MIDDLEMAN,
-    vendor: Endpoints.ROLE_ACCESS.VENDOR,
+    farmer: Endpoints.RoleAccess.farmer,
+    customer: Endpoints.RoleAccess.customer,
+    middleman: Endpoints.RoleAccess.middleman,
+    supplier: Endpoints.RoleAccess.middleman,
+    vendor: Endpoints.RoleAccess.vendor,
   };
 
   const targetEndpoint = roleEndpointMap[normalized];
@@ -462,7 +462,7 @@ export const verifyRoleAccess = async (role) => {
  */
 export const verifyBusinessAccess = async () => {
   try {
-    const response = await api.get(Endpoints.ROLE_ACCESS.BUSINESS_ACCESS);
+    const response = await api.get(Endpoints.RoleAccess.businessAccess);
     const body = response.data;
     return {
       success: Boolean(body?.success ?? true),

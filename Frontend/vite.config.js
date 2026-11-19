@@ -7,33 +7,9 @@ export default defineConfig(({ mode }) => {
 
   const commonApiBaseUrl =
     env.VITE_API_BASE_URL ||
-    'https://flatterer-exalted-anthem.ngrok-free.dev'
-
-  const farmerCropsApiBaseUrl =
-    env.VITE_FARMER_CROPS_API_BASE_URL ||
-    'https://pogo-musty-monument.ngrok-free.dev'
-
-  const farmerSalesApiBaseUrl =
-    env.VITE_FARMER_SALES_API_BASE_URL ||
-    farmerCropsApiBaseUrl
+    'https://zodiac-excursion-rendition.ngrok-free.dev'
 
   const apiProxyConfig = {
-    '/api/v1/farmer/crops': {
-      target: farmerCropsApiBaseUrl,
-      changeOrigin: true,
-      secure: false,
-      headers: {
-        'ngrok-skip-browser-warning': 'true',
-      },
-    },
-    '/api/v1/farmer/sales': {
-      target: farmerSalesApiBaseUrl,
-      changeOrigin: true,
-      secure: false,
-      headers: {
-        'ngrok-skip-browser-warning': 'true',
-      },
-    },
     '/api/vendor-profile': {
       target: commonApiBaseUrl,
       changeOrigin: true,

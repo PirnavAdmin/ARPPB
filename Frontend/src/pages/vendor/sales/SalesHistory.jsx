@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShoppingBag,
@@ -26,6 +26,11 @@ import VendorPagination from '../VendorPagination';
 import VendorStatusBadge from '../VendorStatusBadge';
 import VendorExportMenu from '../VendorExportMenu';
 import SalesDetails from './SalesDetails';
+import {
+  fetchVendorSaleByIdApi,
+  fetchVendorSalesCustomerByIdApi,
+  fetchVendorSalesBatchByIdApi,
+} from '../../../services/vendorApiService';
 
 export default function SalesHistory() {
   const navigate = useNavigate();
@@ -49,6 +54,18 @@ export default function SalesHistory() {
     () => sales.find((s) => s.id === selectedSaleId) || null,
     [sales, selectedSaleId]
   );
+
+  useEffect(() => {
+    if (selectedSaleId) {
+      fetchVendorSaleByIdApi(selectedSaleId);
+      if (selectedSale?.customerId) {
+        fetchVendorSalesCustomerByIdApi(selectedSale.customerId);
+      }
+      if (selectedSale?.batchId) {
+        fetchVendorSalesBatchByIdApi(selectedSale.batchId);
+      }
+    }
+  }, [selectedSaleId, selectedSale]);
 
   // 6 Summary Cards
   const summaryStats = useMemo(() => {

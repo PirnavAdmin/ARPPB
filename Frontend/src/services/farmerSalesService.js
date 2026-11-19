@@ -204,7 +204,7 @@ export function mapSaleFormToCreateDto(form = {}, profile = {}) {
  */
 export async function fetchSalesOptionsApi() {
   try {
-    const response = await api.get(Endpoints.FARMER_SALES.OPTIONS);
+    const response = await api.get(Endpoints?.FARMER_SALES?.OPTIONS || '/api/v1/farmer/sales/options');
     const body = response?.data;
     const data = body?.data || body;
     if (data && (data.buyerCategories || data.categories || data.qualityGrades)) {
@@ -235,7 +235,7 @@ export async function fetchFarmerSalesApi({ category, cropId, status, search, us
   if (userId) params.userId = userId;
 
   try {
-    const response = await api.get(Endpoints.FARMER_SALES.BASE, { params });
+    const response = await api.get(Endpoints?.FARMER_SALES?.BASE || '/api/v1/farmer/sales', { params });
     const body = response?.data;
     const list = Array.isArray(body?.data?.items)
       ? body.data.items
@@ -260,7 +260,10 @@ export async function fetchFarmerSaleByIdApi(id, userId) {
   const params = userId ? { userId } : {};
 
   try {
-    const response = await api.get(Endpoints.FARMER_SALES.BY_ID(id), { params });
+    const response = await api.get(
+      Endpoints?.FARMER_SALES?.BY_ID ? Endpoints.FARMER_SALES.BY_ID(id) : `/api/v1/farmer/sales/${id}`,
+      { params }
+    );
     const body = response?.data;
     const data = body?.data || body;
     return mapSaleDtoToSale(data);
@@ -278,7 +281,7 @@ export async function createFarmerSaleApi(saleFormData, userId, profile) {
   const params = userId ? { userId } : {};
 
   try {
-    const response = await api.post(Endpoints.FARMER_SALES.BASE, payload, { params });
+    const response = await api.post(Endpoints?.FARMER_SALES?.BASE || '/api/v1/farmer/sales', payload, { params });
     const body = response?.data;
     const data = body?.data || body;
 
@@ -318,7 +321,11 @@ export async function verifyFarmerSaleOtpApi(saleId, otpCode, userId) {
   const params = userId ? { userId } : {};
 
   try {
-    const response = await api.post(Endpoints.FARMER_SALES.VERIFY_OTP(saleId), payload, { params });
+    const response = await api.post(
+      Endpoints?.FARMER_SALES?.VERIFY_OTP ? Endpoints.FARMER_SALES.VERIFY_OTP(saleId) : `/api/v1/farmer/sales/${saleId}/verify-otp`,
+      payload,
+      { params }
+    );
     const body = response?.data;
     const data = body?.data || body;
 
@@ -342,7 +349,11 @@ export async function resendFarmerSaleOtpApi(saleId, userId) {
   const params = userId ? { userId } : {};
 
   try {
-    const response = await api.post(Endpoints.FARMER_SALES.RESEND_OTP(saleId), {}, { params });
+    const response = await api.post(
+      Endpoints?.FARMER_SALES?.RESEND_OTP ? Endpoints.FARMER_SALES.RESEND_OTP(saleId) : `/api/v1/farmer/sales/${saleId}/resend-otp`,
+      {},
+      { params }
+    );
     const body = response?.data;
     const data = body?.data || body;
 

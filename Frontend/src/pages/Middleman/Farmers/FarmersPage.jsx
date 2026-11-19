@@ -12,6 +12,11 @@ import { FilterDropdown } from '../components/common/FilterDropdown';
 import { Pagination } from '../components/common/Pagination';
 import { SectionCard } from '../components/common/SectionCard';
 import { CROP_LIST } from '../../../utils/middleman/transactionHelpers';
+import {
+  fetchMiddlemanFarmerByIdApi,
+  fetchMiddlemanFarmerHistoryApi,
+} from '../../../services/middlemanFarmerService';
+import { mapMiddlemanPurchaseDto } from '../../../services/middlemanPurchaseService';
 
 export const FarmersPage = ({ initialOpenRegister = false }) => {
   const navigate = useNavigate();
@@ -38,6 +43,37 @@ export const FarmersPage = ({ initialOpenRegister = false }) => {
   const [editingFarmer, setEditingFarmer] = useState(null);
   const [viewingFarmer, setViewingFarmer] = useState(null);
   const [historyFarmer, setHistoryFarmer] = useState(null);
+  const [apiFarmerHistory, setApiFarmerHistory] = useState(null);
+
+  const handleViewFarmer = async (f) => {
+    setViewingFarmer(f);
+    const id = f?.id || f?.farmerId;
+    if (id) {
+      const detail = await fetchMiddlemanFarmerByIdApi(id);
+      if (detail) {
+        setViewingFarmer((prev) => (prev ? { ...prev, ...detail } : prev));
+      }
+    }
+  };
+
+  const handleViewHistory = async (f) => {
+    setHistoryFarmer(f);
+    setApiFarmerHistory(null);
+    const id = f?.id || f?.farmerId;
+    if (id) {
+      const hist = await fetchMiddlemanFarmerHistoryApi(id);
+      const list = Array.isArray(hist?.items)
+        ? hist.items
+        : Array.isArray(hist?.purchases)
+        ? hist.purchases
+        : Array.isArray(hist)
+        ? hist
+        : null;
+      if (list && list.length > 0) {
+        setApiFarmerHistory(list.map((p) => mapMiddlemanPurchaseDto(p)));
+      }
+    }
+  };
 
   useEffect(() => {
     if (shouldOpenRegister) {
@@ -86,11 +122,11 @@ export const FarmersPage = ({ initialOpenRegister = false }) => {
     }
   };
 
-  const handleSaveFarmer = (formData) => {
+  const handleSaveFarmer = async (formData) => {
     if (editingFarmer) {
-      updateFarmer(editingFarmer.farmerId, formData);
+      await updateFarmer(editingFarmer.farmerId, formData);
     } else {
-      addFarmer(formData);
+      await addFarmer(formData);
     }
     handleCloseForm();
   };
@@ -165,12 +201,12 @@ export const FarmersPage = ({ initialOpenRegister = false }) => {
       <SectionCard bodyClassName="p-0">
         <FarmerTable
           farmers={paginatedFarmers}
-          onView={(f) => setViewingFarmer(f)}
+          onView={handleViewFarmer}
           onEdit={(f) => {
             setEditingFarmer(f);
             setIsFormOpen(true);
           }}
-          onViewPurchases={(f) => setHistoryFarmer(f)}
+          onViewPurchases={handleViewHistory}
           onViewLedger={(f) => navigate('/middleman/ledger', { state: { partyFilter: f.farmerId } })}
         />
 
@@ -219,8 +255,14 @@ export const FarmersPage = ({ initialOpenRegister = false }) => {
       {historyFarmer && (
         <FarmerHistory
           farmer={historyFarmer}
-          purchases={purchases.filter((p) => p.farmerId === historyFarmer.farmerId)}
-          onClose={() => setHistoryFarmer(null)}
+          purchases={
+            apiFarmerHistory ||
+            purchases.filter((p) => p.farmerId === historyFarmer.farmerId)
+          }
+          onClose={() => {
+            setHistoryFarmer(null);
+            setApiFarmerHistory(null);
+          }}
         />
       )}
     </div>

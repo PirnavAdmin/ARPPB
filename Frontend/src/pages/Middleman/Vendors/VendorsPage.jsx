@@ -50,11 +50,11 @@ export const VendorsPage = () => {
   const totalItems = filteredVendors.length;
   const paginatedVendors = filteredVendors.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const handleSaveVendor = (formData) => {
+  const handleSaveVendor = async (formData) => {
     if (editingVendor) {
-      updateVendor(editingVendor.vendorId, formData);
+      await updateVendor(editingVendor.vendorId, formData);
     } else {
-      addVendor(formData);
+      await addVendor(formData);
     }
     setIsFormOpen(false);
     setEditingVendor(null);

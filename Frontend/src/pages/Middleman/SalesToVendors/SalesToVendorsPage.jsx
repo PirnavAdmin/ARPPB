@@ -12,13 +12,13 @@ export const SalesToVendorsPage = () => {
 
   const [submittedTxn, setSubmittedTxn] = useState(null);
 
-  const handleSubmit = (payload) => {
-    const created = createVendorSale(payload, false);
+  const handleSubmit = async (payload) => {
+    const created = await createVendorSale(payload, false);
     setSubmittedTxn(created);
   };
 
-  const handleSaveDraft = (payload) => {
-    const created = createVendorSale(payload, true);
+  const handleSaveDraft = async (payload) => {
+    const created = await createVendorSale(payload, true);
     setSubmittedTxn(created);
   };
 
