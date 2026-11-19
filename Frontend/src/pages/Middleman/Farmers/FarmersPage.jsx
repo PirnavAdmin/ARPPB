@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useMiddleman } from '../../../context/middleman';
 import { MiddlemanPageHeader } from '../components/layout/MiddlemanPageHeader';
@@ -13,8 +13,9 @@ import { Pagination } from '../components/common/Pagination';
 import { SectionCard } from '../components/common/SectionCard';
 import { CROP_LIST } from '../../../utils/middleman/transactionHelpers';
 
-export const FarmersPage = () => {
+export const FarmersPage = ({ initialOpenRegister = false }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { farmers, addFarmer, updateFarmer, purchases } = useMiddleman();
 
   // Search & Filters state
@@ -25,11 +26,24 @@ export const FarmersPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
 
+  // Detect whether to open register form immediately
+  const shouldOpenRegister =
+    initialOpenRegister ||
+    location.pathname.endsWith('/register') ||
+    location.pathname.endsWith('/add') ||
+    Boolean(location.state?.openRegister);
+
   // Modal states
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(shouldOpenRegister);
   const [editingFarmer, setEditingFarmer] = useState(null);
   const [viewingFarmer, setViewingFarmer] = useState(null);
   const [historyFarmer, setHistoryFarmer] = useState(null);
+
+  useEffect(() => {
+    if (shouldOpenRegister) {
+      setIsFormOpen(true);
+    }
+  }, [shouldOpenRegister]);
 
   // Extract unique districts for filter
   const districts = useMemo(() => {
@@ -64,14 +78,21 @@ export const FarmersPage = () => {
 
   const activeCount = farmers.filter((f) => (f.status || 'Active') === 'Active').length;
 
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setEditingFarmer(null);
+    if (location.pathname.endsWith('/register') || location.pathname.endsWith('/add')) {
+      navigate('/middleman/farmers', { replace: true });
+    }
+  };
+
   const handleSaveFarmer = (formData) => {
     if (editingFarmer) {
       updateFarmer(editingFarmer.farmerId, formData);
     } else {
       addFarmer(formData);
     }
-    setIsFormOpen(false);
-    setEditingFarmer(null);
+    handleCloseForm();
   };
 
   return (
@@ -175,10 +196,7 @@ export const FarmersPage = () => {
               initialData={editingFarmer}
               isEdit={Boolean(editingFarmer)}
               onSave={handleSaveFarmer}
-              onCancel={() => {
-                setIsFormOpen(false);
-                setEditingFarmer(null);
-              }}
+              onCancel={handleCloseForm}
             />
           </div>
         </div>
