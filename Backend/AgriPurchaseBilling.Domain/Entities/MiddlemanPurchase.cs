@@ -38,6 +38,10 @@ namespace AgriPurchaseBilling.Domain.Entities
         [MaxLength(100)]
         public string Variety { get; set; } = "Standard";
 
+        [Column("quality_grade")]
+        [MaxLength(50)]
+        public string QualityGrade { get; set; } = "Grade A";
+
         [Column("quantity")]
         public decimal Quantity { get; set; }
 
@@ -51,6 +55,15 @@ namespace AgriPurchaseBilling.Domain.Entities
         [Column("subtotal")]
         public decimal Subtotal { get; set; }
 
+        [Column("transportation_charges")]
+        public decimal TransportationCharges { get; set; }
+
+        [Column("loading_charges")]
+        public decimal LoadingCharges { get; set; }
+
+        [Column("other_charges")]
+        public decimal OtherCharges { get; set; }
+
         [Column("additional_charges")]
         public decimal AdditionalCharges { get; set; }
 
@@ -63,13 +76,20 @@ namespace AgriPurchaseBilling.Domain.Entities
         [Column("expected_payment_date")]
         public DateTime? ExpectedPaymentDate { get; set; }
 
+        [Column("pickup_location")]
+        [MaxLength(255)]
+        public string? PickupLocation { get; set; }
+
+        [Column("delivery_date")]
+        public DateTime? DeliveryDate { get; set; }
+
         [Column("status")]
         [MaxLength(50)]
         public string Status { get; set; } = "Pending Confirmation";
 
         [Column("otp_status")]
         [MaxLength(50)]
-        public string OtpStatus { get; set; } = "Pending";
+        public string OtpStatus { get; set; } = "Pending OTP";
 
         [Column("confirmation_date")]
         public DateTime? ConfirmationDate { get; set; }
