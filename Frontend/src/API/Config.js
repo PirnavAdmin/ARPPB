@@ -7,6 +7,10 @@ export const COMMON_API_BASE_URL =
     import.meta.env?.VITE_API_BASE_URL ||
     "https://flatterer-exalted-anthem.ngrok-free.dev";
 
+export const FARMER_CROPS_API_BASE_URL =
+    import.meta.env?.VITE_FARMER_CROPS_API_BASE_URL ||
+    "https://pogo-musty-monument.ngrok-free.dev";
+
 export const REMOTE_API_BASE_URL = COMMON_API_BASE_URL;
 
 // In the browser on localhost (Vite dev/preview), use relative URLs ("")
@@ -43,6 +47,13 @@ export function getProfileBaseURL() {
     return COMMON_API_BASE_URL;
 }
 
+/**
+ * Resolves the Base URL for Farmer Crops APIs.
+ */
+export function getFarmerCropsBaseURL() {
+    return FARMER_CROPS_API_BASE_URL;
+}
+
 const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
@@ -64,6 +75,8 @@ api.interceptors.request.use(
 
         if (config._retriedViaProxy || isBrowserLocalhost) {
             config.baseURL = "";
+        } else if (typeof config.url === "string" && config.url.startsWith("/api/v1/farmer/crops")) {
+            config.baseURL = FARMER_CROPS_API_BASE_URL;
         } else {
             config.baseURL = COMMON_API_BASE_URL;
         }

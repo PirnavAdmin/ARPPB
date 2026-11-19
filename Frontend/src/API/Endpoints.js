@@ -53,6 +53,13 @@ const Endpoints = {
         VERIFY_MOBILE_OTP: "/api/v1/farmer/profile/change-mobile/verify-otp",
         CHANGE_PASSWORD: "/api/v1/farmer/profile/change-password",
     },
+
+    FARMER_CROPS: {
+        BASE: "/api/v1/farmer/crops",
+        OPTIONS: "/api/v1/farmer/crops/options",
+        BY_ID: (id) => `/api/v1/farmer/crops/${id}`,
+        ADD_STOCK: (id) => `/api/v1/farmer/crops/${id}/add-stock`,
+    },
 };
 
 export default Endpoints;

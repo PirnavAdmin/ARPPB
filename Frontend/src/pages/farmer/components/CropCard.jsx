@@ -44,7 +44,7 @@ function CropCard({ crop, onEdit, onView, onUpdateStock, onDelete }) {
           Variety: <strong>{crop.variety}</strong>
         </div>
         <div style={{ fontSize: '0.76rem', color: 'var(--farmer-secondary)', marginTop: 2 }}>
-          📍 {crop.village}, {crop.district} ({crop.cultivationArea} Acres)
+          📍 {crop.storageLocation || [crop.village, crop.district].filter(Boolean).join(', ') || 'Farm Warehouse'} ({crop.cultivationArea || crop.cultivationAreaAcres || 0} Acres)
         </div>
       </div>
 

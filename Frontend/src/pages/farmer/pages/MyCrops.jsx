@@ -5,9 +5,22 @@ import CropForm from '../components/CropForm';
 import DataTable from '../components/DataTable';
 import StatusBadge from '../components/StatusBadge';
 import { formatCurrency, formatDate } from '../utils/farmerHelpers';
+import { DEFAULT_CROP_OPTIONS } from '../../../services/farmerCropService';
 
 function MyCrops() {
-  const { crops, addCrop, updateCrop, deleteCrop, addHarvestStock, navigateTo, searchQuery } = useFarmer();
+  const {
+    crops,
+    cropOptions,
+    isCropsLoading,
+    cropsError,
+    refreshCrops,
+    addCrop,
+    updateCrop,
+    deleteCrop,
+    addHarvestStock,
+    navigateTo,
+    searchQuery,
+  } = useFarmer();
 
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
   const [isAddMode, setIsAddMode] = useState(false);
@@ -15,45 +28,67 @@ function MyCrops() {
   const [viewingCrop, setViewingCrop] = useState(null);
   const [stockModalCrop, setStockModalCrop] = useState(null);
   const [harvestYieldInput, setHarvestYieldInput] = useState('');
+  const [isStockSubmitting, setIsStockSubmitting] = useState(false);
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [seasonFilter, setSeasonFilter] = useState('All');
 
+  const options = cropOptions || DEFAULT_CROP_OPTIONS;
+  const categoryOptions = options.categories?.length ? options.categories : DEFAULT_CROP_OPTIONS.categories;
+  const seasonOptions = options.seasons?.length ? options.seasons : DEFAULT_CROP_OPTIONS.seasons;
+
   // Filtered crops
   const filteredCrops = useMemo(() => {
-    return crops.filter((crop) => {
+    return (crops || []).filter((crop) => {
+      const q = String(searchQuery || '').trim().toLowerCase();
       const matchSearch =
-        !searchQuery ||
-        crop.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        crop.variety.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        crop.district.toLowerCase().includes(searchQuery.toLowerCase());
+        !q ||
+        (crop.name && crop.name.toLowerCase().includes(q)) ||
+        (crop.variety && crop.variety.toLowerCase().includes(q)) ||
+        (crop.district && crop.district.toLowerCase().includes(q)) ||
+        (crop.village && crop.village.toLowerCase().includes(q)) ||
+        (crop.storageLocation && crop.storageLocation.toLowerCase().includes(q));
 
+      const cropCat = String(crop.category || crop.cropCategory || '').toLowerCase();
       const matchCategory =
-        categoryFilter === 'All' || crop.category === categoryFilter;
+        categoryFilter === 'All' ||
+        cropCat === categoryFilter.toLowerCase() ||
+        cropCat.includes(categoryFilter.toLowerCase().slice(0, 4));
 
+      const cropSeason = String(crop.season || '').toLowerCase();
       const matchSeason =
-        seasonFilter === 'All' || crop.season === seasonFilter;
+        seasonFilter === 'All' ||
+        cropSeason === seasonFilter.toLowerCase();
 
       return matchSearch && matchCategory && matchSeason;
     });
   }, [crops, searchQuery, categoryFilter, seasonFilter]);
 
-  const handleSaveCrop = (formData) => {
+  const handleSaveCrop = async (formData) => {
     if (editingCrop) {
-      updateCrop(editingCrop.id, formData);
+      await updateCrop(editingCrop.id, formData);
       setEditingCrop(null);
     } else {
-      addCrop(formData);
+      await addCrop(formData);
       setIsAddMode(false);
     }
   };
 
-  const handleConfirmStockAdd = () => {
+  const handleConfirmStockAdd = async () => {
     if (stockModalCrop && harvestYieldInput) {
-      addHarvestStock(stockModalCrop.id || stockModalCrop.name, Number(harvestYieldInput), stockModalCrop.unit);
-      setStockModalCrop(null);
-      setHarvestYieldInput('');
+      setIsStockSubmitting(true);
+      try {
+        await addHarvestStock(
+          stockModalCrop.id || stockModalCrop.name,
+          Number(harvestYieldInput),
+          stockModalCrop.unit
+        );
+        setStockModalCrop(null);
+        setHarvestYieldInput('');
+      } finally {
+        setIsStockSubmitting(false);
+      }
     }
   };
 
@@ -156,6 +191,17 @@ function MyCrops() {
         </div>
 
         <div className="farmer-header-actions">
+          {/* Refresh / Sync with Backend */}
+          <button
+            type="button"
+            className="farmer-btn farmer-btn-outline"
+            onClick={() => refreshCrops && refreshCrops()}
+            disabled={isCropsLoading}
+            title="Sync inventory with backend server"
+          >
+            {isCropsLoading ? '⏳ Syncing...' : '🔄 Sync'}
+          </button>
+
           {/* Grid vs Table View Toggle */}
           <div
             style={{
@@ -196,6 +242,34 @@ function MyCrops() {
           </button>
         </div>
       </div>
+
+      {/* Sync / Error Banner if any */}
+      {cropsError && (
+        <div
+          style={{
+            padding: '12px 18px',
+            marginBottom: 20,
+            borderRadius: 10,
+            background: '#FEF2F2',
+            border: '1px solid #FCA5A5',
+            color: '#991B1B',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: '0.88rem',
+          }}
+        >
+          <span>⚠️ {cropsError}</span>
+          <button
+            type="button"
+            className="farmer-btn farmer-btn-outline farmer-btn-sm"
+            onClick={() => refreshCrops && refreshCrops()}
+            disabled={isCropsLoading}
+          >
+            🔄 Retry Sync
+          </button>
+        </div>
+      )}
 
       {/* Add / Edit Form Modal or Inline Panel */}
       {(isAddMode || editingCrop) && (
@@ -241,11 +315,11 @@ function MyCrops() {
               }}
             >
               <option value="All">All Categories</option>
-              <option value="Cereal">Cereal</option>
-              <option value="Spices">Spices</option>
-              <option value="Oilseed">Oilseed</option>
-              <option value="Commercial / Cash Crop">Commercial</option>
-              <option value="Pulses">Pulses</option>
+              {categoryOptions.map((opt) => (
+                <option key={opt.code} value={opt.code}>
+                  {opt.code}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -265,21 +339,71 @@ function MyCrops() {
               }}
             >
               <option value="All">All Seasons</option>
-              <option value="Kharif">Kharif</option>
-              <option value="Rabi">Rabi</option>
-              <option value="Zaid">Zaid</option>
-              <option value="Annual">Annual</option>
+              {seasonOptions.map((opt) => (
+                <option key={opt.code} value={opt.code}>
+                  {opt.code}
+                </option>
+              ))}
             </select>
           </div>
         </div>
 
         <span style={{ fontSize: '0.84rem', color: 'var(--farmer-secondary)' }}>
-          Showing <strong>{filteredCrops.length}</strong> of <strong>{crops.length}</strong> registered crops
+          {isCropsLoading ? (
+            'Loading crops from server...'
+          ) : (
+            <>
+              Showing <strong>{filteredCrops.length}</strong> of <strong>{(crops || []).length}</strong> registered crops
+            </>
+          )}
         </span>
       </div>
 
-      {/* Main Content: Grid View or Table View */}
-      {viewMode === 'grid' ? (
+      {/* Main Content: Loading State, Empty State, Grid View or Table View */}
+      {isCropsLoading && (!crops || crops.length === 0) ? (
+        <div
+          className="farmer-card"
+          style={{
+            padding: '48px 24px',
+            textAlign: 'center',
+            color: 'var(--farmer-secondary)',
+          }}
+        >
+          <div style={{ fontSize: '2rem', marginBottom: 12 }}>⏳</div>
+          <p style={{ fontWeight: 600, fontSize: '1rem', margin: '0 0 6px' }}>
+            Fetching Crops from Server...
+          </p>
+          <small>Please wait while we sync your crop inventory.</small>
+        </div>
+      ) : filteredCrops.length === 0 ? (
+        <div
+          className="farmer-card"
+          style={{
+            padding: '48px 24px',
+            textAlign: 'center',
+            color: 'var(--farmer-secondary)',
+          }}
+        >
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🌾</div>
+          <h4 style={{ margin: '0 0 8px', color: 'var(--farmer-text)' }}>No Crops Found</h4>
+          <p style={{ margin: '0 0 16px', fontSize: '0.9rem' }}>
+            {searchQuery || categoryFilter !== 'All' || seasonFilter !== 'All'
+              ? 'No crops match the selected filter criteria. Try adjusting your filters.'
+              : 'You have not registered any crops yet. Start by registering your first crop.'}
+          </p>
+          <button
+            type="button"
+            className="farmer-btn farmer-btn-primary farmer-btn-sm"
+            onClick={() => {
+              setCategoryFilter('All');
+              setSeasonFilter('All');
+              setIsAddMode(true);
+            }}
+          >
+            ➕ Register New Crop
+          </button>
+        </div>
+      ) : viewMode === 'grid' ? (
         <div
           style={{
             display: 'grid',
@@ -377,7 +501,7 @@ function MyCrops() {
                   <span style={{ fontSize: '0.74rem', color: 'var(--farmer-secondary)', display: 'block' }}>
                     LOCATION
                   </span>
-                  <span>{viewingCrop.village}, {viewingCrop.district}</span>
+                  <span>{viewingCrop.storageLocation || `${viewingCrop.village}, ${viewingCrop.district}`}</span>
                 </div>
               </div>
 
@@ -421,6 +545,7 @@ function MyCrops() {
                 type="button"
                 className="farmer-modal-close"
                 onClick={() => setStockModalCrop(null)}
+                disabled={isStockSubmitting}
               >
                 ✕
               </button>
@@ -445,10 +570,13 @@ function MyCrops() {
                 <label>Additional Harvested Quantity ({stockModalCrop.unit}) *</label>
                 <input
                   type="number"
+                  step="0.01"
+                  min="0.01"
                   placeholder="e.g. 50"
                   value={harvestYieldInput}
                   onChange={(e) => setHarvestYieldInput(e.target.value)}
                   autoFocus
+                  disabled={isStockSubmitting}
                 />
               </div>
             </div>
@@ -458,6 +586,7 @@ function MyCrops() {
                 type="button"
                 className="farmer-btn farmer-btn-outline"
                 onClick={() => setStockModalCrop(null)}
+                disabled={isStockSubmitting}
               >
                 Cancel
               </button>
@@ -465,9 +594,9 @@ function MyCrops() {
                 type="button"
                 className="farmer-btn farmer-btn-primary"
                 onClick={handleConfirmStockAdd}
-                disabled={!harvestYieldInput || Number(harvestYieldInput) <= 0}
+                disabled={isStockSubmitting || !harvestYieldInput || Number(harvestYieldInput) <= 0}
               >
-                Confirm & Add to Stock
+                {isStockSubmitting ? 'Adding...' : 'Confirm & Add to Stock'}
               </button>
             </div>
           </div>

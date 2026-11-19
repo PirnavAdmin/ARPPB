@@ -16,6 +16,15 @@ import {
   formatCurrency,
 } from '../utils/farmerHelpers';
 import { useAuth } from '../../../hooks/useAuth';
+import {
+  fetchCropsApi,
+  fetchCropOptionsApi,
+  createCropApi,
+  updateCropApi,
+  deleteCropApi,
+  addCropYieldApi,
+  DEFAULT_CROP_OPTIONS,
+} from '../../../services/farmerCropService';
 
 const FarmerContext = createContext(null);
 const STORAGE_KEY = 'agri-farmer-portal-state-v1';
@@ -134,6 +143,9 @@ export function FarmerProvider({ children }) {
     }));
   }
   const [crops, setCrops] = useState(() => persistedState?.crops ?? initialCrops);
+  const [cropOptions, setCropOptions] = useState(DEFAULT_CROP_OPTIONS);
+  const [isCropsLoading, setIsCropsLoading] = useState(false);
+  const [cropsError, setCropsError] = useState(null);
   const [marketPrices, setMarketPrices] = useState(() => persistedState?.marketPrices ?? initialMarketPrices);
   const [sales, setSales] = useState(() => persistedState?.sales ?? initialSales);
   const [purchases, setPurchases] = useState(() => persistedState?.purchases ?? initialPurchases);
@@ -254,52 +266,112 @@ export function FarmerProvider({ children }) {
     }
   }, [showToast]);
 
+  // Crops API Integration
+  const loadCropsFromApi = useCallback(async (filters = {}) => {
+    setIsCropsLoading(true);
+    setCropsError(null);
+    try {
+      const apiCrops = await fetchCropsApi({
+        category: filters.category,
+        season: filters.season,
+        search: filters.search,
+        userId: user?.userId,
+      });
+      if (Array.isArray(apiCrops)) {
+        setCrops(apiCrops);
+      }
+      return apiCrops;
+    } catch (error) {
+      console.warn('Farmer crops API fetch error:', error?.message);
+      setCropsError(error?.message || 'Failed to sync crops with server.');
+      return null;
+    } finally {
+      setIsCropsLoading(false);
+    }
+  }, [user?.userId]);
+
+  const loadCropOptionsFromApi = useCallback(async () => {
+    try {
+      const opts = await fetchCropOptionsApi();
+      if (opts) {
+        setCropOptions(opts);
+      }
+    } catch (error) {
+      console.warn('Crop options fetch error:', error?.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCropOptionsFromApi();
+    loadCropsFromApi();
+  }, [loadCropOptionsFromApi, loadCropsFromApi]);
+
   // Crop CRUD Actions
-  const addCrop = useCallback((newCropData) => {
-    const newId = `CROP-00${Date.now().toString().slice(-4)}`;
-    const crop = {
-      id: newId,
-      availableQuantity: Number(newCropData.harvestedQuantity || newCropData.availableQuantity || 0),
-      soldQuantity: 0,
-      reservedQuantity: 0,
-      harvestedQuantity: Number(newCropData.harvestedQuantity || newCropData.availableQuantity || 0),
-      status: 'Ready to Sell',
-      color: '#237A45',
-      ...newCropData,
-    };
+  const addCrop = useCallback(async (newCropData) => {
+    let createdCrop = null;
+    try {
+      createdCrop = await createCropApi(newCropData, user?.userId, profile);
+    } catch (apiError) {
+      console.warn('Backend create crop failed:', apiError);
+      showToast(apiError?.message || 'Failed to register crop on server.', 'error', 6000);
+      throw apiError;
+    }
 
-    setCrops((prev) => [crop, ...prev]);
+    if (createdCrop) {
+      setCrops((prev) => [createdCrop, ...prev.filter((c) => c.id !== createdCrop.id)]);
 
-    setStockRecords((prev) => [
-      {
-        id: `STK-${newId.slice(-3)}`,
-        cropId: newId,
-        cropName: crop.name,
-        variety: crop.variety || 'Standard',
-        openingStock: crop.availableQuantity,
-        harvestedQuantity: crop.availableQuantity,
-        soldQuantity: 0,
-        reservedQuantity: 0,
-        availableQuantity: crop.availableQuantity,
-        unit: crop.unit || 'qtl',
-        lastUpdated: new Date().toISOString().split('T')[0],
-        status: crop.availableQuantity > 50 ? 'Normal' : 'Low Stock',
-        storageLocation: `Reddy Farm Warehouse Bay-${(prev.length % 3) + 1}`,
-      },
-      ...prev,
-    ]);
+      setStockRecords((prev) => [
+        {
+          id: `STK-${String(createdCrop.id).slice(-3)}`,
+          cropId: createdCrop.id,
+          cropName: createdCrop.name,
+          variety: createdCrop.variety || 'Standard',
+          openingStock: createdCrop.availableQuantity,
+          harvestedQuantity: createdCrop.availableQuantity,
+          soldQuantity: 0,
+          reservedQuantity: 0,
+          availableQuantity: createdCrop.availableQuantity,
+          unit: createdCrop.unit || 'Quintals',
+          lastUpdated: new Date().toISOString().split('T')[0],
+          status: createdCrop.availableQuantity > 50 ? 'Normal' : 'Low Stock',
+          storageLocation: createdCrop.storageLocation || `Reddy Farm Warehouse Bay-${(prev.length % 3) + 1}`,
+        },
+        ...prev,
+      ]);
 
-    showToast(`Crop "${crop.name}" registered successfully!`, 'success');
-  }, [showToast]);
+      showToast(`Crop "${createdCrop.name}" registered successfully!`, 'success');
+      return createdCrop;
+    }
+  }, [profile, user?.userId, showToast]);
 
-  const updateCrop = useCallback((id, updatedFields) => {
+  const updateCrop = useCallback(async (id, updatedFields) => {
+    let updatedCrop = null;
+    const isBackendId = typeof id === 'number' || (!isNaN(Number(id)) && !String(id).includes('CROP-'));
+
+    if (isBackendId) {
+      try {
+        updatedCrop = await updateCropApi(Number(id), updatedFields, user?.userId, profile);
+      } catch (apiError) {
+        console.warn('Backend update crop failed:', apiError);
+        showToast(apiError?.message || 'Failed to update crop on server.', 'error', 6000);
+        throw apiError;
+      }
+    }
+
     setCrops((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updatedFields } : c))
+      prev.map((c) => {
+        if (c.id === id || (updatedCrop && c.id === updatedCrop.id)) {
+          return updatedCrop ? { ...c, ...updatedCrop } : { ...c, ...updatedFields };
+        }
+        return c;
+      })
     );
-    showToast('Crop information updated.', 'success');
-  }, [showToast]);
 
-  const deleteCrop = useCallback((id) => {
+    showToast('Crop information updated successfully.', 'success');
+    return updatedCrop;
+  }, [profile, user?.userId, showToast]);
+
+  const deleteCrop = useCallback(async (id) => {
     const crop = crops.find((c) => c.id === id);
     if (!crop) return;
 
@@ -310,13 +382,25 @@ export function FarmerProvider({ children }) {
       showToast('Cannot delete crop with pending transactions.', 'error');
       return;
     }
+
+    const isBackendId = typeof id === 'number' || (!isNaN(Number(id)) && !String(id).includes('CROP-'));
+    if (isBackendId) {
+      try {
+        await deleteCropApi(Number(id), user?.userId);
+      } catch (apiError) {
+        console.warn('Backend delete crop failed:', apiError);
+        showToast(apiError?.message || 'Failed to delete crop from server.', 'error', 6000);
+        return;
+      }
+    }
+
     setCrops((prev) => prev.filter((c) => c.id !== id));
     setStockRecords((prev) => prev.filter((s) => !matchesCropRecord(s, id, crop.name)));
     showToast(`Crop "${crop.name}" removed from inventory.`, 'info');
-  }, [crops, sales, showToast]);
+  }, [crops, sales, user?.userId, showToast]);
 
   // Adjust Stock / Harvest
-  const addHarvestStock = useCallback((cropIdentifier, additionalQty, unit = 'qtl') => {
+  const addHarvestStock = useCallback(async (cropIdentifier, additionalQty, unit = 'Quintals') => {
     const qty = Number(additionalQty);
     if (isNaN(qty) || qty <= 0) return;
 
@@ -326,11 +410,27 @@ export function FarmerProvider({ children }) {
     const cropId = cropTarget?.id || cropIdentifier;
     const cropName = cropTarget?.name || String(cropIdentifier || '').trim();
 
+    let updatedCropFromApi = null;
+    const isBackendId = typeof cropId === 'number' || (!isNaN(Number(cropId)) && !String(cropId).includes('CROP-'));
+
+    if (isBackendId) {
+      try {
+        updatedCropFromApi = await addCropYieldApi(Number(cropId), qty, user?.userId);
+      } catch (apiError) {
+        console.warn('Backend add yield stock failed:', apiError);
+        showToast(apiError?.message || 'Failed to add harvest yield to server.', 'error', 6000);
+        return;
+      }
+    }
+
     setCrops((prev) =>
       prev.map((c) => {
         if (matchesCropRecord(c, cropId, cropName)) {
-          const newHarvested = c.harvestedQuantity + qty;
-          const newAvailable = c.availableQuantity + qty;
+          if (updatedCropFromApi) {
+            return { ...c, ...updatedCropFromApi };
+          }
+          const newHarvested = (Number(c.harvestedQuantity) || 0) + qty;
+          const newAvailable = (Number(c.availableQuantity) || 0) + qty;
           return {
             ...c,
             harvestedQuantity: newHarvested,
@@ -375,7 +475,7 @@ export function FarmerProvider({ children }) {
     ]);
 
     showToast(`Harvest of ${qty} ${unit} added to ${cropName} successfully!`, 'success');
-  }, [crops, showToast]);
+  }, [crops, user?.userId, showToast]);
 
   // Sell Products: Create Sale Transaction
   const createSale = useCallback((saleForm) => {
@@ -769,6 +869,10 @@ export function FarmerProvider({ children }) {
 
       // Crops
       crops,
+      cropOptions,
+      isCropsLoading,
+      cropsError,
+      refreshCrops: loadCropsFromApi,
       addCrop,
       updateCrop,
       deleteCrop,
@@ -821,6 +925,10 @@ export function FarmerProvider({ children }) {
       profile,
       updateProfile,
       crops,
+      cropOptions,
+      isCropsLoading,
+      cropsError,
+      loadCropsFromApi,
       addCrop,
       updateCrop,
       deleteCrop,
