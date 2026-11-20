@@ -170,19 +170,23 @@ export function OTPConfirmations() {
     setRejectReason('');
   };
 
-  const handleConfirmPurchase = (e) => {
+  const handleConfirmPurchase = async (e) => {
     e.preventDefault();
     if (!verifyingRecord) return;
-    const result = verifyOtpConfirmation(verifyingRecord.id, otpInput);
+    const result = await verifyOtpConfirmation(verifyingRecord.id, otpInput);
     setFeedback(result);
     if (result.success) {
       setExpirySeconds(0);
     }
   };
 
-  const handleResendOtp = (record) => {
+  const handleResendOtp = async (record) => {
     if (!record || resendCooldown > 0) return;
-    const newCode = resendOtpConfirmation(record.id);
+    const result = await resendOtpConfirmation(record.id);
+    if (!result.success) {
+      setFeedback({ success: false, message: result.message });
+      return;
+    }
     setResendCooldown(30);
     if (verifyingId === record.id) {
       setExpirySeconds(300);
@@ -191,14 +195,14 @@ export function OTPConfirmations() {
       setFeedback({
         success: true,
         isInfo: true,
-        message: `New frontend demo OTP generated (${newCode}). Timer reset to 05:00 and attempts cleared.`,
+        message: result.message,
       });
     }
   };
 
-  const handleRejectPurchase = (record, reason) => {
+  const handleRejectPurchase = async (record, reason) => {
     if (!record) return;
-    const res = rejectOtpConfirmation(
+    const res = await rejectOtpConfirmation(
       record.id,
       reason.trim() || 'Purchase declined by customer'
     );
@@ -207,6 +211,8 @@ export function OTPConfirmations() {
       setIsRejectingMode(false);
       setRejectReason('');
       setFeedback(null);
+    } else {
+      setFeedback({ success: false, message: res.message });
     }
   };
 

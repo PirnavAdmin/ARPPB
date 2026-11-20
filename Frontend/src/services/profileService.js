@@ -649,11 +649,9 @@ export function mapCustomerDtoToProfile(dto = {}, existingProfile = {}, user = n
 
   const formattedCustomerId =
     user?.entityCode ||
-    (typeof dto.customerId === 'string' && dto.customerId.startsWith('CUS')
-      ? dto.customerId
-      : dto.customerId
-      ? `CUS-${dto.customerId}`
-      : existingProfile.customerId || 'CUS-1001');
+    (dto.customerId !== null && dto.customerId !== undefined
+      ? String(dto.customerId)
+      : existingProfile.customerId || '');
 
   const rawAddresses = Array.isArray(dto.addresses)
     ? dto.addresses
@@ -813,7 +811,7 @@ export async function setDefaultCustomerAddressApi(id) {
   try {
     const response = await api.patch(
       Endpoints.CUSTOMER_PROFILE.SET_DEFAULT_ADDRESS(id),
-      {},
+      undefined,
       {
         baseURL: getProfileBaseURL('customer'),
         useProfileBaseURL: true,
