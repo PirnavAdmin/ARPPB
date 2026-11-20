@@ -14,16 +14,23 @@ const MIDDLEMAN_OTP_STATUSES = ['Pending', 'Confirmed', 'Rejected', 'Expired'];
 export const OTPConfirmationsPage = () => {
   const { confirmations, confirmTransaction, rejectTransaction } = useMiddleman();
 
-  const handleVerifyOtp = ({ otpId }) => {
-    confirmTransaction(otpId);
+  const handleVerifyOtp = ({ otpId, record }) => {
+    const targetId = record?.confirmationId || record?.id || otpId;
+    confirmTransaction(targetId);
     return {
       success: true,
-      message: 'Transaction authorized! Stock & ledger records updated.',
+      message: `Transaction ${record?.transactionId || targetId} authorized! Stock & ledger records updated.`,
     };
   };
 
-  const handleRejectOtp = (otpId, reason) => {
-    rejectTransaction(otpId, reason);
+  const handleRejectOtp = (otpId, reason, record) => {
+    const targetId = record?.confirmationId || record?.id || otpId;
+    rejectTransaction(targetId, reason);
+  };
+
+  const handleResendOtp = (_otpId, record) => {
+    // Generates a demo OTP (or refreshes active demo OTP code)
+    return record?.demoOtpCode || '488031';
   };
 
   return (
@@ -36,6 +43,7 @@ export const OTPConfirmationsPage = () => {
       statusOptions={MIDDLEMAN_OTP_STATUSES}
       onVerifyOtp={handleVerifyOtp}
       onRejectOtp={handleRejectOtp}
+      onResendOtp={handleResendOtp}
       exportFilePrefix="Middleman_OTP_Confirmations_Log"
     />
   );
