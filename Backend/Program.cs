@@ -78,6 +78,13 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IOtpRepository, OtpRepository>();
 builder.Services.AddScoped<IFarmerProfileRepository, FarmerProfileRepository>();
 builder.Services.AddScoped<IVendorProfileRepository, VendorProfileRepository>();
+builder.Services.AddScoped<ICustomerMarketplaceRepository, CustomerMarketplaceRepository>();
+builder.Services.AddScoped<ICustomerPurchaseHistoryRepository, CustomerPurchaseHistoryRepository>();
+builder.Services.AddScoped<ICustomerNotificationRepository, CustomerNotificationRepository>();
+builder.Services.AddScoped<ICustomerCartRepository, CustomerCartRepository>();
+builder.Services.AddScoped<ICustomerDashboardRepository, CustomerDashboardRepository>();
+builder.Services.AddScoped<ICustomerOrderRepository, CustomerOrderRepository>();
+builder.Services.AddScoped<ICustomerOtpRepository, CustomerOtpRepository>();
 builder.Services.AddScoped<IMiddlemanNotificationRepository, MiddlemanNotificationRepository>();
 
 // SERVICE REGISTRATIONS
@@ -96,6 +103,13 @@ builder.Services.AddScoped<IFarmerProfileService, FarmerProfileService>();
 builder.Services.AddScoped<IMiddlemanProfileService, MiddlemanProfileService>();
 builder.Services.AddScoped<IVendorProfileService, VendorProfileService>();
 builder.Services.AddScoped<IVendorMobileChangeService, VendorMobileChangeService>();
+builder.Services.AddScoped<ICustomerMarketplaceService, CustomerMarketplaceService>();
+builder.Services.AddScoped<ICustomerPurchaseHistoryService, CustomerPurchaseHistoryService>();
+builder.Services.AddScoped<ICustomerNotificationService, CustomerNotificationService>();
+builder.Services.AddScoped<ICustomerCartService, CustomerCartService>();
+builder.Services.AddScoped<ICustomerDashboardService, CustomerDashboardService>();
+builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
+builder.Services.AddScoped<ICustomerOtpService, CustomerOtpService>();
 builder.Services.AddScoped<IMiddlemanNotificationService, MiddlemanNotificationService>();
 builder.Services.AddScoped<IMiddlemanLedgerService, MiddlemanLedgerService>();
 builder.Services.AddScoped<IMiddlemanDashboardService, MiddlemanDashboardService>();
