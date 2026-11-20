@@ -30,14 +30,19 @@ export const CustomerSalesTable = ({
         <tbody className="divide-y divide-[#E2E8F0] text-xs text-[#1F2937]">
           {sales.map((s) => (
             <tr key={s.saleId} className="hover:bg-slate-50/60 transition-colors">
-              <td className="py-3 px-3.5 font-mono font-bold text-[#0F766E]">{s.saleId}</td>
-              <td className="py-3 px-3.5 font-bold text-[#1F2937] max-w-[160px] truncate">
-                {s.customerName}
+              <td
+                onClick={() => onViewDetails && onViewDetails(s)}
+                className="py-3 px-3.5 font-mono font-bold text-[#0F766E] cursor-pointer hover:underline"
+              >
+                {s.saleId}
               </td>
-              <td className="py-3 px-3.5 font-medium">{s.cropName}</td>
+              <td className="py-3 px-3.5 font-bold text-[#1F2937] max-w-[160px] truncate">
+                {s.customerName || 'Direct Customer'}
+              </td>
+              <td className="py-3 px-3.5 font-medium">{s.cropName || ''}</td>
               <td className="py-3 px-3.5 text-right font-medium">{formatQuantity(s.quantity, s.unit)}</td>
-              <td className="py-3 px-3.5 text-right text-[#64748B]">{formatINR(s.price)}</td>
-              <td className="py-3 px-3.5 text-right font-bold text-[#0F766E]">{formatINR(s.finalAmount)}</td>
+              <td className="py-3 px-3.5 text-right text-[#64748B]">{formatINR(s.rate ?? s.price ?? 0)}</td>
+              <td className="py-3 px-3.5 text-right font-bold text-[#0F766E]">{formatINR(s.finalAmount ?? s.totalAmount ?? 0)}</td>
               <td className="py-3 px-3.5 text-[#64748B] whitespace-nowrap">{formatDate(s.salesDate)}</td>
               <td className="py-3 px-3.5">
                 <StatusBadge status={s.otpStatus} size="sm" />
@@ -72,4 +77,3 @@ export const CustomerSalesTable = ({
 };
 
 export default CustomerSalesTable;
-
