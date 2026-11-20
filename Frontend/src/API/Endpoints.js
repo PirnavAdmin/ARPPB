@@ -132,6 +132,18 @@ const API_ENDPOINTS = {
   // =========================
   // MIDDLEMAN PURCHASES
   // =========================
+  // =========================
+  // MIDDLEMAN CONFIRMATIONS
+  // =========================
+  MiddlemanConfirmations: {
+    summary: "/api/v1/middleman/confirmations/summary",
+    getAll: "/api/v1/middleman/confirmations",
+    getById: (id) => `/api/v1/middleman/confirmations/${id}`,
+    verify: (id) => `/api/v1/middleman/confirmations/${id}/verify`,
+    resend: (id) => `/api/v1/middleman/confirmations/${id}/resend`,
+    reject: (id) => `/api/v1/middleman/confirmations/${id}/reject`,
+  },
+
   MiddlemanPurchases: {
     getAll: "/api/v1/middleman/purchases",
     create: "/api/v1/middleman/purchases",

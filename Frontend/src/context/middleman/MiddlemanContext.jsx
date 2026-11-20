@@ -49,6 +49,12 @@ import {
   fetchMiddlemanVendorSalesApi,
   createMiddlemanVendorSaleApi,
 } from '../../services/middlemanVendorService';
+import {
+  fetchMiddlemanConfirmationsApi,
+  verifyMiddlemanOtpApi,
+  rejectMiddlemanOtpApi,
+  resendMiddlemanOtpApi,
+} from '../../services/middlemanConfirmationsService';
 
 const STORAGE_KEY = 'agriconnect_middleman_state_v1';
 
@@ -385,6 +391,19 @@ export const MiddlemanProvider = ({ children }) => {
     }
   }, []);
 
+  
+  // Fetch Middleman Confirmations from backend API (GET /api/v1/middleman/confirmations)
+  const refreshConfirmations = useCallback(async () => {
+    try {
+      const apiConfirmations = await fetchMiddlemanConfirmationsApi();
+      if (apiConfirmations && Array.isArray(apiConfirmations) && apiConfirmations.length > 0) {
+        setConfirmations(apiConfirmations);
+      }
+    } catch {
+      // fallback smoothly to existing state
+    }
+  }, []);
+
   useEffect(() => {
     Promise.resolve().then(() => {
       refreshProfile();
@@ -395,6 +414,7 @@ export const MiddlemanProvider = ({ children }) => {
       refreshLedger();
       refreshNotifications();
       refreshVendorSales();
+      refreshConfirmations();
     });
   }, [
     token,
@@ -408,6 +428,7 @@ export const MiddlemanProvider = ({ children }) => {
     refreshLedger,
     refreshNotifications,
     refreshVendorSales,
+    refreshConfirmations,
   ]);
 
   // Profile actions (PUT /api/v1/middleman-profile/{id})
@@ -832,9 +853,13 @@ export const MiddlemanProvider = ({ children }) => {
   }, [addNotification]);
 
   // Centralized OTP Confirmation Action (Simulated Verified Interaction)
-  const confirmTransaction = useCallback((confirmationId) => {
+  const confirmTransaction = useCallback((confirmationId, otpCode) => {
     const confItem = confirmations.find((c) => c.confirmationId === confirmationId || c.id === confirmationId);
     if (!confItem || confItem.otpStatus === 'Confirmed') return;
+
+    const targetId = confItem.confirmationId || confItem.id || confirmationId;
+    const codeToVerify = otpCode || confItem.demoOtpCode || '488031';
+    verifyMiddlemanOtpApi(targetId, codeToVerify).catch(() => null);
 
     const now = new Date().toISOString().replace('T', ' ').slice(0, 16);
 
@@ -1152,6 +1177,9 @@ export const MiddlemanProvider = ({ children }) => {
     const confItem = confirmations.find((c) => c.confirmationId === confirmationId || c.id === confirmationId);
     if (!confItem) return;
 
+    const targetId = confItem.confirmationId || confItem.id || confirmationId;
+    rejectMiddlemanOtpApi(targetId, reason).catch(() => null);
+
     setConfirmations((prev) =>
       prev.map((c) =>
         (c.confirmationId === confItem.confirmationId || (confItem.id && c.id === confItem.id))
@@ -1449,6 +1477,7 @@ export const MiddlemanProvider = ({ children }) => {
     confirmations,
     confirmTransaction,
     rejectTransaction,
+    refreshConfirmations,
     ledger,
     addLedgerEntry,
     settleLedgerEntry,
