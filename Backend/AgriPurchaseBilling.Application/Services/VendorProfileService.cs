@@ -1,4 +1,4 @@
-using AgriPurchaseBilling.Application.DTOs;
+﻿using AgriPurchaseBilling.Application.DTOs;
 using AgriPurchaseBilling.Application.Interfaces;
 using AgriPurchaseBilling.Domain.Entities;
 
@@ -27,12 +27,24 @@ namespace AgriPurchaseBilling.Application.Services
             return MapProfile(profile, bank);
         }
 
-        public async Task<VendorProfileDto?> UpdateProfileAsync(
-            long userId,
-            UpdateVendorProfileRequest request,
+        public async Task<List<VendorProfileDto>> GetAllProfilesAsync(
             CancellationToken cancellationToken = default)
         {
-            var profile = await _repository.UpdateProfileAsync(userId, request, cancellationToken);
+            var profiles = await _repository.GetAllProfilesAsync(cancellationToken);
+            var banks = (await _repository.GetAllPrimaryBanksAsync(cancellationToken))
+                .GroupBy(x => x.VendorProfileId)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            return profiles
+                .Select(p => MapProfile(p, banks.GetValueOrDefault(p.Id)))
+                .ToList();
+        }
+
+        public async Task<VendorProfileDto?> GetProfileByIdAsync(
+            long id,
+            CancellationToken cancellationToken = default)
+        {
+            var profile = await _repository.GetProfileByIdAsync(id, cancellationToken);
             if (profile == null)
             {
                 return null;
@@ -40,6 +52,65 @@ namespace AgriPurchaseBilling.Application.Services
 
             var bank = await _repository.GetPrimaryBankAsync(profile.Id, cancellationToken);
             return MapProfile(profile, bank);
+        }
+
+        public async Task<VendorProfileDto?> UpdateProfileByIdAsync(
+            long userId,
+            long id,
+            UpdateVendorProfileRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            var existing = await _repository.GetProfileByIdAsync(id, cancellationToken);
+            if (existing == null)
+            {
+                return null;
+            }
+
+            if (existing.Vendor?.UserId != userId)
+            {
+                throw new UnauthorizedAccessException(
+                    "You can only update your own vendor profile.");
+            }
+
+            var updated = await _repository.UpdateProfileAsync(id, request, cancellationToken);
+            if (updated == null)
+            {
+                return null;
+            }
+
+            var bank = await _repository.GetPrimaryBankAsync(updated.Id, cancellationToken);
+            return MapProfile(updated, bank);
+        }
+
+        private static VendorProfileDto MapProfile(VendorProfile profile, VendorBankAccount? bank)
+        {
+            var features = new List<string>();
+            if (profile.OtpSecurityEnabled) features.Add("OTP Security");
+            if (profile.GstBillingEnabled) features.Add("GST Billing");
+
+            return new VendorProfileDto
+            {
+                Id = profile.Id,
+                VendorCode = profile.VendorCode,
+                BusinessName = profile.BusinessName,
+                Initials = Initials(profile.BusinessName),
+                Status = profile.IsActive ? "Active" : "Inactive",
+                IsVerified = profile.IsVerified,
+                VerificationLabel = profile.IsVerified ? "Verified Enterprise Vendor" : "Verification Pending",
+                BusinessDescription = profile.BusinessType,
+                Location = FormatLocation(profile.District, profile.State, profile.PinCode),
+                Gstin = profile.Gstin ?? string.Empty,
+                ApmcLicenseNumber = profile.ApmcLicenseNumber ?? string.Empty,
+                Compliance = new VendorComplianceDto
+                {
+                    OtpSecurityEnabled = profile.OtpSecurityEnabled,
+                    GstBillingEnabled = profile.GstBillingEnabled,
+                    Summary = features.Count == 0 ? "No compliance features enabled" : $"{string.Join(" & ", features)} Enabled",
+                    LastUpdated = profile.ComplianceUpdatedAt
+                },
+                Business = MapBusiness(profile),
+                BankDetails = bank == null ? null : MapBank(bank, reveal: false)
+            };
         }
 
         public async Task<VendorBankDetailsDto?> GetBankDetailsAsync(
@@ -78,35 +149,6 @@ namespace AgriPurchaseBilling.Application.Services
             await _repository.UpsertBankAsync(profile.Id, request, cancellationToken);
             var bank = await _repository.GetPrimaryBankAsync(profile.Id, cancellationToken);
             return bank == null ? null : MapBank(bank, reveal: false);
-        }
-
-        private static VendorProfileDto MapProfile(VendorProfile profile, VendorBankAccount? bank)
-        {
-            var features = new List<string>();
-            if (profile.OtpSecurityEnabled) features.Add("OTP Security");
-            if (profile.GstBillingEnabled) features.Add("GST Billing");
-
-            return new VendorProfileDto
-            {
-                VendorCode = profile.VendorCode,
-                BusinessName = profile.BusinessName,
-                Initials = Initials(profile.BusinessName),
-                Status = profile.IsActive ? "Active" : "Inactive",
-                IsVerified = profile.IsVerified,
-                VerificationLabel = profile.IsVerified ? "Verified Enterprise Vendor" : "Verification Pending",
-                BusinessDescription = profile.BusinessType,
-                Location = FormatLocation(profile.District, profile.State, profile.PinCode),
-                Gstin = profile.Gstin ?? string.Empty,
-                Compliance = new VendorComplianceDto
-                {
-                    OtpSecurityEnabled = profile.OtpSecurityEnabled,
-                    GstBillingEnabled = profile.GstBillingEnabled,
-                    Summary = features.Count == 0 ? "No compliance features enabled" : $"{string.Join(" & ", features)} Enabled",
-                    LastUpdated = profile.ComplianceUpdatedAt
-                },
-                Business = MapBusiness(profile),
-                BankDetails = bank == null ? null : MapBank(bank, reveal: false)
-            };
         }
 
         private static VendorBusinessProfileDto MapBusiness(VendorProfile profile) => new()

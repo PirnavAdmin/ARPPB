@@ -8,6 +8,7 @@ export const NotificationsPage = () => {
     notifications,
     markNotificationAsRead,
     markAllNotificationsAsRead,
+    deleteNotification,
   } = useMiddleman();
 
   return (
@@ -19,6 +20,7 @@ export const NotificationsPage = () => {
       categories={MIDDLEMAN_NOTIFICATION_CATEGORIES}
       onMarkRead={markNotificationAsRead}
       onMarkAllRead={markAllNotificationsAsRead}
+      onDelete={deleteNotification}
     />
   );
 };

@@ -30,10 +30,18 @@ export const MiddlemanRoutes = () => {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<MiddlemanDashboard />} />
           <Route path="farmers" element={<FarmersPage />} />
+          <Route path="farmers/register" element={<FarmersPage initialOpenRegister />} />
+          <Route path="farmers/add" element={<FarmersPage initialOpenRegister />} />
           <Route path="vendors" element={<VendorsPage />} />
+          <Route path="vendors/register" element={<VendorsPage initialOpenRegister />} />
+          <Route path="vendors/add" element={<VendorsPage initialOpenRegister />} />
           <Route path="customers" element={<CustomersPage />} />
           <Route path="purchases" element={<PurchaseFromFarmersPage />} />
+          <Route path="purchase-history" element={<Navigate to="/middleman/sales-history" state={{ activeTab: 'farmer' }} replace />} />
           <Route path="sales/vendors" element={<SalesToVendorsPage />} />
+          <Route path="sales-to-vendors" element={<SalesToVendorsPage />} />
+          <Route path="sales/vendors/history" element={<Navigate to="/middleman/sales-history" state={{ activeTab: 'vendor' }} replace />} />
+          <Route path="vendor-sales-history" element={<Navigate to="/middleman/sales-history" state={{ activeTab: 'vendor' }} replace />} />
           <Route path="sales/customers" element={<SalesToCustomersPage />} />
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="sales-history" element={<SalesHistoryPage />} />

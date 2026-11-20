@@ -69,6 +69,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         connectionString,
         serverVersion));
 builder.Services.AddCustomerProfileModule();
+builder.Services.AddFarmerCropsModule();
+builder.Services.AddVendorOperationsModule(connectionString);
 
 // REPOSITORY REGISTRATIONS
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
@@ -76,6 +78,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IOtpRepository, OtpRepository>();
 builder.Services.AddScoped<IFarmerProfileRepository, FarmerProfileRepository>();
 builder.Services.AddScoped<IVendorProfileRepository, VendorProfileRepository>();
+builder.Services.AddScoped<IMiddlemanNotificationRepository, MiddlemanNotificationRepository>();
 
 // SERVICE REGISTRATIONS
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
@@ -93,6 +96,13 @@ builder.Services.AddScoped<IFarmerProfileService, FarmerProfileService>();
 builder.Services.AddScoped<IMiddlemanProfileService, MiddlemanProfileService>();
 builder.Services.AddScoped<IVendorProfileService, VendorProfileService>();
 builder.Services.AddScoped<IVendorMobileChangeService, VendorMobileChangeService>();
+builder.Services.AddScoped<IMiddlemanNotificationService, MiddlemanNotificationService>();
+builder.Services.AddScoped<IMiddlemanLedgerService, MiddlemanLedgerService>();
+builder.Services.AddScoped<IMiddlemanDashboardService, MiddlemanDashboardService>();
+builder.Services.AddScoped<IMiddlemanInventoryService, MiddlemanInventoryService>();
+builder.Services.AddScoped<IMiddlemanFarmerService, MiddlemanFarmerService>();
+builder.Services.AddScoped<IMiddlemanPurchaseService, MiddlemanPurchaseService>();
+builder.Services.AddScoped<IMiddlemanVendorService, MiddlemanVendorService>();
 
 // JWT registration
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
@@ -205,14 +215,23 @@ builder.Services.AddSwaggerGen(options =>
 // BUILD APPLICATION
 var app = builder.Build();
 
+// Honor ngrok / reverse-proxy headers so Swagger works on both local and public URLs
+app.UseForwardedHeaders(new Microsoft.AspNetCore.Builder.ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+                     | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+                     | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedHost
+});
+
 // SWAGGER MIDDLEWARE
 app.UseSwagger();
 
 app.UseSwaggerUI(options =>
 {
     options.RoutePrefix = "swagger";
+    // Relative path (no leading slash) works under both localhost and ngrok
     options.SwaggerEndpoint(
-        "/swagger/v1/swagger.json",
+        "v1/swagger.json",
         "ARPPB API v1");
 });
 
@@ -224,8 +243,8 @@ app.UseAuthorization();
 // MAP CONTROLLERS
 app.MapControllers();
 
-// REDIRECT ROOT TO SWAGGER UI
-app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
+// REDIRECT ROOT TO SWAGGER UI (Supports GET and HEAD for tunnel/health probes)
+app.MapMethods("/", new[] { "GET", "HEAD" }, () => Results.Redirect("/swagger")).ExcludeFromDescription();
 
 // RUN
 app.Run();

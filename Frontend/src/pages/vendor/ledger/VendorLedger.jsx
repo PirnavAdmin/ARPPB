@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   CreditCard,
   ArrowUpRight,
@@ -15,6 +15,7 @@ import { formatCurrency } from '../../../utils/formatCurrency';
 import { LEDGER_CATEGORIES } from '../../../utils/constants';
 import VendorModal from '../VendorModal';
 import SharedMyLedger from '../../../components/shared/ledger/MyLedger';
+import { fetchVendorLedgerByIdApi } from '../../../services/vendorApiService';
 
 const SUB_LEDGER_TABS = [
   {
@@ -49,6 +50,12 @@ export default function VendorLedger() {
 
   // Settlement Modal State
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (isSettlementModalOpen && ledger[0]?.id) {
+      fetchVendorLedgerByIdApi(ledger[0].id);
+    }
+  }, [isSettlementModalOpen, ledger]);
   const [settlementForm, setSettlementForm] = useState({
     settlementType: 'Supplier Payment',
     partyCategory: 'Farmer',

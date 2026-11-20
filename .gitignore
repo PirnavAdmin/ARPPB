@@ -1,2 +1,9 @@
-notepad .gitignore
+# Visual Studio temporary & cache files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Node modules
 node_modules/

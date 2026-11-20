@@ -1,4 +1,5 @@
-import { createContext, useState, useCallback, useMemo } from 'react';
+import { createContext, useState, useCallback, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { toast } from 'sonner';
 import {
@@ -31,6 +32,52 @@ import {
   calculateSalesTotals,
 } from '../utils/calculations';
 import { confirmationService } from '../services/confirmationService';
+import {
+  fetchVendorDashboardOtpConfirmationsApi,
+  verifyVendorDashboardOtpApi,
+  fetchVendorFarmersApi,
+  createVendorFarmerApi,
+  updateVendorFarmerApi,
+  updateVendorFarmerStatusApi,
+  fetchVendorMiddlemenApi,
+  createVendorMiddlemanApi,
+  updateVendorMiddlemanApi,
+  updateVendorMiddlemanStatusApi,
+  fetchVendorCustomersApi,
+  createVendorCustomerApi,
+  updateVendorCustomerApi,
+  updateVendorCustomerStatusApi,
+  fetchVendorRawMaterialsApi,
+  fetchVendorRawMaterialMovementsApi,
+  fetchVendorProcessingBatchesApi,
+  createVendorProcessingBatchApi,
+  fetchVendorFinishedProductsApi,
+  createVendorFinishedProductApi,
+  updateVendorFinishedProductApi,
+  adjustVendorFinishedProductStockApi,
+  updateVendorFinishedProductStatusApi,
+  fetchVendorSalesBatchesApi,
+  fetchVendorSalesApi,
+  createVendorSaleApi,
+  updateVendorSaleApi,
+  deleteVendorSaleApi,
+  submitVendorSaleApi,
+  fetchVendorOrdersApi,
+  updateVendorOrderStatusApi,
+  cancelVendorOrderApi,
+  fetchVendorConfirmationsApi,
+  createVendorConfirmationApi,
+  verifyVendorConfirmationOtpApi,
+  resendVendorConfirmationOtpApi,
+  fetchVendorLedgerApi,
+  payVendorSupplierApi,
+  recordVendorCustomerReceiptApi,
+  settleVendorLedgerEntryApi,
+  fetchVendorNotificationsApi,
+  markVendorNotificationReadApi,
+  markAllVendorNotificationsReadApi,
+  deleteVendorNotificationApi,
+} from '../services/vendorApiService';
 
 export const VendorContext = createContext(null);
 
@@ -89,6 +136,102 @@ export function VendorProvider({ children }) {
       return next;
     });
   };
+
+  const location = useLocation();
+  const currentPathname = location?.pathname || '';
+  const isVendorRoute = currentPathname.startsWith('/vendor');
+  const isCustomerRoute = currentPathname.startsWith('/customer');
+
+  // Sync Vendor Portal data from backend APIs in small staged batches
+  // so ngrok / Vite proxy is never flooded with dozens of concurrent sockets.
+  const refreshVendorPortalData = useCallback(async (onlyCatalog = false) => {
+    try {
+      const [rawMaterialsList, finishedProductsList, salesBatchesList] = await Promise.all([
+        fetchVendorRawMaterialsApi(),
+        fetchVendorFinishedProductsApi(),
+        fetchVendorSalesBatchesApi(),
+      ]);
+
+      if (Array.isArray(rawMaterialsList) && rawMaterialsList.length > 0) {
+        updateStateAndStorage(setInventory, STORAGE_KEYS.INVENTORY, rawMaterialsList);
+      }
+      if (Array.isArray(finishedProductsList) && finishedProductsList.length > 0) {
+        updateStateAndStorage(setProducts, STORAGE_KEYS.PRODUCTS, finishedProductsList);
+      }
+      if (Array.isArray(salesBatchesList) && salesBatchesList.length > 0) {
+        updateStateAndStorage(setProductBatches, STORAGE_KEYS.PRODUCT_BATCHES, salesBatchesList);
+      }
+
+      if (onlyCatalog) return;
+
+      const [farmersList, middlemenList, customersList, rawMovementsList] = await Promise.all([
+        fetchVendorFarmersApi(),
+        fetchVendorMiddlemenApi(),
+        fetchVendorCustomersApi(),
+        fetchVendorRawMaterialMovementsApi(),
+      ]);
+
+      const [processingList, salesList, ordersList, confirmationsList] = await Promise.all([
+        fetchVendorProcessingBatchesApi(),
+        fetchVendorSalesApi(),
+        fetchVendorOrdersApi(),
+        fetchVendorConfirmationsApi(),
+      ]);
+
+      const [dashboardConfirmationsList, ledgerList, notificationsList] = await Promise.all([
+        fetchVendorDashboardOtpConfirmationsApi(),
+        fetchVendorLedgerApi(),
+        fetchVendorNotificationsApi(),
+      ]);
+
+      if (Array.isArray(farmersList) && farmersList.length > 0) {
+        updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, farmersList);
+      }
+      if (Array.isArray(middlemenList) && middlemenList.length > 0) {
+        updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, middlemenList);
+      }
+      if (Array.isArray(customersList) && customersList.length > 0) {
+        updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, customersList);
+      }
+      if (Array.isArray(rawMovementsList) && rawMovementsList.length > 0) {
+        updateStateAndStorage(setStockMovements, STORAGE_KEYS.STOCK_MOVEMENTS, rawMovementsList);
+      }
+      if (Array.isArray(processingList) && processingList.length > 0) {
+        updateStateAndStorage(setProcessingRecords, STORAGE_KEYS.PROCESSING, processingList);
+      }
+      if (Array.isArray(salesList) && salesList.length > 0) {
+        updateStateAndStorage(setSales, STORAGE_KEYS.SALES, salesList);
+      }
+      if (Array.isArray(ordersList) && ordersList.length > 0) {
+        updateStateAndStorage(setOrders, STORAGE_KEYS.ORDERS, ordersList);
+      }
+      const mergedConfirmations =
+        Array.isArray(confirmationsList) && confirmationsList.length > 0
+          ? confirmationsList
+          : Array.isArray(dashboardConfirmationsList) && dashboardConfirmationsList.length > 0
+          ? dashboardConfirmationsList
+          : null;
+      if (mergedConfirmations) {
+        updateStateAndStorage(setConfirmations, STORAGE_KEYS.CONFIRMATIONS, mergedConfirmations);
+      }
+      if (Array.isArray(ledgerList) && ledgerList.length > 0) {
+        updateStateAndStorage(setLedger, STORAGE_KEYS.LEDGER, ledgerList);
+      }
+      if (Array.isArray(notificationsList) && notificationsList.length > 0) {
+        updateStateAndStorage(setNotifications, STORAGE_KEYS.NOTIFICATIONS, notificationsList);
+      }
+    } catch {
+      // Keep local storage fallback silently
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isVendorRoute) {
+      refreshVendorPortalData(false);
+    } else if (isCustomerRoute) {
+      refreshVendorPortalData(true);
+    }
+  }, [isVendorRoute, isCustomerRoute, refreshVendorPortalData]);
 
   // Notification generator
   const pushNotification = useCallback(
@@ -159,6 +302,13 @@ export function VendorProvider({ children }) {
         createdAt: dayjs().format('YYYY-MM-DD'),
       };
       updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev) => [newFarmer, ...prev]);
+      createVendorFarmerApi(newFarmer).then((created) => {
+        if (created && created.rawId) {
+          updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev) =>
+            prev.map((f) => (f.id === newId ? { ...f, rawId: created.rawId } : f))
+          );
+        }
+      });
       toast.success(`Farmer ${newFarmer.farmerName} (${newId}) registered successfully.`);
       return newFarmer;
     },
@@ -169,15 +319,20 @@ export function VendorProvider({ children }) {
     updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev) =>
       prev.map((f) => (f.id === id ? { ...f, ...payload } : f))
     );
+    updateVendorFarmerApi(id, payload);
     toast.success(`Farmer ${id} updated successfully.`);
   }, []);
 
   const toggleFarmerStatus = useCallback((id) => {
+    let nextStatus = 'Active';
     updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev) =>
-      prev.map((f) =>
-        f.id === id ? { ...f, status: f.status === 'Active' ? 'Inactive' : 'Active' } : f
-      )
+      prev.map((f) => {
+        if (f.id !== id) return f;
+        nextStatus = f.status === 'Active' ? 'Inactive' : 'Active';
+        return { ...f, status: nextStatus };
+      })
     );
+    updateVendorFarmerStatusApi(id, nextStatus);
     toast.info(`Farmer ${id} status updated.`);
   }, []);
 
@@ -232,6 +387,13 @@ export function VendorProvider({ children }) {
         createdAt: dayjs().format('YYYY-MM-DD'),
       };
       updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev) => [newMid, ...prev]);
+      createVendorMiddlemanApi(newMid).then((created) => {
+        if (created && created.rawId) {
+          updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev) =>
+            prev.map((m) => (m.id === newId ? { ...m, rawId: created.rawId } : m))
+          );
+        }
+      });
       toast.success(`Middleman ${newMid.businessName} (${newId}) registered successfully.`);
       return newMid;
     },
@@ -242,15 +404,20 @@ export function VendorProvider({ children }) {
     updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev) =>
       prev.map((m) => (m.id === id ? { ...m, ...payload } : m))
     );
+    updateVendorMiddlemanApi(id, payload);
     toast.success(`Middleman ${id} updated successfully.`);
   }, []);
 
   const toggleMiddlemanStatus = useCallback((id) => {
+    let nextStatus = 'Active';
     updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev) =>
-      prev.map((m) =>
-        m.id === id ? { ...m, status: m.status === 'Active' ? 'Inactive' : 'Active' } : m
-      )
+      prev.map((m) => {
+        if (m.id !== id) return m;
+        nextStatus = m.status === 'Active' ? 'Inactive' : 'Active';
+        return { ...m, status: nextStatus };
+      })
     );
+    updateVendorMiddlemanStatusApi(id, nextStatus);
     toast.info(`Middleman ${id} status updated.`);
   }, []);
 
@@ -312,6 +479,13 @@ export function VendorProvider({ children }) {
         createdAt: dayjs().format('YYYY-MM-DD'),
       };
       updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev) => [newCust, ...prev]);
+      createVendorCustomerApi(newCust).then((created) => {
+        if (created && created.rawId) {
+          updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev) =>
+            prev.map((c) => (c.id === newId ? { ...c, rawId: created.rawId } : c))
+          );
+        }
+      });
       toast.success(`Customer ${newCust.customerName} (${newId}) registered successfully.`);
       return newCust;
     },
@@ -322,15 +496,20 @@ export function VendorProvider({ children }) {
     updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev) =>
       prev.map((c) => (c.id === id ? { ...c, ...payload } : c))
     );
+    updateVendorCustomerApi(id, payload);
     toast.success(`Customer ${id} updated successfully.`);
   }, []);
 
   const toggleCustomerStatus = useCallback((id) => {
+    let nextStatus = 'Active';
     updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev) =>
-      prev.map((c) =>
-        c.id === id ? { ...c, status: c.status === 'Active' ? 'Inactive' : 'Active' } : c
-      )
+      prev.map((c) => {
+        if (c.id !== id) return c;
+        nextStatus = c.status === 'Active' ? 'Inactive' : 'Active';
+        return { ...c, status: nextStatus };
+      })
     );
+    updateVendorCustomerStatusApi(id, nextStatus);
     toast.info(`Customer ${id} status updated.`);
   }, []);
 
@@ -439,6 +618,21 @@ export function VendorProvider({ children }) {
           otpRecord,
           ...prev,
         ]);
+        createVendorConfirmationApi(otpRecord).then((created) => {
+          if (created && (created.rawId || created.demoOtpCode)) {
+            updateStateAndStorage(setConfirmations, STORAGE_KEYS.CONFIRMATIONS, (prev) =>
+              prev.map((c) =>
+                c.id === newOtpId
+                  ? {
+                      ...c,
+                      rawId: created.rawId ?? c.rawId,
+                      backendOtp: created.demoOtpCode || c.backendOtp,
+                    }
+                  : c
+              )
+            );
+          }
+        });
 
         pushNotification({
           category: isFarmer ? 'New Farmer Purchase' : 'New Middleman Purchase',
@@ -515,6 +709,21 @@ export function VendorProvider({ children }) {
         otpRecord,
         ...prev,
       ]);
+      createVendorConfirmationApi(otpRecord).then((created) => {
+        if (created && (created.rawId || created.demoOtpCode)) {
+          updateStateAndStorage(setConfirmations, STORAGE_KEYS.CONFIRMATIONS, (prev) =>
+            prev.map((c) =>
+              c.id === newOtpId
+                ? {
+                    ...c,
+                    rawId: created.rawId ?? c.rawId,
+                    backendOtp: created.demoOtpCode || c.backendOtp,
+                  }
+                : c
+            )
+          );
+        }
+      });
 
       toast.success(`Draft ${purchaseId} submitted! Demo OTP: ${demoOtpCode}`);
       return { otpId: newOtpId, demoOtpCode };
@@ -564,6 +773,7 @@ export function VendorProvider({ children }) {
             : c
         )
       );
+      resendVendorConfirmationOtpApi(target.rawId || target.id);
 
       if (target.transactionId.startsWith('PUR-')) {
         updateStateAndStorage(setPurchases, STORAGE_KEYS.PURCHASES, (prev) =>
@@ -580,9 +790,18 @@ export function VendorProvider({ children }) {
   );
 
   const verifyTransactionOtp = useCallback(
-    (otpIdOrTransactionId, enteredCode) => {
+    (otpIdOrTransactionId, enteredCodeArg) => {
+      const lookupId =
+        otpIdOrTransactionId && typeof otpIdOrTransactionId === 'object'
+          ? otpIdOrTransactionId.otpId || otpIdOrTransactionId.transactionId
+          : otpIdOrTransactionId;
+      const enteredCode =
+        otpIdOrTransactionId && typeof otpIdOrTransactionId === 'object'
+          ? otpIdOrTransactionId.enteredCode
+          : enteredCodeArg;
+
       const otpRecord = confirmations.find(
-        (c) => c.id === otpIdOrTransactionId || c.transactionId === otpIdOrTransactionId
+        (c) => c.id === lookupId || c.transactionId === lookupId
       );
       if (!otpRecord) {
         toast.error('OTP record not found.');
@@ -662,6 +881,15 @@ export function VendorProvider({ children }) {
               }
             : c
         )
+      );
+      verifyVendorConfirmationOtpApi(
+        otpRecord.rawId || otpRecord.id,
+        otpRecord.backendOtp || cleanedInput
+      );
+      verifyVendorDashboardOtpApi(
+        String(otpRecord.partyCategory || 'farmer').toLowerCase(),
+        otpRecord.rawId || otpRecord.id,
+        otpRecord.backendOtp || cleanedInput
       );
 
       // CASE A: FARMER OR MIDDLEMAN PURCHASE CONFIRMATION
@@ -1008,6 +1236,7 @@ export function VendorProvider({ children }) {
             ? prev.map((r) => (r.id === procId ? draftRecord : r))
             : [draftRecord, ...prev];
         });
+        createVendorProcessingBatchApi(draftRecord);
 
         toast.info(`Processing Draft ${procId} saved. Raw material stock was not deducted.`);
         return { success: true, record: draftRecord };
@@ -1239,6 +1468,7 @@ export function VendorProvider({ children }) {
           ? prev.map((r) => (r.id === procId ? completedRecord : r))
           : [completedRecord, ...prev];
       });
+      createVendorProcessingBatchApi(completedRecord);
 
       pushNotification({
         category: 'Processing Completed',
@@ -1301,6 +1531,7 @@ export function VendorProvider({ children }) {
       };
 
       updateStateAndStorage(setProducts, STORAGE_KEYS.PRODUCTS, (prev) => [newProd, ...prev]);
+      createVendorFinishedProductApi(newProd);
       toast.success(`Finished Product ${newProd.productName} (${newId}) created.`);
       return newProd;
     },
@@ -1329,6 +1560,10 @@ export function VendorProvider({ children }) {
         };
       })
     );
+    updateVendorFinishedProductApi(id, payload);
+    if (payload.status) {
+      updateVendorFinishedProductStatusApi(id, payload.status);
+    }
     toast.success(`Product ${id} updated.`);
   }, []);
 
@@ -1379,6 +1614,14 @@ export function VendorProvider({ children }) {
           )
         );
       }
+
+      adjustVendorFinishedProductStockApi(productId, {
+        batchId,
+        adjustmentType,
+        quantity,
+        reason,
+        newSellingPrice: sellPrice,
+      });
 
       toast.success(`Stock updated for ${prod.productName} (${reason || 'Manual adjustment'}).`);
       return { success: true };
@@ -1570,6 +1813,7 @@ export function VendorProvider({ children }) {
 
       updateStateAndStorage(setSales, STORAGE_KEYS.SALES, (prev) => [saleRecord, ...prev]);
       updateStateAndStorage(setOrders, STORAGE_KEYS.ORDERS, (prev) => [orderRecord, ...prev]);
+      createVendorSaleApi(saleRecord, isDraft);
 
       if (!isDraft) {
         const otpRecord = {
@@ -1603,6 +1847,8 @@ export function VendorProvider({ children }) {
           otpRecord,
           ...prev,
         ]);
+        submitVendorSaleApi(newSaleId, saleRecord);
+        createVendorConfirmationApi(otpRecord);
 
         pushNotification({
           category: 'Customer Order Received',
@@ -1820,6 +2066,12 @@ export function VendorProvider({ children }) {
         )
       );
 
+      if (nextStatus === 'Cancelled') {
+        cancelVendorOrderApi(orderId, reason);
+      } else {
+        updateVendorOrderStatusApi(orderId, nextStatus, reason);
+      }
+
       if (sale) {
         updateStateAndStorage(setSales, STORAGE_KEYS.SALES, (prev) =>
           prev.map((s) =>
@@ -1832,6 +2084,11 @@ export function VendorProvider({ children }) {
               : s
           )
         );
+        if (nextStatus === 'Cancelled') {
+          deleteVendorSaleApi(sale.id);
+        } else {
+          updateVendorSaleApi(sale.id, { salesStatus: nextStatus });
+        }
       }
 
       if (nextStatus === 'Completed') {
@@ -1899,6 +2156,29 @@ export function VendorProvider({ children }) {
         return [entry, ...prevLedger];
       });
 
+      const settlementPayload = {
+        settlementType,
+        partyId,
+        partyName,
+        partyCategory,
+        referenceTransactionId: settlementTxnId,
+        amount: numAmount,
+        paymentMode,
+        notes,
+        date,
+      };
+      if (isSupplier) {
+        payVendorSupplierApi(settlementPayload);
+      } else {
+        recordVendorCustomerReceiptApi(settlementPayload);
+      }
+      const linkedLedger = ledger.find(
+        (l) => l.transactionId === referenceTransactionId || l.id === referenceTransactionId
+      );
+      if (linkedLedger) {
+        settleVendorLedgerEntryApi(linkedLedger.id, settlementPayload);
+      }
+
       // Update linked purchase or sale paid/received amount
       if (isSupplier && referenceTransactionId.startsWith('PUR-')) {
         updateStateAndStorage(setPurchases, STORAGE_KEYS.PURCHASES, (prev) =>
@@ -1949,12 +2229,14 @@ export function VendorProvider({ children }) {
     updateStateAndStorage(setNotifications, STORAGE_KEYS.NOTIFICATIONS, (prev) =>
       prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
     );
+    markVendorNotificationReadApi(id);
   }, []);
 
   const markAllNotificationsRead = useCallback(() => {
     updateStateAndStorage(setNotifications, STORAGE_KEYS.NOTIFICATIONS, (prev) =>
       prev.map((n) => ({ ...n, isRead: true }))
     );
+    markAllVendorNotificationsReadApi();
     toast.success('All notifications marked as read.');
   }, []);
 
@@ -1962,6 +2244,7 @@ export function VendorProvider({ children }) {
     updateStateAndStorage(setNotifications, STORAGE_KEYS.NOTIFICATIONS, (prev) =>
       prev.filter((n) => n.id !== id)
     );
+    deleteVendorNotificationApi(id);
     toast.info('Notification deleted.');
   }, []);
 
@@ -2146,6 +2429,7 @@ export function VendorProvider({ children }) {
       pendingConfirmationsCount,
       financialSummary,
       // Actions
+      refreshVendorPortalData,
       addFarmer,
       updateFarmer,
       toggleFarmerStatus,
@@ -2196,6 +2480,7 @@ export function VendorProvider({ children }) {
       unreadNotificationsCount,
       pendingConfirmationsCount,
       financialSummary,
+      refreshVendorPortalData,
       addFarmer,
       updateFarmer,
       toggleFarmerStatus,

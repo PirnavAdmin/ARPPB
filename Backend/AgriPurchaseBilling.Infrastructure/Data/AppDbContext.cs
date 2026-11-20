@@ -25,6 +25,17 @@ namespace AgriPurchaseBilling.Infrastructure.Data
         public DbSet<MiddlemanProfile> MiddlemanProfiles => Set<MiddlemanProfile>();
         public DbSet<VendorProfile> VendorProfiles => Set<VendorProfile>();
         public DbSet<VendorBankAccount> VendorBankAccounts => Set<VendorBankAccount>();
+        public DbSet<MiddlemanLedger> MiddlemanLedgers => Set<MiddlemanLedger>();
+        public DbSet<MiddlemanInventory> MiddlemanInventories => Set<MiddlemanInventory>();
+        public DbSet<MiddlemanFarmer> MiddlemanFarmers => Set<MiddlemanFarmer>();
+        public DbSet<MiddlemanVendor> MiddlemanVendors => Set<MiddlemanVendor>();
+        public DbSet<MiddlemanVendorSale> MiddlemanVendorSales => Set<MiddlemanVendorSale>();
+        public DbSet<MiddlemanConfirmation> MiddlemanConfirmations => Set<MiddlemanConfirmation>();
+        public DbSet<MiddlemanPurchase> MiddlemanPurchases => Set<MiddlemanPurchase>();
+        public DbSet<MiddlemanSale> MiddlemanSales => Set<MiddlemanSale>();
+        public DbSet<MiddlemanNotification> MiddlemanNotifications => Set<MiddlemanNotification>();
+        public DbSet<FarmerCrop> FarmerCrops => Set<FarmerCrop>();
+        public DbSet<FarmerCropYieldLog> FarmerCropYieldLogs => Set<FarmerCropYieldLog>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -522,6 +533,60 @@ namespace AgriPurchaseBilling.Infrastructure.Data
                 entity.HasOne(e => e.User)
                     .WithMany(u => u.MobileHistories)
                     .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // FarmerCrops
+            modelBuilder.Entity<FarmerCrop>(entity =>
+            {
+                entity.ToTable("farmer_crops");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.CropCode).HasColumnName("crop_code").IsRequired().HasMaxLength(50);
+                entity.HasIndex(e => e.CropCode).IsUnique().HasDatabaseName("uk_crop_code");
+                entity.Property(e => e.FarmerId).HasColumnName("farmer_id").IsRequired();
+                entity.HasIndex(e => e.FarmerId).HasDatabaseName("idx_farmer_id");
+                entity.Property(e => e.CropName).HasColumnName("crop_name").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CropCategory).HasColumnName("crop_category").IsRequired().HasMaxLength(60);
+                entity.Property(e => e.CropVariety).HasColumnName("crop_variety").IsRequired().HasMaxLength(150);
+                entity.Property(e => e.Season).HasColumnName("season").IsRequired().HasMaxLength(50);
+                entity.Property(e => e.CultivationAreaAcres).HasColumnName("cultivation_area_acres").HasPrecision(8, 2);
+                entity.Property(e => e.HarvestDate).HasColumnName("harvest_date");
+                entity.Property(e => e.HarvestedQuantity).HasColumnName("harvested_quantity").HasPrecision(12, 2);
+                entity.Property(e => e.AvailableQuantity).HasColumnName("available_quantity").HasPrecision(12, 2);
+                entity.Property(e => e.SoldQuantity).HasColumnName("sold_quantity").HasPrecision(12, 2).HasDefaultValue(0.00m);
+                entity.Property(e => e.Unit).HasColumnName("unit").HasMaxLength(20).HasDefaultValue("Quintals");
+                entity.Property(e => e.ExpectedSellingPrice).HasColumnName("expected_selling_price").HasPrecision(12, 2);
+                entity.Property(e => e.QualityGrade).HasColumnName("quality_grade").HasMaxLength(100);
+                entity.Property(e => e.StorageLocation).HasColumnName("storage_location").IsRequired().HasMaxLength(255);
+                entity.Property(e => e.CropDescription).HasColumnName("crop_description");
+                entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Ready to Sell");
+                entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+
+                entity.HasOne(e => e.Farmer)
+                    .WithMany()
+                    .HasForeignKey(e => e.FarmerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // FarmerCropYieldLogs
+            modelBuilder.Entity<FarmerCropYieldLog>(entity =>
+            {
+                entity.ToTable("farmer_crop_yield_logs");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.FarmerCropId).HasColumnName("farmer_crop_id").IsRequired();
+                entity.HasIndex(e => e.FarmerCropId).HasDatabaseName("idx_yield_crop_id");
+                entity.Property(e => e.AdditionalQuantity).HasColumnName("additional_quantity").HasPrecision(12, 2).IsRequired();
+                entity.Property(e => e.PreviousAvailableQuantity).HasColumnName("previous_available_quantity").HasPrecision(12, 2).IsRequired();
+                entity.Property(e => e.NewAvailableQuantity).HasColumnName("new_available_quantity").HasPrecision(12, 2).IsRequired();
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.HasOne(e => e.FarmerCrop)
+                    .WithMany()
+                    .HasForeignKey(e => e.FarmerCropId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
         }

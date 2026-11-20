@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Building2, Store, Plus, X } from 'lucide-react';
 import { useMiddleman } from '../../../context/middleman';
@@ -34,6 +34,15 @@ export const SalesHistoryPage = () => {
 
   const [selectedPurchase, setSelectedPurchase] = useState(null);
   const [selectedSale, setSelectedSale] = useState(null);
+
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
+    }
+    if (location.state?.partyFilter) {
+      setSearchTerm(location.state.partyFilter);
+    }
+  }, [location.state]);
 
   // 1. Filter Farmer Purchases
   const filteredPurchases = useMemo(() => {

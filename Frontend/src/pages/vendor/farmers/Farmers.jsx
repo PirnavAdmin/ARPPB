@@ -30,6 +30,13 @@ import PurchaseForm from '../purchases/PurchaseForm';
 import { CROP_OPTIONS, AP_DISTRICTS, INDIAN_STATES } from '../../../utils/constants';
 import { formatCurrency, formatNumber } from '../../../utils/formatCurrency';
 import { generateNextId } from '../../../utils/generateTransactionId';
+import {
+  fetchVendorFarmerByIdApi,
+  fetchVendorFarmerTransactionsApi,
+  fetchVendorFarmerPaymentsApi,
+  fetchVendorFarmerOtpConfirmationsApi,
+  exportVendorFarmersApi,
+} from '../../../services/vendorApiService';
 
 export function Farmers() {
   const location = useLocation();
@@ -93,6 +100,11 @@ export function Farmers() {
     const params = { farmerId };
     if (tab && tab !== 'overview') params.tab = tab;
     setSearchParams(params, { state: { fromDirectory: true } });
+    fetchVendorFarmerByIdApi(farmerId);
+    fetchVendorFarmerTransactionsApi(farmerId);
+    fetchVendorFarmerPaymentsApi(farmerId);
+    fetchVendorFarmerOtpConfirmationsApi(farmerId);
+    exportVendorFarmersApi({ farmerId });
   };
 
   // Return to the Farmers table (search, filters, pagination and scroll are preserved)

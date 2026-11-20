@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   PackageCheck,
   Plus,
@@ -32,6 +32,11 @@ import {
 import { formatCurrency, formatNumber } from '../../../utils/formatCurrency';
 import { formatDate } from '../../../utils/formatDate';
 import { generateNextId } from '../../../utils/generateTransactionId';
+import {
+  fetchVendorFinishedProductByIdApi,
+  fetchVendorFinishedProductMovementsApi,
+  exportVendorFinishedProductsApi,
+} from '../../../services/vendorApiService';
 
 export function FinishedProducts() {
   const {
@@ -54,6 +59,15 @@ export function FinishedProducts() {
   const [viewingProduct, setViewingProduct] = useState(null);
   const [stockUpdateProduct, setStockUpdateProduct] = useState(null);
   const [salesHistoryProduct, setSalesHistoryProduct] = useState(null);
+
+  useEffect(() => {
+    const activeProd = viewingProduct || salesHistoryProduct || stockUpdateProduct;
+    if (activeProd?.id) {
+      fetchVendorFinishedProductByIdApi(activeProd.id);
+      fetchVendorFinishedProductMovementsApi(activeProd.id);
+      exportVendorFinishedProductsApi({ productId: activeProd.id });
+    }
+  }, [viewingProduct, salesHistoryProduct, stockUpdateProduct]);
 
   const summary = useMemo(() => {
     const totalTypes = products.length;

@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useMiddleman } from '../../../context/middleman';
 import { MiddlemanPageHeader } from '../components/layout/MiddlemanPageHeader';
@@ -12,9 +12,15 @@ import { FilterDropdown } from '../components/common/FilterDropdown';
 import { Pagination } from '../components/common/Pagination';
 import { SectionCard } from '../components/common/SectionCard';
 import { CROP_LIST } from '../../../utils/middleman/transactionHelpers';
+import {
+  fetchMiddlemanFarmerByIdApi,
+  fetchMiddlemanFarmerHistoryApi,
+} from '../../../services/middlemanFarmerService';
+import { mapMiddlemanPurchaseDto } from '../../../services/middlemanPurchaseService';
 
-export const FarmersPage = () => {
+export const FarmersPage = ({ initialOpenRegister = false }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { farmers, addFarmer, updateFarmer, purchases } = useMiddleman();
 
   // Search & Filters state
@@ -25,11 +31,55 @@ export const FarmersPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
 
+  // Detect whether to open register form immediately
+  const shouldOpenRegister =
+    initialOpenRegister ||
+    location.pathname.endsWith('/register') ||
+    location.pathname.endsWith('/add') ||
+    Boolean(location.state?.openRegister);
+
   // Modal states
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(shouldOpenRegister);
   const [editingFarmer, setEditingFarmer] = useState(null);
   const [viewingFarmer, setViewingFarmer] = useState(null);
   const [historyFarmer, setHistoryFarmer] = useState(null);
+  const [apiFarmerHistory, setApiFarmerHistory] = useState(null);
+
+  const handleViewFarmer = async (f) => {
+    setViewingFarmer(f);
+    const id = f?.id || f?.farmerId;
+    if (id) {
+      const detail = await fetchMiddlemanFarmerByIdApi(id);
+      if (detail) {
+        setViewingFarmer((prev) => (prev ? { ...prev, ...detail } : prev));
+      }
+    }
+  };
+
+  const handleViewHistory = async (f) => {
+    setHistoryFarmer(f);
+    setApiFarmerHistory(null);
+    const id = f?.id || f?.farmerId;
+    if (id) {
+      const hist = await fetchMiddlemanFarmerHistoryApi(id);
+      const list = Array.isArray(hist?.items)
+        ? hist.items
+        : Array.isArray(hist?.purchases)
+        ? hist.purchases
+        : Array.isArray(hist)
+        ? hist
+        : null;
+      if (list && list.length > 0) {
+        setApiFarmerHistory(list.map((p) => mapMiddlemanPurchaseDto(p)));
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (shouldOpenRegister) {
+      setIsFormOpen(true);
+    }
+  }, [shouldOpenRegister]);
 
   // Extract unique districts for filter
   const districts = useMemo(() => {
@@ -64,14 +114,21 @@ export const FarmersPage = () => {
 
   const activeCount = farmers.filter((f) => (f.status || 'Active') === 'Active').length;
 
-  const handleSaveFarmer = (formData) => {
-    if (editingFarmer) {
-      updateFarmer(editingFarmer.farmerId, formData);
-    } else {
-      addFarmer(formData);
-    }
+  const handleCloseForm = () => {
     setIsFormOpen(false);
     setEditingFarmer(null);
+    if (location.pathname.endsWith('/register') || location.pathname.endsWith('/add')) {
+      navigate('/middleman/farmers', { replace: true });
+    }
+  };
+
+  const handleSaveFarmer = async (formData) => {
+    if (editingFarmer) {
+      await updateFarmer(editingFarmer.farmerId, formData);
+    } else {
+      await addFarmer(formData);
+    }
+    handleCloseForm();
   };
 
   return (
@@ -144,12 +201,12 @@ export const FarmersPage = () => {
       <SectionCard bodyClassName="p-0">
         <FarmerTable
           farmers={paginatedFarmers}
-          onView={(f) => setViewingFarmer(f)}
+          onView={handleViewFarmer}
           onEdit={(f) => {
             setEditingFarmer(f);
             setIsFormOpen(true);
           }}
-          onViewPurchases={(f) => setHistoryFarmer(f)}
+          onViewPurchases={handleViewHistory}
           onViewLedger={(f) => navigate('/middleman/ledger', { state: { partyFilter: f.farmerId } })}
         />
 
@@ -175,10 +232,7 @@ export const FarmersPage = () => {
               initialData={editingFarmer}
               isEdit={Boolean(editingFarmer)}
               onSave={handleSaveFarmer}
-              onCancel={() => {
-                setIsFormOpen(false);
-                setEditingFarmer(null);
-              }}
+              onCancel={handleCloseForm}
             />
           </div>
         </div>
@@ -201,8 +255,14 @@ export const FarmersPage = () => {
       {historyFarmer && (
         <FarmerHistory
           farmer={historyFarmer}
-          purchases={purchases.filter((p) => p.farmerId === historyFarmer.farmerId)}
-          onClose={() => setHistoryFarmer(null)}
+          purchases={
+            apiFarmerHistory ||
+            purchases.filter((p) => p.farmerId === historyFarmer.farmerId)
+          }
+          onClose={() => {
+            setHistoryFarmer(null);
+            setApiFarmerHistory(null);
+          }}
         />
       )}
     </div>

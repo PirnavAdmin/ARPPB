@@ -29,6 +29,10 @@ import CustomerDetails from './CustomerDetails';
 import { AP_DISTRICTS, INDIAN_STATES } from '../../../utils/constants';
 import { formatCurrency, formatNumber } from '../../../utils/formatCurrency';
 import { generateNextId } from '../../../utils/generateTransactionId';
+import {
+  fetchVendorCustomerByIdApi,
+  exportVendorCustomersApi,
+} from '../../../services/vendorApiService';
 
 export function Customers() {
   const navigate = useNavigate();
@@ -95,6 +99,8 @@ export function Customers() {
   const openProfile = (customerId) => {
     listScrollRef.current = window.scrollY;
     setSearchParams({ customerId }, { state: { fromDirectory: true } });
+    fetchVendorCustomerByIdApi(customerId);
+    exportVendorCustomersApi({ customerId });
   };
 
   // Return to the Customers table (search, filters, pagination and scroll are preserved)
