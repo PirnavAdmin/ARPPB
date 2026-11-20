@@ -67,10 +67,15 @@ var serverVersion = new MariaDbServerVersion(
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(
         connectionString,
-        serverVersion));
+        serverVersion,
+        mySqlOptions => mySqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorNumbersToAdd: null)));
 builder.Services.AddCustomerProfileModule();
 builder.Services.AddFarmerCropsModule();
 builder.Services.AddVendorOperationsModule(connectionString);
+builder.Services.AddFarmerSalesModule();
 
 // REPOSITORY REGISTRATIONS
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
@@ -247,6 +252,9 @@ app.MapControllers();
 
 // REDIRECT ROOT TO SWAGGER UI (Supports GET and HEAD for tunnel/health probes)
 app.MapMethods("/", new[] { "GET", "HEAD" }, () => Results.Redirect("/swagger")).ExcludeFromDescription();
+
+// ENSURE FARMER SALES TABLES EXIST
+await app.EnsureFarmerSalesTablesAsync();
 
 // RUN
 app.Run();
