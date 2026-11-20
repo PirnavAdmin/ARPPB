@@ -1,4 +1,5 @@
 import { createContext, useState, useCallback, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { toast } from 'sonner';
 import {
@@ -32,63 +33,46 @@ import {
 } from '../utils/calculations';
 import { confirmationService } from '../services/confirmationService';
 import {
-  fetchVendorDashboardApi,
-  fetchVendorDashboardTransactionsApi,
   fetchVendorDashboardOtpConfirmationsApi,
   verifyVendorDashboardOtpApi,
-  fetchVendorFarmersOverviewApi,
   fetchVendorFarmersApi,
   createVendorFarmerApi,
   updateVendorFarmerApi,
   updateVendorFarmerStatusApi,
-  fetchVendorMiddlemenOverviewApi,
   fetchVendorMiddlemenApi,
   createVendorMiddlemanApi,
   updateVendorMiddlemanApi,
   updateVendorMiddlemanStatusApi,
-  fetchVendorCustomersOverviewApi,
   fetchVendorCustomersApi,
   createVendorCustomerApi,
   updateVendorCustomerApi,
   updateVendorCustomerStatusApi,
-  fetchVendorRawMaterialOverviewApi,
   fetchVendorRawMaterialsApi,
   fetchVendorRawMaterialMovementsApi,
-  fetchVendorProcessingOverviewApi,
   fetchVendorProcessingBatchesApi,
   createVendorProcessingBatchApi,
-  fetchVendorFinishedProductsOverviewApi,
   fetchVendorFinishedProductsApi,
   createVendorFinishedProductApi,
   updateVendorFinishedProductApi,
   adjustVendorFinishedProductStockApi,
   updateVendorFinishedProductStatusApi,
-  fetchVendorSalesCatalogSummaryApi,
-  fetchVendorSalesCustomersApi,
   fetchVendorSalesBatchesApi,
-  fetchVendorSalesSummaryApi,
   fetchVendorSalesApi,
-  fetchVendorSalesDraftsApi,
   createVendorSaleApi,
   updateVendorSaleApi,
   deleteVendorSaleApi,
   submitVendorSaleApi,
-  fetchVendorOrdersSummaryApi,
   fetchVendorOrdersApi,
   updateVendorOrderStatusApi,
   cancelVendorOrderApi,
-  fetchVendorConfirmationsSummaryApi,
   fetchVendorConfirmationsApi,
   createVendorConfirmationApi,
   verifyVendorConfirmationOtpApi,
   resendVendorConfirmationOtpApi,
-  fetchVendorLedgerSummaryApi,
-  fetchVendorLedgerDayTotalsApi,
   fetchVendorLedgerApi,
   payVendorSupplierApi,
   recordVendorCustomerReceiptApi,
   settleVendorLedgerEntryApi,
-  fetchVendorNotificationsSummaryApi,
   fetchVendorNotificationsApi,
   markVendorNotificationReadApi,
   markAllVendorNotificationsReadApi,
@@ -153,57 +137,51 @@ export function VendorProvider({ children }) {
     });
   };
 
-  // Sync Vendor Portal data from backend APIs (with safe fallback to local state)
-  const refreshVendorPortalData = useCallback(async () => {
+  const location = useLocation();
+  const currentPathname = location?.pathname || '';
+  const isVendorRoute = currentPathname.startsWith('/vendor');
+  const isCustomerRoute = currentPathname.startsWith('/customer');
+
+  // Sync Vendor Portal data from backend APIs in small staged batches
+  // so ngrok / Vite proxy is never flooded with dozens of concurrent sockets.
+  const refreshVendorPortalData = useCallback(async (onlyCatalog = false) => {
     try {
-      const [
-        farmersList,
-        middlemenList,
-        customersList,
-        rawMaterialsList,
-        rawMovementsList,
-        processingList,
-        finishedProductsList,
-        salesList,
-        salesBatchesList,
-        ordersList,
-        confirmationsList,
-        dashboardConfirmationsList,
-        ledgerList,
-        notificationsList,
-      ] = await Promise.all([
+      const [rawMaterialsList, finishedProductsList, salesBatchesList] = await Promise.all([
+        fetchVendorRawMaterialsApi(),
+        fetchVendorFinishedProductsApi(),
+        fetchVendorSalesBatchesApi(),
+      ]);
+
+      if (Array.isArray(rawMaterialsList) && rawMaterialsList.length > 0) {
+        updateStateAndStorage(setInventory, STORAGE_KEYS.INVENTORY, rawMaterialsList);
+      }
+      if (Array.isArray(finishedProductsList) && finishedProductsList.length > 0) {
+        updateStateAndStorage(setProducts, STORAGE_KEYS.PRODUCTS, finishedProductsList);
+      }
+      if (Array.isArray(salesBatchesList) && salesBatchesList.length > 0) {
+        updateStateAndStorage(setProductBatches, STORAGE_KEYS.PRODUCT_BATCHES, salesBatchesList);
+      }
+
+      if (onlyCatalog) return;
+
+      const [farmersList, middlemenList, customersList, rawMovementsList] = await Promise.all([
         fetchVendorFarmersApi(),
         fetchVendorMiddlemenApi(),
         fetchVendorCustomersApi(),
-        fetchVendorRawMaterialsApi(),
         fetchVendorRawMaterialMovementsApi(),
+      ]);
+
+      const [processingList, salesList, ordersList, confirmationsList] = await Promise.all([
         fetchVendorProcessingBatchesApi(),
-        fetchVendorFinishedProductsApi(),
         fetchVendorSalesApi(),
-        fetchVendorSalesBatchesApi(),
         fetchVendorOrdersApi(),
         fetchVendorConfirmationsApi(),
+      ]);
+
+      const [dashboardConfirmationsList, ledgerList, notificationsList] = await Promise.all([
         fetchVendorDashboardOtpConfirmationsApi(),
         fetchVendorLedgerApi(),
         fetchVendorNotificationsApi(),
-        // Trigger overview & summary endpoints in parallel
-        fetchVendorDashboardApi(),
-        fetchVendorDashboardTransactionsApi(),
-        fetchVendorFarmersOverviewApi(),
-        fetchVendorMiddlemenOverviewApi(),
-        fetchVendorCustomersOverviewApi(),
-        fetchVendorRawMaterialOverviewApi(),
-        fetchVendorProcessingOverviewApi(),
-        fetchVendorFinishedProductsOverviewApi(),
-        fetchVendorSalesCatalogSummaryApi(),
-        fetchVendorSalesCustomersApi(),
-        fetchVendorSalesSummaryApi(),
-        fetchVendorSalesDraftsApi(),
-        fetchVendorOrdersSummaryApi(),
-        fetchVendorConfirmationsSummaryApi(),
-        fetchVendorLedgerSummaryApi(),
-        fetchVendorLedgerDayTotalsApi(),
-        fetchVendorNotificationsSummaryApi(),
       ]);
 
       if (Array.isArray(farmersList) && farmersList.length > 0) {
@@ -215,23 +193,14 @@ export function VendorProvider({ children }) {
       if (Array.isArray(customersList) && customersList.length > 0) {
         updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, customersList);
       }
-      if (Array.isArray(rawMaterialsList) && rawMaterialsList.length > 0) {
-        updateStateAndStorage(setInventory, STORAGE_KEYS.INVENTORY, rawMaterialsList);
-      }
       if (Array.isArray(rawMovementsList) && rawMovementsList.length > 0) {
         updateStateAndStorage(setStockMovements, STORAGE_KEYS.STOCK_MOVEMENTS, rawMovementsList);
       }
       if (Array.isArray(processingList) && processingList.length > 0) {
         updateStateAndStorage(setProcessingRecords, STORAGE_KEYS.PROCESSING, processingList);
       }
-      if (Array.isArray(finishedProductsList) && finishedProductsList.length > 0) {
-        updateStateAndStorage(setProducts, STORAGE_KEYS.PRODUCTS, finishedProductsList);
-      }
       if (Array.isArray(salesList) && salesList.length > 0) {
         updateStateAndStorage(setSales, STORAGE_KEYS.SALES, salesList);
-      }
-      if (Array.isArray(salesBatchesList) && salesBatchesList.length > 0) {
-        updateStateAndStorage(setProductBatches, STORAGE_KEYS.PRODUCT_BATCHES, salesBatchesList);
       }
       if (Array.isArray(ordersList) && ordersList.length > 0) {
         updateStateAndStorage(setOrders, STORAGE_KEYS.ORDERS, ordersList);
@@ -257,8 +226,12 @@ export function VendorProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    refreshVendorPortalData();
-  }, [refreshVendorPortalData]);
+    if (isVendorRoute) {
+      refreshVendorPortalData(false);
+    } else if (isCustomerRoute) {
+      refreshVendorPortalData(true);
+    }
+  }, [isVendorRoute, isCustomerRoute, refreshVendorPortalData]);
 
   // Notification generator
   const pushNotification = useCallback(

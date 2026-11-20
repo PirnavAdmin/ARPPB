@@ -46,6 +46,25 @@ const API_ENDPOINTS = {
   },
 
   // =========================
+  // FARMER SALES
+  // =========================
+  FarmerSales: {
+    getAll: "/api/v1/farmer/sales",
+    create: "/api/v1/farmer/sales",
+    getOptions: "/api/v1/farmer/sales/options",
+    getById: (id) => `/api/v1/farmer/sales/${id}`,
+    verifyOtp: (id) => `/api/v1/farmer/sales/${id}/verify-otp`,
+    resendOtp: (id) => `/api/v1/farmer/sales/${id}/resend-otp`,
+  },
+  FARMER_SALES: {
+    BASE: "/api/v1/farmer/sales",
+    OPTIONS: "/api/v1/farmer/sales/options",
+    BY_ID: (id) => `/api/v1/farmer/sales/${id}`,
+    VERIFY_OTP: (id) => `/api/v1/farmer/sales/${id}/verify-otp`,
+    RESEND_OTP: (id) => `/api/v1/farmer/sales/${id}/resend-otp`,
+  },
+
+  // =========================
   // FARMER PROFILE
   // =========================
   FarmerProfile: {

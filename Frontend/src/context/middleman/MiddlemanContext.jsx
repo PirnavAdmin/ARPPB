@@ -31,19 +31,16 @@ import {
 import {
   fetchMiddlemanInventoryBatchesApi,
   fetchMiddlemanInventoryApi,
-  fetchMiddlemanInventorySummaryApi,
   createMiddlemanInventoryBatchApi,
   updateMiddlemanInventoryBatchApi,
   fetchMiddlemanLedgerApi,
   createMiddlemanLedgerApi,
   settleMiddlemanLedgerApi,
   fetchMiddlemanNotificationsApi,
-  fetchMiddlemanNotificationsStatusApi,
   markMiddlemanNotificationReadApi,
   markAllMiddlemanNotificationsReadApi,
   deleteMiddlemanNotificationApi,
   fetchMiddlemanSalesVendorsApi,
-  fetchMiddlemanDashboardApi,
 } from '../../services/middleman';
 import {
   fetchMiddlemanVendorsApi,
@@ -56,7 +53,7 @@ import {
 const STORAGE_KEY = 'agriconnect_middleman_state_v1';
 
 export const MiddlemanProvider = ({ children }) => {
-  const { user, updateUserMobile } = useAuth();
+  const { user, token, updateUserMobile } = useAuth();
   const authKey = String(user?.userId || user?.fullName || '');
 
   // Load state from localStorage or initialize from mock data
@@ -299,10 +296,9 @@ export const MiddlemanProvider = ({ children }) => {
     }
   }, []);
 
-  // Fetch Middleman Inventory from backend API (GET /api/v1/middleman/inventory & /batches & /summary)
+  // Fetch Middleman Inventory from backend API (GET /api/v1/middleman/inventory & /batches)
   const refreshInventory = useCallback(async () => {
     try {
-      fetchMiddlemanInventorySummaryApi().catch(() => null);
       const apiBatches =
         (await fetchMiddlemanInventoryBatchesApi()) ||
         (await fetchMiddlemanInventoryApi());
@@ -329,7 +325,6 @@ export const MiddlemanProvider = ({ children }) => {
   // Fetch Middleman Notifications from backend API (GET /api/v1/notifications)
   const refreshNotifications = useCallback(async () => {
     try {
-      fetchMiddlemanNotificationsStatusApi().catch(() => null);
       const apiNotifs = await fetchMiddlemanNotificationsApi({ status: 'All', timeRange: 'All' });
       if (apiNotifs && Array.isArray(apiNotifs) && apiNotifs.length > 0) {
         setNotifications(apiNotifs);
@@ -351,10 +346,9 @@ export const MiddlemanProvider = ({ children }) => {
     }
   }, []);
 
-  // Fetch Middleman Vendor Sales & Dashboard from backend API (GET /api/v1/middleman/vendor-sales)
+  // Fetch Middleman Vendor Sales from backend API (GET /api/v1/middleman/vendor-sales)
   const refreshVendorSales = useCallback(async () => {
     try {
-      fetchMiddlemanDashboardApi().catch(() => null);
       const apiSales =
         (await fetchMiddlemanVendorSalesApi()) ||
         (await fetchMiddlemanSalesVendorsApi());
@@ -747,7 +741,7 @@ export const MiddlemanProvider = ({ children }) => {
     }
 
     return newSale;
-  }, [addNotification, token]);
+  }, [addNotification]);
 
   // Customer Sale Actions
   const createCustomerSale = useCallback((data, isDraft = false) => {
@@ -800,7 +794,7 @@ export const MiddlemanProvider = ({ children }) => {
     }
 
     return newSale;
-  }, [addNotification, token]);
+  }, [addNotification]);
 
   // Centralized OTP Confirmation Action (Simulated Verified Interaction)
   const confirmTransaction = useCallback((confirmationId) => {
@@ -1386,7 +1380,6 @@ export const MiddlemanProvider = ({ children }) => {
     refreshFarmers,
     addFarmer,
     updateFarmer,
-    refreshFarmers,
     vendors,
     refreshVendors,
     addVendor,
@@ -1397,11 +1390,9 @@ export const MiddlemanProvider = ({ children }) => {
     purchases,
     refreshPurchases,
     createPurchase,
-    refreshPurchases,
     vendorSales,
     refreshVendorSales,
     createVendorSale,
-    refreshVendorSales,
     customerSales,
     createCustomerSale,
     inventory,

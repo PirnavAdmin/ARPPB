@@ -276,11 +276,36 @@ export function getFarmerSalesBaseURL() {
 }
 const api = axios.create({
     baseURL: API_BASE_URL,
+    timeout: 25000,
     headers: {
         "Content-Type": "application/json",
         "ngrok-skip-browser-warning": "true",
     },
 });
+
+// Concurrency limiter to avoid flooding the ngrok / Vite proxy tunnel with simultaneous TLS requests
+const MAX_CONCURRENT_REQUESTS = 4;
+let activeRequestsCount = 0;
+const requestQueue = [];
+
+function acquireRequestSlot() {
+    if (activeRequestsCount < MAX_CONCURRENT_REQUESTS) {
+        activeRequestsCount++;
+        return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+        requestQueue.push(resolve);
+    });
+}
+
+function releaseRequestSlot() {
+    if (requestQueue.length > 0) {
+        const nextResolve = requestQueue.shift();
+        nextResolve();
+    } else {
+        activeRequestsCount = Math.max(0, activeRequestsCount - 1);
+    }
+}
 
 api.interceptors.request.use(
     async (config) => {
@@ -293,6 +318,9 @@ api.interceptors.request.use(
         if (!token && requiredRole) {
             token = await ensurePortalRoleToken(requiredRole, false);
         }
+
+        await acquireRequestSlot();
+        config._hasAcquiredSlot = true;
 
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -324,6 +352,10 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
     (response) => {
+        if (response?.config?._hasAcquiredSlot) {
+            response.config._hasAcquiredSlot = false;
+            releaseRequestSlot();
+        }
         const accessToken =
             response?.data?.data?.accessToken ||
             response?.data?.accessToken ||
@@ -335,6 +367,10 @@ api.interceptors.response.use(
     },
     async (error) => {
         const originalConfig = error?.config;
+        if (originalConfig?._hasAcquiredSlot) {
+            originalConfig._hasAcquiredSlot = false;
+            releaseRequestSlot();
+        }
         const status = error?.response?.status;
 
         if (
@@ -352,6 +388,17 @@ api.interceptors.response.use(
                     return api.request(originalConfig);
                 }
             }
+        }
+
+        // If a proxy request suffered a transient socket reset (502/504 or network drop), retry once directly
+        if (
+            originalConfig &&
+            !originalConfig._retriedOnSocketReset &&
+            (!error.response || status === 502 || status === 504)
+        ) {
+            originalConfig._retriedOnSocketReset = true;
+            await new Promise((r) => setTimeout(r, 250));
+            return api.request(originalConfig);
         }
 
         if (
