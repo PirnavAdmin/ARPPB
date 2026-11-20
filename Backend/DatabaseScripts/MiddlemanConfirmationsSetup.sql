@@ -100,9 +100,9 @@ DROP PROCEDURE IF EXISTS `sp_Middleman_GetOtpConfirmations`;
 DELIMITER $$
 CREATE PROCEDURE `sp_Middleman_GetOtpConfirmations`(
     IN p_middleman_id BIGINT,
-    IN p_party_type VARCHAR(50),
-    IN p_otp_status VARCHAR(50),
-    IN p_search VARCHAR(100),
+    IN p_party_type VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_otp_status VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_search VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_page INT,
     IN p_page_size INT
 )
@@ -181,9 +181,9 @@ DROP PROCEDURE IF EXISTS `sp_MiddlemanGetOtpConfirmations`;
 DELIMITER $$
 CREATE PROCEDURE `sp_MiddlemanGetOtpConfirmations`(
     IN p_middleman_id BIGINT,
-    IN p_party_type VARCHAR(50),
-    IN p_otp_status VARCHAR(50),
-    IN p_search VARCHAR(100),
+    IN p_party_type VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_otp_status VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_search VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_page INT,
     IN p_page_size INT
 )
