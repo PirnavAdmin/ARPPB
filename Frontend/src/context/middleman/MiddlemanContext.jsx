@@ -833,7 +833,7 @@ export const MiddlemanProvider = ({ children }) => {
 
   // Centralized OTP Confirmation Action (Simulated Verified Interaction)
   const confirmTransaction = useCallback((confirmationId) => {
-    const confItem = confirmations.find((c) => c.confirmationId === confirmationId);
+    const confItem = confirmations.find((c) => c.confirmationId === confirmationId || c.id === confirmationId);
     if (!confItem || confItem.otpStatus === 'Confirmed') return;
 
     const now = new Date().toISOString().replace('T', ' ').slice(0, 16);
@@ -841,7 +841,7 @@ export const MiddlemanProvider = ({ children }) => {
     // 1. Update confirmation status
     setConfirmations((prev) =>
       prev.map((c) =>
-        c.confirmationId === confirmationId
+        (c.confirmationId === confItem.confirmationId || (confItem.id && c.id === confItem.id))
           ? { ...c, otpStatus: 'Confirmed', confirmationDate: now }
           : c
       )
@@ -1149,12 +1149,12 @@ export const MiddlemanProvider = ({ children }) => {
 
   // Reject Transaction Action
   const rejectTransaction = useCallback((confirmationId, reason = 'Verification rejected by party.') => {
-    const confItem = confirmations.find((c) => c.confirmationId === confirmationId);
+    const confItem = confirmations.find((c) => c.confirmationId === confirmationId || c.id === confirmationId);
     if (!confItem) return;
 
     setConfirmations((prev) =>
       prev.map((c) =>
-        c.confirmationId === confirmationId
+        (c.confirmationId === confItem.confirmationId || (confItem.id && c.id === confItem.id))
           ? { ...c, otpStatus: 'Rejected', notes: `${c.notes} [Rejected: ${reason}]` }
           : c
       )

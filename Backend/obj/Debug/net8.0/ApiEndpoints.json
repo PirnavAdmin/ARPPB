@@ -1,0 +1,4496 @@
+[
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.CustomerProfileController",
+    "Method": "GetProfile",
+    "RelativePath": "api/customer/profile",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CustomerProfileDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 403
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.CustomerProfileController",
+    "Method": "UpdateProfile",
+    "RelativePath": "api/customer/profile",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.UpdateCustomerProfileDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CustomerProfileDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 403
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.CustomerProfileController",
+    "Method": "AddDeliveryAddress",
+    "RelativePath": "api/customer/profile/addresses",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.CreateCustomerDeliveryAddressDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CustomerDeliveryAddressDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 201
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 403
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.CustomerProfileController",
+    "Method": "UpdateDeliveryAddress",
+    "RelativePath": "api/customer/profile/addresses/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.UpdateCustomerDeliveryAddressDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CustomerDeliveryAddressDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 403
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.CustomerProfileController",
+    "Method": "DeleteDeliveryAddress",
+    "RelativePath": "api/customer/profile/addresses/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 403
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.CustomerProfileController",
+    "Method": "SetDefaultDeliveryAddress",
+    "RelativePath": "api/customer/profile/addresses/{id}/default",
+    "HttpMethod": "PATCH",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CustomerDeliveryAddressDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 403
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.CustomerProfileController",
+    "Method": "SendMobileChangeOtp",
+    "RelativePath": "api/customer/profile/mobile/send-otp",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.SendMobileChangeOtpDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.MobileChangeOtpResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 403
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 503
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 409
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.CustomerProfileController",
+    "Method": "VerifyMobileChangeOtp",
+    "RelativePath": "api/customer/profile/mobile/verify-otp",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VerifyMobileChangeOtpDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CustomerProfileDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 403
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Object, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 409
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.AuthController",
+    "Method": "ForgotPassword",
+    "RelativePath": "api/v1/Auth/forgot-password",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.ForgotPasswordRequestDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.AuthController",
+    "Method": "Login",
+    "RelativePath": "api/v1/Auth/login",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.LoginRequestDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.AuthController",
+    "Method": "ResetPassword",
+    "RelativePath": "api/v1/Auth/reset-password",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.ResetPasswordRequestDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.AuthController",
+    "Method": "VerifyOtp",
+    "RelativePath": "api/v1/Auth/verify-otp",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VerifyOtpRequestDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.FarmerCropsController",
+    "Method": "GetCrops",
+    "RelativePath": "api/v1/farmer/crops",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "category",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "season",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "userId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.CropResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.CropResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.FarmerCropsController",
+    "Method": "RegisterCrop",
+    "RelativePath": "api/v1/farmer/crops",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.CreateCropRequestDto",
+        "IsRequired": true
+      },
+      {
+        "Name": "userId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CropResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 201
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CropResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.FarmerCropsController",
+    "Method": "GetCropById",
+    "RelativePath": "api/v1/farmer/crops/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "userId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CropResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CropResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.FarmerCropsController",
+    "Method": "UpdateCrop",
+    "RelativePath": "api/v1/farmer/crops/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.UpdateCropRequestDto",
+        "IsRequired": true
+      },
+      {
+        "Name": "userId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CropResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CropResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CropResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.FarmerCropsController",
+    "Method": "DeleteCrop",
+    "RelativePath": "api/v1/farmer/crops/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "userId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.FarmerCropsController",
+    "Method": "AddHarvestYield",
+    "RelativePath": "api/v1/farmer/crops/{id}/add-stock",
+    "HttpMethod": "PATCH",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.AddCropYieldRequestDto",
+        "IsRequired": true
+      },
+      {
+        "Name": "userId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CropResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CropResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CropResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.FarmerCropsController",
+    "Method": "GetOptions",
+    "RelativePath": "api/v1/farmer/crops/options",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.CropOptionsDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.FarmerProfileController",
+    "Method": "GetProfile",
+    "RelativePath": "api/v1/farmer/profile",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.FarmerProfileResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.FarmerProfileResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.FarmerProfileResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.FarmerProfileController",
+    "Method": "UpdateProfile",
+    "RelativePath": "api/v1/farmer/profile",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.UpdateFarmerProfileRequestDto",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.FarmerProfileResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.FarmerProfileResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.FarmerProfileResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.FarmerProfileResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.FarmerProfileController",
+    "Method": "GetAllProfiles",
+    "RelativePath": "api/v1/farmer/profile/all",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.FarmerProfileResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.FarmerProfileController",
+    "Method": "GetBankDetails",
+    "RelativePath": "api/v1/farmer/profile/bank-details",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "reveal",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      },
+      {
+        "Name": "userId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.BankDetailsDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.BankDetailsDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.BankDetailsDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.FarmerProfileController",
+    "Method": "UpdateBankDetails",
+    "RelativePath": "api/v1/farmer/profile/bank-details",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.UpdateBankDetailsRequestDto",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.BankDetailsDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.BankDetailsDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.BankDetailsDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.BankDetailsDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.FarmerProfileController",
+    "Method": "SendMobileChangeOtp",
+    "RelativePath": "api/v1/farmer/profile/change-mobile/send-otp",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.SendMobileChangeOtpRequestDto",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 409
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.FarmerProfileController",
+    "Method": "VerifyMobileChangeOtp",
+    "RelativePath": "api/v1/farmer/profile/change-mobile/verify-otp",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VerifyMobileChangeOtpRequestDto",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 409
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.FarmerProfileController",
+    "Method": "ChangePassword",
+    "RelativePath": "api/v1/farmer/profile/change-password",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.ChangeFarmerPasswordRequestDto",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 401
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.MiddlemanProfileController",
+    "Method": "GetMyProfile",
+    "RelativePath": "api/v1/middleman-profile",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.MiddlemanProfileDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.MiddlemanProfileController",
+    "Method": "GetById",
+    "RelativePath": "api/v1/middleman-profile/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.MiddlemanProfileController",
+    "Method": "Update",
+    "RelativePath": "api/v1/middleman-profile/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.UpdateMiddlemanProfileRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.MiddlemanProfileController",
+    "Method": "SendMobileChangeOtp",
+    "RelativePath": "api/v1/middleman-profile/mobile/send-otp",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "SendMiddlemanMobileChangeOtpRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.MiddlemanProfileController",
+    "Method": "VerifyMobileChangeOtp",
+    "RelativePath": "api/v1/middleman-profile/mobile/verify-otp",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "VerifyMiddlemanMobileChangeOtpRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanDashboardController",
+    "Method": "GetDashboard",
+    "RelativePath": "api/v1/middleman/dashboard",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Dashboard"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanDashboardController",
+    "Method": "GetCropwiseInventory",
+    "RelativePath": "api/v1/middleman/dashboard/cropwise-inventory",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Dashboard"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanDashboardController",
+    "Method": "GetKpis",
+    "RelativePath": "api/v1/middleman/dashboard/kpis",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Dashboard"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanDashboardController",
+    "Method": "GetPendingConfirmations",
+    "RelativePath": "api/v1/middleman/dashboard/pending-confirmations",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Dashboard"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanDashboardController",
+    "Method": "GetPurchaseVsSales",
+    "RelativePath": "api/v1/middleman/dashboard/purchase-vs-sales",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Dashboard"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanDashboardController",
+    "Method": "GetPurchases",
+    "RelativePath": "api/v1/middleman/dashboard/purchases",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Dashboard"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanDashboardController",
+    "Method": "GetRecentTransactions",
+    "RelativePath": "api/v1/middleman/dashboard/recent-transactions",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Dashboard"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanDashboardController",
+    "Method": "GetCustomerSales",
+    "RelativePath": "api/v1/middleman/dashboard/sales/customers",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Dashboard"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanDashboardController",
+    "Method": "GetVendorSales",
+    "RelativePath": "api/v1/middleman/dashboard/sales/vendors",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Dashboard"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanFarmerController",
+    "Method": "GetFarmers",
+    "RelativePath": "api/v1/middleman/farmers",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Crop",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "District",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Status",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "PageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Farmers"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanFarmerController",
+    "Method": "RegisterFarmer",
+    "RelativePath": "api/v1/middleman/farmers",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.RegisterFarmerRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Farmers"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanFarmerController",
+    "Method": "GetFarmerById",
+    "RelativePath": "api/v1/middleman/farmers/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Farmers"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanFarmerController",
+    "Method": "UpdateFarmer",
+    "RelativePath": "api/v1/middleman/farmers/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.UpdateFarmerRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Farmers"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanFarmerController",
+    "Method": "GetFarmerHistory",
+    "RelativePath": "api/v1/middleman/farmers/{id}/history",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Farmers"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanInventoryController",
+    "Method": "GetInventory",
+    "RelativePath": "api/v1/middleman/inventory",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Inventory"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanInventoryController",
+    "Method": "GetBatches",
+    "RelativePath": "api/v1/middleman/inventory/batches",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Crop",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Quality",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Status",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "PageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Inventory"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanInventoryController",
+    "Method": "CreateBatch",
+    "RelativePath": "api/v1/middleman/inventory/batches",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.CreateInventoryBatchRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Inventory"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanInventoryController",
+    "Method": "GetBatchById",
+    "RelativePath": "api/v1/middleman/inventory/batches/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Inventory"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanInventoryController",
+    "Method": "UpdateBatch",
+    "RelativePath": "api/v1/middleman/inventory/batches/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.UpdateInventoryBatchRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Inventory"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanInventoryController",
+    "Method": "GetSummary",
+    "RelativePath": "api/v1/middleman/inventory/summary",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Inventory"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanLedgerController",
+    "Method": "GetLedger",
+    "RelativePath": "api/v1/middleman/ledger",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Ledger"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanLedgerController",
+    "Method": "Create",
+    "RelativePath": "api/v1/middleman/ledger",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.CreateLedgerEntryRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Ledger"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanLedgerController",
+    "Method": "GetById",
+    "RelativePath": "api/v1/middleman/ledger/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Ledger"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanLedgerController",
+    "Method": "Update",
+    "RelativePath": "api/v1/middleman/ledger/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.UpdateLedgerEntryRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Ledger"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanLedgerController",
+    "Method": "Settle",
+    "RelativePath": "api/v1/middleman/ledger/{id}/settle",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.SettleLedgerRequest",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Ledger"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanLedgerController",
+    "Method": "Settle",
+    "RelativePath": "api/v1/middleman/ledger/{id}/settle",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.SettleLedgerRequest",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Ledger"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanPurchaseController",
+    "Method": "GetPurchases",
+    "RelativePath": "api/v1/middleman/purchases",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Status",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "PageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Purchases"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanPurchaseController",
+    "Method": "CreatePurchase",
+    "RelativePath": "api/v1/middleman/purchases",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.CreateMiddlemanPurchaseRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Purchases"
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.MiddlemanPurchaseController",
+    "Method": "GetPurchaseById",
+    "RelativePath": "api/v1/middleman/purchases/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [],
+    "Tags": [
+      "Middleman - Purchases"
+    ]
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.MiddlemanNotificationsController",
+    "Method": "Get",
+    "RelativePath": "api/v1/notifications",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Category",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Priority",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Status",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "TimeRange",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "PageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.MiddlemanNotificationsController",
+    "Method": "Delete",
+    "RelativePath": "api/v1/notifications/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.MiddlemanNotificationsController",
+    "Method": "MarkRead",
+    "RelativePath": "api/v1/notifications/{id}/read",
+    "HttpMethod": "PATCH",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.MiddlemanNotificationsController",
+    "Method": "Latest",
+    "RelativePath": "api/v1/notifications/latest",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "take",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.MiddlemanNotificationsController",
+    "Method": "MarkAllRead",
+    "RelativePath": "api/v1/notifications/read-all",
+    "HttpMethod": "PATCH",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Backend.AgriPurchaseBilling.Api.Controllers.MiddlemanNotificationsController",
+    "Method": "Status",
+    "RelativePath": "api/v1/notifications/status",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.RegistrationController",
+    "Method": "Register",
+    "RelativePath": "api/v1/Registration",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.RegisterRequestDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.RegistrationResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 201
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.RegistrationResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.RegistrationResponseDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 409
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.RegistrationController",
+    "Method": "SendMobileOtp",
+    "RelativePath": "api/v1/Registration/send-mobile-otp",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Api.Controllers.RegistrationController\u002BRegistrationOtpRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.RegistrationController",
+    "Method": "VerifyMobileOtp",
+    "RelativePath": "api/v1/Registration/verify-mobile-otp",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Api.Controllers.RegistrationController\u002BRegistrationOtpVerifyRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.RoleAccessController",
+    "Method": "BusinessAccess",
+    "RelativePath": "api/v1/role-access/business-access",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.RoleAccessController",
+    "Method": "CustomerAccess",
+    "RelativePath": "api/v1/role-access/customer",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.RoleAccessController",
+    "Method": "FarmerAccess",
+    "RelativePath": "api/v1/role-access/farmer",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.RoleAccessController",
+    "Method": "MiddlemanAccess",
+    "RelativePath": "api/v1/role-access/middleman",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.RoleAccessController",
+    "Method": "GetMyProfile",
+    "RelativePath": "api/v1/role-access/profile",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.RoleAccessController",
+    "Method": "VendorAccess",
+    "RelativePath": "api/v1/role-access/vendor",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorConfirmationsController",
+    "Method": "GetConfirmations",
+    "RelativePath": "api/v1/vendor/confirmations",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Category",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Status",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "From",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "To",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "Ascending",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      },
+      {
+        "Name": "Page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "PageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorConfirmationsController",
+    "Method": "Create",
+    "RelativePath": "api/v1/vendor/confirmations",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorPortal.CreateOtpConfirmationRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorConfirmationsController",
+    "Method": "GetConfirmation",
+    "RelativePath": "api/v1/vendor/confirmations/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorConfirmationsController",
+    "Method": "Resend",
+    "RelativePath": "api/v1/vendor/confirmations/{id}/resend",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorConfirmationsController",
+    "Method": "Verify",
+    "RelativePath": "api/v1/vendor/confirmations/{id}/verify",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorPortal.VerifyOtpRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorConfirmationsController",
+    "Method": "GetSummary",
+    "RelativePath": "api/v1/vendor/confirmations/summary",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorDashboardController",
+    "Method": "GetDashboard",
+    "RelativePath": "api/v1/vendor/dashboard",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "fromDate",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "toDate",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorDashboardDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorDashboardDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorDashboardController",
+    "Method": "GetOtpConfirmations",
+    "RelativePath": "api/v1/vendor/dashboard/otp-confirmations",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "fromDate",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "toDate",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Api.Controllers.VendorDashboardOtpQueueDto, Backend, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorDashboardController",
+    "Method": "VerifyOtp",
+    "RelativePath": "api/v1/vendor/dashboard/otp-confirmations/{partnerType}/{confirmationId}/verify",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "partnerType",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "confirmationId",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorOperations.VerifyVendorDashboardOtpRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorDashboardOtpVerificationDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorDashboardOtpVerificationDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorDashboardController",
+    "Method": "Search",
+    "RelativePath": "api/v1/vendor/dashboard/search",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "q",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "take",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorDashboardSearchResultDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorDashboardSearchResultDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorDashboardController",
+    "Method": "GetTransactions",
+    "RelativePath": "api/v1/vendor/dashboard/transactions",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Type",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Status",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "FromDate",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "ToDate",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "Page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "PageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorDashboardTransactionPageDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorDashboardTransactionPageDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorDashboardController",
+    "Method": "ExportTransactions",
+    "RelativePath": "api/v1/vendor/dashboard/transactions/export",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Type",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Status",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "FromDate",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "ToDate",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "Page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "PageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFinishedProductsController",
+    "Method": "GetProducts",
+    "RelativePath": "api/v1/vendor/finished-products",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "category",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "sourceRawMaterial",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "status",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFinishedProductDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFinishedProductsController",
+    "Method": "CreateProduct",
+    "RelativePath": "api/v1/vendor/finished-products",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorOperations.CreateFinishedProductRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFinishedProductDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 201
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFinishedProductDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFinishedProductsController",
+    "Method": "GetProductById",
+    "RelativePath": "api/v1/vendor/finished-products/{productId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "productId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFinishedProductDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFinishedProductDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFinishedProductsController",
+    "Method": "UpdateProduct",
+    "RelativePath": "api/v1/vendor/finished-products/{productId}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "productId",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorOperations.UpdateFinishedProductRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFinishedProductDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFinishedProductDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFinishedProductsController",
+    "Method": "AdjustStock",
+    "RelativePath": "api/v1/vendor/finished-products/{productId}/adjust-stock",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "productId",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorOperations.AdjustFinishedProductStockRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFinishedProductsController",
+    "Method": "GetProductMovements",
+    "RelativePath": "api/v1/vendor/finished-products/{productId}/movements",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "productId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFinishedProductMovementDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFinishedProductsController",
+    "Method": "ToggleStatus",
+    "RelativePath": "api/v1/vendor/finished-products/{productId}/status",
+    "HttpMethod": "PATCH",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "productId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFinishedProductsController",
+    "Method": "ExportCsv",
+    "RelativePath": "api/v1/vendor/finished-products/export",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFinishedProductsController",
+    "Method": "GetOverview",
+    "RelativePath": "api/v1/vendor/finished-products/overview",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFinishedProductsOverviewDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorRawMaterialInventoryController",
+    "Method": "GetStocks",
+    "RelativePath": "api/v1/vendor/inventory/raw-materials",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "crop",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "supplierType",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "grade",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "stockStatus",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorRawMaterialStockDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorRawMaterialInventoryController",
+    "Method": "GetStockById",
+    "RelativePath": "api/v1/vendor/inventory/raw-materials/{stockId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "stockId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorRawMaterialStockDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorRawMaterialStockDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorRawMaterialInventoryController",
+    "Method": "ExportCsv",
+    "RelativePath": "api/v1/vendor/inventory/raw-materials/export",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorRawMaterialInventoryController",
+    "Method": "GetStockMovements",
+    "RelativePath": "api/v1/vendor/inventory/raw-materials/movements",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorStockMovementDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorRawMaterialInventoryController",
+    "Method": "GetOverview",
+    "RelativePath": "api/v1/vendor/inventory/raw-materials/overview",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorRawMaterialOverviewDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorLedgerController",
+    "Method": "GetEntries",
+    "RelativePath": "api/v1/vendor/ledger",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Tab",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "LedgerCategory",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "PartyCategory",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Party",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Status",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "EntryType",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "From",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "To",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "Ascending",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      },
+      {
+        "Name": "Page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "PageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorLedgerController",
+    "Method": "GetEntry",
+    "RelativePath": "api/v1/vendor/ledger/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorLedgerController",
+    "Method": "Settle",
+    "RelativePath": "api/v1/vendor/ledger/{id}/settle",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorPortal.SettleLedgerEntryRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorLedgerController",
+    "Method": "GetDayTotals",
+    "RelativePath": "api/v1/vendor/ledger/day-totals",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "days",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorLedgerController",
+    "Method": "PaySupplier",
+    "RelativePath": "api/v1/vendor/ledger/pay-supplier",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorPortal.PaySupplierRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorLedgerController",
+    "Method": "RecordReceipt",
+    "RelativePath": "api/v1/vendor/ledger/receipts",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorPortal.RecordReceiptRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorLedgerController",
+    "Method": "GetSummary",
+    "RelativePath": "api/v1/vendor/ledger/summary",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorNotificationsController",
+    "Method": "GetNotifications",
+    "RelativePath": "api/v1/vendor/notifications",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Category",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Priority",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "IsRead",
+        "Type": "System.Nullable\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "From",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "To",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "Page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "PageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorNotificationsController",
+    "Method": "Delete",
+    "RelativePath": "api/v1/vendor/notifications/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorNotificationsController",
+    "Method": "MarkRead",
+    "RelativePath": "api/v1/vendor/notifications/{id}/read",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorNotificationsController",
+    "Method": "MarkAllRead",
+    "RelativePath": "api/v1/vendor/notifications/read-all",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorNotificationsController",
+    "Method": "GetSummary",
+    "RelativePath": "api/v1/vendor/notifications/summary",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorOrdersController",
+    "Method": "GetOrders",
+    "RelativePath": "api/v1/vendor/orders",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Status",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "OtpStatus",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "PaymentStatus",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "CustomerUserId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "Product",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "From",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "To",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "Page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "PageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorOrdersController",
+    "Method": "GetOrder",
+    "RelativePath": "api/v1/vendor/orders/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorOrdersController",
+    "Method": "Cancel",
+    "RelativePath": "api/v1/vendor/orders/{id}/cancel",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorPortal.CancelOrderRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorOrdersController",
+    "Method": "UpdateStatus",
+    "RelativePath": "api/v1/vendor/orders/{id}/status",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorPortal.UpdateOrderStatusRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorOrdersController",
+    "Method": "GetSummary",
+    "RelativePath": "api/v1/vendor/orders/summary",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorCustomersController",
+    "Method": "GetCustomers",
+    "RelativePath": "api/v1/vendor/partners/customers",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "district",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "state",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "status",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorCustomerSummaryDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorCustomersController",
+    "Method": "CreateCustomer",
+    "RelativePath": "api/v1/vendor/partners/customers",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorOperations.CreateVendorCustomerRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorCustomerDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 201
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorCustomerDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorCustomersController",
+    "Method": "GetCustomerById",
+    "RelativePath": "api/v1/vendor/partners/customers/{customerId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "customerId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorCustomerDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorCustomerDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorCustomersController",
+    "Method": "UpdateCustomer",
+    "RelativePath": "api/v1/vendor/partners/customers/{customerId}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "customerId",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorOperations.UpdateVendorCustomerRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorCustomerDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorCustomerDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorCustomersController",
+    "Method": "ToggleStatus",
+    "RelativePath": "api/v1/vendor/partners/customers/{customerId}/status",
+    "HttpMethod": "PATCH",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "customerId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorCustomersController",
+    "Method": "ExportCsv",
+    "RelativePath": "api/v1/vendor/partners/customers/export",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorCustomersController",
+    "Method": "GetOverview",
+    "RelativePath": "api/v1/vendor/partners/customers/overview",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorCustomersOverviewDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFarmersController",
+    "Method": "GetFarmers",
+    "RelativePath": "api/v1/vendor/partners/farmers",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "district",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "state",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "crop",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "status",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFarmerSummaryDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFarmersController",
+    "Method": "CreateFarmer",
+    "RelativePath": "api/v1/vendor/partners/farmers",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorOperations.CreateVendorFarmerRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFarmerDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 201
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFarmerDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFarmersController",
+    "Method": "GetFarmerById",
+    "RelativePath": "api/v1/vendor/partners/farmers/{farmerId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "farmerId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFarmerDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFarmerDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFarmersController",
+    "Method": "UpdateFarmer",
+    "RelativePath": "api/v1/vendor/partners/farmers/{farmerId}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "farmerId",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorOperations.UpdateVendorFarmerRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFarmerDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFarmerDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFarmersController",
+    "Method": "GetFarmerOtpLogs",
+    "RelativePath": "api/v1/vendor/partners/farmers/{farmerId}/otp-confirmations",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "farmerId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFarmerOtpLogDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFarmersController",
+    "Method": "GetFarmerPayments",
+    "RelativePath": "api/v1/vendor/partners/farmers/{farmerId}/payments",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "farmerId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFarmerPaymentDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFarmersController",
+    "Method": "ToggleStatus",
+    "RelativePath": "api/v1/vendor/partners/farmers/{farmerId}/status",
+    "HttpMethod": "PATCH",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "farmerId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFarmersController",
+    "Method": "GetFarmerTransactions",
+    "RelativePath": "api/v1/vendor/partners/farmers/{farmerId}/transactions",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "farmerId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFarmerTransactionDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFarmersController",
+    "Method": "ExportCsv",
+    "RelativePath": "api/v1/vendor/partners/farmers/export",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorFarmersController",
+    "Method": "GetOverview",
+    "RelativePath": "api/v1/vendor/partners/farmers/overview",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorFarmersOverviewDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorMiddlemenController",
+    "Method": "GetMiddlemen",
+    "RelativePath": "api/v1/vendor/partners/middlemen",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "district",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "state",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "status",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorMiddlemanSummaryDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorMiddlemenController",
+    "Method": "CreateMiddleman",
+    "RelativePath": "api/v1/vendor/partners/middlemen",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorOperations.CreateVendorMiddlemanRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorMiddlemanDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 201
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorMiddlemanDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorMiddlemenController",
+    "Method": "GetMiddlemanById",
+    "RelativePath": "api/v1/vendor/partners/middlemen/{middlemanId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "middlemanId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorMiddlemanDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorMiddlemanDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorMiddlemenController",
+    "Method": "UpdateMiddleman",
+    "RelativePath": "api/v1/vendor/partners/middlemen/{middlemanId}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "middlemanId",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorOperations.UpdateVendorMiddlemanRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorMiddlemanDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorMiddlemanDetailDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorMiddlemenController",
+    "Method": "GetMiddlemanOtpLogs",
+    "RelativePath": "api/v1/vendor/partners/middlemen/{middlemanId}/otp-confirmations",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "middlemanId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorMiddlemanOtpLogDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorMiddlemenController",
+    "Method": "GetMiddlemanPayments",
+    "RelativePath": "api/v1/vendor/partners/middlemen/{middlemanId}/payments",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "middlemanId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorMiddlemanPaymentDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorMiddlemenController",
+    "Method": "ToggleStatus",
+    "RelativePath": "api/v1/vendor/partners/middlemen/{middlemanId}/status",
+    "HttpMethod": "PATCH",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "middlemanId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorMiddlemenController",
+    "Method": "GetMiddlemanTransactions",
+    "RelativePath": "api/v1/vendor/partners/middlemen/{middlemanId}/transactions",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "middlemanId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorMiddlemanTransactionDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorMiddlemenController",
+    "Method": "ExportCsv",
+    "RelativePath": "api/v1/vendor/partners/middlemen/export",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorMiddlemenController",
+    "Method": "GetOverview",
+    "RelativePath": "api/v1/vendor/partners/middlemen/overview",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorMiddlemenOverviewDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorProcessingController",
+    "Method": "GetBatches",
+    "RelativePath": "api/v1/vendor/processing/batches",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "rawMaterial",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "status",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorProcessingBatchDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorProcessingController",
+    "Method": "CreateBatch",
+    "RelativePath": "api/v1/vendor/processing/batches",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorOperations.CreateProcessingBatchRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorProcessingBatchDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 201
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorProcessingBatchDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorProcessingController",
+    "Method": "GetBatchById",
+    "RelativePath": "api/v1/vendor/processing/batches/{processingId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "processingId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorProcessingBatchDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorProcessingBatchDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorProcessingController",
+    "Method": "ExportCsv",
+    "RelativePath": "api/v1/vendor/processing/export",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorProcessingController",
+    "Method": "GetOverview",
+    "RelativePath": "api/v1/vendor/processing/overview",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorOperations.VendorProcessingOverviewDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorProfileController",
+    "Method": "GetAllProfiles",
+    "RelativePath": "api/v1/vendor/profile",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[System.Collections.Generic.List\u00601[[AgriPurchaseBilling.Application.DTOs.VendorProfileDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorProfileController",
+    "Method": "GetProfileById",
+    "RelativePath": "api/v1/vendor/profile/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorProfileDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorProfileDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorProfileController",
+    "Method": "UpdateProfileById",
+    "RelativePath": "api/v1/vendor/profile/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.UpdateVendorProfileRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorProfileDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorProfileDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 403
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorProfileDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 404
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorProfileController",
+    "Method": "GetBankDetails",
+    "RelativePath": "api/v1/vendor/profile/bank-details",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "reveal",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorBankDetailsDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorProfileController",
+    "Method": "UpdateBankDetails",
+    "RelativePath": "api/v1/vendor/profile/bank-details",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.UpdateVendorBankDetailsRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorBankDetailsDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorBankDetailsDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorProfileController",
+    "Method": "RequestMobileChangeOtp",
+    "RelativePath": "api/v1/vendor/profile/mobile-change/request-otp",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.RequestVendorMobileChangeDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorMobileChangeOtpDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorMobileChangeOtpDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorProfileController",
+    "Method": "VerifyMobileChangeOtp",
+    "RelativePath": "api/v1/vendor/profile/mobile-change/verify-otp",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VerifyVendorMobileChangeDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorMobileChangeResultDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 200
+      },
+      {
+        "Type": "AgriPurchaseBilling.Application.DTOs.ApiResponse\u00601[[AgriPurchaseBilling.Application.DTOs.VendorMobileChangeResultDto, AgriPurchaseBilling.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "application/json"
+        ],
+        "StatusCode": 400
+      }
+    ]
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorSalesController",
+    "Method": "GetSales",
+    "RelativePath": "api/v1/vendor/sales",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Status",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "OtpStatus",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "PaymentStatus",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "CustomerUserId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "Product",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "From",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "To",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "Page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "PageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorSalesController",
+    "Method": "CreateSale",
+    "RelativePath": "api/v1/vendor/sales",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorPortal.SaveSaleRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorSalesController",
+    "Method": "GetSale",
+    "RelativePath": "api/v1/vendor/sales/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorSalesController",
+    "Method": "UpdateSale",
+    "RelativePath": "api/v1/vendor/sales/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AgriPurchaseBilling.Application.DTOs.VendorPortal.SaveSaleRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorSalesController",
+    "Method": "DeleteDraft",
+    "RelativePath": "api/v1/vendor/sales/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorSalesController",
+    "Method": "SubmitSale",
+    "RelativePath": "api/v1/vendor/sales/{id}/submit",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorSalesController",
+    "Method": "GetBatches",
+    "RelativePath": "api/v1/vendor/sales/batches",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "product",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "includeEmpty",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorSalesController",
+    "Method": "GetBatch",
+    "RelativePath": "api/v1/vendor/sales/batches/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorSalesController",
+    "Method": "GetCatalogSummary",
+    "RelativePath": "api/v1/vendor/sales/catalog-summary",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorSalesController",
+    "Method": "GetCustomers",
+    "RelativePath": "api/v1/vendor/sales/customers",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "search",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorSalesController",
+    "Method": "GetCustomer",
+    "RelativePath": "api/v1/vendor/sales/customers/{customerUserId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "customerUserId",
+        "Type": "System.Int64",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorSalesController",
+    "Method": "GetDrafts",
+    "RelativePath": "api/v1/vendor/sales/drafts",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Status",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "OtpStatus",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "PaymentStatus",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "CustomerUserId",
+        "Type": "System.Nullable\u00601[[System.Int64, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "Product",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "From",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "To",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "Page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "PageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorSalesController",
+    "Method": "GetSummary",
+    "RelativePath": "api/v1/vendor/sales/summary",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  }
+]
