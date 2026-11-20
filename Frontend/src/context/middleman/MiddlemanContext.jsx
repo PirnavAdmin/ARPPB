@@ -55,6 +55,13 @@ import {
   rejectMiddlemanOtpApi,
   resendMiddlemanOtpApi,
 } from '../../services/middlemanConfirmationsService';
+import {
+  fetchMiddlemanCustomersApi,
+  registerMiddlemanCustomerApi,
+  updateMiddlemanCustomerApi,
+  fetchMiddlemanCustomerSalesApi,
+  createMiddlemanCustomerSaleApi,
+} from '../../services/middlemanCustomerService';
 
 const STORAGE_KEY = 'agriconnect_middleman_state_v1';
 
@@ -393,6 +400,28 @@ export const MiddlemanProvider = ({ children }) => {
 
   
   // Fetch Middleman Confirmations from backend API (GET /api/v1/middleman/confirmations)
+  const refreshCustomers = useCallback(async () => {
+    try {
+      const apiCusts = await fetchMiddlemanCustomersApi();
+      if (apiCusts && Array.isArray(apiCusts) && apiCusts.length > 0) {
+        setCustomers(apiCusts);
+      }
+    } catch {
+      // fallback smoothly
+    }
+  }, []);
+
+  const refreshCustomerSales = useCallback(async () => {
+    try {
+      const apiCustSales = await fetchMiddlemanCustomerSalesApi();
+      if (apiCustSales && Array.isArray(apiCustSales) && apiCustSales.length > 0) {
+        setCustomerSales(apiCustSales);
+      }
+    } catch {
+      // fallback smoothly
+    }
+  }, []);
+
   const refreshConfirmations = useCallback(async () => {
     try {
       const apiConfirmations = await fetchMiddlemanConfirmationsApi();
@@ -415,6 +444,8 @@ export const MiddlemanProvider = ({ children }) => {
       refreshNotifications();
       refreshVendorSales();
       refreshConfirmations();
+      refreshCustomers();
+      refreshCustomerSales();
     });
   }, [
     token,
@@ -429,6 +460,8 @@ export const MiddlemanProvider = ({ children }) => {
     refreshNotifications,
     refreshVendorSales,
     refreshConfirmations,
+    refreshCustomers,
+    refreshCustomerSales,
   ]);
 
   // Profile actions (PUT /api/v1/middleman-profile/{id})
@@ -585,8 +618,8 @@ export const MiddlemanProvider = ({ children }) => {
   }, []);
 
   // Customer actions
-  const addCustomer = useCallback((data) => {
-    const newCustomer = {
+  const addCustomer = useCallback(async (data) => {
+    let newCustomer = {
       customerId: generateId('CUS'),
       totalPurchases: 0,
       totalPurchaseValue: 0,
@@ -595,6 +628,16 @@ export const MiddlemanProvider = ({ children }) => {
       ...data,
     };
     setCustomers((prev) => [newCustomer, ...prev]);
+
+    try {
+      const saved = await registerMiddlemanCustomerApi(data);
+      if (saved && saved.customerId) {
+        newCustomer = saved;
+        setCustomers((prev) => prev.map((c) => (c.customerId === newCustomer.customerId ? saved : c)));
+      }
+    } catch (err) {
+      console.warn('registerMiddlemanCustomerApi fallback:', err?.message || err);
+    }
     addNotification({
       title: 'Customer Registered',
       description: `Customer ${newCustomer.name} was added.`,
@@ -606,8 +649,13 @@ export const MiddlemanProvider = ({ children }) => {
     return newCustomer;
   }, [addNotification]);
 
-  const updateCustomer = useCallback((id, data) => {
+  const updateCustomer = useCallback(async (id, data) => {
     setCustomers((prev) => prev.map((c) => (c.customerId === id ? { ...c, ...data } : c)));
+    try {
+      await updateMiddlemanCustomerApi(id, data);
+    } catch (err) {
+      console.warn('updateMiddlemanCustomerApi fallback:', err?.message || err);
+    }
   }, []);
 
   // Purchase Actions
@@ -812,6 +860,16 @@ export const MiddlemanProvider = ({ children }) => {
     };
 
     setCustomerSales((prev) => [newSale, ...prev]);
+
+    createMiddlemanCustomerSaleApi(data, isDraft)
+      .then((saved) => {
+        if (saved && saved.saleId) {
+          setCustomerSales((prev) => prev.map((s) => (s.saleId === saleId ? saved : s)));
+        }
+      })
+      .catch((err) => {
+        console.warn('createMiddlemanCustomerSaleApi fallback:', err?.message || err);
+      });
 
     if (!isDraft) {
       const confId = generateId('CONF-C');
@@ -1460,6 +1518,7 @@ export const MiddlemanProvider = ({ children }) => {
     addVendor,
     updateVendor,
     customers,
+    refreshCustomers,
     addCustomer,
     updateCustomer,
     purchases,
@@ -1469,6 +1528,7 @@ export const MiddlemanProvider = ({ children }) => {
     refreshVendorSales,
     createVendorSale,
     customerSales,
+    refreshCustomerSales,
     createCustomerSale,
     inventory,
     addInventoryBatch,
@@ -1478,6 +1538,8 @@ export const MiddlemanProvider = ({ children }) => {
     confirmTransaction,
     rejectTransaction,
     refreshConfirmations,
+    refreshCustomers,
+    refreshCustomerSales,
     ledger,
     addLedgerEntry,
     settleLedgerEntry,
