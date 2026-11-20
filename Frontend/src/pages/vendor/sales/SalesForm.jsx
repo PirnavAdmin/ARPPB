@@ -285,6 +285,8 @@ export default function SalesForm({ preselectedProductId = '', preselectedCustom
 
     const payload = {
       customerId: selectedCustomer.id,
+      customerUserId: selectedCustomer.customerUserId || selectedCustomer.rawId,
+      rawCustomerId: selectedCustomer.customerUserId || selectedCustomer.rawId,
       customerName: selectedCustomer.customerName,
       businessName: selectedCustomer.businessName,
       mobileNumber: selectedCustomer.mobileNumber,
@@ -292,7 +294,14 @@ export default function SalesForm({ preselectedProductId = '', preselectedCustom
       deliveryAddress: effectiveAddress,
       district: selectedCustomer.district,
       state: selectedCustomer.state,
-      items: lineItems,
+      items: lineItems.map((item) => ({
+        ...item,
+        finishedBatchId:
+          item.finishedBatchId ||
+          item.batchRawId ||
+          item.rawId ||
+          (typeof item.batchId === 'number' ? item.batchId : null),
+      })),
       ...additionalDetails,
     };
 
