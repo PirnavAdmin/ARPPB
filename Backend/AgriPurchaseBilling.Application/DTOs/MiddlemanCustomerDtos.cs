@@ -76,14 +76,17 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string? Mobile { get; set; }
         public string CropName { get; set; } = string.Empty;
         public string Variety { get; set; } = "Standard";
+        public string QualityGrade { get; set; } = "Grade A";
         public decimal Quantity { get; set; }
         public string Unit { get; set; } = "Quintal";
         public decimal Rate { get; set; }
         public decimal Subtotal { get; set; }
         public decimal DeliveryCharges { get; set; }
+        public string? DeliveryAddress { get; set; }
         public decimal FinalAmount { get; set; }
         public DateTime SalesDate { get; set; }
         public DateTime? ExpectedPaymentDate { get; set; }
+        public DateTime? ExpectedDeliveryDate { get; set; }
         public string Status { get; set; } = "Pending Confirmation";
         public string OtpStatus { get; set; } = "Pending";
         public DateTime? ConfirmationDate { get; set; }
@@ -117,14 +120,17 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string? Mobile { get; set; }
         public string CropName { get; set; } = string.Empty;
         public string? Variety { get; set; } = "Standard";
+        public string? QualityGrade { get; set; } = "Grade A";
         public decimal Quantity { get; set; }
         public string? Unit { get; set; } = "Quintal";
         public decimal Rate { get; set; }
         public decimal Subtotal { get; set; }
         public decimal DeliveryCharges { get; set; }
+        public string? DeliveryAddress { get; set; }
         public decimal FinalAmount { get; set; }
         public DateTime? SalesDate { get; set; }
         public DateTime? ExpectedPaymentDate { get; set; }
+        public DateTime? ExpectedDeliveryDate { get; set; }
         public bool IsDraft { get; set; } = false;
         public string? Notes { get; set; }
     }

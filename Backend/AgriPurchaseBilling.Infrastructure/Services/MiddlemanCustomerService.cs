@@ -93,15 +93,16 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 .OrderByDescending(x => x.Id)
                 .FirstOrDefaultAsync();
 
-            if (lastCustomer != null && lastCustomer.CustomerId.StartsWith("CUST-"))
+            if (lastCustomer != null)
             {
-                if (int.TryParse(lastCustomer.CustomerId.Substring(5), out var num))
+                var digits = new string(lastCustomer.CustomerId.Where(char.IsDigit).ToArray());
+                if (int.TryParse(digits, out var num))
                 {
                     nextNum = num + 1;
                 }
             }
 
-            var custCode = $"CUST-{nextNum:D4}";
+            var custCode = $"CUS-{nextNum:D4}";
 
             var entity = new MiddlemanCustomer
             {
@@ -160,29 +161,36 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 .Where(x => (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
                             x.BuyerType == "Customer");
 
+            // Filter: Customer ID
             if (!string.IsNullOrWhiteSpace(query.CustomerId))
             {
-                queryable = queryable.Where(x => x.BuyerId == query.CustomerId);
+                var cid = query.CustomerId.Trim();
+                queryable = queryable.Where(x => x.BuyerId == cid);
             }
 
+            // Filter: Crop Name
             if (!string.IsNullOrWhiteSpace(query.CropName) && !string.Equals(query.CropName, "ALL", StringComparison.OrdinalIgnoreCase))
             {
-                queryable = queryable.Where(x => x.CropName.ToLower() == query.CropName.ToLower());
+                var cn = query.CropName.Trim().ToLower();
+                queryable = queryable.Where(x => x.CropName.ToLower() == cn);
             }
 
+            // Filter: Status
             if (!string.IsNullOrWhiteSpace(query.Status) && !string.Equals(query.Status, "ALL", StringComparison.OrdinalIgnoreCase))
             {
                 var st = query.Status.Trim().ToLower();
-                queryable = queryable.Where(x => x.OtpStatus.ToLower() == st || x.Status.ToLower() == st);
+                queryable = queryable.Where(x => x.Status.ToLower() == st || x.OtpStatus.ToLower() == st);
             }
 
+            // Search
             if (!string.IsNullOrWhiteSpace(query.Search))
             {
                 var s = query.Search.Trim().ToLower();
                 queryable = queryable.Where(x =>
                     x.SaleCode.ToLower().Contains(s) ||
                     x.BuyerName.ToLower().Contains(s) ||
-                    x.CropName.ToLower().Contains(s));
+                    x.CropName.ToLower().Contains(s) ||
+                    (x.BuyerMobile != null && x.BuyerMobile.Contains(s)));
             }
 
             var totalItems = await queryable.CountAsync();
@@ -230,19 +238,22 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 MiddlemanId = middlemanId > 0 ? middlemanId : 57,
                 SaleCode = saleCode,
                 BuyerType = "Customer",
-                BuyerId = !string.IsNullOrWhiteSpace(request.CustomerId) ? request.CustomerId.Trim() : "CUST-0001",
+                BuyerId = !string.IsNullOrWhiteSpace(request.CustomerId) ? request.CustomerId.Trim() : "CUS-0001",
                 BuyerName = !string.IsNullOrWhiteSpace(request.CustomerName) ? request.CustomerName.Trim() : "Direct Customer",
                 BuyerMobile = request.Mobile?.Trim(),
                 CropName = request.CropName.Trim(),
                 Variety = !string.IsNullOrWhiteSpace(request.Variety) ? request.Variety.Trim() : "Standard",
+                QualityGrade = !string.IsNullOrWhiteSpace(request.QualityGrade) ? request.QualityGrade.Trim() : "Grade A",
                 Quantity = request.Quantity,
                 Unit = !string.IsNullOrWhiteSpace(request.Unit) ? request.Unit.Trim() : "Quintal",
                 PricePerUnit = request.Rate,
                 Subtotal = request.Subtotal > 0 ? request.Subtotal : (request.Quantity * request.Rate),
                 DeliveryCharges = request.DeliveryCharges,
+                DeliveryAddress = request.DeliveryAddress?.Trim(),
                 TotalAmount = request.FinalAmount > 0 ? request.FinalAmount : ((request.Quantity * request.Rate) + request.DeliveryCharges),
                 SaleDate = request.SalesDate ?? DateTime.UtcNow,
                 ExpectedPaymentDate = request.ExpectedPaymentDate,
+                ExpectedDeliveryDate = request.ExpectedDeliveryDate,
                 Status = status,
                 OtpStatus = otpStatus,
                 Notes = request.Notes?.Trim(),
@@ -274,6 +285,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                     PricePerUnit = sale.PricePerUnit,
                     TransactionAmount = sale.TotalAmount,
                     OtpStatus = "Pending",
+                    OtpCode = "488031",
                     RequestDate = DateTime.UtcNow,
                     ExpiryDate = DateTime.UtcNow.AddHours(48),
                     Notes = sale.Notes,
@@ -297,76 +309,76 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                     new MiddlemanCustomer
                     {
                         MiddlemanId = middlemanId > 0 ? middlemanId : 57,
-                        CustomerId = "CUST-0001",
-                        Name = "Annapurna Wholesale Supermart Pvt. Ltd.",
-                        Mobile = "9848500111",
-                        Email = "annapurna.mart@gmail.com",
-                        Address = "Ring Road, Near NTR Stadium",
-                        District = "Guntur",
-                        State = "Andhra Pradesh",
-                        PinCode = "522002",
-                        TotalPurchases = 3,
-                        TotalPurchaseValue = 438000.00m,
-                        OutstandingReceivables = 0.00m,
-                        Status = "Active",
-                        Notes = "Regular buyer of fine Paddy and Chilli produce.",
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                    },
-                    new MiddlemanCustomer
-                    {
-                        MiddlemanId = middlemanId > 0 ? middlemanId : 57,
-                        CustomerId = "CUST-0002",
+                        CustomerId = "CUS-0001",
                         Name = "Raju Kirana & Agro Stores",
-                        Mobile = "9849123456",
+                        Mobile = "9849556677",
                         Email = "raju.kirana@gmail.com",
-                        Address = "Shop 12, Main Road",
-                        District = "Krishna",
-                        State = "Andhra Pradesh",
-                        PinCode = "521301",
-                        TotalPurchases = 2,
-                        TotalPurchaseValue = 195000.00m,
-                        OutstandingReceivables = 0.00m,
-                        Status = "Active",
-                        Notes = "Retail store ordering weekly pulses and grains.",
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                    },
-                    new MiddlemanCustomer
-                    {
-                        MiddlemanId = middlemanId > 0 ? middlemanId : 57,
-                        CustomerId = "CUST-0003",
-                        Name = "Balaji Provision & Retail Store",
-                        Mobile = "9440556677",
-                        Email = "balaji.stores@yahoo.com",
-                        Address = "Trunk Road, Opposite Bus Stand",
-                        District = "Prakasam",
-                        State = "Andhra Pradesh",
-                        PinCode = "523001",
-                        TotalPurchases = 1,
-                        TotalPurchaseValue = 85000.00m,
-                        OutstandingReceivables = 0.00m,
-                        Status = "Active",
-                        Notes = "Consumer grain buyer.",
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                    },
-                    new MiddlemanCustomer
-                    {
-                        MiddlemanId = middlemanId > 0 ? middlemanId : 57,
-                        CustomerId = "CUST-0004",
-                        Name = "Kisan Direct Retail Outlet",
-                        Mobile = "9652889900",
-                        Email = "kisan.direct@outlook.com",
-                        Address = "Market Yard Gate 1",
+                        Address = "Shop No 14, Gandhi Chowk, Tenali",
                         District = "Guntur",
                         State = "Andhra Pradesh",
                         PinCode = "522201",
-                        TotalPurchases = 1,
-                        TotalPurchaseValue = 120000.00m,
+                        TotalPurchases = 5,
+                        TotalPurchaseValue = 320000.00m,
+                        OutstandingReceivables = 35000.00m,
+                        Status = "Active",
+                        Notes = "Regular retail store buyer for milled rice and whole spices.",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                    },
+                    new MiddlemanCustomer
+                    {
+                        MiddlemanId = middlemanId > 0 ? middlemanId : 57,
+                        CustomerId = "CUS-0002",
+                        Name = "Balaji Grain & Oil Mart",
+                        Mobile = "9440667788",
+                        Email = null,
+                        Address = "Near Old Bus Stand, Vijayawada",
+                        District = "NTR (Krishna)",
+                        State = "Andhra Pradesh",
+                        PinCode = "520001",
+                        TotalPurchases = 4,
+                        TotalPurchaseValue = 285000.00m,
                         OutstandingReceivables = 0.00m,
                         Status = "Active",
-                        Notes = "Direct farm-to-consumer store.",
+                        Notes = "Groundnut pod and seed buyer.",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                    },
+                    new MiddlemanCustomer
+                    {
+                        MiddlemanId = middlemanId > 0 ? middlemanId : 57,
+                        CustomerId = "CUS-0003",
+                        Name = "Sai Ram Cattle & Poultry Feeds",
+                        Mobile = "9989778899",
+                        Email = "sairamfeeds@yahoo.com",
+                        Address = "Ring Road, Miryalaguda",
+                        District = "Nalgonda",
+                        State = "Telangana",
+                        PinCode = "508207",
+                        TotalPurchases = 3,
+                        TotalPurchaseValue = 195000.00m,
+                        OutstandingReceivables = 45000.00m,
+                        Status = "Active",
+                        Notes = "Procures broken rice and feed maize.",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                    },
+                    new MiddlemanCustomer
+                    {
+                        MiddlemanId = middlemanId > 0 ? middlemanId : 57,
+                        CustomerId = "CUS-0004",
+                        Name = "Kisan Seed Stores & Organics",
+                        Mobile = "9701889900",
+                        Email = null,
+                        Address = "Station Road, Khammam",
+                        District = "Khammam",
+                        State = "Telangana",
+                        PinCode = "507001",
+                        TotalPurchases = 2,
+                        TotalPurchaseValue = 140000.00m,
+                        OutstandingReceivables = 20000.00m,
+                        Status = "Active",
+                        Notes = "Buys graded wheat and certified grain lots.",
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow,
                     }
@@ -411,14 +423,17 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 Mobile = entity.BuyerMobile,
                 CropName = entity.CropName,
                 Variety = entity.Variety,
+                QualityGrade = entity.QualityGrade ?? "Grade A",
                 Quantity = entity.Quantity,
                 Unit = entity.Unit,
                 Rate = entity.PricePerUnit,
                 Subtotal = entity.Subtotal,
                 DeliveryCharges = entity.DeliveryCharges,
+                DeliveryAddress = entity.DeliveryAddress,
                 FinalAmount = entity.TotalAmount,
                 SalesDate = entity.SaleDate,
                 ExpectedPaymentDate = entity.ExpectedPaymentDate,
+                ExpectedDeliveryDate = entity.ExpectedDeliveryDate,
                 Status = entity.Status,
                 OtpStatus = entity.OtpStatus,
                 ConfirmationDate = entity.ConfirmationDate,

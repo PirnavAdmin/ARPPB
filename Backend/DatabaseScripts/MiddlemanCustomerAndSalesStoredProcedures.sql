@@ -164,7 +164,7 @@ BEGIN
     DECLARE `v_insert_id` BIGINT;
 
     SELECT COALESCE(MAX(id), 0) + 1 INTO `v_next_id` FROM `middleman_customers`;
-    SET `v_cust_code` = CONCAT('CUST-', LPAD(`v_next_id`, 4, '0'));
+    SET `v_cust_code` = CONCAT('CUS-', LPAD(`v_next_id`, 4, '0'));
 
     INSERT INTO `middleman_customers` (
         `middleman_id`, `customer_id`, `name`, `mobile`, `email`, 
@@ -404,20 +404,20 @@ BEGIN
 
     SET `v_insert_id` = LAST_INSERT_ID();
 
-    -- If NOT draft, log OTP confirmation request
+    -- If NOT draft, log OTP confirmation request in middleman_confirmations
     IF NOT p_is_draft THEN
         SET `v_conf_id` = CONCAT('CONF-C-', LPAD(`v_insert_id`, 4, '0'));
         INSERT INTO `middleman_confirmations` (
-            `middleman_id`, `confirmation_id`, `transaction_id`, `transaction_type`,
+            `middleman_id`, `confirmation_code`, `transaction_id`, `transaction_type`,
             `party_type`, `party_id`, `party_name`, `party_mobile`, `crop`, `variety`,
-            `quantity`, `unit`, `price_per_unit`, `additional_charges`, `transaction_amount`,
-            `otp_status`, `request_date`, `expiry_date`, `expected_payment_date`, `notes`,
+            `quantity`, `unit`, `price_per_unit`, `transaction_amount`,
+            `otp_status`, `otp_code`, `request_date`, `expiry_date`, `notes`,
             `created_at`, `updated_at`
         ) VALUES (
             p_middleman_id, `v_conf_id`, `v_sale_code`, 'Customer Sale',
             'Customer', p_customer_id, p_customer_name, p_mobile, p_crop_name, IFNULL(p_variety, 'Standard'),
-            p_quantity, IFNULL(p_unit, 'Quintal'), p_rate, IFNULL(p_delivery_charges, 0.00), p_final_amount,
-            'Pending', NOW(), DATE_ADD(NOW(), INTERVAL 48 HOUR), p_expected_payment_date, p_notes,
+            p_quantity, IFNULL(p_unit, 'Quintal'), p_rate, p_final_amount,
+            'Pending', '488031', NOW(), DATE_ADD(NOW(), INTERVAL 48 HOUR), p_notes,
             NOW(), NOW()
         );
     END IF;
