@@ -105,6 +105,17 @@ const API_ENDPOINTS = {
     update: (id) => `/api/v1/middleman/farmers/${id}`,
     history: (id) => `/api/v1/middleman/farmers/${id}/history`,
   },
+  MiddlemanCustomers: {
+    getAll: "/api/v1/middleman/customers",
+    create: "/api/v1/middleman/customers",
+    getById: (id) => `/api/v1/middleman/customers/${id}`,
+    update: (id) => `/api/v1/middleman/customers/${id}`,
+  },
+  MiddlemanCustomerSales: {
+    getAll: "/api/v1/middleman/customer-sales",
+    create: "/api/v1/middleman/customer-sales",
+    getById: (id) => `/api/v1/middleman/customer-sales/${id}`,
+  },
 
   // =========================
   // MIDDLEMAN INVENTORY
