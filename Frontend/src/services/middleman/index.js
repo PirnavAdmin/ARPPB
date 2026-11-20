@@ -366,25 +366,44 @@ export async function fetchMiddlemanInventoryBatchesApi(params = {}) {
 
 export async function createMiddlemanInventoryBatchApi(batchData = {}) {
   try {
-    const res = await api.post(Endpoints.MiddlemanInventory.createBatch, {
-      purchaseId: batchData.purchaseId || null,
+    const purchasedQuantity = Number(
+      batchData.purchasedQuantity ?? batchData.quantity ?? 0
+    );
+    const purchaseRate = Number(
+      batchData.purchaseRate ?? batchData.rate ?? batchData.pricePerQuintal ?? 0
+    );
+    const allocatedCharges = Number(
+      batchData.allocatedCharges ?? batchData.additionalCharges ?? 0
+    );
+    const availableQuantity = Number(
+      batchData.availableQuantity ?? purchasedQuantity
+    );
+    const averageCost = Number(
+      batchData.averageCost ??
+      (purchasedQuantity > 0 ? (purchasedQuantity * purchaseRate + allocatedCharges) / purchasedQuantity : purchaseRate)
+    );
+
+    const payload = {
+      purchaseId: batchData.purchaseId || batchData.purchaseCode || null,
       farmerId: batchData.farmerId || null,
-      farmerName: batchData.farmerName || '',
+      farmerName: batchData.farmerName || batchData.supplierName || 'Registered Farmer',
       cropName: batchData.cropName || '',
-      variety: batchData.variety || 'Standard',
+      variety: batchData.variety || batchData.cropVariety || 'Standard',
       unit: batchData.unit || 'Quintal',
-      purchaseDate: batchData.purchaseDate || new Date().toISOString().slice(0, 10),
-      purchasedQuantity: Number(batchData.purchasedQuantity) || 0,
-      availableQuantity: Number(
-        batchData.availableQuantity ?? batchData.purchasedQuantity ?? 0
-      ),
-      purchaseRate: Number(batchData.purchaseRate) || 0,
-      allocatedCharges: Number(batchData.allocatedCharges) || 0,
-      averageCost: Number(batchData.averageCost) || 0,
-      quality: batchData.quality || 'Grade A',
-      godownLocation: batchData.godownLocation || 'Main Yard Godown',
-      minimumThreshold: Number(batchData.minimumThreshold || 30),
-    });
+      purchaseDate: batchData.purchaseDate
+        ? new Date(batchData.purchaseDate).toISOString()
+        : new Date().toISOString(),
+      purchasedQuantity,
+      availableQuantity,
+      purchaseRate,
+      allocatedCharges,
+      averageCost,
+      quality: batchData.quality || batchData.qualityGrade || 'Grade A',
+      godownLocation: batchData.godownLocation || batchData.pickupLocation || batchData.storageLocation || 'Main AMC Warehouse',
+      minimumThreshold: Number(batchData.minimumThreshold || 10),
+    };
+
+    const res = await api.post(Endpoints.MiddlemanInventory.createBatch, payload);
     const dto = res.data?.data ?? res.data;
     return dto ? mapMiddlemanBatchDto(dto, batchData) : null;
   } catch (err) {
@@ -395,18 +414,28 @@ export async function createMiddlemanInventoryBatchApi(batchData = {}) {
 
 export async function updateMiddlemanInventoryBatchApi(id, batchData = {}) {
   if (!id) return null;
-  let targetId = batchData.id || id;
-  if (typeof targetId === 'string' && targetId.startsWith('STK')) {
-    const numPart = targetId.replace(/\D/g, '');
+  let targetId = batchData.id || (typeof id === 'number' ? id : null);
+  if (!targetId && typeof id === 'string') {
+    const numPart = id.replace(/\D/g, '');
     if (numPart && numPart.length < 10) targetId = parseInt(numPart, 10);
   }
+  targetId = targetId || id;
   try {
+    const availableQuantity = Number(
+      batchData.availableQuantity ?? batchData.purchasedQuantity ?? 0
+    );
+    const soldQuantity = Number(batchData.soldQuantity || 0);
+    const minimumThreshold = Number(batchData.minimumThreshold || 10);
+    const status =
+      batchData.status ||
+      (availableQuantity <= 0 ? 'Exhausted' : availableQuantity <= minimumThreshold ? 'Low Stock' : 'In Stock');
+
     const res = await api.put(Endpoints.MiddlemanInventory.updateBatch(targetId), {
-      availableQuantity: Number(batchData.availableQuantity),
-      soldQuantity: Number(batchData.soldQuantity || 0),
-      godownLocation: batchData.godownLocation || 'Main Yard Godown',
-      minimumThreshold: Number(batchData.minimumThreshold || 30),
-      status: batchData.status || 'In Stock',
+      availableQuantity,
+      soldQuantity,
+      godownLocation: batchData.godownLocation || batchData.storageLocation || 'Main AMC Warehouse',
+      minimumThreshold,
+      status,
     });
     const dto = res.data?.data ?? res.data;
     return dto ? mapMiddlemanBatchDto(dto, batchData) : null;

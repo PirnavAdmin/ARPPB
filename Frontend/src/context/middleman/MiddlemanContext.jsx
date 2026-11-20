@@ -614,6 +614,41 @@ export const MiddlemanProvider = ({ children }) => {
       console.warn('Syncing purchase to backend API had non-blocking issue:', err);
     }
 
+    // Persist stock batch directly to Middleman Inventory in backend DB
+    if (!isDraft && data.cropName && Number(data.quantity) > 0) {
+      const stockId = generateId('STK');
+      const batchPayload = {
+        stockId,
+        purchaseId: purchaseRecord.purchaseId || tempId,
+        farmerId: data.farmerId || null,
+        farmerName: data.farmerName || '',
+        cropName: data.cropName,
+        variety: data.variety || 'Standard',
+        unit: data.unit || 'Quintal',
+        purchaseDate: data.purchaseDate || new Date().toISOString().slice(0, 10),
+        purchasedQuantity: Number(data.quantity),
+        availableQuantity: Number(data.quantity),
+        soldQuantity: 0,
+        purchaseRate: Number(data.rate || 0),
+        allocatedCharges: Number(data.additionalCharges || 0),
+        averageCost: Number(data.averageCostPerUnit || data.rate || 0),
+        quality: data.quality || 'Grade A',
+        godownLocation: data.pickupLocation || 'Main AMC Warehouse',
+        minimumThreshold: 10,
+        status: 'In Stock',
+      };
+      setInventory((prev) => [batchPayload, ...prev]);
+      createMiddlemanInventoryBatchApi(batchPayload)
+        .then((savedBatch) => {
+          if (savedBatch && (savedBatch.stockId || savedBatch.id)) {
+            setInventory((prev) =>
+              prev.map((b) => (b.stockId === stockId ? { ...b, ...savedBatch } : b))
+            );
+          }
+        })
+        .catch((err) => console.warn('Saving inventory batch on purchase issue:', err));
+    }
+
     if (!isDraft) {
       // Create pending confirmation record
       const confId = generateId('CONF-F');
@@ -825,37 +860,40 @@ export const MiddlemanProvider = ({ children }) => {
           )
         );
 
-        // Create new Inventory Batch
-        const stockId = generateId('STK');
-        const newBatch = {
-          stockId,
-          purchaseId: purchase.purchaseId,
-          farmerId: purchase.farmerId,
-          farmerName: purchase.farmerName,
-          cropName: purchase.cropName,
-          variety: purchase.variety || 'Standard',
-          unit: purchase.unit || 'Quintal',
-          purchaseDate: purchase.purchaseDate || now.slice(0, 10),
-          purchasedQuantity: Number(purchase.quantity),
-          soldQuantity: 0,
-          availableQuantity: Number(purchase.quantity),
-          purchaseRate: Number(purchase.rate),
-          allocatedCharges: Number(purchase.additionalCharges || 0),
-          averageCost: Number(purchase.averageCostPerUnit || purchase.rate),
-          quality: purchase.quality || 'Grade A',
-          status: 'In Stock',
-          godownLocation: purchase.pickupLocation || 'Main Yard Godown',
-        };
-        setInventory((prev) => [newBatch, ...prev]);
-        createMiddlemanInventoryBatchApi(newBatch)
-          .then((savedBatch) => {
-            if (savedBatch && (savedBatch.stockId || savedBatch.id)) {
-              setInventory((prev) =>
-                prev.map((b) => (b.stockId === stockId ? { ...b, ...savedBatch } : b))
-              );
-            }
-          })
-          .catch(() => {});
+        // Create new Inventory Batch if not already created during purchase
+        const existingBatch = inventory.find((b) => b.purchaseId === purchase.purchaseId);
+        if (!existingBatch) {
+          const stockId = generateId('STK');
+          const newBatch = {
+            stockId,
+            purchaseId: purchase.purchaseId,
+            farmerId: purchase.farmerId,
+            farmerName: purchase.farmerName,
+            cropName: purchase.cropName,
+            variety: purchase.variety || 'Standard',
+            unit: purchase.unit || 'Quintal',
+            purchaseDate: purchase.purchaseDate || now.slice(0, 10),
+            purchasedQuantity: Number(purchase.quantity),
+            soldQuantity: 0,
+            availableQuantity: Number(purchase.quantity),
+            purchaseRate: Number(purchase.rate),
+            allocatedCharges: Number(purchase.additionalCharges || 0),
+            averageCost: Number(purchase.averageCostPerUnit || purchase.rate),
+            quality: purchase.quality || 'Grade A',
+            status: 'In Stock',
+            godownLocation: purchase.pickupLocation || 'Main AMC Warehouse',
+          };
+          setInventory((prev) => [newBatch, ...prev]);
+          createMiddlemanInventoryBatchApi(newBatch)
+            .then((savedBatch) => {
+              if (savedBatch && (savedBatch.stockId || savedBatch.id)) {
+                setInventory((prev) =>
+                  prev.map((b) => (b.stockId === stockId ? { ...b, ...savedBatch } : b))
+                );
+              }
+            })
+            .catch(() => {});
+        }
 
         // Update Farmer stats
         setFarmers((prev) =>
@@ -1162,19 +1200,28 @@ export const MiddlemanProvider = ({ children }) => {
   // Inventory Batch Actions
   const addInventoryBatch = useCallback(async (data) => {
     const stockId = generateId('STK');
+    const purchasedQty = Number(data.purchasedQuantity ?? data.quantity ?? 0);
+    const rate = Number(data.purchaseRate ?? data.rate ?? 0);
+    const charges = Number(data.allocatedCharges ?? data.additionalCharges ?? 0);
     const newBatch = {
       stockId,
-      purchasedQuantity: Number(data.purchasedQuantity || 0),
-      availableQuantity: Number(data.availableQuantity ?? data.purchasedQuantity ?? 0),
+      cropName: data.cropName || '',
+      variety: data.variety || 'Standard',
+      farmerId: data.farmerId || 'FAR-0001',
+      farmerName: data.farmerName || 'Registered Farmer',
+      purchaseId: data.purchaseId || generateId('PUR'),
+      purchaseDate: data.purchaseDate || new Date().toISOString().slice(0, 10),
+      purchasedQuantity: purchasedQty,
+      availableQuantity: Number(data.availableQuantity ?? purchasedQty),
       soldQuantity: Number(data.soldQuantity || 0),
-      purchaseRate: Number(data.purchaseRate || 0),
-      allocatedCharges: Number(data.allocatedCharges || 0),
-      averageCost: Number(data.averageCost || data.purchaseRate || 0),
+      purchaseRate: rate,
+      allocatedCharges: charges,
+      averageCost: Number(data.averageCost || (purchasedQty > 0 ? (purchasedQty * rate + charges) / purchasedQty : rate)),
       quality: data.quality || 'Grade A',
       status: 'In Stock',
-      godownLocation: data.godownLocation || 'Main Yard Godown',
-      purchaseDate: data.purchaseDate || new Date().toISOString().slice(0, 10),
+      godownLocation: data.godownLocation || 'Main AMC Warehouse',
       unit: data.unit || 'Quintal',
+      minimumThreshold: Number(data.minimumThreshold || 10),
       ...data,
     };
     setInventory((prev) => [newBatch, ...prev]);
