@@ -253,7 +253,7 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
                 Notes = HasColumn(reader, "Notes") && !reader.IsDBNull(reader.GetOrdinal("Notes")) ? reader.GetString(reader.GetOrdinal("Notes")) : null,
                 Status = reader.GetString(reader.GetOrdinal("Status")),
                 OtpCode = HasColumn(reader, "OtpCode") && !reader.IsDBNull(reader.GetOrdinal("OtpCode")) ? reader.GetString(reader.GetOrdinal("OtpCode")) : null,
-                OtpStatus = HasColumn(reader, "OtpStatus") && !reader.IsDBNull(reader.GetOrdinal("OtpStatus")) ? reader.GetString(reader.GetOrdinal("OtpStatus")) : null,
+                OtpStatus = HasColumn(reader, "OtpStatus") && !reader.IsDBNull(reader.GetOrdinal("OtpStatus")) ? reader.GetString(reader.GetOrdinal("OtpStatus")) : "Pending",
                 OtpExpiresAt = HasColumn(reader, "OtpExpiresAt") && !reader.IsDBNull(reader.GetOrdinal("OtpExpiresAt")) ? reader.GetDateTime(reader.GetOrdinal("OtpExpiresAt")) : null,
                 ConfirmedAt = HasColumn(reader, "ConfirmedAt") && !reader.IsDBNull(reader.GetOrdinal("ConfirmedAt")) ? reader.GetDateTime(reader.GetOrdinal("ConfirmedAt")) : null,
                 IsActive = HasColumn(reader, "IsActive") && !reader.IsDBNull(reader.GetOrdinal("IsActive")) ? reader.GetBoolean(reader.GetOrdinal("IsActive")) : true,

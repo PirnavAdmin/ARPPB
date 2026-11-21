@@ -253,9 +253,6 @@ app.MapControllers();
 // REDIRECT ROOT TO SWAGGER UI (Supports GET and HEAD for tunnel/health probes)
 app.MapMethods("/", new[] { "GET", "HEAD" }, () => Results.Redirect("/swagger")).ExcludeFromDescription();
 
-// ENSURE FARMER SALES TABLES EXIST
-await app.EnsureFarmerSalesTablesAsync();
-
 // RUN
 app.Run();
 
