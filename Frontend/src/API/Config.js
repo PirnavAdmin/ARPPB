@@ -309,6 +309,15 @@ function releaseRequestSlot() {
 
 api.interceptors.request.use(
     async (config) => {
+        if (typeof config.url === "function") {
+            config.url = config.url.path || config.url.toString();
+        } else if (config.url && typeof config.url === "object" && config.url.path) {
+            if (config.url.method && !config.method) {
+                config.method = config.url.method;
+            }
+            config.url = config.url.path;
+        }
+
         if (typeof config.url === "string" && config.url.startsWith("/api/vendor-profile")) {
             config.url = config.url.replace(/^\/api\/vendor-profile/, "/api/v1/vendor/profile");
         }

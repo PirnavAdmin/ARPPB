@@ -1849,3 +1849,151 @@ export async function deleteVendorNotificationApi(id) {
     return null;
   }
 }
+
+/* ==========================================================================
+   13. VENDOR PURCHASES APIs
+   ========================================================================== */
+
+export function mapVendorPurchaseDto(dto = {}, existing = {}) {
+  if (!dto || typeof dto !== 'object') return existing;
+  const rawId = dto.id ?? existing.rawId ?? null;
+  const id =
+    dto.purchaseCode ||
+    (typeof dto.id === 'string' && dto.id.startsWith('PUR-')
+      ? dto.id
+      : rawId
+      ? `PUR-${dto.supplierCategory === 'Middleman' ? 'M' : 'F'}-${String(rawId).padStart(4, '0')}`
+      : existing.id || 'PUR-F-0001');
+
+  const supplierId =
+    dto.supplierCode ||
+    (dto.supplierId
+      ? `${dto.supplierCategory === 'Middleman' ? 'MID' : 'FARM'}-${String(dto.supplierId).padStart(4, '0')}`
+      : existing.supplierId || '');
+
+  return {
+    ...existing,
+    rawId,
+    id,
+    purchaseCode: dto.purchaseCode || id,
+    billNumber: dto.billNumber || existing.billNumber || '',
+    supplierCategory: dto.supplierCategory || existing.supplierCategory || 'Farmer',
+    supplierId,
+    supplierRawId: dto.supplierId ?? existing.supplierRawId ?? null,
+    supplierName: dto.supplierName || dto.supplierBusinessName || existing.supplierName || '',
+    ownerName: dto.supplierName || existing.ownerName || '',
+    mobileNumber: dto.mobileNumber || existing.mobileNumber || '',
+    email: dto.email || existing.email || '',
+    gstNumber: dto.gstin || existing.gstNumber || '',
+    village: dto.villageOrMarket || existing.village || '',
+    district: dto.district || existing.district || '',
+    state: dto.state || existing.state || 'Andhra Pradesh',
+    crop: dto.cropName || existing.crop || 'Paddy',
+    variety: dto.cropVariety || existing.variety || 'Standard',
+    quantity: Number(dto.quantity ?? existing.quantity ?? 0),
+    unit: dto.unit || existing.unit || 'Quintal',
+    rate: Number(dto.ratePerUnit ?? existing.rate ?? 0),
+    totalAmount: Number(dto.totalAmount ?? existing.totalAmount ?? 0),
+    dueAmount: Number(dto.dueAmount ?? existing.dueAmount ?? 0),
+    paidAmount: Number(dto.paidAmount ?? existing.paidAmount ?? 0),
+    paymentStatus: dto.paymentStatus || existing.paymentStatus || 'Pending',
+    status: dto.paymentStatus === 'Paid' ? 'Confirmed' : existing.status || 'Pending OTP Confirmation',
+    purchaseDate: dto.purchaseDate
+      ? String(dto.purchaseDate).slice(0, 10)
+      : existing.purchaseDate || new Date().toISOString().slice(0, 10),
+  };
+}
+
+export async function fetchVendorPurchasesSummaryApi() {
+  try {
+    const res = await api.get('/api/v1/vendor/purchases/summary');
+    return res.data?.data ?? res.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchVendorPurchasesApi(params = {}) {
+  try {
+    const res = await api.get(Endpoints.VendorPurchases.getAll, { params });
+    const list = extractList(res, ['items', 'purchases', 'data']);
+    return list ? list.map((item) => mapVendorPurchaseDto(item)) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchVendorPurchaseByIdApi(id, supplierCategory = 'Farmer') {
+  if (!id) return null;
+  const cleanId = String(id).replace(/^PUR-[FM]-0*/i, '') || id;
+  try {
+    const res = await api.get(Endpoints.VendorPurchases.getById(cleanId), {
+      params: { supplierCategory },
+    });
+    const dto = res.data?.data ?? res.data;
+    return dto ? mapVendorPurchaseDto(dto) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function createVendorPurchaseApi(payload = {}) {
+  try {
+    const isMiddleman =
+      String(payload.supplierCategory || '').toLowerCase() === 'middleman';
+    const supplierCategory = isMiddleman ? 'Middleman' : 'Farmer';
+
+    const supplierNumericId =
+      payload.supplierRawId ||
+      payload.supplierIdNum ||
+      Number(String(payload.supplierId || '').replace(/\D/g, '')) ||
+      1;
+
+    const quantity = Number(payload.quantity || 1);
+    const ratePerUnit = Number(payload.rate || payload.ratePerUnit || 1);
+    const totalAmount = Number(payload.totalAmount || quantity * ratePerUnit);
+    const dueAmount = Number(payload.dueAmount ?? totalAmount);
+
+    const reqBody = {
+      supplierCategory,
+      supplierId: supplierNumericId,
+      purchaseCode: payload.purchaseCode || payload.id || null,
+      billNumber: payload.billNumber || null,
+      cropName: String(payload.cropName || payload.crop || 'Paddy').trim(),
+      cropVariety: String(payload.cropVariety || payload.variety || 'Standard').trim(),
+      quantity,
+      unit: payload.unit || 'Quintal',
+      ratePerUnit,
+      totalAmount,
+      dueAmount,
+      paymentStatus: payload.paymentStatus || 'Pending',
+      purchaseDate: payload.purchaseDate
+        ? new Date(payload.purchaseDate).toISOString()
+        : new Date().toISOString(),
+    };
+
+    const res = await api.post(Endpoints.VendorPurchases.create, reqBody);
+    const dto = res.data?.data ?? res.data;
+    return dto ? mapVendorPurchaseDto(dto) : { success: true };
+  } catch (err) {
+    console.warn('createVendorPurchaseApi warning:', err?.response?.data || err?.message);
+    return null;
+  }
+}
+
+export async function updateVendorPurchaseStatusApi(id, supplierCategory, statusPayload = {}) {
+  if (!id) return null;
+  const cleanId = String(id).replace(/^PUR-[FM]-0*/i, '') || id;
+  try {
+    const res = await api.patch(
+      `/api/v1/vendor/purchases/${cleanId}/status`,
+      statusPayload,
+      { params: { supplierCategory: supplierCategory || 'Farmer' } }
+    );
+    const dto = res.data?.data ?? res.data;
+    return dto ? mapVendorPurchaseDto(dto) : { success: true };
+  } catch {
+    return null;
+  }
+}
+
