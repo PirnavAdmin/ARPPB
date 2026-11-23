@@ -40,6 +40,8 @@ namespace AgriPurchaseBilling.Infrastructure.Data
         public DbSet<FarmerSale> FarmerSales => Set<FarmerSale>();
         public DbSet<FarmerSellProduct> FarmerSellProducts => Set<FarmerSellProduct>();
         public DbSet<FarmerMySale> FarmerMySales => Set<FarmerMySale>();
+        public DbSet<FarmerNotification> FarmerNotifications => Set<FarmerNotification>();
+        public DbSet<DailyMandiMarketPrice> DailyMandiMarketPrices => Set<DailyMandiMarketPrice>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -729,6 +731,54 @@ namespace AgriPurchaseBilling.Infrastructure.Data
                     .WithMany()
                     .HasForeignKey(e => e.CropId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // 17. Farmer Notifications
+            modelBuilder.Entity<FarmerNotification>(entity =>
+            {
+                entity.ToTable("farmer_notifications");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.NotificationCode).HasColumnName("notification_code").HasMaxLength(50).IsRequired();
+                entity.Property(e => e.FarmerId).HasColumnName("farmer_id").IsRequired();
+                entity.Property(e => e.Title).HasColumnName("title").HasMaxLength(200).IsRequired();
+                entity.Property(e => e.Detail).HasColumnName("detail").IsRequired();
+                entity.Property(e => e.Category).HasColumnName("category").HasMaxLength(50).HasDefaultValue("general");
+                entity.Property(e => e.Type).HasColumnName("type").HasMaxLength(50).HasDefaultValue("info");
+                entity.Property(e => e.TargetPage).HasColumnName("target_page").HasMaxLength(50);
+                entity.Property(e => e.TargetId).HasColumnName("target_id").HasMaxLength(100);
+                entity.Property(e => e.IsRead).HasColumnName("is_read").HasDefaultValue(false);
+                entity.Property(e => e.ReadAt).HasColumnName("read_at");
+                entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+            });
+
+            // 18. Daily Mandi Market Prices
+            modelBuilder.Entity<DailyMandiMarketPrice>(entity =>
+            {
+                entity.ToTable("daily_mandi_market_prices");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.PriceCode).HasColumnName("price_code").HasMaxLength(50).IsRequired();
+                entity.Property(e => e.Crop).HasColumnName("crop").HasMaxLength(100).IsRequired();
+                entity.Property(e => e.Category).HasColumnName("category").HasMaxLength(50).HasDefaultValue("Cereal");
+                entity.Property(e => e.Market).HasColumnName("market").HasMaxLength(150).IsRequired();
+                entity.Property(e => e.State).HasColumnName("state").HasMaxLength(50).HasDefaultValue("AP");
+                entity.Property(e => e.Location).HasColumnName("location").HasMaxLength(200);
+                entity.Property(e => e.TodayPrice).HasColumnName("today_price").HasPrecision(12, 2);
+                entity.Property(e => e.PrevPrice).HasColumnName("prev_price").HasPrecision(12, 2);
+                entity.Property(e => e.DailyChange).HasColumnName("daily_change").HasMaxLength(20);
+                entity.Property(e => e.Trend).HasColumnName("trend").HasMaxLength(20).HasDefaultValue("up");
+                entity.Property(e => e.MinPrice).HasColumnName("min_price").HasPrecision(12, 2);
+                entity.Property(e => e.MaxPrice).HasColumnName("max_price").HasPrecision(12, 2);
+                entity.Property(e => e.AvgPrice).HasColumnName("avg_price").HasPrecision(12, 2);
+                entity.Property(e => e.Unit).HasColumnName("unit").HasMaxLength(50).HasDefaultValue("qtl");
+                entity.Property(e => e.PriceHistory).HasColumnName("price_history");
+                entity.Property(e => e.UpdatedLabel).HasColumnName("updated_label").HasMaxLength(100);
+                entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
             });
         }
     }
