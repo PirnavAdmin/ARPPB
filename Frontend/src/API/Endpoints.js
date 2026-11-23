@@ -139,6 +139,7 @@ export const MiddlemanLedger = {
 // --------------------------------------------------
 export const MiddlemanNotifications = {
   getAll: endpoint("GET", "/api/v1/middleman/notifications"),
+  create: endpoint("POST", "/api/v1/middleman/notifications"),
   getStatus: endpoint("GET", "/api/v1/notifications/status"),
   getLatest: endpoint("GET", "/api/v1/notifications/latest"),
   markRead: endpoint("PATCH", "/api/v1/middleman/notifications/{id}/read"),

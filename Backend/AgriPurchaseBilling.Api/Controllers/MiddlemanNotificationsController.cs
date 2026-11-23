@@ -68,6 +68,23 @@ namespace Backend.AgriPurchaseBilling.Api.Controllers
             });
         }
 
+        /// <summary>
+        /// Create a new notification for the current middleman.
+        /// POST /api/v1/middleman/notifications
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] MiddlemanNotificationDto dto, CancellationToken ct)
+        {
+            var userId = CurrentUserId;
+            if (string.IsNullOrWhiteSpace(dto.Title))
+                return BadRequest(new { message = "Title is required." });
+
+            var id = await service.CreateAsync(userId, dto, ct);
+            dto.Id = id;
+            dto.CreatedAt = DateTime.UtcNow;
+            return Ok(new { success = true, message = "Notification created successfully.", data = dto, id });
+        }
+
         [HttpGet("status")]
         [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> Status(CancellationToken ct)

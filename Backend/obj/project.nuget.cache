@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "exletwXYBGY=",
+  "dgSpecHash": "3SCR6tEKtOE=",
   "success": true,
-  "projectFilePath": "C:\\Projects\\ARPPB\\Backend\\Backend.csproj",
+  "projectFilePath": "C:\\Users\\ADMIN\\Documents\\ARPPB\\Backend\\Backend.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\ADMIN\\.nuget\\packages\\fluentvalidation\\11.5.1\\fluentvalidation.11.5.1.nupkg.sha512",
     "C:\\Users\\ADMIN\\.nuget\\packages\\fluentvalidation.aspnetcore\\11.3.0\\fluentvalidation.aspnetcore.11.3.0.nupkg.sha512",
@@ -61,7 +61,11 @@
     "C:\\Users\\ADMIN\\.nuget\\packages\\system.reflection.metadata\\6.0.1\\system.reflection.metadata.6.0.1.nupkg.sha512",
     "C:\\Users\\ADMIN\\.nuget\\packages\\system.runtime.compilerservices.unsafe\\6.0.0\\system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512",
     "C:\\Users\\ADMIN\\.nuget\\packages\\system.text.encoding.codepages\\6.0.0\\system.text.encoding.codepages.6.0.0.nupkg.sha512",
-    "C:\\Users\\ADMIN\\.nuget\\packages\\system.threading.channels\\6.0.0\\system.threading.channels.6.0.0.nupkg.sha512"
+    "C:\\Users\\ADMIN\\.nuget\\packages\\system.threading.channels\\6.0.0\\system.threading.channels.6.0.0.nupkg.sha512",
+    "C:\\Users\\ADMIN\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.31\\microsoft.netcore.app.ref.8.0.31.nupkg.sha512",
+    "C:\\Users\\ADMIN\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.31\\microsoft.windowsdesktop.app.ref.8.0.31.nupkg.sha512",
+    "C:\\Users\\ADMIN\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.31\\microsoft.aspnetcore.app.ref.8.0.31.nupkg.sha512",
+    "C:\\Users\\ADMIN\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\8.0.31\\microsoft.netcore.app.host.win-x64.8.0.31.nupkg.sha512"
   ],
   "logs": []
 }

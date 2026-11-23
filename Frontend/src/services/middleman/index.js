@@ -576,6 +576,38 @@ export async function settleMiddlemanLedgerApi(id, settledAmount, extra = {}) {
    4. MIDDLEMAN NOTIFICATIONS APIs
    ========================================================================== */
 
+export async function createMiddlemanNotificationApi(payload = {}) {
+  try {
+    const priority =
+      payload.priority && ['High', 'Medium', 'Low'].includes(payload.priority)
+        ? payload.priority
+        : String(payload.priority || '').toLowerCase() === 'high'
+        ? 'High'
+        : String(payload.priority || '').toLowerCase() === 'low'
+        ? 'Low'
+        : 'Medium';
+
+    const reqBody = {
+      title: payload.title || payload.subject || 'System Notification',
+      description: payload.description || payload.message || '',
+      category: payload.category || payload.type || 'General',
+      priority,
+      actorName: payload.actorName || payload.partyName || null,
+      referenceNumber: payload.referenceNumber || payload.relatedId || payload.id || null,
+      moduleUrl: payload.moduleUrl || payload.actionUrl || null,
+      isRead: false,
+    };
+
+    const endpointUrl = Endpoints.MiddlemanNotifications.create || Endpoints.MiddlemanNotifications.getAll;
+    const res = await api.post(endpointUrl, reqBody);
+    const dto = res.data?.data ?? res.data;
+    return dto ? mapMiddlemanNotificationDto(dto) : { success: true };
+  } catch (err) {
+    console.warn('createMiddlemanNotificationApi fallback:', err?.message || err);
+    return null;
+  }
+}
+
 export async function fetchMiddlemanNotificationsApi(params = {}) {
   try {
     const res = await api.get(Endpoints.MiddlemanNotifications.getAll, { params });
@@ -727,6 +759,7 @@ export const ledgerService = {
 
 export const notificationService = {
   getAll: fetchMiddlemanNotificationsApi,
+  create: createMiddlemanNotificationApi,
   getStatus: fetchMiddlemanNotificationsStatusApi,
   getLatest: fetchMiddlemanLatestNotificationsApi,
   markRead: markMiddlemanNotificationReadApi,
