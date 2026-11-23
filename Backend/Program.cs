@@ -75,6 +75,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddCustomerProfileModule();
 builder.Services.AddFarmerCropsModule();
 builder.Services.AddVendorOperationsModule(connectionString);
+builder.Services.AddVendorPortalModule();
+builder.Services.AddScoped<AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorPortalExceptionFilter>();
 builder.Services.AddFarmerSalesModule();
 
 // REPOSITORY REGISTRATIONS
@@ -216,6 +218,9 @@ builder.Services.AddSwaggerGen(options =>
                 Array.Empty<string>()
             }
         });
+
+    // Clean and unified Middleman module endpoints in Swagger UI
+    options.DocumentFilter<AgriPurchaseBilling.Api.Filters.MiddlemanCanonicalSwaggerFilter>();
 });
 
 

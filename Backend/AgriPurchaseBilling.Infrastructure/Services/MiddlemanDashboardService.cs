@@ -33,6 +33,10 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             var pending = await GetPendingConfirmationsAsync(userId);
             var recent = await GetRecentTransactionsAsync(userId);
 
+            var purchases = recent.Where(t => (t.Type ?? "").Contains("Purchase", StringComparison.OrdinalIgnoreCase)).ToList();
+            var vendorSales = recent.Where(t => (t.Type ?? "").Contains("Vendor", StringComparison.OrdinalIgnoreCase)).ToList();
+            var customerSales = recent.Where(t => (t.Type ?? "").Contains("Customer", StringComparison.OrdinalIgnoreCase)).ToList();
+
             return new MiddlemanDashboardResponseDto
             {
                 TotalMiddlemen = 7,
@@ -46,7 +50,10 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 PurchaseVsSalesComparison = monthly,
                 CropwiseInventory = cropwise,
                 PendingConfirmations = pending,
-                RecentTransactions = recent
+                RecentTransactions = recent,
+                Purchases = purchases,
+                VendorSales = vendorSales,
+                CustomerSales = customerSales
             };
         }
 

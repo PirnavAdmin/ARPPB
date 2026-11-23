@@ -178,6 +178,8 @@ namespace AgriPurchaseBilling.Application.DTOs
     public class MiddlemanVendorSaleQueryDto
     {
         public string? Search { get; set; }
+        public string? CropName { get; set; }
+        public string? Crop { get => CropName; set => CropName = value; }
         public string? Status { get; set; } = "ALL";
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;

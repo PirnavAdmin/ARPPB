@@ -11,6 +11,7 @@ namespace AgriPurchaseBilling.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/middleman/customers")]
+    [Route("api/v1/middleman/customer-management")]
     [Tags("Middleman - Customers")]
     [Authorize(Roles = "Middleman,Admin")]
     public class MiddlemanCustomerController : ControllerBase
@@ -32,13 +33,18 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
-        /// Get list of registered customers and retail stores with search and district filtering.
+        /// Get list of registered customers and retail stores with search, partyFilter, and district filtering.
         /// GET /api/v1/middleman/customers
+        /// GET /api/v1/middleman/customer-management
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetCustomers([FromQuery] MiddlemanCustomerQueryDto query)
+        public async Task<IActionResult> GetCustomers([FromQuery] MiddlemanCustomerQueryDto query, [FromQuery] string? partyFilter = null)
         {
             var userId = GetUserId();
+            if (string.IsNullOrWhiteSpace(query.Search) && !string.IsNullOrWhiteSpace(partyFilter))
+            {
+                query.Search = partyFilter;
+            }
             var result = await _customerService.GetCustomersAsync(userId, query);
             return Ok(new { success = true, data = result });
         }
@@ -100,17 +106,17 @@ namespace AgriPurchaseBilling.Api.Controllers
         {
             if (request == null)
             {
-                return BadRequest(new { success = false, message = "Invalid update request." });
+                return BadRequest(new { success = false, message = "Invalid customer update request." });
             }
 
             var userId = GetUserId();
-            var updated = await _customerService.UpdateCustomerAsync(userId, id, request);
-            if (updated == null)
+            var customer = await _customerService.UpdateCustomerAsync(userId, id, request);
+            if (customer == null)
             {
                 return NotFound(new { success = false, message = $"Customer '{id}' not found." });
             }
 
-            return Ok(new { success = true, message = "Customer details updated successfully.", data = updated });
+            return Ok(new { success = true, message = "Customer updated successfully.", data = customer });
         }
     }
 }

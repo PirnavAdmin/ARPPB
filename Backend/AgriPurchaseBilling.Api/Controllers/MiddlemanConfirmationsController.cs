@@ -11,6 +11,8 @@ namespace AgriPurchaseBilling.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/middleman/confirmations")]
+    [Route("api/v1/middleman/otp-confirmations")]
+    [Route("api/v1/middleman/otp")]
     [Tags("Middleman - OTP Confirmations")]
     [Authorize(Roles = "Middleman,Admin")]
     public class MiddlemanConfirmationsController : ControllerBase
@@ -32,10 +34,57 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
-        /// Get OTP Confirmations Summary including KPI card counts and Tab badge numbers.
-        /// GET /api/v1/middleman/confirmations/summary
+        /// Unified OTP Confirmations endpoint: returns KPI summary counters (Pending, Verified, Expired) AND paginated confirmations list, or single record by ID.
+        /// GET /api/v1/middleman/confirmations
+        /// GET /api/v1/middleman/otp-confirmations
+        /// GET /api/v1/middleman/otp
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetConfirmations(
+            [FromQuery] string? id = null,
+            [FromQuery] MiddlemanOtpQueryDto? query = null,
+            [FromQuery] string? partyFilter = null)
+        {
+            var userId = GetUserId();
+            query ??= new MiddlemanOtpQueryDto();
+
+            if (!string.IsNullOrWhiteSpace(id))
+            {
+                var item = await _confirmationsService.GetConfirmationByIdAsync(userId, id);
+                if (item == null)
+                {
+                    return NotFound(new { success = false, message = $"OTP confirmation '{id}' not found." });
+                }
+                return Ok(new { success = true, data = item });
+            }
+
+            if (string.IsNullOrWhiteSpace(query.Search) && !string.IsNullOrWhiteSpace(partyFilter))
+            {
+                query.Search = partyFilter;
+            }
+
+            var summary = await _confirmationsService.GetSummaryAsync(userId);
+            var page = await _confirmationsService.GetConfirmationsAsync(userId, query);
+
+            return Ok(new
+            {
+                success = true,
+                summary = summary,
+                totalPending = summary.PendingCount,
+                totalVerified = summary.VerifiedCount,
+                totalExpired = summary.FailedOrExpiredCount,
+                farmerPending = summary.FarmerCount,
+                vendorPending = summary.VendorCount,
+                customerPending = summary.CustomerCount,
+                data = page
+            });
+        }
+
+        /// <summary>
+        /// Backward-compatible OTP Confirmations Summary endpoint.
         /// </summary>
         [HttpGet("summary")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> GetSummary()
         {
             var userId = GetUserId();
@@ -44,22 +93,10 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
-        /// Get Paginated OTP Confirmations with category, status, and search filters matching the 9 UI reference screenshots.
-        /// GET /api/v1/middleman/confirmations
-        /// </summary>
-        [HttpGet]
-        public async Task<IActionResult> GetConfirmations([FromQuery] MiddlemanOtpQueryDto query)
-        {
-            var userId = GetUserId();
-            var page = await _confirmationsService.GetConfirmationsAsync(userId, query);
-            return Ok(new { success = true, data = page });
-        }
-
-        /// <summary>
-        /// Get single OTP confirmation details by ID, confirmation code (e.g. CONF-F001), or transaction ID.
-        /// GET /api/v1/middleman/confirmations/{id}
+        /// Backward-compatible single OTP confirmation details by ID.
         /// </summary>
         [HttpGet("{id}")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> GetConfirmationById(string id)
         {
             var userId = GetUserId();

@@ -11,6 +11,9 @@ namespace AgriPurchaseBilling.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/middleman/customer-sales")]
+    [Route("api/v1/middleman/sales/customers")]
+    [Route("api/v1/middleman/sales-to-customers")]
+    [Route("api/v1/middleman/customer-sales-history")]
     [Tags("Middleman - Customer Sales")]
     [Authorize(Roles = "Middleman,Admin")]
     public class MiddlemanCustomerSaleController : ControllerBase
@@ -32,13 +35,19 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
-        /// Get sales transactions to customers with search, crop, status filtering, and pagination.
+        /// Get sales transactions to customers with search, crop, partyFilter, status filtering, and pagination.
         /// GET /api/v1/middleman/customer-sales
+        /// GET /api/v1/middleman/sales/customers
+        /// GET /api/v1/middleman/sales-to-customers
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetCustomerSales([FromQuery] MiddlemanCustomerSaleQueryDto query)
+        public async Task<IActionResult> GetCustomerSales([FromQuery] MiddlemanCustomerSaleQueryDto query, [FromQuery] string? partyFilter = null)
         {
             var userId = GetUserId();
+            if (string.IsNullOrWhiteSpace(query.Search) && !string.IsNullOrWhiteSpace(partyFilter))
+            {
+                query.Search = partyFilter;
+            }
             var result = await _customerService.GetCustomerSalesAsync(userId, query);
             return Ok(new { success = true, data = result });
         }

@@ -11,6 +11,9 @@ namespace AgriPurchaseBilling.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/middleman/vendor-sales")]
+    [Route("api/v1/middleman/sales/vendors")]
+    [Route("api/v1/middleman/sales-to-vendors")]
+    [Route("api/v1/middleman/vendor-sales-history")]
     [Tags("Middleman - Vendor Sales")]
     [Authorize(Roles = "Middleman,Admin")]
     public class MiddlemanVendorSaleController : ControllerBase
@@ -32,13 +35,19 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
-        /// Get sales transactions to vendors with status filtering, search, and pagination.
+        /// Get sales transactions to vendors with status filtering, search, partyFilter, and pagination.
         /// GET /api/v1/middleman/vendor-sales
+        /// GET /api/v1/middleman/sales/vendors
+        /// GET /api/v1/middleman/sales-to-vendors
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetVendorSales([FromQuery] MiddlemanVendorSaleQueryDto query)
+        public async Task<IActionResult> GetVendorSales([FromQuery] MiddlemanVendorSaleQueryDto query, [FromQuery] string? partyFilter = null)
         {
             var userId = GetUserId();
+            if (string.IsNullOrWhiteSpace(query.Search) && !string.IsNullOrWhiteSpace(partyFilter))
+            {
+                query.Search = partyFilter;
+            }
             var result = await _vendorService.GetVendorSalesAsync(userId, query);
             return Ok(new { success = true, data = result });
         }
