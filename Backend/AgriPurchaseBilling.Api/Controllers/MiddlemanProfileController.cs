@@ -1,4 +1,4 @@
-﻿using AgriPurchaseBilling.Application.DTOs;
+using AgriPurchaseBilling.Application.DTOs;
 using AgriPurchaseBilling.Application.Interfaces;
 using AgriPurchaseBilling.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -12,6 +12,7 @@ namespace Backend.AgriPurchaseBilling.Api.Controllers
     [Route("api/v1/middleman-profile")]
     [Authorize(Roles = "Middleman")]
     [Produces("application/json")]
+    [Tags("Middleman - Profile")]
     public class MiddlemanProfileController : ControllerBase
     {
         private readonly IMiddlemanProfileService _service;
