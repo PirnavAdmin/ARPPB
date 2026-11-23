@@ -38,8 +38,10 @@ namespace Backend.AgriPurchaseBilling.Api.Controllers
             return 0;
         }
 
-        // GET /api/v1/notifications?search=chilli&category=Farmer%20Purchase%20Confirmation&priority=High&status=Unread&timeRange=Last7Days&page=1&pageSize=10
-        // GET /api/v1/middleman/notifications
+        /// <summary>
+        /// Unified Notifications endpoint: returns unread badge stats, latest 5 preview alerts, and paginated notifications feed.
+        /// GET /api/v1/middleman/notifications
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> Get([FromQuery] MiddlemanNotificationQuery query, CancellationToken ct)
         {
@@ -48,10 +50,26 @@ namespace Backend.AgriPurchaseBilling.Api.Controllers
                 return BadRequest(new { message = "status must be All, Read or Unread." });
             if (query.TimeRange is not ("All" or "Today" or "Last7Days" or "Last30Days"))
                 return BadRequest(new { message = "timeRange must be All, Today, Last7Days or Last30Days." });
-            return Ok(await service.GetPageAsync(userId, query, ct));
+
+            var page = await service.GetPageAsync(userId, query, ct);
+            var stats = await service.GetStatsAsync(userId, ct);
+            var latest = await service.GetLatestAsync(userId, 5, ct);
+
+            return Ok(new
+            {
+                success = true,
+                stats = stats,
+                unreadCount = stats.Unread,
+                totalCount = stats.Total,
+                highPriorityCount = stats.HighPriorityUnread,
+                latest = latest,
+                items = page.Items,
+                data = page
+            });
         }
 
         [HttpGet("status")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> Status(CancellationToken ct)
         {
             var userId = CurrentUserId;
@@ -60,6 +78,7 @@ namespace Backend.AgriPurchaseBilling.Api.Controllers
 
         // Used by the bell/dropdown. Default: latest five.
         [HttpGet("latest")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> Latest([FromQuery] int take = 5, CancellationToken ct = default)
         {
             var userId = CurrentUserId;

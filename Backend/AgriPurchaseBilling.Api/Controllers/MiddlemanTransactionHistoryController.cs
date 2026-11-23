@@ -41,8 +41,8 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
-        /// Get unified transaction history for Sales Order History screen across tabs: 'farmer', 'vendor', or 'customer', with badge counts.
-        /// Supports query parameters: tab, search, partyFilter, crop, status, page, pageSize.
+        /// Unified transaction and sales order history endpoint across tabs: 'farmer', 'vendor', or 'customer', with badge counts, or single record by ID.
+        /// Supports query parameters: tab, id, search, partyFilter, crop, status, page, pageSize.
         /// GET /api/v1/middleman/transaction-history
         /// GET /api/v1/middleman/sales-history
         /// GET /api/v1/middleman/sales-order-history
@@ -50,6 +50,7 @@ namespace AgriPurchaseBilling.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetTransactionHistory(
             [FromQuery] string? tab = "farmer",
+            [FromQuery] string? id = null,
             [FromQuery] string? search = null,
             [FromQuery] string? partyFilter = null,
             [FromQuery] string? crop = null,
@@ -58,10 +59,15 @@ namespace AgriPurchaseBilling.Api.Controllers
             [FromQuery] int pageSize = 10)
         {
             var userId = GetUserId();
+
+            if (!string.IsNullOrWhiteSpace(id))
+            {
+                return await GetTransactionById(id);
+            }
+
             var activeTab = (tab ?? "farmer").Trim().ToLower();
             var effectiveSearch = !string.IsNullOrWhiteSpace(search) ? search : partyFilter;
 
-            // Fetch tab counts for badges
             var purchasesPage = await _purchaseService.GetPurchasesAsync(userId, new MiddlemanPurchaseQueryDto
             {
                 Search = activeTab == "farmer" ? effectiveSearch : null,
@@ -105,7 +111,11 @@ namespace AgriPurchaseBilling.Api.Controllers
                     farmerCount = purchasesPage.TotalItems,
                     vendorCount = vendorSalesPage.TotalItems,
                     customerCount = customerSalesPage.TotalItems,
+                    totalCount = purchasesPage.TotalItems + vendorSalesPage.TotalItems + customerSalesPage.TotalItems
                 },
+                farmerPurchases = purchasesPage,
+                vendorSales = vendorSalesPage,
+                customerSales = customerSalesPage,
                 data = activeData
             });
         }
@@ -116,6 +126,7 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// GET /api/v1/middleman/sales-history/farmer-purchases
         /// </summary>
         [HttpGet("farmer-purchases")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> GetFarmerPurchases([FromQuery] MiddlemanPurchaseQueryDto query, [FromQuery] string? partyFilter = null)
         {
             var userId = GetUserId();
@@ -133,6 +144,7 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// GET /api/v1/middleman/sales-history/vendor-sales
         /// </summary>
         [HttpGet("vendor-sales")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> GetVendorSales([FromQuery] MiddlemanVendorSaleQueryDto query, [FromQuery] string? partyFilter = null)
         {
             var userId = GetUserId();
@@ -150,6 +162,7 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// GET /api/v1/middleman/sales-history/customer-sales
         /// </summary>
         [HttpGet("customer-sales")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> GetCustomerSales([FromQuery] MiddlemanCustomerSaleQueryDto query, [FromQuery] string? partyFilter = null)
         {
             var userId = GetUserId();
@@ -167,6 +180,7 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// GET /api/v1/middleman/sales-history/{id}
         /// </summary>
         [HttpGet("{id}")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> GetTransactionById(string id)
         {
             var userId = GetUserId();

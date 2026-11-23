@@ -33,24 +33,41 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
-        /// Get the full Inventory summary with 4 KPI metrics (Purchased: 770 Qtl, Sold: 520 Qtl, Available: 250 Qtl, Low Stock: 2 Batches) and active batches.
+        /// Unified My Inventory endpoint: returns 4 KPI metrics, godown statistics, and active stock batches with batch tracing, or single batch by ID.
         /// GET /api/v1/middleman/inventory
         /// GET /api/v1/middleman/my-inventory
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetInventory()
+        public async Task<IActionResult> GetInventory(
+            [FromQuery] string? id = null,
+            [FromQuery] string? batchId = null,
+            [FromQuery] MiddlemanInventoryQueryDto? query = null)
         {
             var userId = GetUserId();
+            var targetId = id ?? batchId;
+            if (!string.IsNullOrWhiteSpace(targetId))
+            {
+                var batch = await _inventoryService.GetBatchByIdAsync(userId, targetId);
+                if (batch == null) return NotFound(new { success = false, message = $"Stock batch '{targetId}' not found." });
+                return Ok(new { success = true, data = batch });
+            }
+
             var summary = await _inventoryService.GetSummaryAsync(userId);
-            return Ok(new { success = true, data = summary });
+            return Ok(new
+            {
+                success = true,
+                summary = summary,
+                totalPurchasedQuantity = summary.TotalPurchasedStock,
+                totalSoldQuantity = summary.TotalSoldStock,
+                availableStockQuantity = summary.AvailableStock,
+                lowStockBatchCount = summary.LowStockBatches,
+                batches = summary.Batches,
+                data = summary
+            });
         }
 
-        /// <summary>
-        /// Get inventory summary cards metrics.
-        /// GET /api/v1/middleman/inventory/summary
-        /// GET /api/v1/middleman/my-inventory/summary
-        /// </summary>
         [HttpGet("summary")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> GetSummary()
         {
             var userId = GetUserId();
@@ -58,12 +75,8 @@ namespace AgriPurchaseBilling.Api.Controllers
             return Ok(new { success = true, data = summary });
         }
 
-        /// <summary>
-        /// Get filtered and paginated inventory batches.
-        /// GET /api/v1/middleman/inventory/batches
-        /// GET /api/v1/middleman/my-inventory/batches
-        /// </summary>
         [HttpGet("batches")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> GetBatches([FromQuery] MiddlemanInventoryQueryDto query)
         {
             var userId = GetUserId();
@@ -71,12 +84,8 @@ namespace AgriPurchaseBilling.Api.Controllers
             return Ok(new { success = true, data = page });
         }
 
-        /// <summary>
-        /// Get single batch traceability details by ID or Stock Code (e.g. STK-0001).
-        /// GET /api/v1/middleman/inventory/batches/{id}
-        /// GET /api/v1/middleman/my-inventory/batches/{id}
-        /// </summary>
         [HttpGet("batches/{id}")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> GetBatchById(string id)
         {
             var userId = GetUserId();

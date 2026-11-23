@@ -218,6 +218,9 @@ builder.Services.AddSwaggerGen(options =>
                 Array.Empty<string>()
             }
         });
+
+    // Clean and unified Middleman module endpoints in Swagger UI
+    options.DocumentFilter<AgriPurchaseBilling.Api.Filters.MiddlemanCanonicalSwaggerFilter>();
 });
 
 

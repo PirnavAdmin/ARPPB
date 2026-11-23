@@ -133,6 +133,7 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// GET /api/v1/middleman/ledger/summary
         /// </summary>
         [HttpGet("summary")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> GetSummary(
             [FromQuery] string? partyFilter = null,
             [FromQuery] string? partyId = null,
@@ -150,6 +151,7 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// GET /api/v1/middleman/ledger/{id}
         /// </summary>
         [HttpGet("{id}")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> GetById(string id)
         {
             var userId = GetUserId();
