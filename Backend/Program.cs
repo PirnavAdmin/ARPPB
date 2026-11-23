@@ -67,10 +67,15 @@ var serverVersion = new MariaDbServerVersion(
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(
         connectionString,
-        serverVersion));
+        serverVersion,
+        mySqlOptions => mySqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorNumbersToAdd: null)));
 builder.Services.AddCustomerProfileModule();
 builder.Services.AddFarmerCropsModule();
 builder.Services.AddVendorOperationsModule(connectionString);
+builder.Services.AddFarmerSalesModule();
 
 // REPOSITORY REGISTRATIONS
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
@@ -103,6 +108,8 @@ builder.Services.AddScoped<IMiddlemanInventoryService, MiddlemanInventoryService
 builder.Services.AddScoped<IMiddlemanFarmerService, MiddlemanFarmerService>();
 builder.Services.AddScoped<IMiddlemanPurchaseService, MiddlemanPurchaseService>();
 builder.Services.AddScoped<IMiddlemanVendorService, MiddlemanVendorService>();
+builder.Services.AddScoped<IMiddlemanCustomerService, MiddlemanCustomerService>();
+builder.Services.AddScoped<IMiddlemanConfirmationsService, MiddlemanConfirmationsService>();
 
 // JWT registration
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();

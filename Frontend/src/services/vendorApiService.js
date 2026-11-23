@@ -153,6 +153,7 @@ export function mapVendorMiddlemanDto(dto = {}, existing = {}) {
 export function mapVendorCustomerDto(dto = {}, existing = {}) {
   if (!dto || typeof dto !== 'object') return existing;
   const rawId = dto.id ?? dto.customerId ?? existing.rawId ?? null;
+  const customerUserId = dto.customerUserId ?? dto.customer_user_id ?? dto.userId ?? (existing.customerUserId || rawId);
   const id =
     dto.customerCode ||
     (typeof dto.id === 'string' && dto.id.startsWith('CUST-')
@@ -164,6 +165,8 @@ export function mapVendorCustomerDto(dto = {}, existing = {}) {
   return {
     ...existing,
     rawId,
+    customerUserId,
+    customerCode: dto.customerCode || id,
     id,
     customerName: dto.customerName || dto.fullName || dto.name || existing.customerName || '',
     businessName: dto.businessName || dto.companyName || existing.businessName || '',
@@ -1190,6 +1193,14 @@ function buildVendorFinishedProductRequestDto(payload = {}) {
     [payload.packageSize, payload.packagingType].filter(Boolean).join(' ').trim() ||
     '50 Kg PP Woven Bag';
 
+  const mfg =
+    payload.manufacturingDate || payload.mfgDate
+      ? new Date(payload.manufacturingDate || payload.mfgDate)
+      : new Date();
+  const exp = payload.expiryDate
+    ? new Date(payload.expiryDate)
+    : new Date(mfg.getTime() + 270 * 24 * 3600 * 1000);
+
   return {
     productName: String(payload.productName || 'Finished Product').trim(),
     category: String(payload.category || 'Food Grains & Cereals').trim(),
@@ -1198,11 +1209,8 @@ function buildVendorFinishedProductRequestDto(payload = {}) {
     packaging,
     initialQuantity: Number(payload.availableQuantity ?? payload.initialQuantity ?? 0),
     unit: payload.unit || 'Quintal',
-    mfgDate:
-      payload.manufacturingDate ||
-      payload.mfgDate ||
-      new Date().toISOString().slice(0, 10),
-    expiryDate: payload.expiryDate || null,
+    mfgDate: mfg.toISOString(),
+    expiryDate: exp.toISOString(),
     productionCost: Number(payload.productionCost) || 0,
     sellingPrice: Number(payload.sellingPrice) || 0,
     minThresholdQuantity: Number(
@@ -1217,7 +1225,8 @@ export async function fetchVendorFinishedProductsOverviewApi() {
   try {
     const res = await api.get(Endpoints.VendorFinishedProducts.overview);
     return res.data?.data ?? res.data ?? null;
-  } catch {
+  } catch (err) {
+    console.warn('[fetchVendorFinishedProductsOverviewApi] error:', err?.response?.data || err?.message || err);
     return null;
   }
 }
@@ -1227,7 +1236,8 @@ export async function fetchVendorFinishedProductsApi(params = {}) {
     const res = await api.get(Endpoints.VendorFinishedProducts.getAll, { params });
     const list = extractList(res, ['items', 'products', 'data']);
     return list ? list.map((item) => mapVendorFinishedProductDto(item)) : null;
-  } catch {
+  } catch (err) {
+    console.warn('[fetchVendorFinishedProductsApi] error:', err?.response?.data || err?.message || err);
     return null;
   }
 }
@@ -1238,7 +1248,8 @@ export async function createVendorFinishedProductApi(payload = {}) {
     const res = await api.post(Endpoints.VendorFinishedProducts.create, reqBody);
     const dto = res.data?.data ?? res.data;
     return dto ? mapVendorFinishedProductDto(dto, payload) : null;
-  } catch {
+  } catch (err) {
+    console.warn('[createVendorFinishedProductApi] error:', err?.response?.data || err?.message || err);
     return null;
   }
 }
@@ -1249,7 +1260,8 @@ export async function fetchVendorFinishedProductByIdApi(id) {
     const res = await api.get(Endpoints.VendorFinishedProducts.getById(id));
     const dto = res.data?.data ?? res.data;
     return dto ? mapVendorFinishedProductDto(dto) : null;
-  } catch {
+  } catch (err) {
+    console.warn('[fetchVendorFinishedProductByIdApi] error:', err?.response?.data || err?.message || err);
     return null;
   }
 }
@@ -1262,7 +1274,8 @@ export async function updateVendorFinishedProductApi(id, payload = {}) {
     const res = await api.put(Endpoints.VendorFinishedProducts.update(targetId), reqBody);
     const dto = res.data?.data ?? res.data;
     return dto ? mapVendorFinishedProductDto(dto, payload) : null;
-  } catch {
+  } catch (err) {
+    console.warn('[updateVendorFinishedProductApi] error:', err?.response?.data || err?.message || err);
     return null;
   }
 }
@@ -1328,15 +1341,24 @@ export async function exportVendorFinishedProductsApi(params = {}) {
 
 function buildVendorSaleRequestDto(payload = {}, isDraft = false) {
   const customerUserId =
-    Number(payload.rawCustomerId) ||
+    Number(payload.customerUserId || payload.rawCustomerId) ||
     Number(String(payload.customerId || '1').replace(/\D/g, '')) ||
     1;
   const items = (payload.items || []).map((i) => ({
     finishedBatchId:
-      Number(String(i.batchId || i.productId || '1').replace(/\D/g, '')) || 1,
+      Number(i.finishedBatchId || i.batchRawId || i.rawId) ||
+      Number(String(i.batchId || i.productId || '1').replace(/\D/g, '')) ||
+      1,
     quantity: Number(i.sellingQuantity ?? i.quantity ?? 1),
     pricePerUnit: Number(i.pricePerUnit ?? i.unitPrice ?? 0),
   }));
+
+  const expDelivery = payload.expectedDeliveryDate
+    ? new Date(payload.expectedDeliveryDate).toISOString()
+    : null;
+  const expPayment = payload.expectedPaymentDate
+    ? new Date(payload.expectedPaymentDate).toISOString()
+    : null;
 
   return {
     customerUserId,
@@ -1345,8 +1367,8 @@ function buildVendorSaleRequestDto(payload = {}, isDraft = false) {
     taxAmount: Number(payload.tax ?? payload.taxAmount ?? 0),
     deliveryCharges: Number(payload.deliveryCharges ?? 0),
     otherCharges: Number(payload.otherCharges ?? 0),
-    expectedDeliveryDate: payload.expectedDeliveryDate || null,
-    expectedPaymentDate: payload.expectedPaymentDate || null,
+    expectedDeliveryDate: expDelivery,
+    expectedPaymentDate: expPayment,
     paymentTerms: payload.paymentTerms || 'Net 15 Days',
     notes: payload.notes || null,
     items,
@@ -1428,9 +1450,17 @@ export async function createVendorSaleApi(payload = {}, isDraft = false) {
   try {
     const reqBody = buildVendorSaleRequestDto(payload, isDraft);
     const res = await api.post(Endpoints.VendorSales.create, reqBody);
-    const dto = res.data?.data ?? res.data;
-    return dto ? mapVendorSaleDto(dto, payload) : null;
-  } catch {
+    const dataObj = res.data?.data ?? res.data;
+    const saleDto = dataObj?.sale || dataObj;
+    const mapped = saleDto ? mapVendorSaleDto(saleDto, payload) : null;
+    if (mapped) {
+      if (dataObj?.saleId) mapped.rawId = dataObj.saleId;
+      if (dataObj?.confirmationId) mapped.confirmationId = dataObj.confirmationId;
+      if (res.data?.devOtp) mapped.devOtp = res.data.devOtp;
+    }
+    return mapped;
+  } catch (err) {
+    console.warn('[createVendorSaleApi] error:', err?.response?.data || err?.message || err);
     return null;
   }
 }
@@ -1703,45 +1733,48 @@ export async function fetchVendorLedgerByIdApi(id) {
 
 export async function payVendorSupplierApi(payload = {}) {
   try {
+    const rawEntryId = Number(
+      String(payload.ledgerEntryId || payload.referenceTransactionId || '0').replace(
+        /\D/g,
+        ''
+      )
+    );
     const reqBody = {
-      ledgerEntryId:
-        Number(
-          String(payload.ledgerEntryId || payload.referenceTransactionId || '0').replace(
-            /\D/g,
-            ''
-          )
-        ) || 1,
+      ledgerEntryId: rawEntryId > 0 ? rawEntryId : null,
       partyName: String(payload.partyName || 'Supplier').trim(),
       amount: Number(payload.amount) || 0,
       paymentMode: payload.paymentMode || 'NEFT / RTGS',
-      referenceNo: String(payload.referenceTransactionId || payload.referenceNo || '').trim(),
+      referenceNo: String(payload.referenceTransactionId || payload.referenceNo || '').trim() || null,
     };
     const res = await api.post(Endpoints.VendorLedger.paySupplier, reqBody);
     const dto = res.data?.data ?? res.data;
     return dto ? mapVendorLedgerDto(dto) : null;
-  } catch {
+  } catch (err) {
+    console.warn('[payVendorSupplierApi] error:', err?.response?.data || err?.message || err);
     return null;
   }
 }
 
 export async function recordVendorCustomerReceiptApi(payload = {}) {
   try {
+    const rawSaleId = Number(
+      String(payload.saleId || payload.referenceTransactionId || '0').replace(/\D/g, '')
+    );
+    const rawCustomerUserId = Number(
+      String(payload.partyId || payload.customerUserId || '0').replace(/\D/g, '')
+    );
     const reqBody = {
-      saleId:
-        Number(
-          String(payload.saleId || payload.referenceTransactionId || '0').replace(/\D/g, '')
-        ) || 1,
-      customerUserId:
-        Number(String(payload.partyId || payload.customerUserId || '0').replace(/\D/g, '')) ||
-        1,
+      saleId: rawSaleId > 0 ? rawSaleId : null,
+      customerUserId: rawCustomerUserId > 0 ? rawCustomerUserId : null,
       amount: Number(payload.amount) || 0,
       paymentMode: payload.paymentMode || 'NEFT / RTGS',
-      referenceNo: String(payload.referenceTransactionId || payload.referenceNo || '').trim(),
+      referenceNo: String(payload.referenceTransactionId || payload.referenceNo || '').trim() || null,
     };
     const res = await api.post(Endpoints.VendorLedger.receipts, reqBody);
     const dto = res.data?.data ?? res.data;
     return dto ? mapVendorLedgerDto(dto) : null;
-  } catch {
+  } catch (err) {
+    console.warn('[recordVendorCustomerReceiptApi] error:', err?.response?.data || err?.message || err);
     return null;
   }
 }

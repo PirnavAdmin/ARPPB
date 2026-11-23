@@ -43,8 +43,8 @@ export function MyCart() {
     profile.deliveryAddresses?.[0] ||
     null;
 
-  const handleConfirmReviewOrder = () => {
-    const res = placeOrdersFromCart(selectedAddressObj);
+  const handleConfirmReviewOrder = async () => {
+    const res = await placeOrdersFromCart(selectedAddressObj);
     if (res.success) {
       setIsReviewOpen(false);
       setOrderSubmittedInfo({

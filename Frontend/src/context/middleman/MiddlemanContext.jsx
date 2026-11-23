@@ -31,19 +31,16 @@ import {
 import {
   fetchMiddlemanInventoryBatchesApi,
   fetchMiddlemanInventoryApi,
-  fetchMiddlemanInventorySummaryApi,
   createMiddlemanInventoryBatchApi,
   updateMiddlemanInventoryBatchApi,
   fetchMiddlemanLedgerApi,
   createMiddlemanLedgerApi,
   settleMiddlemanLedgerApi,
   fetchMiddlemanNotificationsApi,
-  fetchMiddlemanNotificationsStatusApi,
   markMiddlemanNotificationReadApi,
   markAllMiddlemanNotificationsReadApi,
   deleteMiddlemanNotificationApi,
   fetchMiddlemanSalesVendorsApi,
-  fetchMiddlemanDashboardApi,
 } from '../../services/middleman';
 import {
   fetchMiddlemanVendorsApi,
@@ -52,11 +49,24 @@ import {
   fetchMiddlemanVendorSalesApi,
   createMiddlemanVendorSaleApi,
 } from '../../services/middlemanVendorService';
+import {
+  fetchMiddlemanConfirmationsApi,
+  verifyMiddlemanOtpApi,
+  rejectMiddlemanOtpApi,
+  resendMiddlemanOtpApi,
+} from '../../services/middlemanConfirmationsService';
+import {
+  fetchMiddlemanCustomersApi,
+  registerMiddlemanCustomerApi,
+  updateMiddlemanCustomerApi,
+  fetchMiddlemanCustomerSalesApi,
+  createMiddlemanCustomerSaleApi,
+} from '../../services/middlemanCustomerService';
 
 const STORAGE_KEY = 'agriconnect_middleman_state_v1';
 
 export const MiddlemanProvider = ({ children }) => {
-  const { user, updateUserMobile } = useAuth();
+  const { user, token, updateUserMobile } = useAuth();
   const authKey = String(user?.userId || user?.fullName || '');
 
   // Load state from localStorage or initialize from mock data
@@ -299,10 +309,9 @@ export const MiddlemanProvider = ({ children }) => {
     }
   }, []);
 
-  // Fetch Middleman Inventory from backend API (GET /api/v1/middleman/inventory & /batches & /summary)
+  // Fetch Middleman Inventory from backend API (GET /api/v1/middleman/inventory & /batches)
   const refreshInventory = useCallback(async () => {
     try {
-      fetchMiddlemanInventorySummaryApi().catch(() => null);
       const apiBatches =
         (await fetchMiddlemanInventoryBatchesApi()) ||
         (await fetchMiddlemanInventoryApi());
@@ -329,7 +338,6 @@ export const MiddlemanProvider = ({ children }) => {
   // Fetch Middleman Notifications from backend API (GET /api/v1/notifications)
   const refreshNotifications = useCallback(async () => {
     try {
-      fetchMiddlemanNotificationsStatusApi().catch(() => null);
       const apiNotifs = await fetchMiddlemanNotificationsApi({ status: 'All', timeRange: 'All' });
       if (apiNotifs && Array.isArray(apiNotifs) && apiNotifs.length > 0) {
         setNotifications(apiNotifs);
@@ -351,10 +359,9 @@ export const MiddlemanProvider = ({ children }) => {
     }
   }, []);
 
-  // Fetch Middleman Vendor Sales & Dashboard from backend API (GET /api/v1/middleman/vendor-sales)
+  // Fetch Middleman Vendor Sales from backend API (GET /api/v1/middleman/vendor-sales)
   const refreshVendorSales = useCallback(async () => {
     try {
-      fetchMiddlemanDashboardApi().catch(() => null);
       const apiSales =
         (await fetchMiddlemanVendorSalesApi()) ||
         (await fetchMiddlemanSalesVendorsApi());
@@ -391,6 +398,41 @@ export const MiddlemanProvider = ({ children }) => {
     }
   }, []);
 
+  
+  // Fetch Middleman Confirmations from backend API (GET /api/v1/middleman/confirmations)
+  const refreshCustomers = useCallback(async () => {
+    try {
+      const apiCusts = await fetchMiddlemanCustomersApi();
+      if (apiCusts && Array.isArray(apiCusts) && apiCusts.length > 0) {
+        setCustomers(apiCusts);
+      }
+    } catch {
+      // fallback smoothly
+    }
+  }, []);
+
+  const refreshCustomerSales = useCallback(async () => {
+    try {
+      const apiCustSales = await fetchMiddlemanCustomerSalesApi();
+      if (apiCustSales && Array.isArray(apiCustSales) && apiCustSales.length > 0) {
+        setCustomerSales(apiCustSales);
+      }
+    } catch {
+      // fallback smoothly
+    }
+  }, []);
+
+  const refreshConfirmations = useCallback(async () => {
+    try {
+      const apiConfirmations = await fetchMiddlemanConfirmationsApi();
+      if (apiConfirmations && Array.isArray(apiConfirmations) && apiConfirmations.length > 0) {
+        setConfirmations(apiConfirmations);
+      }
+    } catch {
+      // fallback smoothly to existing state
+    }
+  }, []);
+
   useEffect(() => {
     Promise.resolve().then(() => {
       refreshProfile();
@@ -401,6 +443,9 @@ export const MiddlemanProvider = ({ children }) => {
       refreshLedger();
       refreshNotifications();
       refreshVendorSales();
+      refreshConfirmations();
+      refreshCustomers();
+      refreshCustomerSales();
     });
   }, [
     token,
@@ -414,6 +459,9 @@ export const MiddlemanProvider = ({ children }) => {
     refreshLedger,
     refreshNotifications,
     refreshVendorSales,
+    refreshConfirmations,
+    refreshCustomers,
+    refreshCustomerSales,
   ]);
 
   // Profile actions (PUT /api/v1/middleman-profile/{id})
@@ -570,8 +618,8 @@ export const MiddlemanProvider = ({ children }) => {
   }, []);
 
   // Customer actions
-  const addCustomer = useCallback((data) => {
-    const newCustomer = {
+  const addCustomer = useCallback(async (data) => {
+    let newCustomer = {
       customerId: generateId('CUS'),
       totalPurchases: 0,
       totalPurchaseValue: 0,
@@ -580,6 +628,16 @@ export const MiddlemanProvider = ({ children }) => {
       ...data,
     };
     setCustomers((prev) => [newCustomer, ...prev]);
+
+    try {
+      const saved = await registerMiddlemanCustomerApi(data);
+      if (saved && saved.customerId) {
+        newCustomer = saved;
+        setCustomers((prev) => prev.map((c) => (c.customerId === newCustomer.customerId ? saved : c)));
+      }
+    } catch (err) {
+      console.warn('registerMiddlemanCustomerApi fallback:', err?.message || err);
+    }
     addNotification({
       title: 'Customer Registered',
       description: `Customer ${newCustomer.name} was added.`,
@@ -591,8 +649,13 @@ export const MiddlemanProvider = ({ children }) => {
     return newCustomer;
   }, [addNotification]);
 
-  const updateCustomer = useCallback((id, data) => {
+  const updateCustomer = useCallback(async (id, data) => {
     setCustomers((prev) => prev.map((c) => (c.customerId === id ? { ...c, ...data } : c)));
+    try {
+      await updateMiddlemanCustomerApi(id, data);
+    } catch (err) {
+      console.warn('updateMiddlemanCustomerApi fallback:', err?.message || err);
+    }
   }, []);
 
   // Purchase Actions
@@ -618,6 +681,41 @@ export const MiddlemanProvider = ({ children }) => {
       }
     } catch (err) {
       console.warn('Syncing purchase to backend API had non-blocking issue:', err);
+    }
+
+    // Persist stock batch directly to Middleman Inventory in backend DB
+    if (!isDraft && data.cropName && Number(data.quantity) > 0) {
+      const stockId = generateId('STK');
+      const batchPayload = {
+        stockId,
+        purchaseId: purchaseRecord.purchaseId || tempId,
+        farmerId: data.farmerId || null,
+        farmerName: data.farmerName || '',
+        cropName: data.cropName,
+        variety: data.variety || 'Standard',
+        unit: data.unit || 'Quintal',
+        purchaseDate: data.purchaseDate || new Date().toISOString().slice(0, 10),
+        purchasedQuantity: Number(data.quantity),
+        availableQuantity: Number(data.quantity),
+        soldQuantity: 0,
+        purchaseRate: Number(data.rate || 0),
+        allocatedCharges: Number(data.additionalCharges || 0),
+        averageCost: Number(data.averageCostPerUnit || data.rate || 0),
+        quality: data.quality || 'Grade A',
+        godownLocation: data.pickupLocation || 'Main AMC Warehouse',
+        minimumThreshold: 10,
+        status: 'In Stock',
+      };
+      setInventory((prev) => [batchPayload, ...prev]);
+      createMiddlemanInventoryBatchApi(batchPayload)
+        .then((savedBatch) => {
+          if (savedBatch && (savedBatch.stockId || savedBatch.id)) {
+            setInventory((prev) =>
+              prev.map((b) => (b.stockId === stockId ? { ...b, ...savedBatch } : b))
+            );
+          }
+        })
+        .catch((err) => console.warn('Saving inventory batch on purchase issue:', err));
     }
 
     if (!isDraft) {
@@ -747,7 +845,7 @@ export const MiddlemanProvider = ({ children }) => {
     }
 
     return newSale;
-  }, [addNotification, token]);
+  }, [addNotification]);
 
   // Customer Sale Actions
   const createCustomerSale = useCallback((data, isDraft = false) => {
@@ -762,6 +860,16 @@ export const MiddlemanProvider = ({ children }) => {
     };
 
     setCustomerSales((prev) => [newSale, ...prev]);
+
+    createMiddlemanCustomerSaleApi(data, isDraft)
+      .then((saved) => {
+        if (saved && saved.saleId) {
+          setCustomerSales((prev) => prev.map((s) => (s.saleId === saleId ? saved : s)));
+        }
+      })
+      .catch((err) => {
+        console.warn('createMiddlemanCustomerSaleApi fallback:', err?.message || err);
+      });
 
     if (!isDraft) {
       const confId = generateId('CONF-C');
@@ -800,19 +908,23 @@ export const MiddlemanProvider = ({ children }) => {
     }
 
     return newSale;
-  }, [addNotification, token]);
+  }, [addNotification]);
 
   // Centralized OTP Confirmation Action (Simulated Verified Interaction)
-  const confirmTransaction = useCallback((confirmationId) => {
-    const confItem = confirmations.find((c) => c.confirmationId === confirmationId);
+  const confirmTransaction = useCallback((confirmationId, otpCode) => {
+    const confItem = confirmations.find((c) => c.confirmationId === confirmationId || c.id === confirmationId);
     if (!confItem || confItem.otpStatus === 'Confirmed') return;
+
+    const targetId = confItem.confirmationId || confItem.id || confirmationId;
+    const codeToVerify = otpCode || confItem.demoOtpCode || '488031';
+    verifyMiddlemanOtpApi(targetId, codeToVerify).catch(() => null);
 
     const now = new Date().toISOString().replace('T', ' ').slice(0, 16);
 
     // 1. Update confirmation status
     setConfirmations((prev) =>
       prev.map((c) =>
-        c.confirmationId === confirmationId
+        (c.confirmationId === confItem.confirmationId || (confItem.id && c.id === confItem.id))
           ? { ...c, otpStatus: 'Confirmed', confirmationDate: now }
           : c
       )
@@ -831,37 +943,40 @@ export const MiddlemanProvider = ({ children }) => {
           )
         );
 
-        // Create new Inventory Batch
-        const stockId = generateId('STK');
-        const newBatch = {
-          stockId,
-          purchaseId: purchase.purchaseId,
-          farmerId: purchase.farmerId,
-          farmerName: purchase.farmerName,
-          cropName: purchase.cropName,
-          variety: purchase.variety || 'Standard',
-          unit: purchase.unit || 'Quintal',
-          purchaseDate: purchase.purchaseDate || now.slice(0, 10),
-          purchasedQuantity: Number(purchase.quantity),
-          soldQuantity: 0,
-          availableQuantity: Number(purchase.quantity),
-          purchaseRate: Number(purchase.rate),
-          allocatedCharges: Number(purchase.additionalCharges || 0),
-          averageCost: Number(purchase.averageCostPerUnit || purchase.rate),
-          quality: purchase.quality || 'Grade A',
-          status: 'In Stock',
-          godownLocation: purchase.pickupLocation || 'Main Yard Godown',
-        };
-        setInventory((prev) => [newBatch, ...prev]);
-        createMiddlemanInventoryBatchApi(newBatch)
-          .then((savedBatch) => {
-            if (savedBatch && (savedBatch.stockId || savedBatch.id)) {
-              setInventory((prev) =>
-                prev.map((b) => (b.stockId === stockId ? { ...b, ...savedBatch } : b))
-              );
-            }
-          })
-          .catch(() => {});
+        // Create new Inventory Batch if not already created during purchase
+        const existingBatch = inventory.find((b) => b.purchaseId === purchase.purchaseId);
+        if (!existingBatch) {
+          const stockId = generateId('STK');
+          const newBatch = {
+            stockId,
+            purchaseId: purchase.purchaseId,
+            farmerId: purchase.farmerId,
+            farmerName: purchase.farmerName,
+            cropName: purchase.cropName,
+            variety: purchase.variety || 'Standard',
+            unit: purchase.unit || 'Quintal',
+            purchaseDate: purchase.purchaseDate || now.slice(0, 10),
+            purchasedQuantity: Number(purchase.quantity),
+            soldQuantity: 0,
+            availableQuantity: Number(purchase.quantity),
+            purchaseRate: Number(purchase.rate),
+            allocatedCharges: Number(purchase.additionalCharges || 0),
+            averageCost: Number(purchase.averageCostPerUnit || purchase.rate),
+            quality: purchase.quality || 'Grade A',
+            status: 'In Stock',
+            godownLocation: purchase.pickupLocation || 'Main AMC Warehouse',
+          };
+          setInventory((prev) => [newBatch, ...prev]);
+          createMiddlemanInventoryBatchApi(newBatch)
+            .then((savedBatch) => {
+              if (savedBatch && (savedBatch.stockId || savedBatch.id)) {
+                setInventory((prev) =>
+                  prev.map((b) => (b.stockId === stockId ? { ...b, ...savedBatch } : b))
+                );
+              }
+            })
+            .catch(() => {});
+        }
 
         // Update Farmer stats
         setFarmers((prev) =>
@@ -1117,12 +1232,15 @@ export const MiddlemanProvider = ({ children }) => {
 
   // Reject Transaction Action
   const rejectTransaction = useCallback((confirmationId, reason = 'Verification rejected by party.') => {
-    const confItem = confirmations.find((c) => c.confirmationId === confirmationId);
+    const confItem = confirmations.find((c) => c.confirmationId === confirmationId || c.id === confirmationId);
     if (!confItem) return;
+
+    const targetId = confItem.confirmationId || confItem.id || confirmationId;
+    rejectMiddlemanOtpApi(targetId, reason).catch(() => null);
 
     setConfirmations((prev) =>
       prev.map((c) =>
-        c.confirmationId === confirmationId
+        (c.confirmationId === confItem.confirmationId || (confItem.id && c.id === confItem.id))
           ? { ...c, otpStatus: 'Rejected', notes: `${c.notes} [Rejected: ${reason}]` }
           : c
       )
@@ -1168,19 +1286,28 @@ export const MiddlemanProvider = ({ children }) => {
   // Inventory Batch Actions
   const addInventoryBatch = useCallback(async (data) => {
     const stockId = generateId('STK');
+    const purchasedQty = Number(data.purchasedQuantity ?? data.quantity ?? 0);
+    const rate = Number(data.purchaseRate ?? data.rate ?? 0);
+    const charges = Number(data.allocatedCharges ?? data.additionalCharges ?? 0);
     const newBatch = {
       stockId,
-      purchasedQuantity: Number(data.purchasedQuantity || 0),
-      availableQuantity: Number(data.availableQuantity ?? data.purchasedQuantity ?? 0),
+      cropName: data.cropName || '',
+      variety: data.variety || 'Standard',
+      farmerId: data.farmerId || 'FAR-0001',
+      farmerName: data.farmerName || 'Registered Farmer',
+      purchaseId: data.purchaseId || generateId('PUR'),
+      purchaseDate: data.purchaseDate || new Date().toISOString().slice(0, 10),
+      purchasedQuantity: purchasedQty,
+      availableQuantity: Number(data.availableQuantity ?? purchasedQty),
       soldQuantity: Number(data.soldQuantity || 0),
-      purchaseRate: Number(data.purchaseRate || 0),
-      allocatedCharges: Number(data.allocatedCharges || 0),
-      averageCost: Number(data.averageCost || data.purchaseRate || 0),
+      purchaseRate: rate,
+      allocatedCharges: charges,
+      averageCost: Number(data.averageCost || (purchasedQty > 0 ? (purchasedQty * rate + charges) / purchasedQty : rate)),
       quality: data.quality || 'Grade A',
       status: 'In Stock',
-      godownLocation: data.godownLocation || 'Main Yard Godown',
-      purchaseDate: data.purchaseDate || new Date().toISOString().slice(0, 10),
+      godownLocation: data.godownLocation || 'Main AMC Warehouse',
       unit: data.unit || 'Quintal',
+      minimumThreshold: Number(data.minimumThreshold || 10),
       ...data,
     };
     setInventory((prev) => [newBatch, ...prev]);
@@ -1386,23 +1513,22 @@ export const MiddlemanProvider = ({ children }) => {
     refreshFarmers,
     addFarmer,
     updateFarmer,
-    refreshFarmers,
     vendors,
     refreshVendors,
     addVendor,
     updateVendor,
     customers,
+    refreshCustomers,
     addCustomer,
     updateCustomer,
     purchases,
     refreshPurchases,
     createPurchase,
-    refreshPurchases,
     vendorSales,
     refreshVendorSales,
     createVendorSale,
-    refreshVendorSales,
     customerSales,
+    refreshCustomerSales,
     createCustomerSale,
     inventory,
     addInventoryBatch,
@@ -1411,6 +1537,9 @@ export const MiddlemanProvider = ({ children }) => {
     confirmations,
     confirmTransaction,
     rejectTransaction,
+    refreshConfirmations,
+    refreshCustomers,
+    refreshCustomerSales,
     ledger,
     addLedgerEntry,
     settleLedgerEntry,

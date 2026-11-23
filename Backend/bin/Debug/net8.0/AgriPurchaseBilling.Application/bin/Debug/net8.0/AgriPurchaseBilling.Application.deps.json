@@ -22,8 +22,7 @@
         "runtime": {
           "lib/net7.0/FluentValidation.dll": {
             "assemblyVersion": "11.0.0.0",
-            "fileVersion": "11.5.1.0",
-            "localPath": "FluentValidation.dll"
+            "fileVersion": "11.5.1.0"
           }
         }
       },
@@ -35,8 +34,7 @@
         "runtime": {
           "lib/net6.0/FluentValidation.AspNetCore.dll": {
             "assemblyVersion": "11.0.0.0",
-            "fileVersion": "11.3.0.0",
-            "localPath": "FluentValidation.AspNetCore.dll"
+            "fileVersion": "11.3.0.0"
           }
         }
       },
@@ -47,8 +45,7 @@
         "runtime": {
           "lib/netstandard2.1/FluentValidation.DependencyInjectionExtensions.dll": {
             "assemblyVersion": "11.0.0.0",
-            "fileVersion": "11.5.1.0",
-            "localPath": "FluentValidation.DependencyInjectionExtensions.dll"
+            "fileVersion": "11.5.1.0"
           }
         }
       },
@@ -59,8 +56,7 @@
         "runtime": {
           "lib/net8.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll": {
             "assemblyVersion": "8.0.11.0",
-            "fileVersion": "8.0.1124.52116",
-            "localPath": "Microsoft.AspNetCore.Authentication.JwtBearer.dll"
+            "fileVersion": "8.0.1124.52116"
           }
         }
       },
@@ -71,8 +67,7 @@
         "runtime": {
           "lib/net8.0/Microsoft.Bcl.Cryptography.dll": {
             "assemblyVersion": "10.0.0.2",
-            "fileVersion": "10.0.225.61305",
-            "localPath": "Microsoft.Bcl.Cryptography.dll"
+            "fileVersion": "10.0.225.61305"
           }
         }
       },
@@ -80,8 +75,7 @@
         "runtime": {
           "lib/net8.0/Microsoft.IdentityModel.Abstractions.dll": {
             "assemblyVersion": "8.23.0.0",
-            "fileVersion": "8.23.0.26257",
-            "localPath": "Microsoft.IdentityModel.Abstractions.dll"
+            "fileVersion": "8.23.0.26257"
           }
         }
       },
@@ -92,8 +86,7 @@
         "runtime": {
           "lib/net8.0/Microsoft.IdentityModel.JsonWebTokens.dll": {
             "assemblyVersion": "8.23.0.0",
-            "fileVersion": "8.23.0.26257",
-            "localPath": "Microsoft.IdentityModel.JsonWebTokens.dll"
+            "fileVersion": "8.23.0.26257"
           }
         }
       },
@@ -104,8 +97,7 @@
         "runtime": {
           "lib/net8.0/Microsoft.IdentityModel.Logging.dll": {
             "assemblyVersion": "8.23.0.0",
-            "fileVersion": "8.23.0.26257",
-            "localPath": "Microsoft.IdentityModel.Logging.dll"
+            "fileVersion": "8.23.0.26257"
           }
         }
       },
@@ -117,8 +109,7 @@
         "runtime": {
           "lib/net8.0/Microsoft.IdentityModel.Protocols.dll": {
             "assemblyVersion": "7.1.2.0",
-            "fileVersion": "7.1.2.41121",
-            "localPath": "Microsoft.IdentityModel.Protocols.dll"
+            "fileVersion": "7.1.2.41121"
           }
         }
       },
@@ -130,8 +121,7 @@
         "runtime": {
           "lib/net8.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll": {
             "assemblyVersion": "7.1.2.0",
-            "fileVersion": "7.1.2.41121",
-            "localPath": "Microsoft.IdentityModel.Protocols.OpenIdConnect.dll"
+            "fileVersion": "7.1.2.41121"
           }
         }
       },
@@ -143,8 +133,7 @@
         "runtime": {
           "lib/net8.0/Microsoft.IdentityModel.Tokens.dll": {
             "assemblyVersion": "8.23.0.0",
-            "fileVersion": "8.23.0.26257",
-            "localPath": "Microsoft.IdentityModel.Tokens.dll"
+            "fileVersion": "8.23.0.26257"
           }
         }
       },
@@ -152,8 +141,7 @@
         "runtime": {
           "lib/net8.0/System.Formats.Asn1.dll": {
             "assemblyVersion": "10.0.0.0",
-            "fileVersion": "10.0.225.61305",
-            "localPath": "System.Formats.Asn1.dll"
+            "fileVersion": "10.0.225.61305"
           }
         }
       },
@@ -165,8 +153,7 @@
         "runtime": {
           "lib/net8.0/System.IdentityModel.Tokens.Jwt.dll": {
             "assemblyVersion": "8.23.0.0",
-            "fileVersion": "8.23.0.26257",
-            "localPath": "System.IdentityModel.Tokens.Jwt.dll"
+            "fileVersion": "8.23.0.26257"
           }
         }
       },

@@ -1,4 +1,5 @@
 import { createContext, useState, useCallback, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { toast } from 'sonner';
 import {
@@ -32,63 +33,46 @@ import {
 } from '../utils/calculations';
 import { confirmationService } from '../services/confirmationService';
 import {
-  fetchVendorDashboardApi,
-  fetchVendorDashboardTransactionsApi,
   fetchVendorDashboardOtpConfirmationsApi,
   verifyVendorDashboardOtpApi,
-  fetchVendorFarmersOverviewApi,
   fetchVendorFarmersApi,
   createVendorFarmerApi,
   updateVendorFarmerApi,
   updateVendorFarmerStatusApi,
-  fetchVendorMiddlemenOverviewApi,
   fetchVendorMiddlemenApi,
   createVendorMiddlemanApi,
   updateVendorMiddlemanApi,
   updateVendorMiddlemanStatusApi,
-  fetchVendorCustomersOverviewApi,
   fetchVendorCustomersApi,
   createVendorCustomerApi,
   updateVendorCustomerApi,
   updateVendorCustomerStatusApi,
-  fetchVendorRawMaterialOverviewApi,
   fetchVendorRawMaterialsApi,
   fetchVendorRawMaterialMovementsApi,
-  fetchVendorProcessingOverviewApi,
   fetchVendorProcessingBatchesApi,
   createVendorProcessingBatchApi,
-  fetchVendorFinishedProductsOverviewApi,
   fetchVendorFinishedProductsApi,
   createVendorFinishedProductApi,
   updateVendorFinishedProductApi,
   adjustVendorFinishedProductStockApi,
   updateVendorFinishedProductStatusApi,
-  fetchVendorSalesCatalogSummaryApi,
-  fetchVendorSalesCustomersApi,
   fetchVendorSalesBatchesApi,
-  fetchVendorSalesSummaryApi,
   fetchVendorSalesApi,
-  fetchVendorSalesDraftsApi,
   createVendorSaleApi,
   updateVendorSaleApi,
   deleteVendorSaleApi,
   submitVendorSaleApi,
-  fetchVendorOrdersSummaryApi,
   fetchVendorOrdersApi,
   updateVendorOrderStatusApi,
   cancelVendorOrderApi,
-  fetchVendorConfirmationsSummaryApi,
   fetchVendorConfirmationsApi,
   createVendorConfirmationApi,
   verifyVendorConfirmationOtpApi,
   resendVendorConfirmationOtpApi,
-  fetchVendorLedgerSummaryApi,
-  fetchVendorLedgerDayTotalsApi,
   fetchVendorLedgerApi,
   payVendorSupplierApi,
   recordVendorCustomerReceiptApi,
   settleVendorLedgerEntryApi,
-  fetchVendorNotificationsSummaryApi,
   fetchVendorNotificationsApi,
   markVendorNotificationReadApi,
   markAllVendorNotificationsReadApi,
@@ -153,57 +137,51 @@ export function VendorProvider({ children }) {
     });
   };
 
-  // Sync Vendor Portal data from backend APIs (with safe fallback to local state)
-  const refreshVendorPortalData = useCallback(async () => {
+  const location = useLocation();
+  const currentPathname = location?.pathname || '';
+  const isVendorRoute = currentPathname.startsWith('/vendor');
+  const isCustomerRoute = currentPathname.startsWith('/customer');
+
+  // Sync Vendor Portal data from backend APIs in small staged batches
+  // so ngrok / Vite proxy is never flooded with dozens of concurrent sockets.
+  const refreshVendorPortalData = useCallback(async (onlyCatalog = false) => {
     try {
-      const [
-        farmersList,
-        middlemenList,
-        customersList,
-        rawMaterialsList,
-        rawMovementsList,
-        processingList,
-        finishedProductsList,
-        salesList,
-        salesBatchesList,
-        ordersList,
-        confirmationsList,
-        dashboardConfirmationsList,
-        ledgerList,
-        notificationsList,
-      ] = await Promise.all([
+      const [rawMaterialsList, finishedProductsList, salesBatchesList] = await Promise.all([
+        fetchVendorRawMaterialsApi(),
+        fetchVendorFinishedProductsApi(),
+        fetchVendorSalesBatchesApi(),
+      ]);
+
+      if (Array.isArray(rawMaterialsList) && rawMaterialsList.length > 0) {
+        updateStateAndStorage(setInventory, STORAGE_KEYS.INVENTORY, rawMaterialsList);
+      }
+      if (Array.isArray(finishedProductsList) && finishedProductsList.length > 0) {
+        updateStateAndStorage(setProducts, STORAGE_KEYS.PRODUCTS, finishedProductsList);
+      }
+      if (Array.isArray(salesBatchesList) && salesBatchesList.length > 0) {
+        updateStateAndStorage(setProductBatches, STORAGE_KEYS.PRODUCT_BATCHES, salesBatchesList);
+      }
+
+      if (onlyCatalog) return;
+
+      const [farmersList, middlemenList, customersList, rawMovementsList] = await Promise.all([
         fetchVendorFarmersApi(),
         fetchVendorMiddlemenApi(),
         fetchVendorCustomersApi(),
-        fetchVendorRawMaterialsApi(),
         fetchVendorRawMaterialMovementsApi(),
+      ]);
+
+      const [processingList, salesList, ordersList, confirmationsList] = await Promise.all([
         fetchVendorProcessingBatchesApi(),
-        fetchVendorFinishedProductsApi(),
         fetchVendorSalesApi(),
-        fetchVendorSalesBatchesApi(),
         fetchVendorOrdersApi(),
         fetchVendorConfirmationsApi(),
+      ]);
+
+      const [dashboardConfirmationsList, ledgerList, notificationsList] = await Promise.all([
         fetchVendorDashboardOtpConfirmationsApi(),
         fetchVendorLedgerApi(),
         fetchVendorNotificationsApi(),
-        // Trigger overview & summary endpoints in parallel
-        fetchVendorDashboardApi(),
-        fetchVendorDashboardTransactionsApi(),
-        fetchVendorFarmersOverviewApi(),
-        fetchVendorMiddlemenOverviewApi(),
-        fetchVendorCustomersOverviewApi(),
-        fetchVendorRawMaterialOverviewApi(),
-        fetchVendorProcessingOverviewApi(),
-        fetchVendorFinishedProductsOverviewApi(),
-        fetchVendorSalesCatalogSummaryApi(),
-        fetchVendorSalesCustomersApi(),
-        fetchVendorSalesSummaryApi(),
-        fetchVendorSalesDraftsApi(),
-        fetchVendorOrdersSummaryApi(),
-        fetchVendorConfirmationsSummaryApi(),
-        fetchVendorLedgerSummaryApi(),
-        fetchVendorLedgerDayTotalsApi(),
-        fetchVendorNotificationsSummaryApi(),
       ]);
 
       if (Array.isArray(farmersList) && farmersList.length > 0) {
@@ -215,23 +193,14 @@ export function VendorProvider({ children }) {
       if (Array.isArray(customersList) && customersList.length > 0) {
         updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, customersList);
       }
-      if (Array.isArray(rawMaterialsList) && rawMaterialsList.length > 0) {
-        updateStateAndStorage(setInventory, STORAGE_KEYS.INVENTORY, rawMaterialsList);
-      }
       if (Array.isArray(rawMovementsList) && rawMovementsList.length > 0) {
         updateStateAndStorage(setStockMovements, STORAGE_KEYS.STOCK_MOVEMENTS, rawMovementsList);
       }
       if (Array.isArray(processingList) && processingList.length > 0) {
         updateStateAndStorage(setProcessingRecords, STORAGE_KEYS.PROCESSING, processingList);
       }
-      if (Array.isArray(finishedProductsList) && finishedProductsList.length > 0) {
-        updateStateAndStorage(setProducts, STORAGE_KEYS.PRODUCTS, finishedProductsList);
-      }
       if (Array.isArray(salesList) && salesList.length > 0) {
         updateStateAndStorage(setSales, STORAGE_KEYS.SALES, salesList);
-      }
-      if (Array.isArray(salesBatchesList) && salesBatchesList.length > 0) {
-        updateStateAndStorage(setProductBatches, STORAGE_KEYS.PRODUCT_BATCHES, salesBatchesList);
       }
       if (Array.isArray(ordersList) && ordersList.length > 0) {
         updateStateAndStorage(setOrders, STORAGE_KEYS.ORDERS, ordersList);
@@ -257,8 +226,12 @@ export function VendorProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    refreshVendorPortalData();
-  }, [refreshVendorPortalData]);
+    if (isVendorRoute) {
+      refreshVendorPortalData(false);
+    } else if (isCustomerRoute) {
+      refreshVendorPortalData(true);
+    }
+  }, [isVendorRoute, isCustomerRoute, refreshVendorPortalData]);
 
   // Notification generator
   const pushNotification = useCallback(
@@ -325,32 +298,47 @@ export function VendorProvider({ children }) {
       const newFarmer = {
         ...payload,
         id: newId,
+        farmerCode: newId,
         status: payload.status || 'Active',
         createdAt: dayjs().format('YYYY-MM-DD'),
       };
       updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev) => [newFarmer, ...prev]);
       createVendorFarmerApi(newFarmer).then((created) => {
-        if (created && created.rawId) {
+        if (created) {
           updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev) =>
-            prev.map((f) => (f.id === newId ? { ...f, rawId: created.rawId } : f))
+            prev.map((f) =>
+              f.id === newId
+                ? {
+                    ...f,
+                    ...created,
+                    id: created.id || created.farmerCode || newId,
+                    farmerCode: created.farmerCode || created.id || newId,
+                    rawId: created.rawId ?? f.rawId,
+                  }
+                : f
+            )
           );
         }
       });
-      toast.success(`Farmer ${newFarmer.farmerName} (${newId}) registered successfully.`);
+      toast.success(`Farmer ${newFarmer.farmerName} registered successfully.`);
       return newFarmer;
     },
     [farmers]
   );
 
   const updateFarmer = useCallback((id, payload) => {
+    const targetFarmer = farmers.find((f) => f.id === id);
+    const targetId = targetFarmer?.farmerCode || targetFarmer?.rawId || payload?.rawId || id;
     updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev) =>
       prev.map((f) => (f.id === id ? { ...f, ...payload } : f))
     );
-    updateVendorFarmerApi(id, payload);
+    updateVendorFarmerApi(targetId, { ...targetFarmer, ...payload, rawId: targetFarmer?.rawId });
     toast.success(`Farmer ${id} updated successfully.`);
-  }, []);
+  }, [farmers]);
 
   const toggleFarmerStatus = useCallback((id) => {
+    const targetFarmer = farmers.find((f) => f.id === id);
+    const targetId = targetFarmer?.farmerCode || targetFarmer?.rawId || id;
     let nextStatus = 'Active';
     updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev) =>
       prev.map((f) => {
@@ -359,9 +347,9 @@ export function VendorProvider({ children }) {
         return { ...f, status: nextStatus };
       })
     );
-    updateVendorFarmerStatusApi(id, nextStatus);
+    updateVendorFarmerStatusApi(targetId, nextStatus);
     toast.info(`Farmer ${id} status updated.`);
-  }, []);
+  }, [farmers]);
 
   const deleteFarmer = useCallback((id) => {
     updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev) =>
@@ -409,33 +397,48 @@ export function VendorProvider({ children }) {
       const newMid = {
         ...payload,
         id: newId,
+        middlemanCode: newId,
         openingBalance: safeNumber(payload.openingBalance, 0),
         status: payload.status || 'Active',
         createdAt: dayjs().format('YYYY-MM-DD'),
       };
       updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev) => [newMid, ...prev]);
       createVendorMiddlemanApi(newMid).then((created) => {
-        if (created && created.rawId) {
+        if (created) {
           updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev) =>
-            prev.map((m) => (m.id === newId ? { ...m, rawId: created.rawId } : m))
+            prev.map((m) =>
+              m.id === newId
+                ? {
+                    ...m,
+                    ...created,
+                    id: created.id || created.middlemanCode || newId,
+                    middlemanCode: created.middlemanCode || created.id || newId,
+                    rawId: created.rawId ?? m.rawId,
+                  }
+                : m
+            )
           );
         }
       });
-      toast.success(`Middleman ${newMid.businessName} (${newId}) registered successfully.`);
+      toast.success(`Middleman ${newMid.businessName} registered successfully.`);
       return newMid;
     },
     [middlemen]
   );
 
   const updateMiddleman = useCallback((id, payload) => {
+    const targetMid = middlemen.find((m) => m.id === id);
+    const targetId = targetMid?.middlemanCode || targetMid?.rawId || payload?.rawId || id;
     updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev) =>
       prev.map((m) => (m.id === id ? { ...m, ...payload } : m))
     );
-    updateVendorMiddlemanApi(id, payload);
+    updateVendorMiddlemanApi(targetId, { ...targetMid, ...payload, rawId: targetMid?.rawId });
     toast.success(`Middleman ${id} updated successfully.`);
-  }, []);
+  }, [middlemen]);
 
   const toggleMiddlemanStatus = useCallback((id) => {
+    const targetMid = middlemen.find((m) => m.id === id);
+    const targetId = targetMid?.middlemanCode || targetMid?.rawId || id;
     let nextStatus = 'Active';
     updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev) =>
       prev.map((m) => {
@@ -444,9 +447,9 @@ export function VendorProvider({ children }) {
         return { ...m, status: nextStatus };
       })
     );
-    updateVendorMiddlemanStatusApi(id, nextStatus);
+    updateVendorMiddlemanStatusApi(targetId, nextStatus);
     toast.info(`Middleman ${id} status updated.`);
-  }, []);
+  }, [middlemen]);
 
   const deleteMiddleman = useCallback((id) => {
     updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev) =>
@@ -500,6 +503,7 @@ export function VendorProvider({ children }) {
       const newCust = {
         ...payload,
         id: newId,
+        customerCode: newId,
         creditLimit: safeNumber(payload.creditLimit, 0),
         openingBalance: safeNumber(payload.openingBalance, 0),
         status: payload.status || 'Active',
@@ -507,27 +511,42 @@ export function VendorProvider({ children }) {
       };
       updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev) => [newCust, ...prev]);
       createVendorCustomerApi(newCust).then((created) => {
-        if (created && created.rawId) {
+        if (created) {
           updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev) =>
-            prev.map((c) => (c.id === newId ? { ...c, rawId: created.rawId } : c))
+            prev.map((c) =>
+              c.id === newId
+                ? {
+                    ...c,
+                    ...created,
+                    id: created.id || created.customerCode || newId,
+                    customerCode: created.customerCode || created.id || newId,
+                    customerUserId: created.customerUserId || created.rawId || c.customerUserId,
+                    rawId: created.rawId ?? c.rawId,
+                  }
+                : c
+            )
           );
         }
       });
-      toast.success(`Customer ${newCust.customerName} (${newId}) registered successfully.`);
+      toast.success(`Customer ${newCust.customerName} registered successfully.`);
       return newCust;
     },
     [customers]
   );
 
   const updateCustomer = useCallback((id, payload) => {
+    const targetCust = customers.find((c) => c.id === id);
+    const targetId = targetCust?.customerCode || targetCust?.rawId || payload?.rawId || id;
     updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev) =>
       prev.map((c) => (c.id === id ? { ...c, ...payload } : c))
     );
-    updateVendorCustomerApi(id, payload);
+    updateVendorCustomerApi(targetId, { ...targetCust, ...payload, rawId: targetCust?.rawId });
     toast.success(`Customer ${id} updated successfully.`);
-  }, []);
+  }, [customers]);
 
   const toggleCustomerStatus = useCallback((id) => {
+    const targetCust = customers.find((c) => c.id === id);
+    const targetId = targetCust?.customerCode || targetCust?.rawId || id;
     let nextStatus = 'Active';
     updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev) =>
       prev.map((c) => {
@@ -536,9 +555,9 @@ export function VendorProvider({ children }) {
         return { ...c, status: nextStatus };
       })
     );
-    updateVendorCustomerStatusApi(id, nextStatus);
+    updateVendorCustomerStatusApi(targetId, nextStatus);
     toast.info(`Customer ${id} status updated.`);
-  }, []);
+  }, [customers]);
 
   const deleteCustomer = useCallback((id) => {
     updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev) =>
@@ -1495,7 +1514,13 @@ export function VendorProvider({ children }) {
           ? prev.map((r) => (r.id === procId ? completedRecord : r))
           : [completedRecord, ...prev];
       });
-      createVendorProcessingBatchApi(completedRecord);
+      createVendorProcessingBatchApi(completedRecord).then((created) => {
+        if (created) {
+          updateStateAndStorage(setProcessingRecords, STORAGE_KEYS.PROCESSING, (prev) =>
+            prev.map((r) => (r.id === procId ? { ...r, ...created, rawId: created.rawId ?? r.rawId } : r))
+          );
+        }
+      });
 
       pushNotification({
         category: 'Processing Completed',
@@ -1544,6 +1569,7 @@ export function VendorProvider({ children }) {
       const newProd = {
         ...payload,
         id: newId,
+        productId: newId,
         availableQuantity: safeNumber(payload.availableQuantity, 0),
         reservedQuantity: 0,
         soldQuantity: 0,
@@ -1558,14 +1584,32 @@ export function VendorProvider({ children }) {
       };
 
       updateStateAndStorage(setProducts, STORAGE_KEYS.PRODUCTS, (prev) => [newProd, ...prev]);
-      createVendorFinishedProductApi(newProd);
-      toast.success(`Finished Product ${newProd.productName} (${newId}) created.`);
+      createVendorFinishedProductApi(newProd).then((created) => {
+        if (created) {
+          updateStateAndStorage(setProducts, STORAGE_KEYS.PRODUCTS, (prev) =>
+            prev.map((p) =>
+              p.id === newId
+                ? {
+                    ...p,
+                    ...created,
+                    id: created.id || created.productId || newId,
+                    productId: created.productId || created.id || newId,
+                    rawId: created.rawId ?? p.rawId,
+                  }
+                : p
+            )
+          );
+        }
+      });
+      toast.success(`Finished Product ${newProd.productName} created.`);
       return newProd;
     },
     [products]
   );
 
   const updateFinishedProduct = useCallback((id, payload) => {
+    const targetProd = products.find((p) => p.id === id);
+    const targetId = targetProd?.productId || targetProd?.rawId || payload?.rawId || id;
     updateStateAndStorage(setProducts, STORAGE_KEYS.PRODUCTS, (prev) =>
       prev.map((p) => {
         if (p.id !== id) return p;
@@ -1587,12 +1631,12 @@ export function VendorProvider({ children }) {
         };
       })
     );
-    updateVendorFinishedProductApi(id, payload);
+    updateVendorFinishedProductApi(targetId, { ...targetProd, ...payload, rawId: targetProd?.rawId });
     if (payload.status) {
-      updateVendorFinishedProductStatusApi(id, payload.status);
+      updateVendorFinishedProductStatusApi(targetId, payload.status);
     }
     toast.success(`Product ${id} updated.`);
-  }, []);
+  }, [products]);
 
   const adjustFinishedProductStock = useCallback(
     ({ productId, batchId, adjustmentType, quantity, reason, newSellingPrice }) => {
@@ -1642,7 +1686,8 @@ export function VendorProvider({ children }) {
         );
       }
 
-      adjustVendorFinishedProductStockApi(productId, {
+      const targetProdId = prod.productId || prod.rawId || productId;
+      adjustVendorFinishedProductStockApi(targetProdId, {
         batchId,
         adjustmentType,
         quantity,
@@ -1840,7 +1885,48 @@ export function VendorProvider({ children }) {
 
       updateStateAndStorage(setSales, STORAGE_KEYS.SALES, (prev) => [saleRecord, ...prev]);
       updateStateAndStorage(setOrders, STORAGE_KEYS.ORDERS, (prev) => [orderRecord, ...prev]);
-      createVendorSaleApi(saleRecord, isDraft);
+      createVendorSaleApi(saleRecord, isDraft).then((created) => {
+        if (created) {
+          updateStateAndStorage(setSales, STORAGE_KEYS.SALES, (prev) =>
+            prev.map((s) =>
+              s.id === newSaleId
+                ? {
+                    ...s,
+                    ...created,
+                    id: created.id || created.saleCode || newSaleId,
+                    orderId: created.orderId || created.orderCode || s.orderId,
+                    rawId: created.rawId ?? s.rawId,
+                  }
+                : s
+            )
+          );
+          updateStateAndStorage(setOrders, STORAGE_KEYS.ORDERS, (prev) =>
+            prev.map((o) =>
+              o.id === newOrderId
+                ? {
+                    ...o,
+                    id: created.orderId || created.orderCode || newOrderId,
+                    salesId: created.id || created.saleCode || newSaleId,
+                    rawId: created.rawId ?? o.rawId,
+                  }
+                : o
+            )
+          );
+          if (created.confirmationId || created.devOtp) {
+            updateStateAndStorage(setConfirmations, STORAGE_KEYS.CONFIRMATIONS, (prev) =>
+              prev.map((c) =>
+                c.id === newOtpId
+                  ? {
+                      ...c,
+                      rawId: created.confirmationId ?? c.rawId,
+                      backendOtp: created.devOtp || c.backendOtp,
+                    }
+                  : c
+              )
+            );
+          }
+        }
+      });
 
       if (!isDraft) {
         const otpRecord = {
@@ -1874,8 +1960,6 @@ export function VendorProvider({ children }) {
           otpRecord,
           ...prev,
         ]);
-        submitVendorSaleApi(newSaleId, saleRecord);
-        createVendorConfirmationApi(otpRecord);
 
         pushNotification({
           category: 'Customer Order Received',

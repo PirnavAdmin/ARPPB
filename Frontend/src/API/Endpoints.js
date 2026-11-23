@@ -46,6 +46,25 @@ const API_ENDPOINTS = {
   },
 
   // =========================
+  // FARMER SALES
+  // =========================
+  FarmerSales: {
+    getAll: "/api/v1/farmer/sales",
+    create: "/api/v1/farmer/sales",
+    getOptions: "/api/v1/farmer/sales/options",
+    getById: (id) => `/api/v1/farmer/sales/${id}`,
+    verifyOtp: (id) => `/api/v1/farmer/sales/${id}/verify-otp`,
+    resendOtp: (id) => `/api/v1/farmer/sales/${id}/resend-otp`,
+  },
+  FARMER_SALES: {
+    BASE: "/api/v1/farmer/sales",
+    OPTIONS: "/api/v1/farmer/sales/options",
+    BY_ID: (id) => `/api/v1/farmer/sales/${id}`,
+    VERIFY_OTP: (id) => `/api/v1/farmer/sales/${id}/verify-otp`,
+    RESEND_OTP: (id) => `/api/v1/farmer/sales/${id}/resend-otp`,
+  },
+
+  // =========================
   // FARMER PROFILE
   // =========================
   FarmerProfile: {
@@ -86,6 +105,17 @@ const API_ENDPOINTS = {
     update: (id) => `/api/v1/middleman/farmers/${id}`,
     history: (id) => `/api/v1/middleman/farmers/${id}/history`,
   },
+  MiddlemanCustomers: {
+    getAll: "/api/v1/middleman/customers",
+    create: "/api/v1/middleman/customers",
+    getById: (id) => `/api/v1/middleman/customers/${id}`,
+    update: (id) => `/api/v1/middleman/customers/${id}`,
+  },
+  MiddlemanCustomerSales: {
+    getAll: "/api/v1/middleman/customer-sales",
+    create: "/api/v1/middleman/customer-sales",
+    getById: (id) => `/api/v1/middleman/customer-sales/${id}`,
+  },
 
   // =========================
   // MIDDLEMAN INVENTORY
@@ -113,6 +143,18 @@ const API_ENDPOINTS = {
   // =========================
   // MIDDLEMAN PURCHASES
   // =========================
+  // =========================
+  // MIDDLEMAN CONFIRMATIONS
+  // =========================
+  MiddlemanConfirmations: {
+    summary: "/api/v1/middleman/confirmations/summary",
+    getAll: "/api/v1/middleman/confirmations",
+    getById: (id) => `/api/v1/middleman/confirmations/${id}`,
+    verify: (id) => `/api/v1/middleman/confirmations/${id}/verify`,
+    resend: (id) => `/api/v1/middleman/confirmations/${id}/resend`,
+    reject: (id) => `/api/v1/middleman/confirmations/${id}/reject`,
+  },
+
   MiddlemanPurchases: {
     getAll: "/api/v1/middleman/purchases",
     create: "/api/v1/middleman/purchases",
@@ -371,6 +413,81 @@ const API_ENDPOINTS = {
   MIDDLEMAN_VENDOR_SALES: {
     BASE: "/api/v1/middleman/vendor-sales",
     BY_ID: (id) => `/api/v1/middleman/vendor-sales/${id}`,
+  },
+
+  // Backward-compatible names used by existing services.
+  AUTH: {
+    LOGIN: "/api/v1/Auth/login",
+    FORGOT_PASSWORD: "/api/v1/Auth/forgot-password",
+    VERIFY_OTP: "/api/v1/Auth/verify-otp",
+    RESET_PASSWORD: "/api/v1/Auth/reset-password",
+  },
+  REGISTRATION: {
+    SEND_MOBILE_OTP: "/api/v1/Registration/send-mobile-otp",
+    VERIFY_MOBILE_OTP: "/api/v1/Registration/verify-mobile-otp",
+    REGISTER: "/api/v1/Registration",
+  },
+  ROLE_ACCESS: {
+    FARMER: "/api/v1/role-access/farmer",
+    CUSTOMER: "/api/v1/role-access/customer",
+    MIDDLEMAN: "/api/v1/role-access/middleman",
+    VENDOR: "/api/v1/role-access/vendor",
+    PROFILE: "/api/v1/role-access/profile",
+    BUSINESS_ACCESS: "/api/v1/role-access/business-access",
+  },
+  MIDDLEMAN_PROFILE: {
+    PROFILE: "/api/v1/middleman-profile",
+    BY_ID: (id) => `/api/v1/middleman-profile/${id}`,
+    SEND_MOBILE_OTP: "/api/v1/middleman-profile/mobile/send-otp",
+    VERIFY_MOBILE_OTP: "/api/v1/middleman-profile/mobile/verify-otp",
+  },
+  VENDOR_PROFILE: {
+    PROFILE: "/api/vendor-profile",
+    BY_ID: (vendorId) => `/api/vendor-profile/${vendorId}`,
+    BANK_DETAILS: "/api/vendor-profile/bank-details",
+    REQUEST_MOBILE_OTP: "/api/vendor-profile/mobile-change/request-otp",
+    VERIFY_MOBILE_OTP: "/api/vendor-profile/mobile-change/verify-otp",
+  },
+  CUSTOMER_PROFILE: {
+    PROFILE: "/api/customer/profile",
+    ADDRESSES: "/api/customer/profile/addresses",
+    ADDRESS_BY_ID: (id) => `/api/customer/profile/addresses/${id}`,
+    SET_DEFAULT_ADDRESS: (id) => `/api/customer/profile/addresses/${id}/default`,
+    SEND_MOBILE_OTP: "/api/customer/profile/mobile/send-otp",
+    VERIFY_MOBILE_OTP: "/api/customer/profile/mobile/verify-otp",
+  },
+  CUSTOMER: {
+    DASHBOARD_SUMMARY: "/api/v1/customer/dashboard/summary",
+    MARKETPLACE_CATEGORIES: "/api/v1/customer/marketplace/categories",
+    MARKETPLACE_PRODUCTS: "/api/v1/customer/marketplace/products",
+    MARKETPLACE_PRODUCT_BY_ID: (id) => `/api/v1/customer/marketplace/products/${id}`,
+    CART: "/api/v1/customer/cart",
+    CART_ITEMS: "/api/v1/customer/cart/items",
+    CART_ITEM_BY_ID: (id) => `/api/v1/customer/cart/items/${id}`,
+    CHECKOUT: "/api/v1/customer/cart/checkout",
+    ORDERS: "/api/v1/customer/orders",
+    ORDER_BY_ID: (id) => `/api/v1/customer/orders/${id}`,
+    PURCHASES: "/api/v1/customer/purchases",
+    PURCHASE_SUMMARY: "/api/v1/customer/purchases/summary",
+    PURCHASE_BY_ID: (id) => `/api/v1/customer/purchases/${id}`,
+    CONFIRMATIONS: "/api/v1/customer/confirmations",
+    CONFIRMATION_BY_ID: (id) => `/api/v1/customer/confirmations/${id}`,
+    VERIFY_CONFIRMATION: (id) => `/api/v1/customer/confirmations/${id}/verify`,
+    RESEND_CONFIRMATION: (id) => `/api/v1/customer/confirmations/${id}/resend`,
+    REJECT_CONFIRMATION: (id) => `/api/v1/customer/confirmations/${id}/reject`,
+    NOTIFICATIONS: "/api/v1/customer/notifications",
+    NOTIFICATION_SUMMARY: "/api/v1/customer/notifications/summary",
+    MARK_NOTIFICATION_READ: (id) => `/api/v1/customer/notifications/${id}/read`,
+    MARK_ALL_NOTIFICATIONS_READ: "/api/v1/customer/notifications/read-all",
+    NOTIFICATION_BY_ID: (id) => `/api/v1/customer/notifications/${id}`,
+  },
+  FARMER_PROFILE: {
+    ALL: "/api/v1/farmer/profile/all",
+    PROFILE: "/api/v1/farmer/profile",
+    BANK_DETAILS: "/api/v1/farmer/profile/bank-details",
+    SEND_MOBILE_OTP: "/api/v1/farmer/profile/change-mobile/send-otp",
+    VERIFY_MOBILE_OTP: "/api/v1/farmer/profile/change-mobile/verify-otp",
+    CHANGE_PASSWORD: "/api/v1/farmer/profile/change-password",
   },
 };
 

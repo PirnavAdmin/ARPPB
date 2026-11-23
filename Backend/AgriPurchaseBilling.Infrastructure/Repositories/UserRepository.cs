@@ -21,7 +21,7 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             return await _context.Users.AnyAsync(
-                u => u.Email.ToLower() == email.ToLower(),
+                u => u.Email != null && u.Email.ToLower() == email.ToLower(),
                 cancellationToken);
         }
 
@@ -39,7 +39,7 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             return await _context.Users.FirstOrDefaultAsync(
-                u => u.Email.ToLower() == email.ToLower(),
+                u => u.Email != null && u.Email.ToLower() == email.ToLower(),
                 cancellationToken);
         }
 

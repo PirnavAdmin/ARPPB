@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AgriPurchaseBilling.Application")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bc45587c43c8c2fb5ab18819d424354ee4d7221e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5a8dc9fafeb3877238c5cab3503d005f441e9561")]
 [assembly: System.Reflection.AssemblyProductAttribute("AgriPurchaseBilling.Application")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AgriPurchaseBilling.Application")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
