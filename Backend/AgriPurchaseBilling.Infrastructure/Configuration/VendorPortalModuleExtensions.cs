@@ -20,6 +20,7 @@ namespace AgriPurchaseBilling.Infrastructure.Configuration
             services.AddScoped<IVendorConfirmationsRepository, VendorConfirmationsRepository>();
             services.AddScoped<IVendorLedgerRepository, VendorLedgerRepository>();
             services.AddScoped<IVendorNotificationsRepository, VendorNotificationsRepository>();
+            services.AddScoped<IVendorPurchasesRepository, VendorPurchasesRepository>();
             return services;
         }
     }

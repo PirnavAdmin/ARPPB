@@ -67,15 +67,12 @@ var serverVersion = new MariaDbServerVersion(
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(
         connectionString,
-        serverVersion,
-        mySqlOptions => mySqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 3,
-            maxRetryDelay: TimeSpan.FromSeconds(5),
-            errorNumbersToAdd: null)));
+        serverVersion));
 builder.Services.AddCustomerProfileModule();
 builder.Services.AddFarmerCropsModule();
 builder.Services.AddVendorOperationsModule(connectionString);
-builder.Services.AddFarmerSalesModule();
+builder.Services.AddVendorPortalModule();
+builder.Services.AddScoped<AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorPortalExceptionFilter>();
 
 // REPOSITORY REGISTRATIONS
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
@@ -108,8 +105,6 @@ builder.Services.AddScoped<IMiddlemanInventoryService, MiddlemanInventoryService
 builder.Services.AddScoped<IMiddlemanFarmerService, MiddlemanFarmerService>();
 builder.Services.AddScoped<IMiddlemanPurchaseService, MiddlemanPurchaseService>();
 builder.Services.AddScoped<IMiddlemanVendorService, MiddlemanVendorService>();
-builder.Services.AddScoped<IMiddlemanCustomerService, MiddlemanCustomerService>();
-builder.Services.AddScoped<IMiddlemanConfirmationsService, MiddlemanConfirmationsService>();
 
 // JWT registration
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
@@ -252,9 +247,6 @@ app.MapControllers();
 
 // REDIRECT ROOT TO SWAGGER UI (Supports GET and HEAD for tunnel/health probes)
 app.MapMethods("/", new[] { "GET", "HEAD" }, () => Results.Redirect("/swagger")).ExcludeFromDescription();
-
-// ENSURE FARMER SALES TABLES EXIST
-await app.EnsureFarmerSalesTablesAsync();
 
 // RUN
 app.Run();

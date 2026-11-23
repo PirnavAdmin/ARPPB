@@ -201,6 +201,17 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             var pendingOtps = await GetPendingOtpConfirmationsAsync(
                 vendorId, fromDate, toDate, includeSandboxOtps, cancellationToken);
 
+            var recentTxnsPage = await GetTransactionsAsync(
+                vendorId,
+                new VendorDashboardTransactionQueryDto
+                {
+                    FromDate = fromDate,
+                    ToDate = toDate,
+                    Page = 1,
+                    PageSize = 20
+                },
+                cancellationToken);
+
             return new VendorDashboardDto
             {
                 GeneratedAtUtc = DateTime.UtcNow,
@@ -213,7 +224,8 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 FinishedProducts = finishedProducts,
                 SalesAnalytics = salesAnalytics,
                 EstimatedProfitLoss = profitLoss,
-                PendingOtpConfirmations = pendingOtps
+                PendingOtpConfirmations = pendingOtps,
+                RecentTransactions = recentTxnsPage.Items
             };
         }
 
