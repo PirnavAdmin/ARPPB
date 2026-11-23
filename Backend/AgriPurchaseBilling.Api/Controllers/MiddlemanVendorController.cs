@@ -11,6 +11,7 @@ namespace AgriPurchaseBilling.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/middleman/vendors")]
+    [Route("api/v1/middleman/vendor-management")]
     [Tags("Middleman - Vendors")]
     [Authorize(Roles = "Middleman,Admin")]
     public class MiddlemanVendorController : ControllerBase
@@ -32,13 +33,18 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
-        /// Get list of registered commercial vendors and wholesale buyers with search, type, and district filters.
+        /// Get list of registered commercial vendors and wholesale buyers with search, partyFilter, type, and district filters.
         /// GET /api/v1/middleman/vendors
+        /// GET /api/v1/middleman/vendor-management
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetVendors([FromQuery] MiddlemanVendorQueryDto query)
+        public async Task<IActionResult> GetVendors([FromQuery] MiddlemanVendorQueryDto query, [FromQuery] string? partyFilter = null)
         {
             var userId = GetUserId();
+            if (string.IsNullOrWhiteSpace(query.Search) && !string.IsNullOrWhiteSpace(partyFilter))
+            {
+                query.Search = partyFilter;
+            }
             var result = await _vendorService.GetVendorsAsync(userId, query);
             return Ok(new { success = true, data = result });
         }

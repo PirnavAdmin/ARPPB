@@ -11,6 +11,7 @@ namespace AgriPurchaseBilling.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/middleman/inventory")]
+    [Route("api/v1/middleman/my-inventory")]
     [Tags("Middleman - Inventory")]
     [Authorize(Roles = "Middleman,Admin")]
     public class MiddlemanInventoryController : ControllerBase
@@ -34,6 +35,7 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// <summary>
         /// Get the full Inventory summary with 4 KPI metrics (Purchased: 770 Qtl, Sold: 520 Qtl, Available: 250 Qtl, Low Stock: 2 Batches) and active batches.
         /// GET /api/v1/middleman/inventory
+        /// GET /api/v1/middleman/my-inventory
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetInventory()
@@ -46,6 +48,7 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// <summary>
         /// Get inventory summary cards metrics.
         /// GET /api/v1/middleman/inventory/summary
+        /// GET /api/v1/middleman/my-inventory/summary
         /// </summary>
         [HttpGet("summary")]
         public async Task<IActionResult> GetSummary()
@@ -58,6 +61,7 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// <summary>
         /// Get filtered and paginated inventory batches.
         /// GET /api/v1/middleman/inventory/batches
+        /// GET /api/v1/middleman/my-inventory/batches
         /// </summary>
         [HttpGet("batches")]
         public async Task<IActionResult> GetBatches([FromQuery] MiddlemanInventoryQueryDto query)
@@ -70,6 +74,7 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// <summary>
         /// Get single batch traceability details by ID or Stock Code (e.g. STK-0001).
         /// GET /api/v1/middleman/inventory/batches/{id}
+        /// GET /api/v1/middleman/my-inventory/batches/{id}
         /// </summary>
         [HttpGet("batches/{id}")]
         public async Task<IActionResult> GetBatchById(string id)
@@ -83,6 +88,7 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// <summary>
         /// Procure new stock / create new inventory batch.
         /// POST /api/v1/middleman/inventory/batches
+        /// POST /api/v1/middleman/my-inventory/batches
         /// </summary>
         [HttpPost("batches")]
         public async Task<IActionResult> CreateBatch([FromBody] CreateInventoryBatchRequest request)
@@ -99,13 +105,30 @@ namespace AgriPurchaseBilling.Api.Controllers
 
         /// <summary>
         /// Update stock batch (available quantity, godown location, minimum threshold, status).
-        /// PUT /api/v1/middleman/inventory/batches/{id:long}
+        /// Accepts numeric ID or stock code (e.g. 1 or STK-0001).
+        /// PUT /api/v1/middleman/inventory/batches/{id}
         /// </summary>
-        [HttpPut("batches/{id:long}")]
-        public async Task<IActionResult> UpdateBatch(long id, [FromBody] UpdateInventoryBatchRequest request)
+        [HttpPut("batches/{id}")]
+        public async Task<IActionResult> UpdateBatch(string id, [FromBody] UpdateInventoryBatchRequest request)
         {
             var userId = GetUserId();
-            var updated = await _inventoryService.UpdateBatchAsync(userId, id, request);
+            long numericId = 0;
+            if (long.TryParse(id, out var parsed) && parsed > 0)
+            {
+                numericId = parsed;
+            }
+            else
+            {
+                var existing = await _inventoryService.GetBatchByIdAsync(userId, id);
+                if (existing != null) numericId = existing.Id;
+                else
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(id ?? string.Empty, @"\d+");
+                    if (match.Success && long.TryParse(match.Value, out var num) && num > 0) numericId = num;
+                }
+            }
+
+            var updated = await _inventoryService.UpdateBatchAsync(userId, numericId, request);
             if (updated == null) return NotFound(new { success = false, message = $"Stock batch with ID '{id}' not found." });
             return Ok(new { success = true, message = "Stock batch updated successfully.", data = updated });
         }

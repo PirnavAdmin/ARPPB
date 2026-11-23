@@ -11,6 +11,8 @@ namespace AgriPurchaseBilling.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/middleman/transaction-history")]
+    [Route("api/v1/middleman/sales-history")]
+    [Route("api/v1/middleman/sales-order-history")]
     [Tags("Middleman - Transaction History")]
     [Authorize(Roles = "Middleman,Admin")]
     public class MiddlemanTransactionHistoryController : ControllerBase
@@ -40,12 +42,16 @@ namespace AgriPurchaseBilling.Api.Controllers
 
         /// <summary>
         /// Get unified transaction history for Sales Order History screen across tabs: 'farmer', 'vendor', or 'customer', with badge counts.
+        /// Supports query parameters: tab, search, partyFilter, crop, status, page, pageSize.
         /// GET /api/v1/middleman/transaction-history
+        /// GET /api/v1/middleman/sales-history
+        /// GET /api/v1/middleman/sales-order-history
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetTransactionHistory(
             [FromQuery] string? tab = "farmer",
             [FromQuery] string? search = null,
+            [FromQuery] string? partyFilter = null,
             [FromQuery] string? crop = null,
             [FromQuery] string? status = "ALL",
             [FromQuery] int page = 1,
@@ -53,11 +59,13 @@ namespace AgriPurchaseBilling.Api.Controllers
         {
             var userId = GetUserId();
             var activeTab = (tab ?? "farmer").Trim().ToLower();
+            var effectiveSearch = !string.IsNullOrWhiteSpace(search) ? search : partyFilter;
 
             // Fetch tab counts for badges
             var purchasesPage = await _purchaseService.GetPurchasesAsync(userId, new MiddlemanPurchaseQueryDto
             {
-                Search = activeTab == "farmer" ? search : null,
+                Search = activeTab == "farmer" ? effectiveSearch : null,
+                CropName = activeTab == "farmer" ? crop : null,
                 Status = activeTab == "farmer" ? status : "ALL",
                 Page = activeTab == "farmer" ? page : 1,
                 PageSize = activeTab == "farmer" ? pageSize : 1,
@@ -65,7 +73,8 @@ namespace AgriPurchaseBilling.Api.Controllers
 
             var vendorSalesPage = await _vendorService.GetVendorSalesAsync(userId, new MiddlemanVendorSaleQueryDto
             {
-                Search = activeTab == "vendor" ? search : null,
+                Search = activeTab == "vendor" ? effectiveSearch : null,
+                CropName = activeTab == "vendor" ? crop : null,
                 Status = activeTab == "vendor" ? status : "ALL",
                 Page = activeTab == "vendor" ? page : 1,
                 PageSize = activeTab == "vendor" ? pageSize : 1,
@@ -73,7 +82,7 @@ namespace AgriPurchaseBilling.Api.Controllers
 
             var customerSalesPage = await _customerService.GetCustomerSalesAsync(userId, new MiddlemanCustomerSaleQueryDto
             {
-                Search = activeTab == "customer" ? search : null,
+                Search = activeTab == "customer" ? effectiveSearch : null,
                 CropName = activeTab == "customer" ? crop : null,
                 Status = activeTab == "customer" ? status : "ALL",
                 Page = activeTab == "customer" ? page : 1,
@@ -104,11 +113,16 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// <summary>
         /// Get Farmer Produce Procurement Purchase History (Tab 1: Farmer Purchase History)
         /// GET /api/v1/middleman/transaction-history/farmer-purchases
+        /// GET /api/v1/middleman/sales-history/farmer-purchases
         /// </summary>
         [HttpGet("farmer-purchases")]
-        public async Task<IActionResult> GetFarmerPurchases([FromQuery] MiddlemanPurchaseQueryDto query)
+        public async Task<IActionResult> GetFarmerPurchases([FromQuery] MiddlemanPurchaseQueryDto query, [FromQuery] string? partyFilter = null)
         {
             var userId = GetUserId();
+            if (string.IsNullOrWhiteSpace(query.Search) && !string.IsNullOrWhiteSpace(partyFilter))
+            {
+                query.Search = partyFilter;
+            }
             var result = await _purchaseService.GetPurchasesAsync(userId, query);
             return Ok(new { success = true, data = result });
         }
@@ -116,11 +130,16 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// <summary>
         /// Get Commercial Vendor Sales History (Tab 2: Sales to Vendors)
         /// GET /api/v1/middleman/transaction-history/vendor-sales
+        /// GET /api/v1/middleman/sales-history/vendor-sales
         /// </summary>
         [HttpGet("vendor-sales")]
-        public async Task<IActionResult> GetVendorSales([FromQuery] MiddlemanVendorSaleQueryDto query)
+        public async Task<IActionResult> GetVendorSales([FromQuery] MiddlemanVendorSaleQueryDto query, [FromQuery] string? partyFilter = null)
         {
             var userId = GetUserId();
+            if (string.IsNullOrWhiteSpace(query.Search) && !string.IsNullOrWhiteSpace(partyFilter))
+            {
+                query.Search = partyFilter;
+            }
             var result = await _vendorService.GetVendorSalesAsync(userId, query);
             return Ok(new { success = true, data = result });
         }
@@ -128,11 +147,16 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// <summary>
         /// Get Retail Customer Sales History & Drafts (Tab 3: Sales to Customers)
         /// GET /api/v1/middleman/transaction-history/customer-sales
+        /// GET /api/v1/middleman/sales-history/customer-sales
         /// </summary>
         [HttpGet("customer-sales")]
-        public async Task<IActionResult> GetCustomerSales([FromQuery] MiddlemanCustomerSaleQueryDto query)
+        public async Task<IActionResult> GetCustomerSales([FromQuery] MiddlemanCustomerSaleQueryDto query, [FromQuery] string? partyFilter = null)
         {
             var userId = GetUserId();
+            if (string.IsNullOrWhiteSpace(query.Search) && !string.IsNullOrWhiteSpace(partyFilter))
+            {
+                query.Search = partyFilter;
+            }
             var result = await _customerService.GetCustomerSalesAsync(userId, query);
             return Ok(new { success = true, data = result });
         }
@@ -140,6 +164,7 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// <summary>
         /// Get single transaction record details by ID (e.g., PUR-7213, SAL-0002, CUS-SAL-9692)
         /// GET /api/v1/middleman/transaction-history/{id}
+        /// GET /api/v1/middleman/sales-history/{id}
         /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTransactionById(string id)

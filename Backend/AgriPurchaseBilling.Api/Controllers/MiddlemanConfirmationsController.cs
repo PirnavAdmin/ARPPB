@@ -11,6 +11,8 @@ namespace AgriPurchaseBilling.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/middleman/confirmations")]
+    [Route("api/v1/middleman/otp-confirmations")]
+    [Route("api/v1/middleman/otp")]
     [Tags("Middleman - OTP Confirmations")]
     [Authorize(Roles = "Middleman,Admin")]
     public class MiddlemanConfirmationsController : ControllerBase
@@ -34,6 +36,7 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// <summary>
         /// Get OTP Confirmations Summary including KPI card counts and Tab badge numbers.
         /// GET /api/v1/middleman/confirmations/summary
+        /// GET /api/v1/middleman/otp-confirmations/summary
         /// </summary>
         [HttpGet("summary")]
         public async Task<IActionResult> GetSummary()
@@ -44,13 +47,19 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
-        /// Get Paginated OTP Confirmations with category, status, and search filters matching the 9 UI reference screenshots.
+        /// Get Paginated OTP Confirmations with category, status, partyFilter, and search filters matching the 9 UI reference screenshots.
         /// GET /api/v1/middleman/confirmations
+        /// GET /api/v1/middleman/otp-confirmations
+        /// GET /api/v1/middleman/otp
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetConfirmations([FromQuery] MiddlemanOtpQueryDto query)
+        public async Task<IActionResult> GetConfirmations([FromQuery] MiddlemanOtpQueryDto query, [FromQuery] string? partyFilter = null)
         {
             var userId = GetUserId();
+            if (string.IsNullOrWhiteSpace(query.Search) && !string.IsNullOrWhiteSpace(partyFilter))
+            {
+                query.Search = partyFilter;
+            }
             var page = await _confirmationsService.GetConfirmationsAsync(userId, query);
             return Ok(new { success = true, data = page });
         }

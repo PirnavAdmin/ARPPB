@@ -11,6 +11,7 @@ namespace AgriPurchaseBilling.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/middleman/farmers")]
+    [Route("api/v1/middleman/farmer-management")]
     [Tags("Middleman - Farmers")]
     [Authorize(Roles = "Middleman,Admin")]
     public class MiddlemanFarmerController : ControllerBase
@@ -32,13 +33,18 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
-        /// Get list of registered farmers with search, crop, district, and status filtering.
+        /// Get list of registered farmers with search, partyFilter, crop, district, and status filtering.
         /// GET /api/v1/middleman/farmers
+        /// GET /api/v1/middleman/farmer-management
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetFarmers([FromQuery] MiddlemanFarmerQueryDto query)
+        public async Task<IActionResult> GetFarmers([FromQuery] MiddlemanFarmerQueryDto query, [FromQuery] string? partyFilter = null)
         {
             var userId = GetUserId();
+            if (string.IsNullOrWhiteSpace(query.Search) && !string.IsNullOrWhiteSpace(partyFilter))
+            {
+                query.Search = partyFilter;
+            }
             var result = await _farmerService.GetFarmersAsync(userId, query);
             return Ok(new { success = true, data = result });
         }

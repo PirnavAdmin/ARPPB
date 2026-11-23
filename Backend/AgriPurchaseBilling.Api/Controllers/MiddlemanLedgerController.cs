@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ namespace AgriPurchaseBilling.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/middleman/ledger")]
+    [Route("api/v1/middleman/my-ledger")]
     [Tags("Middleman - Ledger")]
     [Authorize(Roles = "Middleman,Admin")]
     public class MiddlemanLedgerController : ControllerBase
@@ -30,37 +32,131 @@ namespace AgriPurchaseBilling.Api.Controllers
             return 57;
         }
 
-        /// <summary>
-        /// Get all ledger postings and 8 financial summary KPI metrics (or single entry if query param ?id={id} is given).
-        /// GET /api/v1/middleman/ledger
-        /// GET /api/v1/middleman/ledger?id={id}
-        /// </summary>
-        [HttpGet]
-        public async Task<IActionResult> GetLedger([FromQuery] long? id = null)
+        private static long ResolveLedgerId(string id)
         {
-            var userId = GetUserId();
-
-            if (id.HasValue && id.Value > 0)
-            {
-                var singleEntry = await _ledgerService.GetByIdAsync(id.Value, userId);
-                if (singleEntry == null) return NotFound(new { success = false, message = "Ledger entry not found." });
-                return Ok(new { success = true, data = singleEntry });
-            }
-
-            var summary = await _ledgerService.GetSummaryAsync(userId);
-            return Ok(new { success = true, data = summary });
+            if (long.TryParse(id, out var parsed) && parsed > 0) return parsed;
+            var match = System.Text.RegularExpressions.Regex.Match(id ?? string.Empty, @"\d+");
+            if (match.Success && long.TryParse(match.Value, out var num) && num > 0) return num;
+            return 0;
         }
 
         /// <summary>
-        /// Get a single ledger entry voucher by ID using path parameter.
-        /// GET /api/v1/middleman/ledger/{id}
+        /// Get all ledger postings and 8 financial summary KPI metrics with search and party filtering (or single entry if ?id={id} is given).
+        /// Supports query parameters: partyFilter (from Farmer Ledger button), partyId, partyName, partyCategory, category, status, search.
+        /// GET /api/v1/middleman/ledger
+        /// GET /api/v1/middleman/my-ledger
         /// </summary>
-        [HttpGet("{id:long}")]
-        public async Task<IActionResult> GetById(long id)
+        [HttpGet]
+        public async Task<IActionResult> GetLedger(
+            [FromQuery] string? id = null,
+            [FromQuery] string? partyFilter = null,
+            [FromQuery] string? partyId = null,
+            [FromQuery] string? partyName = null,
+            [FromQuery] string? partyCategory = null,
+            [FromQuery] string? category = null,
+            [FromQuery] string? status = null,
+            [FromQuery] string? search = null)
         {
             var userId = GetUserId();
-            var entry = await _ledgerService.GetByIdAsync(id, userId);
-            if (entry == null) return NotFound(new { success = false, message = "Ledger entry not found." });
+
+            if (!string.IsNullOrWhiteSpace(id))
+            {
+                var numId = ResolveLedgerId(id);
+                if (numId > 0)
+                {
+                    var singleEntry = await _ledgerService.GetByIdAsync(numId, userId);
+                    if (singleEntry != null) return Ok(new { success = true, data = singleEntry });
+                }
+                return NotFound(new { success = false, message = $"Ledger entry '{id}' not found." });
+            }
+
+            var summary = await _ledgerService.GetSummaryAsync(userId);
+
+            var filterTerm = (partyFilter ?? search ?? partyName ?? partyId)?.Trim();
+            var hasFilter = !string.IsNullOrWhiteSpace(filterTerm) ||
+                            (!string.IsNullOrWhiteSpace(partyCategory) && !string.Equals(partyCategory, "All", StringComparison.OrdinalIgnoreCase)) ||
+                            (!string.IsNullOrWhiteSpace(category) && !string.Equals(category, "All", StringComparison.OrdinalIgnoreCase)) ||
+                            (!string.IsNullOrWhiteSpace(status) && !string.Equals(status, "All", StringComparison.OrdinalIgnoreCase));
+
+            if (!hasFilter)
+            {
+                return Ok(new { success = true, data = summary });
+            }
+
+            var entries = summary.Entries.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(filterTerm))
+            {
+                entries = entries.Where(x =>
+                    (x.PartyId != null && x.PartyId.Contains(filterTerm, StringComparison.OrdinalIgnoreCase)) ||
+                    (x.PartyName != null && x.PartyName.Contains(filterTerm, StringComparison.OrdinalIgnoreCase)) ||
+                    (x.TransactionId != null && x.TransactionId.Contains(filterTerm, StringComparison.OrdinalIgnoreCase)) ||
+                    (x.LedgerId != null && x.LedgerId.Contains(filterTerm, StringComparison.OrdinalIgnoreCase)) ||
+                    (x.Description != null && x.Description.Contains(filterTerm, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            if (!string.IsNullOrWhiteSpace(partyCategory) && !string.Equals(partyCategory, "All", StringComparison.OrdinalIgnoreCase))
+            {
+                entries = entries.Where(x => string.Equals(x.PartyCategory, partyCategory, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(category) && !string.Equals(category, "All", StringComparison.OrdinalIgnoreCase))
+            {
+                entries = entries.Where(x => string.Equals(x.Category, category, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(status) && !string.Equals(status, "All", StringComparison.OrdinalIgnoreCase))
+            {
+                entries = entries.Where(x => string.Equals(x.Status, status, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var filteredList = entries.ToList();
+            var filteredSummary = new MiddlemanLedgerSummaryDto
+            {
+                TotalPurchases = summary.TotalPurchases,
+                TotalSales = summary.TotalSales,
+                CostOfGoodsSold = summary.CostOfGoodsSold,
+                TotalPayables = summary.TotalPayables,
+                TotalReceivables = summary.TotalReceivables,
+                AmountReceived = summary.AmountReceived,
+                NetPosition = summary.NetPosition,
+                GrossProfit = summary.GrossProfit,
+                TotalEntries = filteredList.Count,
+                Entries = filteredList
+            };
+
+            return Ok(new { success = true, data = filteredSummary });
+        }
+
+        /// <summary>
+        /// Get 8 standardized financial summary KPI cards and sub-ledger totals.
+        /// GET /api/v1/middleman/ledger/summary
+        /// </summary>
+        [HttpGet("summary")]
+        public async Task<IActionResult> GetSummary(
+            [FromQuery] string? partyFilter = null,
+            [FromQuery] string? partyId = null,
+            [FromQuery] string? partyName = null,
+            [FromQuery] string? partyCategory = null,
+            [FromQuery] string? category = null,
+            [FromQuery] string? status = null,
+            [FromQuery] string? search = null)
+        {
+            return await GetLedger(null, partyFilter, partyId, partyName, partyCategory, category, status, search);
+        }
+
+        /// <summary>
+        /// Get a single ledger entry voucher by numeric ID or code (e.g. 1 or LED-0001).
+        /// GET /api/v1/middleman/ledger/{id}
+        /// </summary>
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(string id)
+        {
+            var userId = GetUserId();
+            var numId = ResolveLedgerId(id);
+            if (numId <= 0) return NotFound(new { success = false, message = $"Ledger entry '{id}' not found." });
+            var entry = await _ledgerService.GetByIdAsync(numId, userId);
+            if (entry == null) return NotFound(new { success = false, message = $"Ledger entry '{id}' not found." });
             return Ok(new { success = true, data = entry });
         }
 
@@ -76,14 +172,17 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
-        /// Update an existing ledger entry.
+        /// Update an existing ledger entry by numeric ID or code.
         /// PUT /api/v1/middleman/ledger/{id}
         /// </summary>
-        [HttpPut("{id:long}")]
-        public async Task<IActionResult> Update(long id, [FromBody] UpdateLedgerEntryRequest request)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(string id, [FromBody] UpdateLedgerEntryRequest request)
         {
-            var entry = await _ledgerService.UpdateAsync(id, request, GetUserId());
-            if (entry == null) return NotFound(new { success = false, message = "Ledger entry not found." });
+            var userId = GetUserId();
+            var numId = ResolveLedgerId(id);
+            if (numId <= 0) return NotFound(new { success = false, message = $"Ledger entry '{id}' not found." });
+            var entry = await _ledgerService.UpdateAsync(numId, request, userId);
+            if (entry == null) return NotFound(new { success = false, message = $"Ledger entry '{id}' not found." });
             return Ok(new { success = true, message = "Ledger entry updated successfully.", data = entry });
         }
 
@@ -92,12 +191,15 @@ namespace AgriPurchaseBilling.Api.Controllers
         /// POST /api/v1/middleman/ledger/{id}/settle
         /// PUT /api/v1/middleman/ledger/{id}/settle
         /// </summary>
-        [HttpPost("{id:long}/settle")]
-        [HttpPut("{id:long}/settle")]
-        public async Task<IActionResult> Settle(long id, [FromBody] SettleLedgerRequest? request = null)
+        [HttpPost("{id}/settle")]
+        [HttpPut("{id}/settle")]
+        public async Task<IActionResult> Settle(string id, [FromBody] SettleLedgerRequest? request = null)
         {
-            var entry = await _ledgerService.SettleAsync(id, request, GetUserId());
-            if (entry == null) return NotFound(new { success = false, message = "Ledger entry not found." });
+            var userId = GetUserId();
+            var numId = ResolveLedgerId(id);
+            if (numId <= 0) return NotFound(new { success = false, message = $"Ledger entry '{id}' not found." });
+            var entry = await _ledgerService.SettleAsync(numId, request, userId);
+            if (entry == null) return NotFound(new { success = false, message = $"Ledger entry '{id}' not found." });
             return Ok(new { success = true, message = "Ledger entry settled successfully.", data = entry });
         }
     }
