@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -41,6 +41,15 @@ namespace AgriPurchaseBilling.Application.DTOs
 
         [JsonPropertyName("recentTransactions")]
         public List<DashboardRecentTransactionDto> RecentTransactions { get; set; } = new();
+
+        [JsonPropertyName("purchases")]
+        public List<DashboardRecentTransactionDto> Purchases { get; set; } = new();
+
+        [JsonPropertyName("vendorSales")]
+        public List<DashboardRecentTransactionDto> VendorSales { get; set; } = new();
+
+        [JsonPropertyName("customerSales")]
+        public List<DashboardRecentTransactionDto> CustomerSales { get; set; } = new();
     }
 
     public class DashboardMiddlemanProfileDto
@@ -177,6 +186,15 @@ namespace AgriPurchaseBilling.Application.DTOs
 
         [JsonPropertyName("recentTransactions")]
         public List<DashboardRecentTransactionDto> RecentTransactions { get; set; } = new();
+
+        [JsonPropertyName("purchases")]
+        public List<DashboardRecentTransactionDto> Purchases { get; set; } = new();
+
+        [JsonPropertyName("vendorSales")]
+        public List<DashboardRecentTransactionDto> VendorSales { get; set; } = new();
+
+        [JsonPropertyName("customerSales")]
+        public List<DashboardRecentTransactionDto> CustomerSales { get; set; } = new();
 
         [JsonPropertyName("pendingConfirmations")]
         public List<DashboardPendingConfirmationDto> PendingConfirmations { get; set; } = new();

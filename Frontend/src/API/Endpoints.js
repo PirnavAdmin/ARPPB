@@ -83,16 +83,14 @@ const API_ENDPOINTS = {
   // =========================
   MiddlemanDashboard: {
     get: "/api/v1/middleman/dashboard",
-    getKpis: "/api/v1/middleman/dashboard/kpis",
-    purchaseVsSales: "/api/v1/middleman/dashboard/purchase-vs-sales",
-    cropwiseInventory: "/api/v1/middleman/dashboard/cropwise-inventory",
-    pendingConfirmations:
-      "/api/v1/middleman/dashboard/pending-confirmations",
-    recentTransactions:
-      "/api/v1/middleman/dashboard/recent-transactions",
-    purchases: "/api/v1/middleman/dashboard/purchases",
-    salesVendors: "/api/v1/middleman/dashboard/sales/vendors",
-    salesCustomers: "/api/v1/middleman/dashboard/sales/customers",
+    getKpis: "/api/v1/middleman/dashboard",
+    purchaseVsSales: "/api/v1/middleman/dashboard",
+    cropwiseInventory: "/api/v1/middleman/dashboard",
+    pendingConfirmations: "/api/v1/middleman/dashboard",
+    recentTransactions: "/api/v1/middleman/dashboard",
+    purchases: "/api/v1/middleman/dashboard",
+    salesVendors: "/api/v1/middleman/dashboard",
+    salesCustomers: "/api/v1/middleman/dashboard",
   },
 
   // =========================
