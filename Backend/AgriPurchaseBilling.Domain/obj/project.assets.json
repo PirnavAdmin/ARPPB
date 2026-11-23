@@ -14,11 +14,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj",
+      "projectUniqueName": "C:\\Projects\\ARPPB\\Backend\\AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj",
       "projectName": "AgriPurchaseBilling.Domain",
-      "projectPath": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj",
+      "projectPath": "C:\\Projects\\ARPPB\\Backend\\AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj",
       "packagesPath": "C:\\Users\\ADMIN\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\obj\\",
+      "outputPath": "C:\\Projects\\ARPPB\\Backend\\AgriPurchaseBilling.Domain\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -53,7 +53,7 @@
         "auditLevel": "low",
         "auditMode": "direct"
       },
-      "SdkAnalysisLevel": "11.0.100"
+      "SdkAnalysisLevel": "10.0.400"
     },
     "frameworks": {
       "net8.0": {
@@ -75,7 +75,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\11.0.100/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.403/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

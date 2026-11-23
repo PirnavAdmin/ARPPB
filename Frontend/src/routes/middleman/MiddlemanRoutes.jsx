@@ -63,6 +63,8 @@ export const MiddlemanRoutes = () => {
           {/* General Operations */}
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="sales-history" element={<SalesHistoryPage />} />
+          <Route path="transaction-history" element={<SalesHistoryPage />} />
+          <Route path="sales-order-history" element={<SalesHistoryPage />} />
           <Route path="confirmations" element={<OTPConfirmationsPage />} />
           <Route path="otp-confirmations" element={<Navigate to="/middleman/confirmations" replace />} />
           <Route path="otp" element={<Navigate to="/middleman/confirmations" replace />} />

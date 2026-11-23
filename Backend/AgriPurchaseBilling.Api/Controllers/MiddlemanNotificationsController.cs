@@ -1,4 +1,4 @@
-﻿
+
 using AgriPurchaseBilling.Application.DTOs;
 using AgriPurchaseBilling.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -11,6 +11,7 @@ namespace Backend.AgriPurchaseBilling.Api.Controllers
     [Route("api/v1/notifications")]
     [Authorize(Roles = "Middleman")]
     [Produces("application/json")]
+    [Tags("Middleman - Notifications")]
     public sealed class MiddlemanNotificationsController(IMiddlemanNotificationService service) : ControllerBase
     {
         private long? CurrentUserId
