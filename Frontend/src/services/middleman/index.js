@@ -348,7 +348,8 @@ export async function fetchMiddlemanInventorySummaryApi() {
 
 export async function fetchMiddlemanInventoryBatchesApi(params = {}) {
   try {
-    const res = await api.get(Endpoints.MiddlemanInventory.batches, { params });
+    const effectiveParams = { pageSize: 1000, page: 1, ...params };
+    const res = await api.get(Endpoints.MiddlemanInventory.batches, { params: effectiveParams });
     const data = res.data?.data ?? res.data;
     const list = Array.isArray(data?.items)
       ? data.items

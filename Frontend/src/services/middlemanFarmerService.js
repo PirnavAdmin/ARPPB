@@ -64,7 +64,8 @@ export function mapMiddlemanFarmerDto(dto = {}, existing = {}) {
 
 export async function fetchMiddlemanFarmersApi(params = {}) {
   try {
-    const res = await api.get(Endpoints.MiddlemanFarmers.getAll, { params });
+    const effectiveParams = { pageSize: 1000, page: 1, ...params };
+    const res = await api.get(Endpoints.MiddlemanFarmers.getAll, { params: effectiveParams });
     const data = res.data?.data ?? res.data;
     const list = Array.isArray(data?.items)
       ? data.items

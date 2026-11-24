@@ -8,7 +8,8 @@ import Endpoints from '../API/Endpoints';
 
 export async function fetchMiddlemanVendorsApi(params = {}) {
   try {
-    const res = await api.get(Endpoints.MIDDLEMAN_VENDORS.BASE, { params });
+    const effectiveParams = { pageSize: 1000, page: 1, ...params };
+    const res = await api.get(Endpoints.MIDDLEMAN_VENDORS.BASE, { params: effectiveParams });
     const data = res.data?.data;
     if (data && Array.isArray(data.items)) {
       return data.items;
@@ -80,7 +81,8 @@ export async function updateMiddlemanVendorApi(id, vendorData) {
 
 export async function fetchMiddlemanVendorSalesApi(params = {}) {
   try {
-    const res = await api.get(Endpoints.MIDDLEMAN_VENDOR_SALES.BASE, { params });
+    const effectiveParams = { pageSize: 1000, page: 1, ...params };
+    const res = await api.get(Endpoints.MIDDLEMAN_VENDOR_SALES.BASE, { params: effectiveParams });
     const data = res.data?.data;
     if (data && Array.isArray(data.items)) {
       return data.items;

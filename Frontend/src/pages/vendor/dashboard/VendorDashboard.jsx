@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import dayjs from 'dayjs';
 import { LayoutDashboard, RefreshCw, Download, Building2, MapPin, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../../hooks/useAuth';
@@ -37,12 +38,11 @@ export function VendorDashboard() {
   } = useVendor();
 
   const [datePreset, setDatePreset] = useState('all');
-  const [customStart, setCustomStart] = useState('2026-10-01');
-  const [customEnd, setCustomEnd] = useState('2026-11-05');
+  const [customStart, setCustomStart] = useState(() => dayjs().subtract(30, 'day').format('YYYY-MM-DD'));
+  const [customEnd, setCustomEnd] = useState(() => dayjs().format('YYYY-MM-DD'));
   const [lastRefreshed, setLastRefreshed] = useState(() => new Date());
 
-  // Reference date is 2026-11-05 so presets like Today, Yesterday, Last 7 Days, This Month, Last Month match the realistic dataset
-  const referenceDate = '2026-11-05';
+  const referenceDate = null;
 
   const filteredPurchases = useMemo(
     () =>

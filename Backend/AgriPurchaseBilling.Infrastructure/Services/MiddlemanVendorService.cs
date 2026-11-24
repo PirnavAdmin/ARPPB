@@ -56,10 +56,10 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
             var totalItems = await queryable.CountAsync();
             var page = query.Page <= 0 ? 1 : query.Page;
-            var pageSize = query.PageSize <= 0 ? 10 : query.PageSize;
+            var pageSize = query.PageSize <= 0 ? 1000 : query.PageSize;
 
             var items = await queryable
-                .OrderBy(x => x.Id)
+                .OrderByDescending(x => x.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(x => MapToDto(x))
@@ -188,7 +188,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
             var totalItems = await queryable.CountAsync();
             var page = query.Page <= 0 ? 1 : query.Page;
-            var pageSize = query.PageSize <= 0 ? 10 : query.PageSize;
+            var pageSize = query.PageSize <= 0 ? 1000 : query.PageSize;
 
             var items = await queryable
                 .OrderByDescending(x => x.SalesDate)

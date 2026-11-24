@@ -84,7 +84,7 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
                 ct);
         }
 
-        public async Task<VendorPurchaseItemDto?> GetPurchaseByIdAsync(long vendorId, long id, string supplierCategory, CancellationToken ct)
+        public async Task<VendorPurchaseItemDto?> GetPurchaseByIdAsync(long vendorId, string id, string supplierCategory, CancellationToken ct)
         {
             return await _db.ProcAsync(
                 "sp_Vendor_GetPurchaseById",
@@ -150,7 +150,7 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
         }
 
         public async Task<VendorPurchaseItemDto> UpdatePurchaseStatusAsync(
-            long vendorId, long id, string supplierCategory, UpdateVendorPurchaseStatusRequest request, CancellationToken ct)
+            long vendorId, string id, string supplierCategory, UpdateVendorPurchaseStatusRequest request, CancellationToken ct)
         {
             return await _db.ProcAsync(
                 "sp_Vendor_UpdatePurchaseStatus",

@@ -236,7 +236,7 @@ DROP PROCEDURE IF EXISTS `sp_Vendor_GetPurchaseById`;
 DELIMITER $$
 CREATE PROCEDURE `sp_Vendor_GetPurchaseById`(
     IN p_vendor_id BIGINT,
-    IN p_purchase_id BIGINT,
+    IN p_purchase_id VARCHAR(50),
     IN p_supplier_category VARCHAR(30)
 )
 BEGIN
@@ -269,7 +269,8 @@ BEGIN
             p.`CreatedAt`
         FROM `vendor_middleman_purchases` p
         INNER JOIN `vendor_middlemen` m ON p.`MiddlemanId` = m.`Id`
-        WHERE m.`VendorId` = p_vendor_id AND p.`Id` = p_purchase_id
+        WHERE m.`VendorId` = p_vendor_id 
+          AND (CAST(p.`Id` AS CHAR) = p_purchase_id OR p.`PurchaseCode` = p_purchase_id)
         LIMIT 1;
     ELSE
         SELECT
@@ -300,7 +301,8 @@ BEGIN
             p.`CreatedAt`
         FROM `vendor_farmer_purchases` p
         INNER JOIN `vendor_farmers` f ON p.`FarmerId` = f.`Id`
-        WHERE f.`VendorId` = p_vendor_id AND p.`Id` = p_purchase_id
+        WHERE f.`VendorId` = p_vendor_id 
+          AND (CAST(p.`Id` AS CHAR) = p_purchase_id OR p.`PurchaseCode` = p_purchase_id)
         LIMIT 1;
     END IF;
 END$$
@@ -328,6 +330,13 @@ CREATE PROCEDURE `sp_Vendor_CreateFarmerPurchase`(
 )
 BEGIN
     DECLARE v_new_id BIGINT;
+    DECLARE v_farmer_name VARCHAR(150);
+    DECLARE v_stock_id BIGINT;
+    DECLARE v_stock_code VARCHAR(50);
+    DECLARE v_batch_num VARCHAR(50);
+    DECLARE v_mov_code VARCHAR(50);
+    DECLARE v_stock_cnt INT DEFAULT 0;
+    DECLARE v_mov_cnt INT DEFAULT 0;
 
     -- Validate farmer belongs to this vendor
     IF NOT EXISTS (SELECT 1 FROM `vendor_farmers` WHERE `Id` = p_farmer_id AND `VendorId` = p_vendor_id) THEN
@@ -349,6 +358,43 @@ BEGIN
     );
 
     SET v_new_id = LAST_INSERT_ID();
+
+    -- Auto-inward to vendor_raw_material_stocks
+    SELECT `FullName` INTO v_farmer_name FROM `vendor_farmers` WHERE `Id` = p_farmer_id;
+    SELECT COUNT(*) INTO v_stock_cnt FROM `vendor_raw_material_stocks`;
+    SET v_stock_code = CONCAT('STK-', LPAD(v_stock_cnt + 1, 4, '0'));
+    SET v_batch_num = CONCAT('BCH-', UPPER(LEFT(REPLACE(p_crop_name, ' ', ''), 3)), '-', LPAD(v_stock_cnt + 1, 3, '0'));
+
+    INSERT INTO `vendor_raw_material_stocks` (
+        `VendorId`, `StockCode`, `CropName`, `CropVariety`, `SupplierName`,
+        `SupplierCategory`, `PurchaseId`, `BatchNumber`, `PurchaseDate`,
+        `PurchasedQuantity`, `ProcessedQuantity`, `AvailableQuantity`, `Unit`,
+        `AverageCost`, `QualityGrade`, `Status`, `MinThresholdQuantity`,
+        `CreatedAt`, `UpdatedAt`
+    ) VALUES (
+        p_vendor_id, v_stock_code, p_crop_name, COALESCE(p_crop_variety, 'Standard'), COALESCE(v_farmer_name, 'Farmer'),
+        'Farmer', p_purchase_code, v_batch_num, p_purchase_date,
+        p_quantity, 0.00, p_quantity, p_unit,
+        p_rate_per_unit, 'Grade A (Standard FAQ)', 'In Stock', 15.00,
+        CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6)
+    );
+
+    SET v_stock_id = LAST_INSERT_ID();
+
+    -- Inward stock movement log
+    SELECT COUNT(*) INTO v_mov_cnt FROM `vendor_stock_movements`;
+    SET v_mov_code = CONCAT('MOV-', LPAD(v_mov_cnt + 1, 4, '0'));
+
+    INSERT INTO `vendor_stock_movements` (
+        `StockId`, `MovementCode`, `MovementDate`, `BatchNumber`, `CropName`,
+        `MovementType`, `ReferenceId`, `QuantityChange`, `Unit`, `BalanceAfter`,
+        `Remarks`, `CreatedAt`
+    ) VALUES (
+        v_stock_id, v_mov_code, CURRENT_TIMESTAMP(6), v_batch_num, p_crop_name,
+        'Purchase Inward', p_purchase_code, p_quantity, p_unit, p_quantity,
+        CONCAT('Stock inward for ', p_crop_name, ' (Farmer purchase from ', COALESCE(v_farmer_name, 'Farmer'), ')'),
+        CURRENT_TIMESTAMP(6)
+    );
 
     -- Return newly created purchase row
     SELECT
@@ -399,6 +445,13 @@ CREATE PROCEDURE `sp_Vendor_CreateMiddlemanPurchase`(
 )
 BEGIN
     DECLARE v_new_id BIGINT;
+    DECLARE v_agency_name VARCHAR(150);
+    DECLARE v_stock_id BIGINT;
+    DECLARE v_stock_code VARCHAR(50);
+    DECLARE v_batch_num VARCHAR(50);
+    DECLARE v_mov_code VARCHAR(50);
+    DECLARE v_stock_cnt INT DEFAULT 0;
+    DECLARE v_mov_cnt INT DEFAULT 0;
 
     -- Validate middleman belongs to this vendor
     IF NOT EXISTS (SELECT 1 FROM `vendor_middlemen` WHERE `Id` = p_middleman_id AND `VendorId` = p_vendor_id) THEN
@@ -420,6 +473,43 @@ BEGIN
     );
 
     SET v_new_id = LAST_INSERT_ID();
+
+    -- Auto-inward to vendor_raw_material_stocks
+    SELECT COALESCE(`AgencyName`, `FullName`) INTO v_agency_name FROM `vendor_middlemen` WHERE `Id` = p_middleman_id;
+    SELECT COUNT(*) INTO v_stock_cnt FROM `vendor_raw_material_stocks`;
+    SET v_stock_code = CONCAT('STK-', LPAD(v_stock_cnt + 1, 4, '0'));
+    SET v_batch_num = CONCAT('BCH-', UPPER(LEFT(REPLACE(p_crop_name, ' ', ''), 3)), '-', LPAD(v_stock_cnt + 1, 3, '0'));
+
+    INSERT INTO `vendor_raw_material_stocks` (
+        `VendorId`, `StockCode`, `CropName`, `CropVariety`, `SupplierName`,
+        `SupplierCategory`, `PurchaseId`, `BatchNumber`, `PurchaseDate`,
+        `PurchasedQuantity`, `ProcessedQuantity`, `AvailableQuantity`, `Unit`,
+        `AverageCost`, `QualityGrade`, `Status`, `MinThresholdQuantity`,
+        `CreatedAt`, `UpdatedAt`
+    ) VALUES (
+        p_vendor_id, v_stock_code, p_crop_name, COALESCE(p_crop_variety, 'Standard'), COALESCE(v_agency_name, 'Middleman'),
+        'Middleman', p_purchase_code, v_batch_num, p_purchase_date,
+        p_quantity, 0.00, p_quantity, p_unit,
+        p_rate_per_unit, 'Grade A (Standard FAQ)', 'In Stock', 15.00,
+        CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6)
+    );
+
+    SET v_stock_id = LAST_INSERT_ID();
+
+    -- Inward stock movement log
+    SELECT COUNT(*) INTO v_mov_cnt FROM `vendor_stock_movements`;
+    SET v_mov_code = CONCAT('MOV-', LPAD(v_mov_cnt + 1, 4, '0'));
+
+    INSERT INTO `vendor_stock_movements` (
+        `StockId`, `MovementCode`, `MovementDate`, `BatchNumber`, `CropName`,
+        `MovementType`, `ReferenceId`, `QuantityChange`, `Unit`, `BalanceAfter`,
+        `Remarks`, `CreatedAt`
+    ) VALUES (
+        v_stock_id, v_mov_code, CURRENT_TIMESTAMP(6), v_batch_num, p_crop_name,
+        'Purchase Inward', p_purchase_code, p_quantity, p_unit, p_quantity,
+        CONCAT('Stock inward for ', p_crop_name, ' (Middleman purchase from ', COALESCE(v_agency_name, 'Middleman'), ')'),
+        CURRENT_TIMESTAMP(6)
+    );
 
     -- Return newly created purchase row
     SELECT
@@ -455,7 +545,7 @@ DROP PROCEDURE IF EXISTS `sp_Vendor_UpdatePurchaseStatus`;
 DELIMITER $$
 CREATE PROCEDURE `sp_Vendor_UpdatePurchaseStatus`(
     IN p_vendor_id BIGINT,
-    IN p_purchase_id BIGINT,
+    IN p_purchase_id VARCHAR(50),
     IN p_supplier_category VARCHAR(30),
     IN p_payment_status VARCHAR(30),
     IN p_due_amount DECIMAL(14,2)
@@ -467,14 +557,16 @@ BEGIN
         SET
             p.`PaymentStatus` = COALESCE(p_payment_status, p.`PaymentStatus`),
             p.`DueAmount` = COALESCE(p_due_amount, p.`DueAmount`)
-        WHERE m.`VendorId` = p_vendor_id AND p.`Id` = p_purchase_id;
+        WHERE m.`VendorId` = p_vendor_id
+          AND (CAST(p.`Id` AS CHAR) = p_purchase_id OR p.`PurchaseCode` = p_purchase_id);
     ELSE
         UPDATE `vendor_farmer_purchases` p
         INNER JOIN `vendor_farmers` f ON p.`FarmerId` = f.`Id`
         SET
             p.`PaymentStatus` = COALESCE(p_payment_status, p.`PaymentStatus`),
             p.`DueAmount` = COALESCE(p_due_amount, p.`DueAmount`)
-        WHERE f.`VendorId` = p_vendor_id AND p.`Id` = p_purchase_id;
+        WHERE f.`VendorId` = p_vendor_id
+          AND (CAST(p.`Id` AS CHAR) = p_purchase_id OR p.`PurchaseCode` = p_purchase_id);
     END IF;
 
     -- Return updated purchase

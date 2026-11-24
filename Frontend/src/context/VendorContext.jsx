@@ -8,20 +8,6 @@ import {
   VALID_ORDER_TRANSITIONS,
 } from '../utils/constants';
 import { readStorage, writeStorage } from '../services/api';
-import { INITIAL_FARMERS } from '../data/mockFarmers';
-import { INITIAL_MIDDLEMEN } from '../data/mockMiddlemen';
-import { INITIAL_CUSTOMERS } from '../data/mockCustomers';
-import { INITIAL_PURCHASES } from '../data/mockPurchases';
-import { INITIAL_INVENTORY, INITIAL_STOCK_MOVEMENTS } from '../data/mockInventory';
-import { INITIAL_PROCESSING } from '../data/mockProcessing';
-import { INITIAL_PRODUCTS, INITIAL_PRODUCT_BATCHES } from '../data/mockProducts';
-import {
-  INITIAL_SALES,
-  INITIAL_ORDERS,
-  INITIAL_CONFIRMATIONS,
-  INITIAL_LEDGER,
-} from '../data/mockSales';
-import { INITIAL_NOTIFICATIONS, INITIAL_VENDOR_PROFILE } from '../data/mockNotifications';
 import { generateNextId, generateBatchNumber } from '../utils/generateTransactionId';
 import {
   round2,
@@ -83,48 +69,79 @@ import {
 
 export const VendorContext = createContext(null);
 
+const VENDOR_STORAGE_PURGE_VERSION = 'arppb_vendor_storage_purged_v3';
+
+// Clear out legacy mock data saved in localStorage so only live database records display
+if (typeof window !== 'undefined') {
+  try {
+    if (localStorage.getItem(VENDOR_STORAGE_PURGE_VERSION) !== 'true') {
+      [
+        STORAGE_KEYS.FARMERS,
+        STORAGE_KEYS.MIDDLEMEN,
+        STORAGE_KEYS.CUSTOMERS,
+        STORAGE_KEYS.PURCHASES,
+        STORAGE_KEYS.INVENTORY,
+        STORAGE_KEYS.STOCK_MOVEMENTS,
+        STORAGE_KEYS.PROCESSING,
+        STORAGE_KEYS.PRODUCTS,
+        STORAGE_KEYS.PRODUCT_BATCHES,
+        STORAGE_KEYS.SALES,
+        STORAGE_KEYS.ORDERS,
+        STORAGE_KEYS.CONFIRMATIONS,
+        STORAGE_KEYS.LEDGER,
+        STORAGE_KEYS.NOTIFICATIONS,
+      ].forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem(VENDOR_STORAGE_PURGE_VERSION, 'true');
+    }
+  } catch {
+    // ignore
+  }
+}
+
+const EMPTY_LIST = [];
+
 export function VendorProvider({ children }) {
   const [farmers, setFarmers] = useState(() =>
-    readStorage(STORAGE_KEYS.FARMERS, INITIAL_FARMERS)
+    readStorage(STORAGE_KEYS.FARMERS, EMPTY_LIST)
   );
   const [middlemen, setMiddlemen] = useState(() =>
-    readStorage(STORAGE_KEYS.MIDDLEMEN, INITIAL_MIDDLEMEN)
+    readStorage(STORAGE_KEYS.MIDDLEMEN, EMPTY_LIST)
   );
   const [customers, setCustomers] = useState(() =>
-    readStorage(STORAGE_KEYS.CUSTOMERS, INITIAL_CUSTOMERS)
+    readStorage(STORAGE_KEYS.CUSTOMERS, EMPTY_LIST)
   );
   const [purchases, setPurchases] = useState(() =>
-    readStorage(STORAGE_KEYS.PURCHASES, INITIAL_PURCHASES)
+    readStorage(STORAGE_KEYS.PURCHASES, EMPTY_LIST)
   );
   const [inventory, setInventory] = useState(() =>
-    readStorage(STORAGE_KEYS.INVENTORY, INITIAL_INVENTORY)
+    readStorage(STORAGE_KEYS.INVENTORY, EMPTY_LIST)
   );
   const [stockMovements, setStockMovements] = useState(() =>
-    readStorage(STORAGE_KEYS.STOCK_MOVEMENTS, INITIAL_STOCK_MOVEMENTS)
+    readStorage(STORAGE_KEYS.STOCK_MOVEMENTS, EMPTY_LIST)
   );
   const [processingRecords, setProcessingRecords] = useState(() =>
-    readStorage(STORAGE_KEYS.PROCESSING, INITIAL_PROCESSING)
+    readStorage(STORAGE_KEYS.PROCESSING, EMPTY_LIST)
   );
   const [products, setProducts] = useState(() =>
-    readStorage(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS)
+    readStorage(STORAGE_KEYS.PRODUCTS, EMPTY_LIST)
   );
   const [productBatches, setProductBatches] = useState(() =>
-    readStorage(STORAGE_KEYS.PRODUCT_BATCHES, INITIAL_PRODUCT_BATCHES)
+    readStorage(STORAGE_KEYS.PRODUCT_BATCHES, EMPTY_LIST)
   );
   const [sales, setSales] = useState(() =>
-    readStorage(STORAGE_KEYS.SALES, INITIAL_SALES)
+    readStorage(STORAGE_KEYS.SALES, EMPTY_LIST)
   );
   const [orders, setOrders] = useState(() =>
-    readStorage(STORAGE_KEYS.ORDERS, INITIAL_ORDERS)
+    readStorage(STORAGE_KEYS.ORDERS, EMPTY_LIST)
   );
   const [confirmations, setConfirmations] = useState(() =>
-    readStorage(STORAGE_KEYS.CONFIRMATIONS, INITIAL_CONFIRMATIONS)
+    readStorage(STORAGE_KEYS.CONFIRMATIONS, EMPTY_LIST)
   );
   const [ledger, setLedger] = useState(() =>
-    readStorage(STORAGE_KEYS.LEDGER, INITIAL_LEDGER)
+    readStorage(STORAGE_KEYS.LEDGER, EMPTY_LIST)
   );
   const [notifications, setNotifications] = useState(() =>
-    readStorage(STORAGE_KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS)
+    readStorage(STORAGE_KEYS.NOTIFICATIONS, EMPTY_LIST)
   );
   const [conversionMappings, setConversionMappings] = useState(() =>
     readStorage(STORAGE_KEYS.CONVERSION_MAPPINGS, DEFAULT_CONVERSION_MAPPINGS)
@@ -154,13 +171,13 @@ export function VendorProvider({ children }) {
         fetchVendorSalesBatchesApi(),
       ]);
 
-      if (Array.isArray(rawMaterialsList) && rawMaterialsList.length > 0) {
+      if (Array.isArray(rawMaterialsList)) {
         updateStateAndStorage(setInventory, STORAGE_KEYS.INVENTORY, rawMaterialsList);
       }
-      if (Array.isArray(finishedProductsList) && finishedProductsList.length > 0) {
+      if (Array.isArray(finishedProductsList)) {
         updateStateAndStorage(setProducts, STORAGE_KEYS.PRODUCTS, finishedProductsList);
       }
-      if (Array.isArray(salesBatchesList) && salesBatchesList.length > 0) {
+      if (Array.isArray(salesBatchesList)) {
         updateStateAndStorage(setProductBatches, STORAGE_KEYS.PRODUCT_BATCHES, salesBatchesList);
       }
 
@@ -187,43 +204,42 @@ export function VendorProvider({ children }) {
         fetchVendorPurchasesApi(),
       ]);
 
-      if (Array.isArray(farmersList) && farmersList.length > 0) {
+      if (Array.isArray(farmersList)) {
         updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, farmersList);
       }
-      if (Array.isArray(middlemenList) && middlemenList.length > 0) {
+      if (Array.isArray(middlemenList)) {
         updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, middlemenList);
       }
-      if (Array.isArray(customersList) && customersList.length > 0) {
+      if (Array.isArray(customersList)) {
         updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, customersList);
       }
-      if (Array.isArray(rawMovementsList) && rawMovementsList.length > 0) {
+      if (Array.isArray(rawMovementsList)) {
         updateStateAndStorage(setStockMovements, STORAGE_KEYS.STOCK_MOVEMENTS, rawMovementsList);
       }
-      if (Array.isArray(processingList) && processingList.length > 0) {
+      if (Array.isArray(processingList)) {
         updateStateAndStorage(setProcessingRecords, STORAGE_KEYS.PROCESSING, processingList);
       }
-      if (Array.isArray(salesList) && salesList.length > 0) {
+      if (Array.isArray(salesList)) {
         updateStateAndStorage(setSales, STORAGE_KEYS.SALES, salesList);
       }
-      if (Array.isArray(ordersList) && ordersList.length > 0) {
+      if (Array.isArray(ordersList)) {
         updateStateAndStorage(setOrders, STORAGE_KEYS.ORDERS, ordersList);
       }
       const mergedConfirmations =
         Array.isArray(confirmationsList) && confirmationsList.length > 0
           ? confirmationsList
-          : Array.isArray(dashboardConfirmationsList) && dashboardConfirmationsList.length > 0
+          : Array.isArray(dashboardConfirmationsList)
           ? dashboardConfirmationsList
-          : null;
-      if (mergedConfirmations) {
-        updateStateAndStorage(setConfirmations, STORAGE_KEYS.CONFIRMATIONS, mergedConfirmations);
-      }
-      if (Array.isArray(ledgerList) && ledgerList.length > 0) {
+          : [];
+      updateStateAndStorage(setConfirmations, STORAGE_KEYS.CONFIRMATIONS, mergedConfirmations);
+
+      if (Array.isArray(ledgerList)) {
         updateStateAndStorage(setLedger, STORAGE_KEYS.LEDGER, ledgerList);
       }
-      if (Array.isArray(notificationsList) && notificationsList.length > 0) {
+      if (Array.isArray(notificationsList)) {
         updateStateAndStorage(setNotifications, STORAGE_KEYS.NOTIFICATIONS, notificationsList);
       }
-      if (Array.isArray(backendPurchasesList) && backendPurchasesList.length > 0) {
+      if (Array.isArray(backendPurchasesList)) {
         updateStateAndStorage(setPurchases, STORAGE_KEYS.PURCHASES, backendPurchasesList);
       }
     } catch {
@@ -2438,44 +2454,16 @@ export function VendorProvider({ children }) {
   }, []);
 
   // =========================================================================
-  // 12. RESET DEMO DATA
+  // 12. RESET / SYNC FROM LIVE DATABASE
   // =========================================================================
-  const resetDemoData = useCallback(() => {
-    writeStorage(STORAGE_KEYS.FARMERS, INITIAL_FARMERS);
-    writeStorage(STORAGE_KEYS.MIDDLEMEN, INITIAL_MIDDLEMEN);
-    writeStorage(STORAGE_KEYS.CUSTOMERS, INITIAL_CUSTOMERS);
-    writeStorage(STORAGE_KEYS.PURCHASES, INITIAL_PURCHASES);
-    writeStorage(STORAGE_KEYS.INVENTORY, INITIAL_INVENTORY);
-    writeStorage(STORAGE_KEYS.STOCK_MOVEMENTS, INITIAL_STOCK_MOVEMENTS);
-    writeStorage(STORAGE_KEYS.PROCESSING, INITIAL_PROCESSING);
-    writeStorage(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
-    writeStorage(STORAGE_KEYS.PRODUCT_BATCHES, INITIAL_PRODUCT_BATCHES);
-    writeStorage(STORAGE_KEYS.SALES, INITIAL_SALES);
-    writeStorage(STORAGE_KEYS.ORDERS, INITIAL_ORDERS);
-    writeStorage(STORAGE_KEYS.CONFIRMATIONS, INITIAL_CONFIRMATIONS);
-    writeStorage(STORAGE_KEYS.LEDGER, INITIAL_LEDGER);
-    writeStorage(STORAGE_KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS);
-    writeStorage(STORAGE_KEYS.CONVERSION_MAPPINGS, DEFAULT_CONVERSION_MAPPINGS);
-    writeStorage(STORAGE_KEYS.VENDOR_PROFILE, INITIAL_VENDOR_PROFILE);
-
-    setFarmers(INITIAL_FARMERS);
-    setMiddlemen(INITIAL_MIDDLEMEN);
-    setCustomers(INITIAL_CUSTOMERS);
-    setPurchases(INITIAL_PURCHASES);
-    setInventory(INITIAL_INVENTORY);
-    setStockMovements(INITIAL_STOCK_MOVEMENTS);
-    setProcessingRecords(INITIAL_PROCESSING);
-    setProducts(INITIAL_PRODUCTS);
-    setProductBatches(INITIAL_PRODUCT_BATCHES);
-    setSales(INITIAL_SALES);
-    setOrders(INITIAL_ORDERS);
-    setConfirmations(INITIAL_CONFIRMATIONS);
-    setLedger(INITIAL_LEDGER);
-    setNotifications(INITIAL_NOTIFICATIONS);
-    setConversionMappings(DEFAULT_CONVERSION_MAPPINGS);
-
-    toast.success('Demo ERP dataset restored to factory defaults.');
-  }, []);
+  const resetDemoData = useCallback(async () => {
+    try {
+      await refreshVendorPortalData(false);
+      toast.success('Vendor portal data synced from live database.');
+    } catch {
+      toast.error('Failed to sync from database.');
+    }
+  }, [refreshVendorPortalData]);
 
   // Global summary counters for badges & KPIs
   const unreadNotificationsCount = useMemo(

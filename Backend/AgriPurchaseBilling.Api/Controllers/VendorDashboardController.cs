@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using AgriPurchaseBilling.Application.DTOs;
 using AgriPurchaseBilling.Application.DTOs.VendorOperations;
 using AgriPurchaseBilling.Application.Interfaces;
+using AgriPurchaseBilling.Application.Interfaces.VendorPortal;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -22,25 +23,38 @@ namespace AgriPurchaseBilling.Api.Controllers
     public sealed class VendorDashboardController : ControllerBase
     {
         private readonly IVendorDashboardService _dashboardService;
+        private readonly IVendorResolver _vendorResolver;
         private readonly IWebHostEnvironment _environment;
         private readonly IConfiguration _configuration;
 
-        public VendorDashboardController(IVendorDashboardService dashboardService, IWebHostEnvironment environment, IConfiguration configuration)
+        public VendorDashboardController(
+            IVendorDashboardService dashboardService,
+            IVendorResolver vendorResolver,
+            IWebHostEnvironment environment,
+            IConfiguration configuration)
         {
             _dashboardService = dashboardService;
+            _vendorResolver = vendorResolver;
             _environment = environment;
             _configuration = configuration;
         }
 
-        private long CurrentVendorId
+        private async Task<long> ResolveVendorIdAsync(CancellationToken cancellationToken)
         {
-            get
+            var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (long.TryParse(value, out var userId) && userId > 0)
             {
-                var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                return long.TryParse(value, out var userId) && userId > 0 ? userId : 1;
+                return await _vendorResolver.GetVendorIdAsync(userId, cancellationToken);
             }
+            return 1;
         }
 
+        /// <summary>
+        /// Single unified GET endpoint returning the complete vendor dashboard:
+        /// KPIs, Purchase Overview &amp; Trends, Raw Material Inventory by Crop, Finished Products,
+        /// Sales Analytics, Estimated Profit &amp; Loss, Pending OTP Confirmations, and Recent Transactions.
+        /// GET /api/v1/vendor/dashboard
+        /// </summary>
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<VendorDashboardDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<VendorDashboardDto>), 400)]
@@ -52,8 +66,9 @@ namespace AgriPurchaseBilling.Api.Controllers
             if (!IsValidRange(fromDate, toDate))
                 return BadRequest(ApiResponse<VendorDashboardDto>.Fail("fromDate must be earlier than or equal to toDate."));
 
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
             var dashboard = await _dashboardService.GetDashboardAsync(
-                CurrentVendorId, fromDate, toDate, CanExposeSandboxOtps, cancellationToken);
+                vendorId, fromDate, toDate, CanExposeSandboxOtps, cancellationToken);
             return Ok(ApiResponse<VendorDashboardDto>.Ok(dashboard, "Vendor dashboard retrieved successfully."));
         }
 

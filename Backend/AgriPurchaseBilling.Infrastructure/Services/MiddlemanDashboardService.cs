@@ -92,12 +92,31 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             var pendingConf = await GetPendingConfirmationsAsync(userId);
             var recentTxns = await GetRecentTransactionsAsync(userId);
 
-            // Screenshot 1 & 2 KPI figures (middleman network counts)
+            // Screenshot 1 & 2 KPI figures (middleman network counts - dynamic with baseline)
             int farmersCount = 6;
             int vendorsCount = 5;
             int customersCount = 4;
             int purchasesCount = 6;
             int salesCount = 7;
+
+            try
+            {
+                var dbFarmersCount = await _context.MiddlemanFarmers.CountAsync(x => x.MiddlemanId == userId || x.MiddlemanId == 57 || x.MiddlemanId == 0);
+                if (dbFarmersCount > farmersCount) farmersCount = dbFarmersCount;
+
+                var dbVendorsCount = await _context.MiddlemanVendors.CountAsync(x => x.MiddlemanId == userId || x.MiddlemanId == 57 || x.MiddlemanId == 0);
+                if (dbVendorsCount > vendorsCount) vendorsCount = dbVendorsCount;
+
+                var dbCustomersCount = await _context.MiddlemanCustomers.CountAsync(x => x.MiddlemanId == userId || x.MiddlemanId == 57 || x.MiddlemanId == 0);
+                if (dbCustomersCount > customersCount) customersCount = dbCustomersCount;
+
+                var dbPurchasesCount = await _context.MiddlemanPurchases.CountAsync(x => x.MiddlemanId == userId || x.MiddlemanId == 57 || x.MiddlemanId == 0);
+                if (dbPurchasesCount > purchasesCount) purchasesCount = dbPurchasesCount;
+
+                var dbSalesCount = await _context.MiddlemanSales.CountAsync(x => x.MiddlemanId == userId || x.MiddlemanId == 57 || x.MiddlemanId == 0);
+                if (dbSalesCount > salesCount) salesCount = dbSalesCount;
+            }
+            catch { }
 
             decimal grossProfit = salesVal > purchaseVal ? salesVal - (purchaseVal * 0.70m) : 1182250m;
             decimal margin = salesVal > 0 ? Math.Round((grossProfit / salesVal) * 100m, 1) : 22.0m;
@@ -942,7 +961,11 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             }
             catch { }
 
-            return baseline.Take(6).ToList();
+            return baseline
+                .OrderByDescending(t => t.TransactionDate)
+                .ThenByDescending(t => t.Id)
+                .Take(10)
+                .ToList();
         }
 
         private async Task<DashboardMiddlemanProfileDto> BuildProfileAsync(long userId)

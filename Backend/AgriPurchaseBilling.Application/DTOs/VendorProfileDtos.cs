@@ -18,6 +18,22 @@ namespace AgriPurchaseBilling.Application.DTOs
         public VendorComplianceDto Compliance { get; set; } = new();
         public VendorBusinessProfileDto Business { get; set; } = new();
         public VendorBankDetailsDto? BankDetails { get; set; }
+
+        /// <summary>Business logo as a data URL (data:image/png;base64,...), or empty when none is uploaded.</summary>
+        public string LogoUrl { get; set; } = string.Empty;
+        public bool HasLogo { get; set; }
+        public DateTime UpdatedAt { get; set; }
+    }
+
+    /// <summary>The dropdowns of the My Profile form.</summary>
+    public class VendorProfileOptionsDto
+    {
+        public List<string> BusinessTypes { get; set; } = new();
+        public List<string> Districts { get; set; } = new();
+        public List<string> States { get; set; } = new();
+        public string DefaultState { get; set; } = string.Empty;
+        public long MaxLogoBytes { get; set; }
+        public List<string> AllowedLogoTypes { get; set; } = new();
     }
 
     public class VendorComplianceDto
@@ -36,12 +52,14 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string Mobile { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Gstin { get; set; } = string.Empty;
+        public string ApmcLicenseNumber { get; set; } = string.Empty;
         public string BusinessRegistrationNumber { get; set; } = string.Empty;
         public string BusinessType { get; set; } = string.Empty;
         public string BusinessAddress { get; set; } = string.Empty;
         public string District { get; set; } = string.Empty;
         public string State { get; set; } = string.Empty;
         public string PinCode { get; set; } = string.Empty;
+        public DateTime? LastUpdatedAt { get; set; }
     }
 
     public class VendorBankDetailsDto
@@ -52,12 +70,27 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string AccountNumber { get; set; } = string.Empty;
         public bool IsMasked { get; set; } = true;
         public string IfscCode { get; set; } = string.Empty;
+        public DateTime? LastUpdatedAt { get; set; }
     }
 
-    // Owner name, email and mobile are not editable here: owner name/email are synced from the
-    // user account and mobile changes go through the OTP-verified mobile-change flow.
+    // Owner name and email are saved to the user account (they are the vendor's login identity);
+    // the mobile number is NOT changed here: it goes through the OTP-verified mobile-change flow.
     public class UpdateVendorProfileRequest
     {
+        /// <summary>Owner / Managing Director name. Optional: omitted or empty keeps the current name.</summary>
+        [StringLength(100)]
+        public string? OwnerName { get; set; }
+
+        /// <summary>Email address. Optional: omitted or empty keeps the current email. Must not belong to another account.</summary>
+        [StringLength(100)]
+        public string? Email { get; set; }
+
+        /// <summary>
+        /// Optional business logo as a data URL (data:image/png|jpeg|webp;base64,...), max 2 MB.
+        /// Omitted / empty keeps the current logo (use DELETE /profile/logo to remove it).
+        /// </summary>
+        public string? LogoUrl { get; set; }
+
         [Required, StringLength(200)]
         public string BusinessName { get; set; } = string.Empty;
 
