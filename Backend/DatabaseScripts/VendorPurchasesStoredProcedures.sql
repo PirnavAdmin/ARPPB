@@ -101,10 +101,10 @@ DROP PROCEDURE IF EXISTS `sp_Vendor_GetPurchases`;
 DELIMITER $$
 CREATE PROCEDURE `sp_Vendor_GetPurchases`(
     IN p_vendor_id BIGINT,
-    IN p_supplier_category VARCHAR(30),   -- 'All', 'Farmer', 'Middleman'
-    IN p_payment_status VARCHAR(30),       -- 'All', 'Pending', 'Paid', 'Partial'
-    IN p_crop VARCHAR(100),
-    IN p_search VARCHAR(100),
+    IN p_supplier_category VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,   -- 'All', 'Farmer', 'Middleman'
+    IN p_payment_status VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,       -- 'All', 'Pending', 'Paid', 'Partial'
+    IN p_crop VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_search VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_from_date DATETIME(6),
     IN p_to_date DATETIME(6),
     IN p_page_number INT,
@@ -138,7 +138,7 @@ BEGIN
         `PaymentStatus` VARCHAR(30),
         `PurchaseDate` DATETIME(6),
         `CreatedAt` DATETIME(6)
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
     -- Farmer Purchases
     IF p_supplier_category IS NULL OR LOWER(p_supplier_category) = 'all' OR LOWER(p_supplier_category) = 'farmer' THEN
@@ -236,8 +236,8 @@ DROP PROCEDURE IF EXISTS `sp_Vendor_GetPurchaseById`;
 DELIMITER $$
 CREATE PROCEDURE `sp_Vendor_GetPurchaseById`(
     IN p_vendor_id BIGINT,
-    IN p_purchase_id VARCHAR(50),
-    IN p_supplier_category VARCHAR(30)
+    IN p_purchase_id VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_supplier_category VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     IF LOWER(p_supplier_category) = 'middleman' THEN
@@ -316,16 +316,16 @@ DELIMITER $$
 CREATE PROCEDURE `sp_Vendor_CreateFarmerPurchase`(
     IN p_vendor_id BIGINT,
     IN p_farmer_id BIGINT,
-    IN p_purchase_code VARCHAR(50),
-    IN p_bill_number VARCHAR(50),
-    IN p_crop_name VARCHAR(100),
-    IN p_crop_variety VARCHAR(100),
+    IN p_purchase_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_bill_number VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_crop_name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_crop_variety VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_quantity DECIMAL(12,2),
-    IN p_unit VARCHAR(20),
+    IN p_unit VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_rate_per_unit DECIMAL(12,2),
     IN p_total_amount DECIMAL(14,2),
     IN p_due_amount DECIMAL(14,2),
-    IN p_payment_status VARCHAR(30),
+    IN p_payment_status VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_purchase_date DATETIME(6)
 )
 BEGIN
@@ -431,16 +431,16 @@ DELIMITER $$
 CREATE PROCEDURE `sp_Vendor_CreateMiddlemanPurchase`(
     IN p_vendor_id BIGINT,
     IN p_middleman_id BIGINT,
-    IN p_purchase_code VARCHAR(50),
-    IN p_bill_number VARCHAR(50),
-    IN p_crop_name VARCHAR(100),
-    IN p_crop_variety VARCHAR(100),
+    IN p_purchase_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_bill_number VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_crop_name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_crop_variety VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_quantity DECIMAL(12,2),
-    IN p_unit VARCHAR(20),
+    IN p_unit VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_rate_per_unit DECIMAL(12,2),
     IN p_total_amount DECIMAL(14,2),
     IN p_due_amount DECIMAL(14,2),
-    IN p_payment_status VARCHAR(30),
+    IN p_payment_status VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_purchase_date DATETIME(6)
 )
 BEGIN
@@ -545,9 +545,9 @@ DROP PROCEDURE IF EXISTS `sp_Vendor_UpdatePurchaseStatus`;
 DELIMITER $$
 CREATE PROCEDURE `sp_Vendor_UpdatePurchaseStatus`(
     IN p_vendor_id BIGINT,
-    IN p_purchase_id VARCHAR(50),
-    IN p_supplier_category VARCHAR(30),
-    IN p_payment_status VARCHAR(30),
+    IN p_purchase_id VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_supplier_category VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_payment_status VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_due_amount DECIMAL(14,2)
 )
 BEGIN

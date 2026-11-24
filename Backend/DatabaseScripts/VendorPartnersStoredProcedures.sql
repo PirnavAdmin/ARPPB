@@ -55,11 +55,11 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_GetFarmers`(
     IN p_vendor_id BIGINT,
-    IN p_search VARCHAR(150),
-    IN p_district VARCHAR(100),
-    IN p_state VARCHAR(100),
-    IN p_crop VARCHAR(100),
-    IN p_status VARCHAR(30)
+    IN p_search VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_district VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_state VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_crop VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_status VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     SELECT
@@ -101,7 +101,7 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_GetFarmerById`(
     IN p_vendor_id BIGINT,
-    IN p_farmer_id_or_code VARCHAR(50)
+    IN p_farmer_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_farmer_id BIGINT DEFAULT NULL;
@@ -184,20 +184,20 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_CreateFarmer`(
     IN p_vendor_id BIGINT,
-    IN p_full_name VARCHAR(150),
-    IN p_father_or_spouse_name VARCHAR(150),
-    IN p_mobile_number VARCHAR(20),
-    IN p_email VARCHAR(100),
-    IN p_village VARCHAR(100),
-    IN p_district VARCHAR(100),
-    IN p_state VARCHAR(100),
-    IN p_pin_code VARCHAR(10),
+    IN p_full_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_father_or_spouse_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_mobile_number VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_email VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_village VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_district VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_state VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_pin_code VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_land_acres DECIMAL(10,2),
-    IN p_registered_crops VARCHAR(500),
-    IN p_bank_account_number VARCHAR(50),
-    IN p_ifsc_code VARCHAR(20),
-    IN p_bank_name VARCHAR(100),
-    IN p_aadhaar_number VARCHAR(20)
+    IN p_registered_crops VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_bank_account_number VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_ifsc_code VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_bank_name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_aadhaar_number VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_count INT DEFAULT 0;
@@ -223,22 +223,22 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_UpdateFarmer`(
     IN p_vendor_id BIGINT,
-    IN p_farmer_id_or_code VARCHAR(50),
-    IN p_full_name VARCHAR(150),
-    IN p_father_or_spouse_name VARCHAR(150),
-    IN p_mobile_number VARCHAR(20),
-    IN p_email VARCHAR(100),
-    IN p_village VARCHAR(100),
-    IN p_district VARCHAR(100),
-    IN p_state VARCHAR(100),
-    IN p_pin_code VARCHAR(10),
+    IN p_farmer_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_full_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_father_or_spouse_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_mobile_number VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_email VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_village VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_district VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_state VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_pin_code VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_land_acres DECIMAL(10,2),
-    IN p_registered_crops VARCHAR(500),
-    IN p_bank_account_number VARCHAR(50),
-    IN p_ifsc_code VARCHAR(20),
-    IN p_bank_name VARCHAR(100),
-    IN p_aadhaar_number VARCHAR(20),
-    IN p_status VARCHAR(20)
+    IN p_registered_crops VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_bank_account_number VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_ifsc_code VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_bank_name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_aadhaar_number VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_status VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_farmer_id BIGINT DEFAULT NULL;
@@ -276,7 +276,7 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_ToggleFarmerStatus`(
     IN p_vendor_id BIGINT,
-    IN p_farmer_id_or_code VARCHAR(50)
+    IN p_farmer_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_farmer_id BIGINT DEFAULT NULL;
@@ -301,7 +301,7 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_GetFarmerTransactions`(
     IN p_vendor_id BIGINT,
-    IN p_farmer_id_or_code VARCHAR(50)
+    IN p_farmer_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     SELECT
@@ -326,7 +326,7 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_GetFarmerPayments`(
     IN p_vendor_id BIGINT,
-    IN p_farmer_id_or_code VARCHAR(50)
+    IN p_farmer_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     SELECT
@@ -348,7 +348,7 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_GetFarmerOtpLogs`(
     IN p_vendor_id BIGINT,
-    IN p_farmer_id_or_code VARCHAR(50)
+    IN p_farmer_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     SELECT
@@ -389,10 +389,10 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_GetMiddlemen`(
     IN p_vendor_id BIGINT,
-    IN p_search VARCHAR(150),
-    IN p_district VARCHAR(100),
-    IN p_state VARCHAR(100),
-    IN p_status VARCHAR(30)
+    IN p_search VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_district VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_state VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_status VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     SELECT
@@ -434,7 +434,7 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_GetMiddlemanById`(
     IN p_vendor_id BIGINT,
-    IN p_middleman_id_or_code VARCHAR(50)
+    IN p_middleman_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_mid_id BIGINT DEFAULT NULL;
@@ -514,16 +514,16 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_CreateMiddleman`(
     IN p_vendor_id BIGINT,
-    IN p_full_name VARCHAR(150),
-    IN p_email VARCHAR(100),
-    IN p_mobile_number VARCHAR(20),
-    IN p_business_name VARCHAR(200),
-    IN p_gstin VARCHAR(30),
-    IN p_pan VARCHAR(20),
-    IN p_market_yard_location VARCHAR(255),
-    IN p_district VARCHAR(100),
-    IN p_state VARCHAR(100),
-    IN p_pin_code VARCHAR(10),
+    IN p_full_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_email VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_mobile_number VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_business_name VARCHAR(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_gstin VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_pan VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_market_yard_location VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_district VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_state VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_pin_code VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_opening_balance DECIMAL(14,2)
 )
 BEGIN
@@ -548,19 +548,19 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_UpdateMiddleman`(
     IN p_vendor_id BIGINT,
-    IN p_middleman_id_or_code VARCHAR(50),
-    IN p_full_name VARCHAR(150),
-    IN p_email VARCHAR(100),
-    IN p_mobile_number VARCHAR(20),
-    IN p_business_name VARCHAR(200),
-    IN p_gstin VARCHAR(30),
-    IN p_pan VARCHAR(20),
-    IN p_market_yard_location VARCHAR(255),
-    IN p_district VARCHAR(100),
-    IN p_state VARCHAR(100),
-    IN p_pin_code VARCHAR(10),
+    IN p_middleman_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_full_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_email VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_mobile_number VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_business_name VARCHAR(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_gstin VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_pan VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_market_yard_location VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_district VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_state VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_pin_code VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_opening_balance DECIMAL(14,2),
-    IN p_status VARCHAR(20)
+    IN p_status VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_mid_id BIGINT DEFAULT NULL;
@@ -595,7 +595,7 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_ToggleMiddlemanStatus`(
     IN p_vendor_id BIGINT,
-    IN p_middleman_id_or_code VARCHAR(50)
+    IN p_middleman_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_mid_id BIGINT DEFAULT NULL;
@@ -620,7 +620,7 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_GetMiddlemanTransactions`(
     IN p_vendor_id BIGINT,
-    IN p_middleman_id_or_code VARCHAR(50)
+    IN p_middleman_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     SELECT
@@ -645,7 +645,7 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_GetMiddlemanPayments`(
     IN p_vendor_id BIGINT,
-    IN p_middleman_id_or_code VARCHAR(50)
+    IN p_middleman_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     SELECT
@@ -667,7 +667,7 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_GetMiddlemanOtpLogs`(
     IN p_vendor_id BIGINT,
-    IN p_middleman_id_or_code VARCHAR(50)
+    IN p_middleman_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     SELECT
@@ -706,10 +706,10 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_GetCustomers`(
     IN p_vendor_id BIGINT,
-    IN p_search VARCHAR(150),
-    IN p_district VARCHAR(100),
-    IN p_state VARCHAR(100),
-    IN p_status VARCHAR(30)
+    IN p_search VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_district VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_state VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_status VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     SELECT
@@ -751,7 +751,7 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_GetCustomerById`(
     IN p_vendor_id BIGINT,
-    IN p_customer_id_or_code VARCHAR(50)
+    IN p_customer_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_cust_id BIGINT DEFAULT NULL;
@@ -799,16 +799,16 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_CreateCustomer`(
     IN p_vendor_id BIGINT,
-    IN p_customer_name VARCHAR(150),
-    IN p_business_name VARCHAR(200),
-    IN p_customer_type VARCHAR(50),
-    IN p_mobile_number VARCHAR(20),
-    IN p_email VARCHAR(100),
-    IN p_address VARCHAR(500),
-    IN p_district VARCHAR(100),
-    IN p_state VARCHAR(100),
-    IN p_pin_code VARCHAR(10),
-    IN p_gstin VARCHAR(30),
+    IN p_customer_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_business_name VARCHAR(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_customer_type VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_mobile_number VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_email VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_address VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_district VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_state VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_pin_code VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_gstin VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_credit_limit DECIMAL(14,2)
 )
 BEGIN
@@ -833,19 +833,19 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_UpdateCustomer`(
     IN p_vendor_id BIGINT,
-    IN p_customer_id_or_code VARCHAR(50),
-    IN p_customer_name VARCHAR(150),
-    IN p_business_name VARCHAR(200),
-    IN p_customer_type VARCHAR(50),
-    IN p_mobile_number VARCHAR(20),
-    IN p_email VARCHAR(100),
-    IN p_address VARCHAR(500),
-    IN p_district VARCHAR(100),
-    IN p_state VARCHAR(100),
-    IN p_pin_code VARCHAR(10),
-    IN p_gstin VARCHAR(30),
+    IN p_customer_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_customer_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_business_name VARCHAR(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_customer_type VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_mobile_number VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_email VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_address VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_district VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_state VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_pin_code VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_gstin VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_credit_limit DECIMAL(14,2),
-    IN p_status VARCHAR(20)
+    IN p_status VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_cust_id BIGINT DEFAULT NULL;
@@ -880,7 +880,7 @@ END$$
 
 CREATE PROCEDURE `sp_VendorPartners_ToggleCustomerStatus`(
     IN p_vendor_id BIGINT,
-    IN p_customer_id_or_code VARCHAR(50)
+    IN p_customer_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_cust_id BIGINT DEFAULT NULL;
