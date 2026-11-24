@@ -545,3 +545,7 @@ VALUES
 (5, 2, 'FMOV-0005', 'Sales Dispatch', 'ORD-2026-003', -1000.00, 'Litre', 1850.00, '2026-11-01 12:00:00', 'Dispatched to Rayalaseema Consumer Hub'),
 (6, 2, 'FMOV-0006', 'Sales Dispatch', 'ORD-2026-006', -200.00, 'Litre', 1650.00, '2026-11-07 16:00:00', 'Dispatched to Kareem & Sons Grocery Wholesale')
 ON DUPLICATE KEY UPDATE `MovementCode` = VALUES(`MovementCode`);
+
+-- Ensure ApmcLicenseNumber column exists on vendor_profiles
+ALTER TABLE `vendor_profiles` ADD COLUMN IF NOT EXISTS `ApmcLicenseNumber` VARCHAR(100) NULL AFTER `business_reg_number`;
+
