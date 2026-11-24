@@ -1108,6 +1108,31 @@ export async function exportVendorRawMaterialsApi(params = {}) {
   }
 }
 
+export async function createVendorRawMaterialApi(payload = {}) {
+  try {
+    const reqBody = {
+      cropName: String(payload.cropName || payload.crop || '').trim(),
+      cropVariety: payload.cropVariety || payload.variety || 'Standard',
+      supplierName: payload.supplierName || 'Verified Supplier',
+      supplierCategory: payload.supplierCategory || 'Farmer',
+      purchaseId: payload.purchaseId || payload.purchaseCode || null,
+      batchNumber: payload.batchNumber || null,
+      purchaseDate: payload.purchaseDate ? new Date(payload.purchaseDate).toISOString() : new Date().toISOString(),
+      purchasedQuantity: Number(payload.purchasedQuantity ?? payload.quantity ?? 0),
+      unit: payload.unit || 'Quintal',
+      averageCost: Number(payload.averageCost ?? payload.rate ?? 0),
+      qualityGrade: payload.qualityGrade || payload.quality || 'Grade A (Standard FAQ)',
+      minThresholdQuantity: Number(payload.minThresholdQuantity ?? payload.minimumThreshold ?? 15),
+    };
+    const res = await api.post(Endpoints.VendorRawMaterialInventory.create, reqBody);
+    const dto = res.data?.data ?? res.data;
+    return dto ? mapVendorRawMaterialDto(dto, payload) : null;
+  } catch (err) {
+    console.warn('[createVendorRawMaterialApi] warning:', err?.response?.data || err?.message);
+    return null;
+  }
+}
+
 /* ==========================================================================
    6. VENDOR PROCESSING APIs
    ========================================================================== */
@@ -1182,6 +1207,8 @@ export async function exportVendorProcessingApi(params = {}) {
     return null;
   }
 }
+
+export const exportVendorProcessingBatchesApi = exportVendorProcessingApi;
 
 /* ==========================================================================
    7. VENDOR FINISHED PRODUCTS APIs
@@ -1986,7 +2013,7 @@ export async function updateVendorPurchaseStatusApi(id, supplierCategory, status
   const cleanId = String(id).replace(/^PUR-[FM]-0*/i, '') || id;
   try {
     const res = await api.patch(
-      `/api/v1/vendor/purchases/${cleanId}/status`,
+      Endpoints.VendorPurchases.updateStatus(cleanId),
       statusPayload,
       { params: { supplierCategory: supplierCategory || 'Farmer' } }
     );
@@ -1994,6 +2021,103 @@ export async function updateVendorPurchaseStatusApi(id, supplierCategory, status
     return dto ? mapVendorPurchaseDto(dto) : { success: true };
   } catch {
     return null;
+  }
+}
+
+export async function exportVendorPurchasesApi(params = {}) {
+  try {
+    const res = await api.get(Endpoints.VendorPurchases.export, { params });
+    return res.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/* ==========================================================================
+   14. VENDOR PROFILE & BANK DETAILS APIs
+   ========================================================================== */
+
+export async function fetchVendorProfileApi() {
+  try {
+    const res = await api.get(Endpoints.VendorProfile.get);
+    return res.data?.data ?? res.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchVendorProfileAllApi() {
+  try {
+    const res = await api.get(Endpoints.VendorProfile.getAll);
+    return res.data?.data ?? res.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchVendorProfileByIdApi(id) {
+  if (!id) return null;
+  try {
+    const res = await api.get(Endpoints.VendorProfile.getById(id));
+    return res.data?.data ?? res.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function updateVendorProfileApi(payload = {}) {
+  try {
+    const res = await api.put(Endpoints.VendorProfile.updateProfile, payload);
+    return res.data?.data ?? res.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function updateVendorProfileByIdApi(id, payload = {}) {
+  if (!id) return null;
+  try {
+    const res = await api.put(Endpoints.VendorProfile.update(id), payload);
+    return res.data?.data ?? res.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchVendorBankDetailsApi() {
+  try {
+    const res = await api.get(Endpoints.VendorProfile.getBankDetails);
+    return res.data?.data ?? res.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function updateVendorBankDetailsApi(payload = {}) {
+  try {
+    const res = await api.put(Endpoints.VendorProfile.updateBankDetails, payload);
+    return res.data?.data ?? res.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function requestVendorMobileOtpApi(newMobile) {
+  const cleanPhone = String(newMobile || '').replace(/\D/g, '');
+  try {
+    const res = await api.post(Endpoints.VendorProfile.sendMobileOtp, { newMobile: cleanPhone });
+    return res.data ?? { success: true };
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function verifyVendorMobileOtpApi(otp) {
+  try {
+    const res = await api.post(Endpoints.VendorProfile.verifyMobileOtp, { otp: String(otp || '').trim() });
+    return res.data ?? { success: true };
+  } catch (err) {
+    throw err;
   }
 }
 

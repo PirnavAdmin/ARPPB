@@ -291,6 +291,39 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             }
 
             await _context.SaveChangesAsync();
+
+            // If not draft, also log in MiddlemanConfirmations for OTP verification
+            if (!isDraft)
+            {
+                var confCode = $"CONF-V-{entity.Id:D4}";
+                var conf = new MiddlemanConfirmation
+                {
+                    MiddlemanId = entity.MiddlemanId,
+                    ConfirmationCode = confCode,
+                    TransactionId = entity.SaleId,
+                    TransactionType = "Vendor Sale",
+                    PartyType = "Vendor",
+                    PartyId = entity.VendorId,
+                    PartyName = entity.BusinessName ?? entity.VendorName,
+                    PartyMobile = entity.Mobile,
+                    Crop = entity.CropName,
+                    Variety = string.IsNullOrWhiteSpace(entity.Variety) ? "Standard" : entity.Variety,
+                    Quantity = entity.Quantity,
+                    Unit = string.IsNullOrWhiteSpace(entity.Unit) ? "Quintal" : entity.Unit,
+                    PricePerUnit = entity.Rate,
+                    TransactionAmount = entity.TotalAmount,
+                    OtpStatus = "Pending",
+                    OtpCode = "488031",
+                    RequestDate = DateTime.UtcNow,
+                    ExpiryDate = DateTime.UtcNow.AddHours(48),
+                    Notes = entity.Notes,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                };
+                _context.MiddlemanConfirmations.Add(conf);
+                await _context.SaveChangesAsync();
+            }
+
             return MapSaleToDto(entity);
         }
 

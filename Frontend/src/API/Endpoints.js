@@ -213,7 +213,7 @@ export const MiddlemanVendors = {
 };
 
 // --------------------------------------------------
-// VENDOR - DASHBOARD
+// 1. VENDOR - DASHBOARD
 // --------------------------------------------------
 export const VendorDashboard = {
   get: endpoint("GET", "/api/v1/vendor/dashboard"),
@@ -221,99 +221,184 @@ export const VendorDashboard = {
   search: endpoint("GET", "/api/v1/vendor/dashboard/search"),
   otpConfirmations: endpoint("GET", "/api/v1/vendor/dashboard/otp-confirmations"),
   verifyOtp: (partnerType, confirmationId) =>
-    `/api/v1/vendor/dashboard/otp-confirmations/${partnerType}/${confirmationId}/verify`,
+    endpoint("POST", `/api/v1/vendor/dashboard/otp-confirmations/${partnerType}/${confirmationId}/verify`),
   exportTransactions: endpoint("GET", "/api/v1/vendor/dashboard/transactions/export"),
 };
 
 // --------------------------------------------------
-// VENDOR - CUSTOMERS
-// --------------------------------------------------
-export const VendorCustomers = {
-  overview: endpoint("GET", "/api/v1/vendor/partners/customers/overview"),
-  getAll: endpoint("GET", "/api/v1/vendor/partners/customers"),
-  create: endpoint("POST", "/api/v1/vendor/partners/customers"),
-  getById: endpoint("GET", "/api/v1/vendor/partners/customers/{id}"),
-  update: endpoint("PUT", "/api/v1/vendor/partners/customers/{id}"),
-  updateStatus: endpoint("PATCH", "/api/v1/vendor/partners/customers/{id}/status"),
-  export: endpoint("GET", "/api/v1/vendor/partners/customers/export"),
-};
-
-// --------------------------------------------------
-// VENDOR - FARMERS
+// 2. VENDOR - PARTNERS (FARMERS)
 // --------------------------------------------------
 export const VendorFarmers = {
   overview: endpoint("GET", "/api/v1/vendor/partners/farmers/overview"),
   getAll: endpoint("GET", "/api/v1/vendor/partners/farmers"),
+  getById: endpoint("GET", "/api/v1/vendor/partners/farmers/{farmerId}"),
   create: endpoint("POST", "/api/v1/vendor/partners/farmers"),
-  getById: endpoint("GET", "/api/v1/vendor/partners/farmers/{id}"),
-  update: endpoint("PUT", "/api/v1/vendor/partners/farmers/{id}"),
-  updateStatus: endpoint("PATCH", "/api/v1/vendor/partners/farmers/{id}/status"),
-  transactions: endpoint("GET", "/api/v1/vendor/partners/farmers/{id}/transactions"),
-  payments: endpoint("GET", "/api/v1/vendor/partners/farmers/{id}/payments"),
-  otpConfirmations: endpoint("GET", "/api/v1/vendor/partners/farmers/{id}/otp-confirmations"),
+  update: endpoint("PUT", "/api/v1/vendor/partners/farmers/{farmerId}"),
+  updateStatus: endpoint("PATCH", "/api/v1/vendor/partners/farmers/{farmerId}/status"),
+  transactions: endpoint("GET", "/api/v1/vendor/partners/farmers/{farmerId}/transactions"),
+  payments: endpoint("GET", "/api/v1/vendor/partners/farmers/{farmerId}/payments"),
+  otpConfirmations: endpoint("GET", "/api/v1/vendor/partners/farmers/{farmerId}/otp-confirmations"),
   export: endpoint("GET", "/api/v1/vendor/partners/farmers/export"),
 };
 
 // --------------------------------------------------
-// VENDOR - FINISHED PRODUCTS
-// --------------------------------------------------
-export const VendorFinishedProducts = {
-  overview: endpoint("GET", "/api/v1/vendor/finished-products/overview"),
-  getAll: endpoint("GET", "/api/v1/vendor/finished-products"),
-  create: endpoint("POST", "/api/v1/vendor/finished-products"),
-  getById: endpoint("GET", "/api/v1/vendor/finished-products/{id}"),
-  update: endpoint("PUT", "/api/v1/vendor/finished-products/{id}"),
-  adjustStock: endpoint("POST", "/api/v1/vendor/finished-products/{id}/adjust-stock"),
-  movements: endpoint("GET", "/api/v1/vendor/finished-products/{id}/movements"),
-  updateStatus: endpoint("PATCH", "/api/v1/vendor/finished-products/{id}/status"),
-  export: endpoint("GET", "/api/v1/vendor/finished-products/export"),
-};
-
-// --------------------------------------------------
-// VENDOR - MIDDLEMEN
+// 3. VENDOR - PARTNERS (MIDDLEMEN)
 // --------------------------------------------------
 export const VendorMiddlemen = {
   overview: endpoint("GET", "/api/v1/vendor/partners/middlemen/overview"),
   getAll: endpoint("GET", "/api/v1/vendor/partners/middlemen"),
+  getById: endpoint("GET", "/api/v1/vendor/partners/middlemen/{middlemanId}"),
   create: endpoint("POST", "/api/v1/vendor/partners/middlemen"),
-  getById: endpoint("GET", "/api/v1/vendor/partners/middlemen/{id}"),
-  update: endpoint("PUT", "/api/v1/vendor/partners/middlemen/{id}"),
-  updateStatus: endpoint("PATCH", "/api/v1/vendor/partners/middlemen/{id}/status"),
-  transactions: endpoint("GET", "/api/v1/vendor/partners/middlemen/{id}/transactions"),
-  payments: endpoint("GET", "/api/v1/vendor/partners/middlemen/{id}/payments"),
-  otpConfirmations: endpoint("GET", "/api/v1/vendor/partners/middlemen/{id}/otp-confirmations"),
+  update: endpoint("PUT", "/api/v1/vendor/partners/middlemen/{middlemanId}"),
+  updateStatus: endpoint("PATCH", "/api/v1/vendor/partners/middlemen/{middlemanId}/status"),
+  transactions: endpoint("GET", "/api/v1/vendor/partners/middlemen/{middlemanId}/transactions"),
+  payments: endpoint("GET", "/api/v1/vendor/partners/middlemen/{middlemanId}/payments"),
+  otpConfirmations: endpoint("GET", "/api/v1/vendor/partners/middlemen/{middlemanId}/otp-confirmations"),
   export: endpoint("GET", "/api/v1/vendor/partners/middlemen/export"),
 };
 
 // --------------------------------------------------
-// VENDOR - PROCESSING
+// 4. VENDOR - PARTNERS (CUSTOMERS)
 // --------------------------------------------------
-export const VendorProcessing = {
-  overview: endpoint("GET", "/api/v1/vendor/processing/overview"),
-  getAll: endpoint("GET", "/api/v1/vendor/processing/batches"),
-  create: endpoint("POST", "/api/v1/vendor/processing/batches"),
-  getById: endpoint("GET", "/api/v1/vendor/processing/batches/{id}"),
-  export: endpoint("GET", "/api/v1/vendor/processing/export"),
+export const VendorCustomers = {
+  overview: endpoint("GET", "/api/v1/vendor/partners/customers/overview"),
+  getAll: endpoint("GET", "/api/v1/vendor/partners/customers"),
+  getById: endpoint("GET", "/api/v1/vendor/partners/customers/{customerId}"),
+  create: endpoint("POST", "/api/v1/vendor/partners/customers"),
+  update: endpoint("PUT", "/api/v1/vendor/partners/customers/{customerId}"),
+  updateStatus: endpoint("PATCH", "/api/v1/vendor/partners/customers/{customerId}/status"),
+  export: endpoint("GET", "/api/v1/vendor/partners/customers/export"),
 };
 
 // --------------------------------------------------
-// VENDOR - PURCHASES
+// 5. VENDOR - PURCHASES / PROCUREMENT
 // --------------------------------------------------
 export const VendorPurchases = {
+  summary: endpoint("GET", "/api/v1/vendor/purchases/summary"),
   getAll: endpoint("GET", "/api/v1/vendor/purchases"),
-  create: endpoint("POST", "/api/v1/vendor/purchases"),
   getById: endpoint("GET", "/api/v1/vendor/purchases/{id}"),
+  create: endpoint("POST", "/api/v1/vendor/purchases"),
+  updateStatus: endpoint("PATCH", "/api/v1/vendor/purchases/{id}/status"),
+  export: endpoint("GET", "/api/v1/vendor/purchases/export"),
 };
 
 // --------------------------------------------------
-// VENDOR - RAW MATERIAL INVENTORY
+// 6. VENDOR - RAW MATERIAL INVENTORY
 // --------------------------------------------------
 export const VendorRawMaterialInventory = {
   overview: endpoint("GET", "/api/v1/vendor/inventory/raw-materials/overview"),
   getAll: endpoint("GET", "/api/v1/vendor/inventory/raw-materials"),
-  getById: endpoint("GET", "/api/v1/vendor/inventory/raw-materials/{id}"),
+  getById: endpoint("GET", "/api/v1/vendor/inventory/raw-materials/{stockId}"),
+  create: endpoint("POST", "/api/v1/vendor/inventory/raw-materials"),
   movements: endpoint("GET", "/api/v1/vendor/inventory/raw-materials/movements"),
   export: endpoint("GET", "/api/v1/vendor/inventory/raw-materials/export"),
+};
+
+// --------------------------------------------------
+// 7. VENDOR - PRODUCT PROCESSING
+// --------------------------------------------------
+export const VendorProcessing = {
+  overview: endpoint("GET", "/api/v1/vendor/processing/overview"),
+  getAll: endpoint("GET", "/api/v1/vendor/processing/batches"),
+  getById: endpoint("GET", "/api/v1/vendor/processing/batches/{processingId}"),
+  create: endpoint("POST", "/api/v1/vendor/processing/batches"),
+  export: endpoint("GET", "/api/v1/vendor/processing/export"),
+};
+
+// --------------------------------------------------
+// 8. VENDOR - FINISHED PRODUCTS
+// --------------------------------------------------
+export const VendorFinishedProducts = {
+  overview: endpoint("GET", "/api/v1/vendor/finished-products/overview"),
+  getAll: endpoint("GET", "/api/v1/vendor/finished-products"),
+  getById: endpoint("GET", "/api/v1/vendor/finished-products/{productId}"),
+  create: endpoint("POST", "/api/v1/vendor/finished-products"),
+  update: endpoint("PUT", "/api/v1/vendor/finished-products/{productId}"),
+  adjustStock: endpoint("POST", "/api/v1/vendor/finished-products/{productId}/adjust-stock"),
+  movements: endpoint("GET", "/api/v1/vendor/finished-products/{productId}/movements"),
+  updateStatus: endpoint("PATCH", "/api/v1/vendor/finished-products/{productId}/status"),
+  export: endpoint("GET", "/api/v1/vendor/finished-products/export"),
+};
+
+// --------------------------------------------------
+// 9. VENDOR - SELL PRODUCTS & SALES HISTORY
+// --------------------------------------------------
+export const VendorSales = {
+  catalogSummary: endpoint("GET", "/api/v1/vendor/sales/catalog-summary"),
+  customers: endpoint("GET", "/api/v1/vendor/sales/customers"),
+  customerById: endpoint("GET", "/api/v1/vendor/sales/customers/{customerUserId}"),
+  batches: endpoint("GET", "/api/v1/vendor/sales/batches"),
+  batchById: endpoint("GET", "/api/v1/vendor/sales/batches/{id}"),
+  summary: endpoint("GET", "/api/v1/vendor/sales/summary"),
+  getAll: endpoint("GET", "/api/v1/vendor/sales"),
+  drafts: endpoint("GET", "/api/v1/vendor/sales/drafts"),
+  getById: endpoint("GET", "/api/v1/vendor/sales/{id}"),
+  create: endpoint("POST", "/api/v1/vendor/sales"),
+  update: endpoint("PUT", "/api/v1/vendor/sales/{id}"),
+  submit: endpoint("POST", "/api/v1/vendor/sales/{id}/submit"),
+  delete: endpoint("DELETE", "/api/v1/vendor/sales/{id}"),
+};
+
+// --------------------------------------------------
+// 10. VENDOR - CUSTOMER ORDERS
+// --------------------------------------------------
+export const VendorOrders = {
+  summary: endpoint("GET", "/api/v1/vendor/orders/summary"),
+  getAll: endpoint("GET", "/api/v1/vendor/orders"),
+  getById: endpoint("GET", "/api/v1/vendor/orders/{id}"),
+  updateStatus: endpoint("PUT", "/api/v1/vendor/orders/{id}/status"),
+  cancel: endpoint("POST", "/api/v1/vendor/orders/{id}/cancel"),
+};
+
+// --------------------------------------------------
+// 11. VENDOR - OTP CONFIRMATIONS
+// --------------------------------------------------
+export const VendorConfirmations = {
+  summary: endpoint("GET", "/api/v1/vendor/confirmations/summary"),
+  getAll: endpoint("GET", "/api/v1/vendor/confirmations"),
+  getById: endpoint("GET", "/api/v1/vendor/confirmations/{id}"),
+  create: endpoint("POST", "/api/v1/vendor/confirmations"),
+  verify: endpoint("POST", "/api/v1/vendor/confirmations/{id}/verify"),
+  resend: endpoint("POST", "/api/v1/vendor/confirmations/{id}/resend"),
+};
+
+// --------------------------------------------------
+// 12. VENDOR - MY LEDGER
+// --------------------------------------------------
+export const VendorLedger = {
+  summary: endpoint("GET", "/api/v1/vendor/ledger/summary"),
+  dayTotals: endpoint("GET", "/api/v1/vendor/ledger/day-totals"),
+  getAll: endpoint("GET", "/api/v1/vendor/ledger"),
+  getById: endpoint("GET", "/api/v1/vendor/ledger/{id}"),
+  paySupplier: endpoint("POST", "/api/v1/vendor/ledger/pay-supplier"),
+  receipts: endpoint("POST", "/api/v1/vendor/ledger/receipts"),
+  settle: endpoint("POST", "/api/v1/vendor/ledger/{id}/settle"),
+};
+
+// --------------------------------------------------
+// 13. VENDOR - NOTIFICATIONS
+// --------------------------------------------------
+export const VendorNotifications = {
+  summary: endpoint("GET", "/api/v1/vendor/notifications/summary"),
+  getAll: endpoint("GET", "/api/v1/vendor/notifications"),
+  markRead: endpoint("PUT", "/api/v1/vendor/notifications/{id}/read"),
+  markAllRead: endpoint("PUT", "/api/v1/vendor/notifications/read-all"),
+  delete: endpoint("DELETE", "/api/v1/vendor/notifications/{id}"),
+};
+
+// --------------------------------------------------
+// 14. VENDOR - PROFILE & BANK DETAILS
+// --------------------------------------------------
+export const VendorProfile = {
+  get: endpoint("GET", "/api/v1/vendor/profile"),
+  getAll: endpoint("GET", "/api/v1/vendor/profile/all"),
+  getById: endpoint("GET", "/api/v1/vendor/profile/{id}"),
+  update: endpoint("PUT", "/api/v1/vendor/profile/{id}"),
+  updateProfile: endpoint("PUT", "/api/v1/vendor/profile"),
+  getBankDetails: endpoint("GET", "/api/v1/vendor/profile/bank-details"),
+  updateBankDetails: endpoint("PUT", "/api/v1/vendor/profile/bank-details"),
+  sendMobileOtp: endpoint("POST", "/api/v1/vendor/profile/mobile-change/request-otp"),
+  verifyMobileOtp: endpoint("POST", "/api/v1/vendor/profile/mobile-change/verify-otp"),
 };
 
 // --------------------------------------------------
@@ -377,67 +462,6 @@ export const FarmerProfile = {
   sendMobileOtp: "/api/v1/farmer/profile/change-mobile/send-otp",
   verifyMobileOtp: "/api/v1/farmer/profile/change-mobile/verify-otp",
   changePassword: "/api/v1/farmer/profile/change-password",
-};
-
-export const VendorConfirmations = {
-  summary: "/api/v1/vendor/confirmations/summary",
-  getAll: "/api/v1/vendor/confirmations",
-  create: "/api/v1/vendor/confirmations",
-  getById: (id) => `/api/v1/vendor/confirmations/${id}`,
-  verify: (id) => `/api/v1/vendor/confirmations/${id}/verify`,
-  resend: (id) => `/api/v1/vendor/confirmations/${id}/resend`,
-};
-
-export const VendorLedger = {
-  summary: "/api/v1/vendor/ledger/summary",
-  dayTotals: "/api/v1/vendor/ledger/day-totals",
-  getAll: "/api/v1/vendor/ledger",
-  getById: (id) => `/api/v1/vendor/ledger/${id}`,
-  paySupplier: "/api/v1/vendor/ledger/pay-supplier",
-  receipts: "/api/v1/vendor/ledger/receipts",
-  settle: (id) => `/api/v1/vendor/ledger/${id}/settle`,
-};
-
-export const VendorNotifications = {
-  summary: "/api/v1/vendor/notifications/summary",
-  getAll: "/api/v1/vendor/notifications",
-  markRead: (id) => `/api/v1/vendor/notifications/${id}/read`,
-  markAllRead: "/api/v1/vendor/notifications/read-all",
-  delete: (id) => `/api/v1/vendor/notifications/${id}`,
-};
-
-export const VendorOrders = {
-  summary: "/api/v1/vendor/orders/summary",
-  getAll: "/api/v1/vendor/orders",
-  getById: (id) => `/api/v1/vendor/orders/${id}`,
-  updateStatus: (id) => `/api/v1/vendor/orders/${id}/status`,
-  cancel: (id) => `/api/v1/vendor/orders/${id}/cancel`,
-};
-
-export const VendorProfile = {
-  get: "/api/v1/vendor/profile",
-  getById: (id) => `/api/v1/vendor/profile/${id}`,
-  update: (id) => `/api/v1/vendor/profile/${id}`,
-  getBankDetails: "/api/v1/vendor/profile/bank-details",
-  updateBankDetails: "/api/v1/vendor/profile/bank-details",
-  sendMobileOtp: "/api/v1/vendor/profile/mobile-change/request-otp",
-  verifyMobileOtp: "/api/v1/vendor/profile/mobile-change/verify-otp",
-};
-
-export const VendorSales = {
-  catalogSummary: "/api/v1/vendor/sales/catalog-summary",
-  customers: "/api/v1/vendor/sales/customers",
-  customerById: (id) => `/api/v1/vendor/sales/customers/${id}`,
-  batches: "/api/v1/vendor/sales/batches",
-  batchById: (id) => `/api/v1/vendor/sales/batches/${id}`,
-  summary: "/api/v1/vendor/sales/summary",
-  getAll: "/api/v1/vendor/sales",
-  create: "/api/v1/vendor/sales",
-  drafts: "/api/v1/vendor/sales/drafts",
-  getById: (id) => `/api/v1/vendor/sales/${id}`,
-  update: (id) => `/api/v1/vendor/sales/${id}`,
-  delete: (id) => `/api/v1/vendor/sales/${id}`,
-  submit: (id) => `/api/v1/vendor/sales/${id}/submit`,
 };
 
 // Aliases for backward compatibility
