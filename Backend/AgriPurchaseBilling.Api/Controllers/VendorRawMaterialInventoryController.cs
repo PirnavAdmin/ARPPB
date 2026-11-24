@@ -2,6 +2,7 @@ using System.Security.Claims;
 using AgriPurchaseBilling.Application.DTOs;
 using AgriPurchaseBilling.Application.DTOs.VendorOperations;
 using AgriPurchaseBilling.Application.Interfaces;
+using AgriPurchaseBilling.Application.Interfaces.VendorPortal;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -16,26 +17,32 @@ namespace AgriPurchaseBilling.Api.Controllers
     public sealed class VendorRawMaterialInventoryController : ControllerBase
     {
         private readonly IVendorInventoryProcessingService _inventoryService;
+        private readonly IVendorResolver _vendorResolver;
 
-        public VendorRawMaterialInventoryController(IVendorInventoryProcessingService inventoryService)
+        public VendorRawMaterialInventoryController(
+            IVendorInventoryProcessingService inventoryService,
+            IVendorResolver vendorResolver)
         {
             _inventoryService = inventoryService;
+            _vendorResolver = vendorResolver;
         }
 
-        private long CurrentVendorId
+        private async Task<long> ResolveVendorIdAsync(CancellationToken cancellationToken)
         {
-            get
+            var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (long.TryParse(value, out var userId) && userId > 0)
             {
-                var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                return long.TryParse(value, out var userId) && userId > 0 ? userId : 1;
+                return await _vendorResolver.GetVendorIdAsync(userId, cancellationToken);
             }
+            return 1;
         }
 
         [HttpGet("overview")]
         [ProducesResponseType(typeof(ApiResponse<VendorRawMaterialOverviewDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetOverview(CancellationToken cancellationToken)
         {
-            var overview = await _inventoryService.GetRawMaterialOverviewAsync(CurrentVendorId, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var overview = await _inventoryService.GetRawMaterialOverviewAsync(vendorId, cancellationToken);
             return Ok(ApiResponse<VendorRawMaterialOverviewDto>.Ok(overview, "Raw material inventory overview retrieved successfully."));
         }
 
@@ -49,8 +56,9 @@ namespace AgriPurchaseBilling.Api.Controllers
             [FromQuery] string? stockStatus = null,
             CancellationToken cancellationToken = default)
         {
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
             var stocks = await _inventoryService.GetRawMaterialStocksAsync(
-                CurrentVendorId, search, crop, supplierType, grade, stockStatus, cancellationToken);
+                vendorId, search, crop, supplierType, grade, stockStatus, cancellationToken);
             return Ok(ApiResponse<List<VendorRawMaterialStockDto>>.Ok(stocks, "Raw material stocks retrieved successfully."));
         }
 
@@ -59,7 +67,8 @@ namespace AgriPurchaseBilling.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<VendorRawMaterialStockDto>), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetStockById(string stockId, CancellationToken cancellationToken)
         {
-            var stock = await _inventoryService.GetRawMaterialStockByIdAsync(CurrentVendorId, stockId, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var stock = await _inventoryService.GetRawMaterialStockByIdAsync(vendorId, stockId, cancellationToken);
             return stock == null
                 ? NotFound(ApiResponse<VendorRawMaterialStockDto>.Fail("Raw material stock lot not found."))
                 : Ok(ApiResponse<VendorRawMaterialStockDto>.Ok(stock, "Raw material stock lot retrieved successfully."));
@@ -74,7 +83,8 @@ namespace AgriPurchaseBilling.Api.Controllers
         {
             try
             {
-                var created = await _inventoryService.CreateRawMaterialStockAsync(CurrentVendorId, request, cancellationToken);
+                var vendorId = await ResolveVendorIdAsync(cancellationToken);
+                var created = await _inventoryService.CreateRawMaterialStockAsync(vendorId, request, cancellationToken);
                 return StatusCode(StatusCodes.Status201Created, ApiResponse<VendorRawMaterialStockDto>.Ok(created, "Raw material stock batch created successfully."));
             }
             catch (ArgumentException ex)
@@ -87,14 +97,16 @@ namespace AgriPurchaseBilling.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<List<VendorStockMovementDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetStockMovements(CancellationToken cancellationToken)
         {
-            var movements = await _inventoryService.GetStockMovementsAsync(CurrentVendorId, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var movements = await _inventoryService.GetStockMovementsAsync(vendorId, cancellationToken);
             return Ok(ApiResponse<List<VendorStockMovementDto>>.Ok(movements, "Stock movement history ledger retrieved successfully."));
         }
 
         [HttpGet("export")]
         public async Task<IActionResult> ExportCsv(CancellationToken cancellationToken)
         {
-            var csvBytes = await _inventoryService.ExportRawMaterialsCsvAsync(CurrentVendorId, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var csvBytes = await _inventoryService.ExportRawMaterialsCsvAsync(vendorId, cancellationToken);
             return File(csvBytes, "text/csv", $"raw-materials-inventory-{DateTime.UtcNow:yyyyMMdd}.csv");
         }
     }

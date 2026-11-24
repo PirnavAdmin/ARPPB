@@ -24,6 +24,19 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(ApiResponse<VendorProfileDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<VendorProfileDto>), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetMyProfile(CancellationToken cancellationToken)
+        {
+            if (CurrentUserId is not long userId) return Unauthorized();
+
+            var profile = await _profileService.GetMyProfileAsync(userId, cancellationToken);
+            return profile == null
+                ? NotFound(ApiResponse<VendorProfileDto>.Fail("Vendor profile not found."))
+                : Ok(ApiResponse<VendorProfileDto>.Ok(profile, "Vendor profile retrieved successfully."));
+        }
+
+        [HttpGet("all")]
         [ProducesResponseType(typeof(ApiResponse<List<VendorProfileDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllProfiles(CancellationToken cancellationToken)
         {
@@ -41,6 +54,21 @@ namespace AgriPurchaseBilling.Api.Controllers
             return profile == null
                 ? NotFound(ApiResponse<VendorProfileDto>.Fail("Vendor profile not found."))
                 : Ok(ApiResponse<VendorProfileDto>.Ok(profile, "Vendor profile retrieved successfully."));
+        }
+
+        [HttpPut]
+        [ProducesResponseType(typeof(ApiResponse<VendorProfileDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<VendorProfileDto>), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateMyProfile(
+            [FromBody] UpdateVendorProfileRequest request,
+            CancellationToken cancellationToken)
+        {
+            if (CurrentUserId is not long userId) return Unauthorized();
+
+            var profile = await _profileService.UpdateMyProfileAsync(userId, request, cancellationToken);
+            return profile == null
+                ? NotFound(ApiResponse<VendorProfileDto>.Fail("Vendor profile not found."))
+                : Ok(ApiResponse<VendorProfileDto>.Ok(profile, "Vendor profile updated successfully."));
         }
 
         [HttpPut("{id:long}")]

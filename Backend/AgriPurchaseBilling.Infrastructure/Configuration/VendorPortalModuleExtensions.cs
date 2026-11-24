@@ -3,6 +3,7 @@ using AgriPurchaseBilling.Application.Security;
 using AgriPurchaseBilling.Infrastructure.Data;
 using AgriPurchaseBilling.Infrastructure.Repositories;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace AgriPurchaseBilling.Infrastructure.Configuration
 {
@@ -11,16 +12,16 @@ namespace AgriPurchaseBilling.Infrastructure.Configuration
     {
         public static IServiceCollection AddVendorPortalModule(this IServiceCollection services)
         {
-            services.AddSingleton<VendorPortalDb>();
-            services.AddSingleton<IVendorOtpGenerator, VendorOtpGenerator>();
+            services.TryAddSingleton<VendorPortalDb>();
+            services.TryAddSingleton<IVendorOtpGenerator, VendorOtpGenerator>();
 
-            services.AddScoped<IVendorResolver, VendorResolver>();
-            services.AddScoped<IVendorSalesRepository, VendorSalesRepository>();
-            services.AddScoped<IVendorOrdersRepository, VendorOrdersRepository>();
-            services.AddScoped<IVendorConfirmationsRepository, VendorConfirmationsRepository>();
-            services.AddScoped<IVendorLedgerRepository, VendorLedgerRepository>();
-            services.AddScoped<IVendorNotificationsRepository, VendorNotificationsRepository>();
-            services.AddScoped<IVendorPurchasesRepository, VendorPurchasesRepository>();
+            services.TryAddScoped<IVendorResolver, VendorResolver>();
+            services.TryAddScoped<IVendorSalesRepository, VendorSalesRepository>();
+            services.TryAddScoped<IVendorOrdersRepository, VendorOrdersRepository>();
+            services.TryAddScoped<IVendorConfirmationsRepository, VendorConfirmationsRepository>();
+            services.TryAddScoped<IVendorLedgerRepository, VendorLedgerRepository>();
+            services.TryAddScoped<IVendorNotificationsRepository, VendorNotificationsRepository>();
+            services.TryAddScoped<IVendorPurchasesRepository, VendorPurchasesRepository>();
             return services;
         }
     }

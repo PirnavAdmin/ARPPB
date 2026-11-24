@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Data;
+using System.Data.Common;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AgriPurchaseBilling.Application.DTOs.VendorOperations;
 using AgriPurchaseBilling.Application.Interfaces;
-using AgriPurchaseBilling.Domain.Entities.VendorOperations;
 using AgriPurchaseBilling.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,144 +23,95 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             _context = context;
         }
 
+        private async Task<DbConnection> GetOpenConnectionAsync(CancellationToken cancellationToken)
+        {
+            var conn = _context.Database.GetDbConnection();
+            if (conn.State != ConnectionState.Open)
+            {
+                await conn.OpenAsync(cancellationToken);
+            }
+            return conn;
+        }
+
         // ==========================================
         // 1. RAW MATERIAL INVENTORY
         // ==========================================
 
         public async Task<VendorRawMaterialOverviewDto> GetRawMaterialOverviewAsync(long vendorId, CancellationToken cancellationToken = default)
         {
-            var stocks = await _context.RawMaterialStocks.AsNoTracking()
-                .Where(s => s.VendorId == vendorId)
-                .ToListAsync(cancellationToken);
+            var dto = new VendorRawMaterialOverviewDto { StockUnit = "Qtl" };
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_Vendor_GetRawMaterialOverview(@p_vendor_id);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
 
-            var totalStockQty = stocks.Sum(s => s.PurchasedQuantity);
-            var availQty = stocks.Sum(s => s.AvailableQuantity);
-            var processedQty = stocks.Sum(s => s.ProcessedQuantity);
-            var valuation = stocks.Sum(s => s.AvailableQuantity * s.AverageCost);
-
-            var lowStockItems = stocks
-                .Where(s => s.AvailableQuantity <= s.MinThresholdQuantity || string.Equals(s.Status, "Low Stock", StringComparison.OrdinalIgnoreCase))
-                .Select(s => new LowStockAlertDto
-                {
-                    StockId = s.StockCode,
-                    CropName = s.CropName,
-                    BatchNumber = s.BatchNumber,
-                    QuantityLeft = s.AvailableQuantity,
-                    Unit = s.Unit
-                }).ToList();
-
-            return new VendorRawMaterialOverviewDto
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
             {
-                TotalStockQuantity = totalStockQty,
-                StockUnit = "Qtl",
-                TotalTraceableBatches = stocks.Count,
-                AvailableQuantity = availQty,
-                ValuationAmount = valuation,
-                ProcessedQuantity = processedQty,
-                LowStockItemsCount = lowStockItems.Count,
-                LowStockAlerts = lowStockItems
-            };
+                dto.TotalStockQuantity = SafeDecimal(reader["TotalStockQuantity"]);
+                dto.StockUnit = SafeString(reader["StockUnit"]);
+                dto.TotalTraceableBatches = SafeInt(reader["TotalTraceableBatches"]);
+                dto.AvailableQuantity = SafeDecimal(reader["AvailableQuantity"]);
+                dto.ValuationAmount = SafeDecimal(reader["ValuationAmount"]);
+                dto.ProcessedQuantity = SafeDecimal(reader["ProcessedQuantity"]);
+                dto.LowStockItemsCount = SafeInt(reader["LowStockItemsCount"]);
+            }
+
+            if (await reader.NextResultAsync(cancellationToken))
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    dto.LowStockAlerts.Add(new LowStockAlertDto
+                    {
+                        StockId = SafeString(reader["StockId"]),
+                        CropName = SafeString(reader["CropName"]),
+                        BatchNumber = SafeString(reader["BatchNumber"]),
+                        QuantityLeft = SafeDecimal(reader["QuantityLeft"]),
+                        Unit = SafeString(reader["Unit"])
+                    });
+                }
+            }
+
+            return dto;
         }
 
         public async Task<List<VendorRawMaterialStockDto>> GetRawMaterialStocksAsync(
             long vendorId, string? search, string? crop, string? supplierType, string? grade, string? stockStatus, CancellationToken cancellationToken = default)
         {
-            var query = _context.RawMaterialStocks.AsNoTracking()
-                .Where(s => s.VendorId == vendorId)
-                .AsQueryable();
+            var list = new List<VendorRawMaterialStockDto>();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_Vendor_GetRawMaterialStocks(@p_vendor_id, @p_search, @p_crop, @p_supplier_type, @p_grade, @p_status);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_search", Clean(search));
+            AddParam(cmd, "@p_crop", Clean(crop));
+            AddParam(cmd, "@p_supplier_type", Clean(supplierType));
+            AddParam(cmd, "@p_grade", Clean(grade));
+            AddParam(cmd, "@p_status", Clean(stockStatus));
 
-            if (!string.IsNullOrWhiteSpace(crop) && !crop.Equals("All", StringComparison.OrdinalIgnoreCase))
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
             {
-                query = query.Where(s => s.CropName.ToLower() == crop.ToLower());
+                list.Add(MapRawMaterialStock(reader));
             }
 
-            if (!string.IsNullOrWhiteSpace(supplierType) && !supplierType.Equals("All", StringComparison.OrdinalIgnoreCase))
-            {
-                query = query.Where(s => s.SupplierCategory.ToLower() == supplierType.ToLower());
-            }
-
-            if (!string.IsNullOrWhiteSpace(grade) && !grade.Equals("All", StringComparison.OrdinalIgnoreCase))
-            {
-                query = query.Where(s => s.QualityGrade.ToLower().Contains(grade.ToLower()));
-            }
-
-            if (!string.IsNullOrWhiteSpace(stockStatus) && !stockStatus.Equals("All", StringComparison.OrdinalIgnoreCase))
-            {
-                query = query.Where(s => s.Status.ToLower() == stockStatus.ToLower());
-            }
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var term = search.Trim().ToLower();
-                query = query.Where(s =>
-                    s.StockCode.ToLower().Contains(term) ||
-                    s.CropName.ToLower().Contains(term) ||
-                    s.CropVariety.ToLower().Contains(term) ||
-                    s.BatchNumber.ToLower().Contains(term) ||
-                    s.SupplierName.ToLower().Contains(term) ||
-                    s.PurchaseId.ToLower().Contains(term));
-            }
-
-            var list = await query.OrderByDescending(s => s.PurchaseDate).ToListAsync(cancellationToken);
-
-            return list.Select(s => new VendorRawMaterialStockDto
-            {
-                Id = s.Id,
-                StockId = s.StockCode,
-                CropName = s.CropName,
-                CropVariety = s.CropVariety,
-                SupplierName = s.SupplierName,
-                SupplierCategory = s.SupplierCategory,
-                PurchaseId = s.PurchaseId,
-                BatchNumber = s.BatchNumber,
-                PurchaseDate = s.PurchaseDate,
-                PurchasedQuantity = s.PurchasedQuantity,
-                ProcessedQuantity = s.ProcessedQuantity,
-                AvailableQuantity = s.AvailableQuantity,
-                Unit = s.Unit,
-                AverageCost = s.AverageCost,
-                QualityGrade = s.QualityGrade,
-                Status = s.Status
-            }).ToList();
+            return list;
         }
 
         public async Task<VendorRawMaterialStockDto?> GetRawMaterialStockByIdAsync(long vendorId, string stockCodeOrId, CancellationToken cancellationToken = default)
         {
-            var query = _context.RawMaterialStocks.AsNoTracking()
-                .Where(s => s.VendorId == vendorId)
-                .AsQueryable();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_Vendor_GetRawMaterialStockById(@p_vendor_id, @p_stock_id_or_code);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_stock_id_or_code", stockCodeOrId.Trim());
 
-            if (long.TryParse(stockCodeOrId, out var id))
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
             {
-                query = query.Where(s => s.Id == id || s.StockCode == stockCodeOrId);
+                return MapRawMaterialStock(reader);
             }
-            else
-            {
-                query = query.Where(s => s.StockCode == stockCodeOrId);
-            }
-
-            var s = await query.FirstOrDefaultAsync(cancellationToken);
-            if (s == null) return null;
-
-            return new VendorRawMaterialStockDto
-            {
-                Id = s.Id,
-                StockId = s.StockCode,
-                CropName = s.CropName,
-                CropVariety = s.CropVariety,
-                SupplierName = s.SupplierName,
-                SupplierCategory = s.SupplierCategory,
-                PurchaseId = s.PurchaseId,
-                BatchNumber = s.BatchNumber,
-                PurchaseDate = s.PurchaseDate,
-                PurchasedQuantity = s.PurchasedQuantity,
-                ProcessedQuantity = s.ProcessedQuantity,
-                AvailableQuantity = s.AvailableQuantity,
-                Unit = s.Unit,
-                AverageCost = s.AverageCost,
-                QualityGrade = s.QualityGrade,
-                Status = s.Status
-            };
+            return null;
         }
 
         public async Task<VendorRawMaterialStockDto> CreateRawMaterialStockAsync(long vendorId, CreateRawMaterialStockRequest request, CancellationToken cancellationToken = default)
@@ -170,80 +122,60 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             if (request.PurchasedQuantity <= 0)
                 throw new ArgumentException("Purchased quantity must be greater than zero.");
 
-            var count = await _context.RawMaterialStocks.CountAsync(cancellationToken);
-            var stockCode = $"STK-{(count + 1):D4}";
-            var cropClean = request.CropName.Trim();
-            var cropPrefix = cropClean.Length >= 3 ? cropClean.Substring(0, 3).ToUpperInvariant() : cropClean.ToUpperInvariant();
-            var batchNumber = string.IsNullOrWhiteSpace(request.BatchNumber)
-                ? $"BCH-{cropPrefix}-{(count + 1):D3}"
-                : request.BatchNumber.Trim();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_Vendor_CreateRawMaterialStock(@p_vendor_id, @p_crop_name, @p_crop_variety, @p_supplier_name, @p_supplier_category, @p_purchase_id, @p_batch_number, @p_purchase_date, @p_purchased_quantity, @p_unit, @p_average_cost, @p_quality_grade, @p_min_threshold);";
 
-            var entity = new VendorRawMaterialStock
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_crop_name", request.CropName.Trim());
+            AddParam(cmd, "@p_crop_variety", Clean(request.CropVariety) ?? "Standard");
+            AddParam(cmd, "@p_supplier_name", Clean(request.SupplierName) ?? "Direct Procurement");
+            AddParam(cmd, "@p_supplier_category", Clean(request.SupplierCategory) ?? "Farmer");
+            AddParam(cmd, "@p_purchase_id", Clean(request.PurchaseId));
+            AddParam(cmd, "@p_batch_number", Clean(request.BatchNumber));
+            AddParam(cmd, "@p_purchase_date", request.PurchaseDate ?? DateTime.UtcNow);
+            AddParam(cmd, "@p_purchased_quantity", request.PurchasedQuantity);
+            AddParam(cmd, "@p_unit", Clean(request.Unit) ?? "Quintal");
+            AddParam(cmd, "@p_average_cost", request.AverageCost);
+            AddParam(cmd, "@p_quality_grade", Clean(request.QualityGrade) ?? "Grade A (Standard FAQ)");
+            AddParam(cmd, "@p_min_threshold", request.MinThresholdQuantity ?? 15m);
+
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
             {
-                VendorId = vendorId,
-                StockCode = stockCode,
-                CropName = cropClean,
-                CropVariety = string.IsNullOrWhiteSpace(request.CropVariety) ? "Standard" : request.CropVariety.Trim(),
-                SupplierName = string.IsNullOrWhiteSpace(request.SupplierName) ? "Direct Procurement" : request.SupplierName.Trim(),
-                SupplierCategory = string.IsNullOrWhiteSpace(request.SupplierCategory) ? "Farmer" : request.SupplierCategory.Trim(),
-                PurchaseId = string.IsNullOrWhiteSpace(request.PurchaseId) ? $"PUR-{DateTime.UtcNow:yyyyMMdd}-{(count + 1):D3}" : request.PurchaseId.Trim(),
-                BatchNumber = batchNumber,
-                PurchaseDate = request.PurchaseDate ?? DateTime.UtcNow,
-                PurchasedQuantity = request.PurchasedQuantity,
-                ProcessedQuantity = 0,
-                AvailableQuantity = request.PurchasedQuantity,
-                Unit = string.IsNullOrWhiteSpace(request.Unit) ? "Quintal" : request.Unit.Trim(),
-                AverageCost = request.AverageCost,
-                QualityGrade = string.IsNullOrWhiteSpace(request.QualityGrade) ? "Grade A (Standard FAQ)" : request.QualityGrade.Trim(),
-                Status = "In Stock",
-                MinThresholdQuantity = request.MinThresholdQuantity ?? 15,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+                return MapRawMaterialStock(reader);
+            }
 
-            _context.RawMaterialStocks.Add(entity);
-
-            var movCount = await _context.StockMovements.CountAsync(cancellationToken);
-            _context.StockMovements.Add(new VendorStockMovement
-            {
-                Stock = entity,
-                MovementCode = $"MOV-{(movCount + 1):D4}",
-                MovementDate = DateTime.UtcNow,
-                BatchNumber = batchNumber,
-                CropName = entity.CropName,
-                MovementType = "Purchase Inward",
-                ReferenceId = entity.PurchaseId,
-                QuantityChange = request.PurchasedQuantity,
-                Unit = entity.Unit,
-                BalanceAfter = request.PurchasedQuantity,
-                Remarks = $"Stock inward for {entity.CropName} ({entity.SupplierCategory} purchase from {entity.SupplierName})"
-            });
-
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return (await GetRawMaterialStockByIdAsync(vendorId, stockCode, cancellationToken))!;
+            throw new InvalidOperationException("Failed to create raw material stock.");
         }
 
         public async Task<List<VendorStockMovementDto>> GetStockMovementsAsync(long vendorId, CancellationToken cancellationToken = default)
         {
-            return await _context.StockMovements.AsNoTracking()
-                .Include(m => m.Stock)
-                .Where(m => m.Stock != null && m.Stock.VendorId == vendorId)
-                .OrderByDescending(m => m.MovementDate)
-                .Select(m => new VendorStockMovementDto
+            var list = new List<VendorStockMovementDto>();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_Vendor_GetStockMovements(@p_vendor_id);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                list.Add(new VendorStockMovementDto
                 {
-                    Id = m.Id,
-                    MovementId = m.MovementCode,
-                    MovementDate = m.MovementDate,
-                    BatchNumber = m.BatchNumber,
-                    CropName = m.CropName,
-                    MovementType = m.MovementType,
-                    ReferenceId = m.ReferenceId,
-                    QuantityChange = m.QuantityChange,
-                    Unit = m.Unit,
-                    BalanceAfter = m.BalanceAfter,
-                    Remarks = m.Remarks
-                }).ToListAsync(cancellationToken);
+                    Id = SafeLong(reader["Id"]),
+                    MovementId = SafeString(reader["MovementId"]),
+                    MovementDate = SafeDateTime(reader["MovementDate"]),
+                    BatchNumber = SafeString(reader["BatchNumber"]),
+                    CropName = SafeString(reader["CropName"]),
+                    MovementType = SafeString(reader["MovementType"]),
+                    ReferenceId = SafeString(reader["ReferenceId"]),
+                    QuantityChange = SafeDecimal(reader["QuantityChange"]),
+                    Unit = SafeString(reader["Unit"]),
+                    BalanceAfter = SafeDecimal(reader["BalanceAfter"]),
+                    Remarks = SafeString(reader["Remarks"])
+                });
+            }
+            return list;
         }
 
         public async Task<byte[]> ExportRawMaterialsCsvAsync(long vendorId, CancellationToken cancellationToken = default)
@@ -260,235 +192,171 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             return Encoding.UTF8.GetBytes(sb.ToString());
         }
 
+        private static VendorRawMaterialStockDto MapRawMaterialStock(DbDataReader reader) => new()
+        {
+            Id = SafeLong(reader["Id"]),
+            StockId = SafeString(reader["StockId"]),
+            CropName = SafeString(reader["CropName"]),
+            CropVariety = SafeString(reader["CropVariety"]),
+            SupplierName = SafeString(reader["SupplierName"]),
+            SupplierCategory = SafeString(reader["SupplierCategory"]),
+            PurchaseId = SafeString(reader["PurchaseId"]),
+            BatchNumber = SafeString(reader["BatchNumber"]),
+            PurchaseDate = SafeDateTime(reader["PurchaseDate"]),
+            PurchasedQuantity = SafeDecimal(reader["PurchasedQuantity"]),
+            ProcessedQuantity = SafeDecimal(reader["ProcessedQuantity"]),
+            AvailableQuantity = SafeDecimal(reader["AvailableQuantity"]),
+            Unit = SafeString(reader["Unit"]),
+            AverageCost = SafeDecimal(reader["AverageCost"]),
+            QualityGrade = SafeString(reader["QualityGrade"]),
+            Status = SafeString(reader["Status"])
+        };
+
         // ==========================================
         // 2. PRODUCT PROCESSING MANAGEMENT
         // ==========================================
 
         public async Task<VendorProcessingOverviewDto> GetProcessingOverviewAsync(long vendorId, CancellationToken cancellationToken = default)
         {
-            var batches = await _context.ProcessingBatches.AsNoTracking()
-                .Where(b => b.VendorId == vendorId)
-                .Include(b => b.Outputs)
-                .ToListAsync(cancellationToken);
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_Vendor_GetProcessingOverview(@p_vendor_id);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
 
-            var totalInput = batches.Sum(b => b.InputQuantity);
-            var totalOutput = batches.SelectMany(b => b.Outputs).Sum(o => o.OutputQuantity);
-            var totalWastage = batches.Sum(b => b.WastageQuantity);
-            var totalExpenses = batches.Sum(b => b.ProcessingExpenses);
-
-            return new VendorProcessingOverviewDto
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
             {
-                TotalBatches = batches.Count,
-                DraftProcessingCount = batches.Count(b => string.Equals(b.Status, "Draft", StringComparison.OrdinalIgnoreCase)),
-                CompletedBatchesCount = batches.Count(b => string.Equals(b.Status, "Completed", StringComparison.OrdinalIgnoreCase)),
-                TotalInputQuantity = totalInput,
-                InputUnit = "Qtl",
-                TotalOutputQuantity = totalOutput,
-                TotalWastageQuantity = totalWastage,
-                WastageUnit = "Qtl",
-                TotalProcessingExpenses = totalExpenses
-            };
+                return new VendorProcessingOverviewDto
+                {
+                    TotalBatches = SafeInt(reader["TotalBatches"]),
+                    DraftProcessingCount = SafeInt(reader["DraftProcessingCount"]),
+                    CompletedBatchesCount = SafeInt(reader["CompletedBatchesCount"]),
+                    TotalInputQuantity = SafeDecimal(reader["TotalInputQuantity"]),
+                    InputUnit = SafeString(reader["InputUnit"]),
+                    TotalOutputQuantity = SafeDecimal(reader["TotalOutputQuantity"]),
+                    TotalWastageQuantity = SafeDecimal(reader["TotalWastageQuantity"]),
+                    WastageUnit = SafeString(reader["WastageUnit"]),
+                    TotalProcessingExpenses = SafeDecimal(reader["TotalProcessingExpenses"])
+                };
+            }
+
+            return new VendorProcessingOverviewDto { InputUnit = "Qtl", WastageUnit = "Qtl" };
         }
 
         public async Task<List<VendorProcessingBatchDto>> GetProcessingBatchesAsync(
             long vendorId, string? search, string? rawMaterial, string? status, CancellationToken cancellationToken = default)
         {
-            var query = _context.ProcessingBatches.AsNoTracking()
-                .Where(b => b.VendorId == vendorId)
-                .Include(b => b.Outputs)
-                .AsQueryable();
+            var batches = new List<VendorProcessingBatchDto>();
+            var outputsByBatch = new Dictionary<long, List<VendorProcessingOutputDto>>();
 
-            if (!string.IsNullOrWhiteSpace(rawMaterial) && !rawMaterial.Equals("All", StringComparison.OrdinalIgnoreCase))
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using (var cmd = conn.CreateCommand())
             {
-                query = query.Where(b => b.RawMaterialName.ToLower() == rawMaterial.ToLower());
-            }
+                cmd.CommandText = "CALL sp_Vendor_GetProcessingBatches(@p_vendor_id, @p_search, @p_raw_material, @p_status);";
+                AddParam(cmd, "@p_vendor_id", vendorId);
+                AddParam(cmd, "@p_search", Clean(search));
+                AddParam(cmd, "@p_raw_material", Clean(rawMaterial));
+                AddParam(cmd, "@p_status", Clean(status));
 
-            if (!string.IsNullOrWhiteSpace(status) && !status.Equals("All", StringComparison.OrdinalIgnoreCase))
-            {
-                query = query.Where(b => b.Status.ToLower() == status.ToLower());
-            }
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var term = search.Trim().ToLower();
-                query = query.Where(b =>
-                    b.ProcessingCode.ToLower().Contains(term) ||
-                    b.BatchNumber.ToLower().Contains(term) ||
-                    b.RawMaterialName.ToLower().Contains(term) ||
-                    b.Outputs.Any(o => o.OutputProductName.ToLower().Contains(term)));
-            }
-
-            var list = await query.OrderByDescending(b => b.ProcessingDate).ToListAsync(cancellationToken);
-
-            return list.Select(b =>
-            {
-                var outputsSummary = string.Join(", ", b.Outputs.Select(o => $"{o.OutputProductName} ({o.OutputQuantity} {o.Unit})"));
-                return new VendorProcessingBatchDto
+                await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+                while (await reader.ReadAsync(cancellationToken))
                 {
-                    Id = b.Id,
-                    ProcessingId = b.ProcessingCode,
-                    ProcessingDate = b.ProcessingDate,
-                    RawMaterialAndBatch = $"{b.RawMaterialName} - {b.BatchNumber}",
-                    RawMaterialName = b.RawMaterialName,
-                    SourceStockId = b.SourceStockId,
-                    InputQuantity = b.InputQuantity,
-                    InputUnit = b.Unit,
-                    FinishedOutputsSummary = outputsSummary,
-                    WastageQuantity = b.WastageQuantity,
-                    WastagePercentage = b.WastagePercentage,
-                    ProcessingExpenses = b.ProcessingExpenses,
-                    TotalBatchCost = b.TotalBatchCost,
-                    UnitCost = b.UnitCost,
-                    UnitCostLabel = b.UnitCostLabel,
-                    Status = b.Status,
-                    Notes = b.Notes,
-                    Outputs = b.Outputs.Select(o => new VendorProcessingOutputDto
+                    batches.Add(MapProcessingBatchHeader(reader));
+                }
+
+                if (await reader.NextResultAsync(cancellationToken))
+                {
+                    while (await reader.ReadAsync(cancellationToken))
                     {
-                        Id = o.Id,
-                        OutputProductName = o.OutputProductName,
-                        OutputQuantity = o.OutputQuantity,
-                        Unit = o.Unit,
-                        OutputType = o.OutputType
-                    }).ToList()
-                };
-            }).ToList();
+                        var batchId = SafeLong(reader["ProcessingBatchId"]);
+                        if (!outputsByBatch.TryGetValue(batchId, out var outList))
+                        {
+                            outList = new List<VendorProcessingOutputDto>();
+                            outputsByBatch[batchId] = outList;
+                        }
+                        outList.Add(MapProcessingOutput(reader));
+                    }
+                }
+            }
+
+            foreach (var b in batches)
+            {
+                if (outputsByBatch.TryGetValue(b.Id, out var outs))
+                {
+                    b.Outputs = outs;
+                    b.FinishedOutputsSummary = string.Join(", ", outs.Select(o => $"{o.OutputProductName} ({o.OutputQuantity} {o.Unit})"));
+                }
+            }
+
+            return batches;
         }
 
         public async Task<VendorProcessingBatchDto?> GetProcessingBatchByIdAsync(long vendorId, string processingCodeOrId, CancellationToken cancellationToken = default)
         {
-            var query = _context.ProcessingBatches.AsNoTracking()
-                .Where(b => b.VendorId == vendorId)
-                .Include(b => b.Outputs)
-                .AsQueryable();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_Vendor_GetProcessingBatchById(@p_vendor_id, @p_processing_id_or_code);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_processing_id_or_code", processingCodeOrId.Trim());
 
-            if (long.TryParse(processingCodeOrId, out var id))
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (!await reader.ReadAsync(cancellationToken))
+                return null;
+
+            var batch = MapProcessingBatchHeader(reader);
+            var outputs = new List<VendorProcessingOutputDto>();
+
+            if (await reader.NextResultAsync(cancellationToken))
             {
-                query = query.Where(b => b.Id == id || b.ProcessingCode == processingCodeOrId);
-            }
-            else
-            {
-                query = query.Where(b => b.ProcessingCode == processingCodeOrId);
-            }
-
-            var b = await query.FirstOrDefaultAsync(cancellationToken);
-            if (b == null) return null;
-
-            var outputsSummary = string.Join(", ", b.Outputs.Select(o => $"{o.OutputProductName} ({o.OutputQuantity} {o.Unit})"));
-
-            return new VendorProcessingBatchDto
-            {
-                Id = b.Id,
-                ProcessingId = b.ProcessingCode,
-                ProcessingDate = b.ProcessingDate,
-                RawMaterialAndBatch = $"{b.RawMaterialName} - {b.BatchNumber}",
-                RawMaterialName = b.RawMaterialName,
-                SourceStockId = b.SourceStockId,
-                InputQuantity = b.InputQuantity,
-                InputUnit = b.Unit,
-                FinishedOutputsSummary = outputsSummary,
-                WastageQuantity = b.WastageQuantity,
-                WastagePercentage = b.WastagePercentage,
-                ProcessingExpenses = b.ProcessingExpenses,
-                TotalBatchCost = b.TotalBatchCost,
-                UnitCost = b.UnitCost,
-                UnitCostLabel = b.UnitCostLabel,
-                Status = b.Status,
-                Notes = b.Notes,
-                Outputs = b.Outputs.Select(o => new VendorProcessingOutputDto
+                while (await reader.ReadAsync(cancellationToken))
                 {
-                    Id = o.Id,
-                    OutputProductName = o.OutputProductName,
-                    OutputQuantity = o.OutputQuantity,
-                    Unit = o.Unit,
-                    OutputType = o.OutputType
-                }).ToList()
-            };
+                    outputs.Add(MapProcessingOutput(reader));
+                }
+            }
+
+            batch.Outputs = outputs;
+            batch.FinishedOutputsSummary = string.Join(", ", outputs.Select(o => $"{o.OutputProductName} ({o.OutputQuantity} {o.Unit})"));
+            return batch;
         }
 
         public async Task<VendorProcessingBatchDto> CreateProcessingBatchAsync(long vendorId, CreateProcessingBatchRequest request, CancellationToken cancellationToken = default)
         {
-            var count = await _context.ProcessingBatches.CountAsync(b => b.VendorId == vendorId, cancellationToken);
-            var processingCode = $"PROC-{(count + 1):D4}";
-            var batchNumber = $"PRC-{request.RawMaterialName.Substring(0, Math.Min(3, request.RawMaterialName.Length)).ToUpper()}-2026-{(count + 1):D3}";
+            var totalOutputQty = request.Outputs.Sum(o => o.OutputQuantity);
+            long newBatchId = 0;
+            string processingCode = string.Empty;
 
-            // Find stock to deduct
-            var stock = await _context.RawMaterialStocks
-                .FirstOrDefaultAsync(s => s.VendorId == vendorId && (s.StockCode == request.SourceStockId || s.BatchNumber == request.SourceStockId), cancellationToken);
-
-            decimal rawMaterialCost = 0;
-            if (stock != null)
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using (var cmd = conn.CreateCommand())
             {
-                rawMaterialCost = request.InputQuantity * stock.AverageCost;
-                stock.ProcessedQuantity += request.InputQuantity;
-                stock.AvailableQuantity = Math.Max(0, stock.AvailableQuantity - request.InputQuantity);
-                if (stock.AvailableQuantity <= stock.MinThresholdQuantity)
+                cmd.CommandText = "CALL sp_Vendor_CreateProcessingBatch(@p_vendor_id, @p_raw_material_name, @p_source_stock_id, @p_input_quantity, @p_unit, @p_total_output_quantity, @p_processing_expenses, @p_notes);";
+                AddParam(cmd, "@p_vendor_id", vendorId);
+                AddParam(cmd, "@p_raw_material_name", request.RawMaterialName.Trim());
+                AddParam(cmd, "@p_source_stock_id", request.SourceStockId.Trim());
+                AddParam(cmd, "@p_input_quantity", request.InputQuantity);
+                AddParam(cmd, "@p_unit", request.Unit);
+                AddParam(cmd, "@p_total_output_quantity", totalOutputQty);
+                AddParam(cmd, "@p_processing_expenses", request.ProcessingExpenses);
+                AddParam(cmd, "@p_notes", Clean(request.Notes));
+
+                await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+                if (await reader.ReadAsync(cancellationToken))
                 {
-                    stock.Status = stock.AvailableQuantity == 0 ? "Depleted" : "Low Stock";
+                    newBatchId = SafeLong(reader["BatchId"]);
+                    processingCode = SafeString(reader["ProcessingCode"]);
                 }
             }
 
-            var totalOutputQty = request.Outputs.Sum(o => o.OutputQuantity);
-            var wastageQty = Math.Max(0, request.InputQuantity - totalOutputQty);
-            var wastagePct = request.InputQuantity > 0 ? (wastageQty / request.InputQuantity) * 100 : 0;
-            var totalBatchCost = rawMaterialCost + request.ProcessingExpenses;
-            var unitCost = totalOutputQty > 0 ? totalBatchCost / totalOutputQty : 0;
-
-            var batch = new VendorProcessingBatch
-            {
-                VendorId = vendorId,
-                ProcessingCode = processingCode,
-                BatchNumber = batchNumber,
-                RawMaterialName = request.RawMaterialName.Trim(),
-                SourceStockId = request.SourceStockId.Trim(),
-                InputQuantity = request.InputQuantity,
-                Unit = request.Unit,
-                WastageQuantity = wastageQty,
-                WastagePercentage = Math.Round(wastagePct, 2),
-                ProcessingExpenses = request.ProcessingExpenses,
-                TotalBatchCost = totalBatchCost,
-                UnitCost = Math.Round(unitCost, 2),
-                UnitCostLabel = $"₹/{request.Unit}",
-                Status = "Completed",
-                ProcessingDate = DateTime.UtcNow,
-                Notes = request.Notes?.Trim(),
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
             foreach (var o in request.Outputs)
             {
-                batch.Outputs.Add(new VendorProcessingOutput
-                {
-                    OutputProductName = o.OutputProductName.Trim(),
-                    OutputQuantity = o.OutputQuantity,
-                    Unit = o.Unit,
-                    OutputType = o.OutputType
-                });
+                await using var outCmd = conn.CreateCommand();
+                outCmd.CommandText = "CALL sp_Vendor_AddProcessingOutput(@p_processing_batch_id, @p_output_product_name, @p_output_quantity, @p_unit, @p_output_type);";
+                AddParam(outCmd, "@p_processing_batch_id", newBatchId);
+                AddParam(outCmd, "@p_output_product_name", o.OutputProductName.Trim());
+                AddParam(outCmd, "@p_output_quantity", o.OutputQuantity);
+                AddParam(outCmd, "@p_unit", o.Unit);
+                AddParam(outCmd, "@p_output_type", o.OutputType);
+                await outCmd.ExecuteNonQueryAsync(cancellationToken);
             }
-
-            _context.ProcessingBatches.Add(batch);
-
-            // Log stock movement deduction
-            if (stock != null)
-            {
-                var movCount = await _context.StockMovements.CountAsync(cancellationToken);
-                _context.StockMovements.Add(new VendorStockMovement
-                {
-                    StockId = stock.Id,
-                    MovementCode = $"MOV-{(movCount + 1):D4}",
-                    MovementDate = DateTime.UtcNow,
-                    BatchNumber = $"{stock.BatchNumber} / {stock.StockCode}",
-                    CropName = stock.CropName,
-                    MovementType = "Processing Issue",
-                    ReferenceId = processingCode,
-                    QuantityChange = -request.InputQuantity,
-                    Unit = request.Unit,
-                    BalanceAfter = stock.AvailableQuantity,
-                    Remarks = $"Issued {request.InputQuantity} {request.Unit} to Processing Batch {processingCode} ({batchNumber})"
-                });
-            }
-
-            await _context.SaveChangesAsync(cancellationToken);
 
             return (await GetProcessingBatchByIdAsync(vendorId, processingCode, cancellationToken))!;
         }
@@ -507,278 +375,227 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             return Encoding.UTF8.GetBytes(sb.ToString());
         }
 
+        private static VendorProcessingBatchDto MapProcessingBatchHeader(DbDataReader reader)
+        {
+            var rawMaterialName = SafeString(reader["RawMaterialName"]);
+            var batchNumber = SafeString(reader["BatchNumber"]);
+            return new VendorProcessingBatchDto
+            {
+                Id = SafeLong(reader["Id"]),
+                ProcessingId = SafeString(reader["ProcessingId"]),
+                ProcessingDate = SafeDateTime(reader["ProcessingDate"]),
+                RawMaterialAndBatch = $"{rawMaterialName} - {batchNumber}",
+                RawMaterialName = rawMaterialName,
+                SourceStockId = SafeString(reader["SourceStockId"]),
+                InputQuantity = SafeDecimal(reader["InputQuantity"]),
+                InputUnit = SafeString(reader["InputUnit"]),
+                WastageQuantity = SafeDecimal(reader["WastageQuantity"]),
+                WastagePercentage = SafeDecimal(reader["WastagePercentage"]),
+                ProcessingExpenses = SafeDecimal(reader["ProcessingExpenses"]),
+                TotalBatchCost = SafeDecimal(reader["TotalBatchCost"]),
+                UnitCost = SafeDecimal(reader["UnitCost"]),
+                UnitCostLabel = SafeString(reader["UnitCostLabel"]),
+                Status = SafeString(reader["Status"]),
+                Notes = SafeNullableString(reader["Notes"])
+            };
+        }
+
+        private static VendorProcessingOutputDto MapProcessingOutput(DbDataReader reader) => new()
+        {
+            Id = SafeLong(reader["Id"]),
+            OutputProductName = SafeString(reader["OutputProductName"]),
+            OutputQuantity = SafeDecimal(reader["OutputQuantity"]),
+            Unit = SafeString(reader["Unit"]),
+            OutputType = SafeString(reader["OutputType"])
+        };
+
         // ==========================================
         // 3. FINISHED PRODUCTS INVENTORY
         // ==========================================
 
         public async Task<VendorFinishedProductsOverviewDto> GetFinishedProductsOverviewAsync(long vendorId, CancellationToken cancellationToken = default)
         {
-            var products = await _context.FinishedProducts.AsNoTracking()
-                .Where(p => p.VendorId == vendorId)
-                .ToListAsync(cancellationToken);
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_Vendor_GetFinishedProductsOverview(@p_vendor_id);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
 
-            var batchesCount = await _context.ProcessingBatches.CountAsync(b => b.VendorId == vendorId, cancellationToken);
-            var finishedStock = products.Sum(p => p.AvailableQuantity);
-            var soldQty = products.Sum(p => p.SoldQuantity);
-            var lowStockCount = products.Count(p => p.AvailableQuantity <= p.MinThresholdQuantity);
-
-            return new VendorFinishedProductsOverviewDto
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
             {
-                TotalProductTypes = products.Count,
-                ActiveBatchesCount = batchesCount,
-                TotalFinishedStock = finishedStock,
-                TotalSoldQuantity = soldQty,
-                LowStockProductsCount = lowStockCount
-            };
+                return new VendorFinishedProductsOverviewDto
+                {
+                    TotalProductTypes = SafeInt(reader["TotalProductTypes"]),
+                    ActiveBatchesCount = SafeInt(reader["ActiveBatchesCount"]),
+                    TotalFinishedStock = SafeDecimal(reader["TotalFinishedStock"]),
+                    TotalSoldQuantity = SafeDecimal(reader["TotalSoldQuantity"]),
+                    LowStockProductsCount = SafeInt(reader["LowStockProductsCount"])
+                };
+            }
+
+            return new VendorFinishedProductsOverviewDto();
         }
 
         public async Task<List<VendorFinishedProductDto>> GetFinishedProductsAsync(
             long vendorId, string? search, string? category, string? sourceRawMaterial, string? status, CancellationToken cancellationToken = default)
         {
-            var query = _context.FinishedProducts.AsNoTracking()
-                .Where(p => p.VendorId == vendorId)
-                .AsQueryable();
+            var list = new List<VendorFinishedProductDto>();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_Vendor_GetFinishedProducts(@p_vendor_id, @p_search, @p_category, @p_source_raw_material, @p_status);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_search", Clean(search));
+            AddParam(cmd, "@p_category", Clean(category));
+            AddParam(cmd, "@p_source_raw_material", Clean(sourceRawMaterial));
+            AddParam(cmd, "@p_status", Clean(status));
 
-            if (!string.IsNullOrWhiteSpace(category) && !category.Equals("All", StringComparison.OrdinalIgnoreCase))
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
             {
-                query = query.Where(p => p.Category.ToLower() == category.ToLower());
+                list.Add(MapFinishedProduct(reader));
             }
-
-            if (!string.IsNullOrWhiteSpace(sourceRawMaterial) && !sourceRawMaterial.Equals("All", StringComparison.OrdinalIgnoreCase))
-            {
-                query = query.Where(p => p.SourceRawMaterial.ToLower() == sourceRawMaterial.ToLower());
-            }
-
-            if (!string.IsNullOrWhiteSpace(status) && !status.Equals("All", StringComparison.OrdinalIgnoreCase))
-            {
-                query = query.Where(p => p.Status.ToLower() == status.ToLower());
-            }
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var term = search.Trim().ToLower();
-                query = query.Where(p =>
-                    p.ProductCode.ToLower().Contains(term) ||
-                    p.ProductName.ToLower().Contains(term) ||
-                    p.BrandName.ToLower().Contains(term) ||
-                    p.Category.ToLower().Contains(term));
-            }
-
-            var list = await query.OrderBy(p => p.ProductCode).ToListAsync(cancellationToken);
-
-            return list.Select(p => new VendorFinishedProductDto
-            {
-                Id = p.Id,
-                ProductId = p.ProductCode,
-                ProductName = p.ProductName,
-                Category = p.Category,
-                SourceRawMaterial = p.SourceRawMaterial,
-                BrandName = p.BrandName,
-                Packaging = p.Packaging,
-                AvailableQuantity = p.AvailableQuantity,
-                SoldQuantity = p.SoldQuantity,
-                Unit = p.Unit,
-                MfgDate = p.MfgDate,
-                ExpiryDate = p.ExpiryDate,
-                ProductionCost = p.ProductionCost,
-                SellingPrice = p.SellingPrice,
-                ProfitMarginPercentage = p.ProfitMarginPercentage,
-                Status = p.Status,
-                IsLowStock = p.AvailableQuantity <= p.MinThresholdQuantity,
-                ImageUrl = p.ImageUrl
-            }).ToList();
+            return list;
         }
 
         public async Task<VendorFinishedProductDto?> GetFinishedProductByIdAsync(long vendorId, string productCodeOrId, CancellationToken cancellationToken = default)
         {
-            var query = _context.FinishedProducts.AsNoTracking()
-                .Where(p => p.VendorId == vendorId)
-                .AsQueryable();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_Vendor_GetFinishedProductById(@p_vendor_id, @p_product_id_or_code);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_product_id_or_code", productCodeOrId.Trim());
 
-            if (long.TryParse(productCodeOrId, out var id))
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
             {
-                query = query.Where(p => p.Id == id || p.ProductCode == productCodeOrId);
+                return MapFinishedProduct(reader);
             }
-            else
-            {
-                query = query.Where(p => p.ProductCode == productCodeOrId);
-            }
-
-            var p = await query.FirstOrDefaultAsync(cancellationToken);
-            if (p == null) return null;
-
-            return new VendorFinishedProductDto
-            {
-                Id = p.Id,
-                ProductId = p.ProductCode,
-                ProductName = p.ProductName,
-                Category = p.Category,
-                SourceRawMaterial = p.SourceRawMaterial,
-                BrandName = p.BrandName,
-                Packaging = p.Packaging,
-                AvailableQuantity = p.AvailableQuantity,
-                SoldQuantity = p.SoldQuantity,
-                Unit = p.Unit,
-                MfgDate = p.MfgDate,
-                ExpiryDate = p.ExpiryDate,
-                ProductionCost = p.ProductionCost,
-                SellingPrice = p.SellingPrice,
-                ProfitMarginPercentage = p.ProfitMarginPercentage,
-                Status = p.Status,
-                IsLowStock = p.AvailableQuantity <= p.MinThresholdQuantity,
-                ImageUrl = p.ImageUrl
-            };
+            return null;
         }
 
         public async Task<VendorFinishedProductDto> CreateFinishedProductAsync(long vendorId, CreateFinishedProductRequest request, CancellationToken cancellationToken = default)
         {
-            var count = await _context.FinishedProducts.CountAsync(p => p.VendorId == vendorId, cancellationToken);
-            var productCode = $"PROD-{(count + 1):D4}";
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_Vendor_CreateFinishedProduct(@p_vendor_id, @p_product_name, @p_category, @p_source_raw_material, @p_brand_name, @p_packaging, @p_initial_quantity, @p_unit, @p_mfg_date, @p_expiry_date, @p_production_cost, @p_selling_price, @p_min_threshold_quantity, @p_image_url);";
 
-            var margin = request.SellingPrice > 0
-                ? Math.Round(((request.SellingPrice - request.ProductionCost) / request.SellingPrice) * 100, 2)
-                : 0;
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_product_name", request.ProductName.Trim());
+            AddParam(cmd, "@p_category", request.Category.Trim());
+            AddParam(cmd, "@p_source_raw_material", request.SourceRawMaterial.Trim());
+            AddParam(cmd, "@p_brand_name", request.BrandName.Trim());
+            AddParam(cmd, "@p_packaging", request.Packaging.Trim());
+            AddParam(cmd, "@p_initial_quantity", request.InitialQuantity);
+            AddParam(cmd, "@p_unit", request.Unit);
+            AddParam(cmd, "@p_mfg_date", request.MfgDate);
+            AddParam(cmd, "@p_expiry_date", request.ExpiryDate);
+            AddParam(cmd, "@p_production_cost", request.ProductionCost);
+            AddParam(cmd, "@p_selling_price", request.SellingPrice);
+            AddParam(cmd, "@p_min_threshold_quantity", request.MinThresholdQuantity);
+            AddParam(cmd, "@p_image_url", Clean(request.ImageUrl));
 
-            var product = new VendorFinishedProduct
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
             {
-                VendorId = vendorId,
-                ProductCode = productCode,
-                ProductName = request.ProductName.Trim(),
-                Category = request.Category.Trim(),
-                SourceRawMaterial = request.SourceRawMaterial.Trim(),
-                BrandName = request.BrandName.Trim(),
-                Packaging = request.Packaging.Trim(),
-                AvailableQuantity = request.InitialQuantity,
-                SoldQuantity = 0,
-                Unit = request.Unit,
-                MfgDate = request.MfgDate,
-                ExpiryDate = request.ExpiryDate,
-                ProductionCost = request.ProductionCost,
-                SellingPrice = request.SellingPrice,
-                ProfitMarginPercentage = margin,
-                MinThresholdQuantity = request.MinThresholdQuantity,
-                Status = "Active",
-                ImageUrl = request.ImageUrl,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            if (request.InitialQuantity > 0)
-            {
-                product.Movements.Add(new VendorFinishedProductMovement
-                {
-                    MovementCode = $"FMOV-{(count + 1):D4}",
-                    MovementType = "Initial Stock Inward",
-                    ReferenceId = "INIT-SETUP",
-                    QuantityChange = request.InitialQuantity,
-                    Unit = request.Unit,
-                    BalanceAfter = request.InitialQuantity,
-                    MovementDate = DateTime.UtcNow,
-                    Remarks = "Initial SKU stock registration",
-                    CreatedAt = DateTime.UtcNow
-                });
+                return MapFinishedProduct(reader);
             }
 
-            _context.FinishedProducts.Add(product);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return (await GetFinishedProductByIdAsync(vendorId, productCode, cancellationToken))!;
+            throw new InvalidOperationException("Failed to create finished product.");
         }
 
         public async Task<VendorFinishedProductDto?> UpdateFinishedProductAsync(long vendorId, string productCodeOrId, UpdateFinishedProductRequest request, CancellationToken cancellationToken = default)
         {
-            var product = await FindFinishedProductEntityAsync(vendorId, productCodeOrId, cancellationToken);
-            if (product == null) return null;
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_Vendor_UpdateFinishedProduct(@p_vendor_id, @p_product_id_or_code, @p_product_name, @p_category, @p_source_raw_material, @p_brand_name, @p_packaging, @p_mfg_date, @p_expiry_date, @p_production_cost, @p_selling_price, @p_min_threshold_quantity, @p_status, @p_image_url);";
 
-            var margin = request.SellingPrice > 0
-                ? Math.Round(((request.SellingPrice - request.ProductionCost) / request.SellingPrice) * 100, 2)
-                : 0;
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_product_id_or_code", productCodeOrId.Trim());
+            AddParam(cmd, "@p_product_name", request.ProductName.Trim());
+            AddParam(cmd, "@p_category", request.Category.Trim());
+            AddParam(cmd, "@p_source_raw_material", request.SourceRawMaterial.Trim());
+            AddParam(cmd, "@p_brand_name", request.BrandName.Trim());
+            AddParam(cmd, "@p_packaging", request.Packaging.Trim());
+            AddParam(cmd, "@p_mfg_date", request.MfgDate);
+            AddParam(cmd, "@p_expiry_date", request.ExpiryDate);
+            AddParam(cmd, "@p_production_cost", request.ProductionCost);
+            AddParam(cmd, "@p_selling_price", request.SellingPrice);
+            AddParam(cmd, "@p_min_threshold_quantity", request.MinThresholdQuantity);
+            AddParam(cmd, "@p_status", Clean(request.Status));
+            AddParam(cmd, "@p_image_url", Clean(request.ImageUrl));
 
-            product.ProductName = request.ProductName.Trim();
-            product.Category = request.Category.Trim();
-            product.SourceRawMaterial = request.SourceRawMaterial.Trim();
-            product.BrandName = request.BrandName.Trim();
-            product.Packaging = request.Packaging.Trim();
-            product.MfgDate = request.MfgDate;
-            product.ExpiryDate = request.ExpiryDate;
-            product.ProductionCost = request.ProductionCost;
-            product.SellingPrice = request.SellingPrice;
-            product.ProfitMarginPercentage = margin;
-            product.MinThresholdQuantity = request.MinThresholdQuantity;
-            if (!string.IsNullOrWhiteSpace(request.Status))
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
             {
-                product.Status = request.Status.Trim();
+                return MapFinishedProduct(reader);
             }
-            if (!string.IsNullOrWhiteSpace(request.ImageUrl))
-            {
-                product.ImageUrl = request.ImageUrl.Trim();
-            }
-            product.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync(cancellationToken);
-            return await GetFinishedProductByIdAsync(vendorId, product.ProductCode, cancellationToken);
+            return null;
         }
 
         public async Task<bool> AdjustFinishedProductStockAsync(long vendorId, string productCodeOrId, AdjustFinishedProductStockRequest request, CancellationToken cancellationToken = default)
         {
-            var product = await FindFinishedProductEntityAsync(vendorId, productCodeOrId, cancellationToken);
-            if (product == null) return false;
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_Vendor_AdjustFinishedProductStock(@p_vendor_id, @p_product_id_or_code, @p_quantity_adjustment, @p_reference_id, @p_reason);";
 
-            product.AvailableQuantity += request.QuantityAdjustment;
-            if (product.AvailableQuantity < 0) product.AvailableQuantity = 0;
-            product.UpdatedAt = DateTime.UtcNow;
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_product_id_or_code", productCodeOrId.Trim());
+            AddParam(cmd, "@p_quantity_adjustment", request.QuantityAdjustment);
+            AddParam(cmd, "@p_reference_id", Clean(request.ReferenceId));
+            AddParam(cmd, "@p_reason", request.Reason.Trim());
 
-            var movCount = await _context.FinishedProductMovements.CountAsync(cancellationToken);
-            _context.FinishedProductMovements.Add(new VendorFinishedProductMovement
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
             {
-                FinishedProductId = product.Id,
-                MovementCode = $"FMOV-{(movCount + 1):D4}",
-                MovementType = request.QuantityAdjustment >= 0 ? "Stock Adjustment Inward" : "Stock Adjustment Deduction",
-                ReferenceId = request.ReferenceId ?? "MANUAL-ADJ",
-                QuantityChange = request.QuantityAdjustment,
-                Unit = product.Unit,
-                BalanceAfter = product.AvailableQuantity,
-                MovementDate = DateTime.UtcNow,
-                Remarks = request.Reason.Trim(),
-                CreatedAt = DateTime.UtcNow
-            });
-
-            await _context.SaveChangesAsync(cancellationToken);
-            return true;
+                return SafeBool(reader["Adjusted"]);
+            }
+            return false;
         }
 
         public async Task<List<VendorFinishedProductMovementDto>> GetFinishedProductMovementsAsync(long vendorId, string productCodeOrId, CancellationToken cancellationToken = default)
         {
-            var product = await FindFinishedProductEntityAsync(vendorId, productCodeOrId, cancellationToken);
-            if (product == null) return new List<VendorFinishedProductMovementDto>();
+            var list = new List<VendorFinishedProductMovementDto>();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_Vendor_GetFinishedProductMovements(@p_vendor_id, @p_product_id_or_code);";
 
-            return await _context.FinishedProductMovements.AsNoTracking()
-                .Where(m => m.FinishedProductId == product.Id)
-                .OrderByDescending(m => m.MovementDate)
-                .Select(m => new VendorFinishedProductMovementDto
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_product_id_or_code", productCodeOrId.Trim());
+
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                list.Add(new VendorFinishedProductMovementDto
                 {
-                    Id = m.Id,
-                    MovementCode = m.MovementCode,
-                    MovementType = m.MovementType,
-                    ReferenceId = m.ReferenceId,
-                    QuantityChange = m.QuantityChange,
-                    Unit = m.Unit,
-                    BalanceAfter = m.BalanceAfter,
-                    MovementDate = m.MovementDate,
-                    Remarks = m.Remarks
-                }).ToListAsync(cancellationToken);
+                    Id = SafeLong(reader["Id"]),
+                    MovementCode = SafeString(reader["MovementCode"]),
+                    MovementType = SafeString(reader["MovementType"]),
+                    ReferenceId = SafeString(reader["ReferenceId"]),
+                    QuantityChange = SafeDecimal(reader["QuantityChange"]),
+                    Unit = SafeString(reader["Unit"]),
+                    BalanceAfter = SafeDecimal(reader["BalanceAfter"]),
+                    MovementDate = SafeDateTime(reader["MovementDate"]),
+                    Remarks = SafeString(reader["Remarks"])
+                });
+            }
+            return list;
         }
 
         public async Task<bool> ToggleFinishedProductStatusAsync(long vendorId, string productCodeOrId, CancellationToken cancellationToken = default)
         {
-            var product = await FindFinishedProductEntityAsync(vendorId, productCodeOrId, cancellationToken);
-            if (product == null) return false;
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_Vendor_ToggleFinishedProductStatus(@p_vendor_id, @p_product_id_or_code);";
 
-            product.Status = string.Equals(product.Status, "Active", StringComparison.OrdinalIgnoreCase) ? "Inactive" : "Active";
-            product.UpdatedAt = DateTime.UtcNow;
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_product_id_or_code", productCodeOrId.Trim());
 
-            await _context.SaveChangesAsync(cancellationToken);
-            return true;
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                return SafeBool(reader["Toggled"]);
+            }
+            return false;
         }
 
         public async Task<byte[]> ExportFinishedProductsCsvAsync(long vendorId, CancellationToken cancellationToken = default)
@@ -795,13 +612,44 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             return Encoding.UTF8.GetBytes(sb.ToString());
         }
 
-        private async Task<VendorFinishedProduct?> FindFinishedProductEntityAsync(long vendorId, string productCodeOrId, CancellationToken cancellationToken)
+        private static VendorFinishedProductDto MapFinishedProduct(DbDataReader reader) => new()
         {
-            if (long.TryParse(productCodeOrId, out var id))
-            {
-                return await _context.FinishedProducts.FirstOrDefaultAsync(p => p.VendorId == vendorId && (p.Id == id || p.ProductCode == productCodeOrId), cancellationToken);
-            }
-            return await _context.FinishedProducts.FirstOrDefaultAsync(p => p.VendorId == vendorId && p.ProductCode == productCodeOrId, cancellationToken);
+            Id = SafeLong(reader["Id"]),
+            ProductId = SafeString(reader["ProductId"]),
+            ProductName = SafeString(reader["ProductName"]),
+            Category = SafeString(reader["Category"]),
+            SourceRawMaterial = SafeString(reader["SourceRawMaterial"]),
+            BrandName = SafeString(reader["BrandName"]),
+            Packaging = SafeString(reader["Packaging"]),
+            AvailableQuantity = SafeDecimal(reader["AvailableQuantity"]),
+            SoldQuantity = SafeDecimal(reader["SoldQuantity"]),
+            Unit = SafeString(reader["Unit"]),
+            MfgDate = SafeDateTime(reader["MfgDate"]),
+            ExpiryDate = SafeDateTime(reader["ExpiryDate"]),
+            ProductionCost = SafeDecimal(reader["ProductionCost"]),
+            SellingPrice = SafeDecimal(reader["SellingPrice"]),
+            ProfitMarginPercentage = SafeDecimal(reader["ProfitMarginPercentage"]),
+            Status = SafeString(reader["Status"]),
+            IsLowStock = SafeBool(reader["IsLowStock"]),
+            ImageUrl = SafeNullableString(reader["ImageUrl"])
+        };
+
+        private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+        private static void AddParam(DbCommand cmd, string name, object? value)
+        {
+            var p = cmd.CreateParameter();
+            p.ParameterName = name;
+            p.Value = value ?? DBNull.Value;
+            cmd.Parameters.Add(p);
         }
+
+        private static string SafeString(object? val) => val == null || val is DBNull ? string.Empty : val.ToString() ?? string.Empty;
+        private static string? SafeNullableString(object? val) => val == null || val is DBNull ? null : val.ToString();
+        private static decimal SafeDecimal(object? val) => val == null || val is DBNull ? 0m : Convert.ToDecimal(val, CultureInfo.InvariantCulture);
+        private static int SafeInt(object? val) => val == null || val is DBNull ? 0 : Convert.ToInt32(val, CultureInfo.InvariantCulture);
+        private static long SafeLong(object? val) => val == null || val is DBNull ? 0L : Convert.ToInt64(val, CultureInfo.InvariantCulture);
+        private static DateTime SafeDateTime(object? val) => val == null || val is DBNull ? DateTime.MinValue : Convert.ToDateTime(val, CultureInfo.InvariantCulture);
+        private static bool SafeBool(object? val) => val != null && !(val is DBNull) && (val is bool b ? b : Convert.ToInt32(val, CultureInfo.InvariantCulture) != 0);
     }
 }

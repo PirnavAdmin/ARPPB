@@ -54,6 +54,27 @@ namespace AgriPurchaseBilling.Application.Services
             return MapProfile(profile, bank);
         }
 
+        public async Task<VendorProfileDto?> UpdateMyProfileAsync(
+            long userId,
+            UpdateVendorProfileRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            var existing = await _repository.GetOrCreateProfileByUserIdAsync(userId, cancellationToken);
+            if (existing == null)
+            {
+                return null;
+            }
+
+            var updated = await _repository.UpdateProfileAsync(existing.Id, request, cancellationToken);
+            if (updated == null)
+            {
+                return null;
+            }
+
+            var bank = await _repository.GetPrimaryBankAsync(updated.Id, cancellationToken);
+            return MapProfile(updated, bank);
+        }
+
         public async Task<VendorProfileDto?> UpdateProfileByIdAsync(
             long userId,
             long id,
