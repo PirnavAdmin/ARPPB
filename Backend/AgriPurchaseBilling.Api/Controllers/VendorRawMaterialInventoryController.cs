@@ -64,6 +64,24 @@ namespace AgriPurchaseBilling.Api.Controllers
                 : Ok(ApiResponse<VendorRawMaterialStockDto>.Ok(stock, "Raw material stock lot retrieved successfully."));
         }
 
+        [HttpPost]
+        [ProducesResponseType(typeof(ApiResponse<VendorRawMaterialStockDto>), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ApiResponse<VendorRawMaterialStockDto>), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> CreateStock(
+            [FromBody] CreateRawMaterialStockRequest request,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var created = await _inventoryService.CreateRawMaterialStockAsync(CurrentVendorId, request, cancellationToken);
+                return StatusCode(StatusCodes.Status201Created, ApiResponse<VendorRawMaterialStockDto>.Ok(created, "Raw material stock batch created successfully."));
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ApiResponse<VendorRawMaterialStockDto>.Fail(ex.Message));
+            }
+        }
+
         [HttpGet("movements")]
         [ProducesResponseType(typeof(ApiResponse<List<VendorStockMovementDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetStockMovements(CancellationToken cancellationToken)

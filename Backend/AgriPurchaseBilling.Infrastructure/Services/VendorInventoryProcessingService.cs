@@ -162,6 +162,68 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             };
         }
 
+        public async Task<VendorRawMaterialStockDto> CreateRawMaterialStockAsync(long vendorId, CreateRawMaterialStockRequest request, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(request.CropName))
+                throw new ArgumentException("Crop name is required.");
+
+            if (request.PurchasedQuantity <= 0)
+                throw new ArgumentException("Purchased quantity must be greater than zero.");
+
+            var count = await _context.RawMaterialStocks.CountAsync(cancellationToken);
+            var stockCode = $"STK-{(count + 1):D4}";
+            var cropClean = request.CropName.Trim();
+            var cropPrefix = cropClean.Length >= 3 ? cropClean.Substring(0, 3).ToUpperInvariant() : cropClean.ToUpperInvariant();
+            var batchNumber = string.IsNullOrWhiteSpace(request.BatchNumber)
+                ? $"BCH-{cropPrefix}-{(count + 1):D3}"
+                : request.BatchNumber.Trim();
+
+            var entity = new VendorRawMaterialStock
+            {
+                VendorId = vendorId,
+                StockCode = stockCode,
+                CropName = cropClean,
+                CropVariety = string.IsNullOrWhiteSpace(request.CropVariety) ? "Standard" : request.CropVariety.Trim(),
+                SupplierName = string.IsNullOrWhiteSpace(request.SupplierName) ? "Direct Procurement" : request.SupplierName.Trim(),
+                SupplierCategory = string.IsNullOrWhiteSpace(request.SupplierCategory) ? "Farmer" : request.SupplierCategory.Trim(),
+                PurchaseId = string.IsNullOrWhiteSpace(request.PurchaseId) ? $"PUR-{DateTime.UtcNow:yyyyMMdd}-{(count + 1):D3}" : request.PurchaseId.Trim(),
+                BatchNumber = batchNumber,
+                PurchaseDate = request.PurchaseDate ?? DateTime.UtcNow,
+                PurchasedQuantity = request.PurchasedQuantity,
+                ProcessedQuantity = 0,
+                AvailableQuantity = request.PurchasedQuantity,
+                Unit = string.IsNullOrWhiteSpace(request.Unit) ? "Quintal" : request.Unit.Trim(),
+                AverageCost = request.AverageCost,
+                QualityGrade = string.IsNullOrWhiteSpace(request.QualityGrade) ? "Grade A (Standard FAQ)" : request.QualityGrade.Trim(),
+                Status = "In Stock",
+                MinThresholdQuantity = request.MinThresholdQuantity ?? 15,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _context.RawMaterialStocks.Add(entity);
+
+            var movCount = await _context.StockMovements.CountAsync(cancellationToken);
+            _context.StockMovements.Add(new VendorStockMovement
+            {
+                Stock = entity,
+                MovementCode = $"MOV-{(movCount + 1):D4}",
+                MovementDate = DateTime.UtcNow,
+                BatchNumber = batchNumber,
+                CropName = entity.CropName,
+                MovementType = "Purchase Inward",
+                ReferenceId = entity.PurchaseId,
+                QuantityChange = request.PurchasedQuantity,
+                Unit = entity.Unit,
+                BalanceAfter = request.PurchasedQuantity,
+                Remarks = $"Stock inward for {entity.CropName} ({entity.SupplierCategory} purchase from {entity.SupplierName})"
+            });
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return (await GetRawMaterialStockByIdAsync(vendorId, stockCode, cancellationToken))!;
+        }
+
         public async Task<List<VendorStockMovementDto>> GetStockMovementsAsync(long vendorId, CancellationToken cancellationToken = default)
         {
             return await _context.StockMovements.AsNoTracking()

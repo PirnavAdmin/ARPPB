@@ -48,6 +48,22 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorOperations
         public string Status { get; set; } = "In Stock";
     }
 
+    public class CreateRawMaterialStockRequest
+    {
+        public string CropName { get; set; } = string.Empty;
+        public string? CropVariety { get; set; }
+        public string SupplierName { get; set; } = string.Empty;
+        public string? SupplierCategory { get; set; } = "Farmer";
+        public string? PurchaseId { get; set; }
+        public string? BatchNumber { get; set; }
+        public DateTime? PurchaseDate { get; set; }
+        public decimal PurchasedQuantity { get; set; }
+        public string? Unit { get; set; } = "Quintal";
+        public decimal AverageCost { get; set; }
+        public string? QualityGrade { get; set; } = "Grade A (Standard FAQ)";
+        public decimal? MinThresholdQuantity { get; set; } = 15;
+    }
+
     public class VendorStockMovementDto
     {
         public long Id { get; set; }

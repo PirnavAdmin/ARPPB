@@ -11,6 +11,7 @@ namespace AgriPurchaseBilling.Application.Interfaces
         Task<VendorRawMaterialOverviewDto> GetRawMaterialOverviewAsync(long vendorId, CancellationToken cancellationToken = default);
         Task<List<VendorRawMaterialStockDto>> GetRawMaterialStocksAsync(long vendorId, string? search, string? crop, string? supplierType, string? grade, string? stockStatus, CancellationToken cancellationToken = default);
         Task<VendorRawMaterialStockDto?> GetRawMaterialStockByIdAsync(long vendorId, string stockCodeOrId, CancellationToken cancellationToken = default);
+        Task<VendorRawMaterialStockDto> CreateRawMaterialStockAsync(long vendorId, CreateRawMaterialStockRequest request, CancellationToken cancellationToken = default);
         Task<List<VendorStockMovementDto>> GetStockMovementsAsync(long vendorId, CancellationToken cancellationToken = default);
         Task<byte[]> ExportRawMaterialsCsvAsync(long vendorId, CancellationToken cancellationToken = default);
 
