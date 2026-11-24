@@ -37,6 +37,7 @@ import {
   createMiddlemanLedgerApi,
   settleMiddlemanLedgerApi,
   fetchMiddlemanNotificationsApi,
+  createMiddlemanNotificationApi,
   markMiddlemanNotificationReadApi,
   markAllMiddlemanNotificationsReadApi,
   deleteMiddlemanNotificationApi,
@@ -241,10 +242,35 @@ export const MiddlemanProvider = ({ children }) => {
       id: generateId('NOT'),
       timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
       isRead: false,
-      priority: 'medium',
+      priority: notif.priority || 'medium',
       ...notif,
     };
     setNotifications((prev) => [newNotif, ...prev]);
+
+    // Persist to backend database MiddlemanNotifications table
+    createMiddlemanNotificationApi({
+      title: notif.title,
+      description: notif.description,
+      category: notif.category,
+      priority: notif.priority,
+      actorName: notif.actorName || notif.partyName,
+      referenceNumber: notif.referenceNumber || notif.relatedId || notif.id,
+      moduleUrl: notif.moduleUrl || notif.actionUrl,
+    })
+      .then((created) => {
+        if (created && (created.id || created.rawId)) {
+          setNotifications((prev) =>
+            prev.map((n) =>
+              n.id === newNotif.id
+                ? { ...n, rawId: created.id || created.rawId }
+                : n
+            )
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn('Persisting middleman notification warning:', err);
+      });
   }, []);
 
   const markNotificationAsRead = useCallback((id) => {

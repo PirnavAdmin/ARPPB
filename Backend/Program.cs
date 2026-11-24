@@ -78,6 +78,8 @@ builder.Services.AddVendorOperationsModule(connectionString);
 builder.Services.AddVendorPortalModule();
 builder.Services.AddScoped<AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorPortalExceptionFilter>();
 builder.Services.AddFarmerSalesModule();
+builder.Services.AddFarmerNotificationsModule();
+builder.Services.AddFarmerMarketPricesModule();
 
 // REPOSITORY REGISTRATIONS
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();

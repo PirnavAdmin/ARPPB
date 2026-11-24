@@ -77,6 +77,8 @@ import {
   markVendorNotificationReadApi,
   markAllVendorNotificationsReadApi,
   deleteVendorNotificationApi,
+  fetchVendorPurchasesApi,
+  createVendorPurchaseApi,
 } from '../services/vendorApiService';
 
 export const VendorContext = createContext(null);
@@ -178,10 +180,11 @@ export function VendorProvider({ children }) {
         fetchVendorConfirmationsApi(),
       ]);
 
-      const [dashboardConfirmationsList, ledgerList, notificationsList] = await Promise.all([
+      const [dashboardConfirmationsList, ledgerList, notificationsList, backendPurchasesList] = await Promise.all([
         fetchVendorDashboardOtpConfirmationsApi(),
         fetchVendorLedgerApi(),
         fetchVendorNotificationsApi(),
+        fetchVendorPurchasesApi(),
       ]);
 
       if (Array.isArray(farmersList) && farmersList.length > 0) {
@@ -219,6 +222,9 @@ export function VendorProvider({ children }) {
       }
       if (Array.isArray(notificationsList) && notificationsList.length > 0) {
         updateStateAndStorage(setNotifications, STORAGE_KEYS.NOTIFICATIONS, notificationsList);
+      }
+      if (Array.isArray(backendPurchasesList) && backendPurchasesList.length > 0) {
+        updateStateAndStorage(setPurchases, STORAGE_KEYS.PURCHASES, backendPurchasesList);
       }
     } catch {
       // Keep local storage fallback silently
@@ -631,6 +637,53 @@ export function VendorProvider({ children }) {
         newPurchase,
         ...prev,
       ]);
+
+      // Persist purchase to backend database
+      const matchedSupplier = isFarmer
+        ? farmers.find((f) => f.id === payload.supplierId || f.farmerName === payload.supplierName)
+        : middlemen.find((m) => m.id === payload.supplierId || m.businessName === payload.supplierName);
+
+      const supplierNumericId =
+        payload.supplierRawId ||
+        matchedSupplier?.rawId ||
+        Number(String(payload.supplierId || '').replace(/\D/g, '')) ||
+        1;
+
+      createVendorPurchaseApi({
+        supplierCategory: isFarmer ? 'Farmer' : 'Middleman',
+        supplierId: supplierNumericId,
+        purchaseCode: newPurchaseId,
+        billNumber:
+          payload.billNumber ||
+          `BILL-${dayjs().format('YYYYMMDD')}-${Math.floor(1000 + Math.random() * 9000)}`,
+        cropName: primaryItem.cropName || payload.crop || 'Paddy',
+        cropVariety: primaryItem.cropVariety || payload.variety || 'Standard',
+        quantity: calc.totalQuantity || payload.quantity || 1,
+        unit: primaryItem.unit || payload.unit || 'Quintal',
+        ratePerUnit: primaryItem.pricePerUnit || payload.rate || 1,
+        totalAmount: calc.totalPurchaseAmount,
+        dueAmount: calc.totalPurchaseAmount,
+        paymentStatus: isDraft ? 'Draft' : 'Pending',
+        purchaseDate: payload.purchaseDate || dayjs().format('YYYY-MM-DD'),
+      })
+        .then((created) => {
+          if (created && created.rawId) {
+            updateStateAndStorage(setPurchases, STORAGE_KEYS.PURCHASES, (prev) =>
+              prev.map((p) =>
+                p.id === newPurchaseId
+                  ? {
+                      ...p,
+                      rawId: created.rawId,
+                      purchaseCode: created.purchaseCode || p.id,
+                    }
+                  : p
+              )
+            );
+          }
+        })
+        .catch((err) => {
+          console.warn('Backend sync warning for createPurchase:', err);
+        });
 
       if (!isDraft) {
         const otpRecord = {
