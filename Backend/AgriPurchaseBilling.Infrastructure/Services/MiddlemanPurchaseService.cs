@@ -170,6 +170,38 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
             await _context.SaveChangesAsync();
 
+            // If not draft, also log in MiddlemanConfirmations for OTP verification
+            if (!request.IsDraft)
+            {
+                var confCode = $"CONF-F-{purchase.Id:D4}";
+                var conf = new MiddlemanConfirmation
+                {
+                    MiddlemanId = purchase.MiddlemanId,
+                    ConfirmationCode = confCode,
+                    TransactionId = purchase.PurchaseCode,
+                    TransactionType = "Farmer Purchase",
+                    PartyType = "Farmer",
+                    PartyId = purchase.FarmerId,
+                    PartyName = purchase.FarmerName,
+                    PartyMobile = purchase.FarmerMobile,
+                    Crop = purchase.CropName,
+                    Variety = string.IsNullOrWhiteSpace(purchase.Variety) ? "Standard" : purchase.Variety,
+                    Quantity = purchase.Quantity,
+                    Unit = string.IsNullOrWhiteSpace(purchase.Unit) ? "Quintal" : purchase.Unit,
+                    PricePerUnit = purchase.Rate,
+                    TransactionAmount = purchase.TotalAmount,
+                    OtpStatus = "Pending",
+                    OtpCode = "488031",
+                    RequestDate = DateTime.UtcNow,
+                    ExpiryDate = DateTime.UtcNow.AddHours(48),
+                    Notes = purchase.Notes,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                };
+                _context.MiddlemanConfirmations.Add(conf);
+                await _context.SaveChangesAsync();
+            }
+
             return MapToDto(purchase);
         }
 
