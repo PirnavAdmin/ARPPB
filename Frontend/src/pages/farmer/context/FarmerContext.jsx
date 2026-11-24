@@ -25,9 +25,38 @@ import {
   addCropYieldApi,
   DEFAULT_CROP_OPTIONS,
 } from '../../../services/farmerCropService';
+import {
+  fetchFarmerNotifications,
+  fetchFarmerNotificationStats,
+  markFarmerNotificationRead as markFarmerNotificationReadApi,
+  markAllFarmerNotificationsRead as markAllFarmerNotificationsReadApi,
+  deleteFarmerNotification as deleteFarmerNotificationApi,
+} from '../../../services/farmerNotificationService';
 
 const FarmerContext = createContext(null);
 const STORAGE_KEY = 'agri-farmer-portal-state-v1';
+
+const unwrapList = (value) => {
+  if (Array.isArray(value)) return value;
+  return value?.items || value?.notifications || value?.data || [];
+};
+
+const normalizeFarmerNotification = (item) => {
+  const timestamp = item.timestamp || item.createdAt || item.createdDate || item.createdOn;
+  return {
+    ...item,
+    id: item.id ?? item.notificationId,
+    title: item.title || item.subject || 'Notification',
+    detail: item.detail || item.message || item.description || '',
+    time: item.time || item.relativeTime || (timestamp ? new Date(timestamp).toLocaleString() : 'Today'),
+    timestamp,
+    type: String(item.type || item.priority || 'info').toLowerCase(),
+    category: String(item.category || item.type || 'general').toLowerCase(),
+    read: Boolean(item.read ?? item.isRead ?? item.is_read),
+    targetPage: item.targetPage || item.actionUrl || item.page,
+    targetId: item.targetId || item.referenceId || item.entityId,
+  };
+};
 
 const loadPersistedFarmerState = () => {
   if (typeof window === 'undefined') return null;
@@ -152,6 +181,22 @@ export function FarmerProvider({ children }) {
   const [stockRecords, setStockRecords] = useState(() => persistedState?.stockRecords ?? initialStockRecords);
   const [otpRequests, setOtpRequests] = useState(() => persistedState?.otpRequests ?? initialOTPRequests);
   const [notifications, setNotifications] = useState(() => persistedState?.notifications ?? initialNotifications);
+  const [notificationStats, setNotificationStats] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.allSettled([fetchFarmerNotifications(), fetchFarmerNotificationStats()]).then(([listResult, statsResult]) => {
+      if (!active) return;
+      if (listResult.status === 'fulfilled') {
+        setNotifications(unwrapList(listResult.value).map(normalizeFarmerNotification));
+      }
+      if (statsResult.status === 'fulfilled') {
+        const data = statsResult.value?.stats || statsResult.value;
+        if (data && typeof data === 'object') setNotificationStats(data);
+      }
+    });
+    return () => { active = false; };
+  }, [authKey]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -225,15 +270,53 @@ export function FarmerProvider({ children }) {
 
   // Notifications Actions
   const markNotificationAsRead = useCallback((id) => {
+    const wasUnread = notifications.some((item) => item.id === id && !item.read);
     setNotifications((prev) =>
       prev.map((item) => (item.id === id ? { ...item, read: true } : item))
     );
-  }, []);
+    if (wasUnread) setNotificationStats((prev) => prev ? {
+      ...prev,
+      unreadCount: Math.max(0, Number(prev.unreadCount ?? prev.unread ?? 0) - 1),
+      unread: Math.max(0, Number(prev.unread ?? prev.unreadCount ?? 0) - 1),
+    } : prev);
+    markFarmerNotificationReadApi(id).catch(() => showToast('Could not update notification status.', 'error'));
+  }, [notifications, showToast]);
 
   const markAllNotificationsAsRead = useCallback(() => {
     setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+    setNotificationStats((prev) => prev ? { ...prev, unreadCount: 0, unread: 0 } : prev);
+    markAllFarmerNotificationsReadApi().catch(() => showToast('Could not mark notifications as read.', 'error'));
     showToast('All notifications marked as read', 'info', 3000);
   }, [showToast]);
+
+  const deleteNotification = useCallback(async (id) => {
+    const removed = notifications.find((item) => item.id === id);
+    setNotifications((prev) => prev.filter((item) => item.id !== id));
+    setNotificationStats((prev) => prev ? {
+      ...prev,
+      totalCount: Math.max(0, Number(prev.totalCount ?? prev.total ?? 0) - 1),
+      total: Math.max(0, Number(prev.total ?? prev.totalCount ?? 0) - 1),
+      ...(removed && !removed.read ? {
+        unreadCount: Math.max(0, Number(prev.unreadCount ?? prev.unread ?? 0) - 1),
+        unread: Math.max(0, Number(prev.unread ?? prev.unreadCount ?? 0) - 1),
+      } : {}),
+    } : prev);
+    try {
+      await deleteFarmerNotificationApi(id);
+    } catch {
+      if (removed) setNotifications((prev) => prev.some((item) => item.id === id) ? prev : [removed, ...prev]);
+      setNotificationStats((prev) => prev ? {
+        ...prev,
+        totalCount: Number(prev.totalCount ?? prev.total ?? 0) + 1,
+        total: Number(prev.total ?? prev.totalCount ?? 0) + 1,
+        ...(removed && !removed.read ? {
+          unreadCount: Number(prev.unreadCount ?? prev.unread ?? 0) + 1,
+          unread: Number(prev.unread ?? prev.unreadCount ?? 0) + 1,
+        } : {}),
+      } : prev);
+      showToast('Could not delete notification. Refresh to try again.', 'error');
+    }
+  }, [notifications, showToast]);
 
   // Profile Action
   const updateProfile = useCallback((updated, options = {}) => {
@@ -902,9 +985,11 @@ export function FarmerProvider({ children }) {
 
       // Notifications
       notifications,
+      notificationStats,
       unreadNotificationsCount,
       markNotificationAsRead,
       markAllNotificationsAsRead,
+      deleteNotification,
 
       // Modals & UI State
       selectedTransaction,
@@ -945,9 +1030,11 @@ export function FarmerProvider({ children }) {
       resendOTP,
       pendingOtpCount,
       notifications,
+      notificationStats,
       unreadNotificationsCount,
       markNotificationAsRead,
       markAllNotificationsAsRead,
+      deleteNotification,
       selectedTransaction,
       activeOtpRequest,
       toast,

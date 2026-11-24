@@ -348,6 +348,18 @@ export const FarmerSales = {
   resendOtp: (id) => `/api/v1/farmer/sales/${id}/resend-otp`,
 };
 
+// --------------------------------------------------
+// FARMER - NOTIFICATIONS
+// --------------------------------------------------
+export const FarmerNotifications = {
+  stats: endpoint("GET", "/api/v1/farmer/notifications/stats"),
+  getAll: endpoint("GET", "/api/v1/farmer/notifications"),
+  create: endpoint("POST", "/api/v1/farmer/notifications"),
+  markRead: endpoint("PATCH", "/api/v1/farmer/notifications/{id}/read"),
+  markAllRead: endpoint("PATCH", "/api/v1/farmer/notifications/read-all"),
+  delete: endpoint("DELETE", "/api/v1/farmer/notifications/{id}"),
+};
+
 export const FARMER_SALES = {
   BASE: "/api/v1/farmer/sales",
   OPTIONS: "/api/v1/farmer/sales/options",
@@ -538,6 +550,7 @@ const API_ENDPOINTS = {
   CustomerProfile,
   FarmerCrops,
   FarmerSales,
+  FarmerNotifications,
   FARMER_SALES,
   FarmerProfile,
   MiddlemanDashboard,
