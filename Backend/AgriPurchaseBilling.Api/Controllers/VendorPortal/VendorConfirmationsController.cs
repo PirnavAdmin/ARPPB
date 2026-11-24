@@ -8,6 +8,9 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
     [Route("api/v1/vendor/confirmations")]
     public sealed class VendorConfirmationsController : VendorPortalControllerBase
     {
+        private const string CsvFileName = "Vendor_OTP_Confirmations_Log.csv";
+        private const int AllConfirmationsPageSize = 200;
+
         private readonly IVendorConfirmationsRepository _confirmations;
         private readonly IVendorOtpGenerator _otp;
         private readonly IWebHostEnvironment _environment;
@@ -28,10 +31,37 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
         public async Task<IActionResult> GetSummary(CancellationToken ct) =>
             Success(await _confirmations.GetSummaryAsync(await VendorIdAsync(ct), ct));
 
-        /// <summary>Confirmations table: category tab, OTP status, search, date range, sort, paging.</summary>
+        /// <summary>
+        /// Confirmations table: category tab, OTP status (Sent / Pending, Verified, Failed, Expired, Cancelled), search,
+        /// date range, sort, paging. Unless pageSize is given, up to 200 rows are returned so the screen can page and
+        /// filter them itself.
+        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetConfirmations([FromQuery] OtpQuery query, CancellationToken ct) =>
-            Success(await _confirmations.GetAsync(await VendorIdAsync(ct), query, ct));
+        public async Task<IActionResult> GetConfirmations([FromQuery] OtpQuery query, CancellationToken ct)
+        {
+            // Query keys are case-insensitive.
+            if (!Request.Query.ContainsKey("pageSize"))
+            {
+                query.PageSize = AllConfirmationsPageSize;
+            }
+            return Success(await _confirmations.GetAsync(await VendorIdAsync(ct), query, ct));
+        }
+
+        /// <summary>
+        /// "Export OTP Audit Log": downloads Vendor_OTP_Confirmations_Log.csv with the 13 screen columns for every
+        /// confirmation matching the same filters as the table (no paging). Mobile numbers stay masked.
+        /// </summary>
+        [HttpGet("export")]
+        public async Task<IActionResult> Export([FromQuery] OtpQuery query, CancellationToken ct)
+        {
+            var rows = await _confirmations.ExportAsync(await VendorIdAsync(ct), query, ct);
+            return File(VendorOtpMapper.ToCsv(rows), "text/csv; charset=utf-8", CsvFileName);
+        }
+
+        /// <summary>Tabs (with counts) and the Category, OTP Status and Time dropdowns.</summary>
+        [HttpGet("filters")]
+        public async Task<IActionResult> GetFilters(CancellationToken ct) =>
+            Success(await _confirmations.GetFilterOptionsAsync(await VendorIdAsync(ct), ct));
 
         /// <summary>One confirmation (the "Details" button).</summary>
         [HttpGet("{id:long}")]

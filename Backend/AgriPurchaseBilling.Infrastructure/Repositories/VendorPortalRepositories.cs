@@ -17,6 +17,36 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
         public static DateTime? NextDay(DateTime? value) => value?.Date.AddDays(1);
     }
 
+    /// <summary>Resolves the screen's Date Range preset and customer code of a sales / orders filter.</summary>
+    internal static class SaleFilters
+    {
+        public static async Task<(DateTime? From, DateTime? To, long? Customer)> ResolveAsync(
+            VendorPortalDb db, long vendorId, SalesQuery q, CancellationToken ct)
+        {
+            DateTime? from = Args.Day(q.From);
+            DateTime? to = Args.Day(q.To);
+            if (VendorOrderMapper.ResolveDayRange(q.DatePreset, DateTime.UtcNow) is { } range)
+            {
+                from = range.From;
+                to = range.To;
+            }
+
+            var customer = q.CustomerUserId;
+            var code = Args.Clean(q.CustomerCode);
+            if (customer is null && code is not null)
+            {
+                // An unknown customer code matches nothing (-1) instead of silently showing every order.
+                customer = await db.ProcAsync<long?>(
+                    "sp_vp_ledger_resolve_receipt",
+                    new (string, object?)[] { ("p_vendor", vendorId), ("p_customer_ref", code), ("p_sale_ref", null) },
+                    async r => await r.ReadAsync() && !r.IsDBNull(1) ? Convert.ToInt64(r.GetValue(1)) : null,
+                    ct) ?? -1;
+            }
+
+            return (from, to, customer);
+        }
+    }
+
     // =============================================================
     // Vendor resolution (sp_vp_vendor_resolve)
     // =============================================================
@@ -27,23 +57,15 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
 
         public async Task<long> GetVendorIdAsync(long userId, CancellationToken ct)
         {
-            try
-            {
-                var vendorId = await _db.ProcAsync(
-                    "sp_vp_vendor_resolve",
-                    new (string, object?)[] { ("p_user", userId) },
-                    RowMapper.ReadScalarLongAsync,
-                    ct);
+            var vendorId = await _db.ProcAsync(
+                "sp_vp_vendor_resolve",
+                new (string, object?)[] { ("p_user", userId) },
+                RowMapper.ReadScalarLongAsync,
+                ct);
 
-                if (vendorId > 0)
-                    return vendorId;
-            }
-            catch
-            {
-                // Fallback when sp_vp_vendor_resolve is not available or fails
-            }
-
-            return 1;
+            if (vendorId <= 0)
+                throw new VendorPortalException(403, "No vendor account is linked to this user.");
+            return vendorId;
         }
     }
 
@@ -93,6 +115,7 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
         {
             var page = Args.Page(q.Page);
             var size = Args.Size(q.PageSize);
+            var (from, to, customer) = await SaleFilters.ResolveAsync(_db, vendorId, q, ct);
 
             return await _db.ProcAsync(
                 "sp_vp_sales_list",
@@ -104,10 +127,10 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
                     ("p_status", Args.Clean(q.Status)),
                     ("p_otp", Args.Clean(q.OtpStatus)),
                     ("p_payment", Args.Clean(q.PaymentStatus)),
-                    ("p_customer", q.CustomerUserId),
+                    ("p_customer", customer),
                     ("p_product", Args.Clean(q.Product)),
-                    ("p_from", Args.Day(q.From)),
-                    ("p_to", Args.Day(q.To)),
+                    ("p_from", from),
+                    ("p_to", to),
                     ("p_page", page),
                     ("p_size", size)
                 },
@@ -127,13 +150,53 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
         public Task<SaleDto?> GetSaleAsync(long vendorId, long id, string scope, CancellationToken ct) =>
             VendorSaleReader.GetAsync(_db, vendorId, id, scope, ct);
 
-        // Sales History KPI cards (sp_vp_sales_history_summary).
+        // Sales History KPI cards (sp_vp_sales_summary).
         public Task<SalesHistorySummaryDto> GetSalesHistorySummaryAsync(long vendorId, CancellationToken ct) =>
             _db.ProcAsync(
-                "sp_vp_sales_history_summary",
+                "sp_vp_sales_summary",
                 new (string, object?)[] { ("p_vendor", vendorId) },
                 async r => await RowMapper.ReadFirstAsync<SalesHistorySummaryDto>(r) ?? new SalesHistorySummaryDto(),
                 ct);
+
+        public Task<SalesFilterOptionsDto> GetFilterOptionsAsync(long vendorId, CancellationToken ct) =>
+            _db.ProcAsync(
+                "sp_vp_sales_filter_options",
+                new (string, object?)[] { ("p_vendor", vendorId) },
+                async r =>
+                {
+                    var customers = await RowMapper.ReadListAsync<OrderCustomerOptionDto>(r);
+                    await r.NextResultAsync();
+                    var products = await RowMapper.ReadListAsync<SalesProductOptionDto>(r);
+                    await r.NextResultAsync();
+                    var counts = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+                    while (await r.ReadAsync())
+                    {
+                        counts[Convert.ToString(r.GetValue(0)) ?? string.Empty] = Convert.ToInt64(r.GetValue(1));
+                    }
+                    return VendorOrderMapper.BuildSalesFilterOptions(customers, products, counts);
+                },
+                ct);
+
+        public async Task<List<SaleExportRowDto>> GetExportRowsAsync(long vendorId, SalesQuery q, CancellationToken ct)
+        {
+            var (from, to, customer) = await SaleFilters.ResolveAsync(_db, vendorId, q, ct);
+            return await _db.ProcAsync(
+                "sp_vp_sales_export",
+                new (string, object?)[]
+                {
+                    ("p_vendor", vendorId),
+                    ("p_search", Args.Clean(q.Search)),
+                    ("p_status", Args.Clean(q.Status)),
+                    ("p_otp", Args.Clean(q.OtpStatus)),
+                    ("p_payment", Args.Clean(q.PaymentStatus)),
+                    ("p_customer", customer),
+                    ("p_product", Args.Clean(q.Product)),
+                    ("p_from", from),
+                    ("p_to", to)
+                },
+                RowMapper.ReadListAsync<SaleExportRowDto>,
+                ct);
+        }
 
         public async Task<SaleSaveResultDto> SaveSaleAsync(
             long vendorId, long? saleId, SaveSaleRequest request, string otpHash, int otpMinutes, CancellationToken ct)
@@ -213,6 +276,7 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
             foreach (var sale in sales)
             {
                 sale.Items = bySale.TryGetValue(sale.Id, out var list) ? list : new List<SaleItemDto>();
+                VendorOrderMapper.EnrichSale(sale);
             }
         }
     }
@@ -291,6 +355,54 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
                 VendorSaleReader.ReadAsync,
                 ct)
             ?? throw new VendorPortalException(404, "Order not found.");
+
+        public async Task<List<OrderExportRowDto>> GetExportRowsAsync(long vendorId, SalesQuery q, CancellationToken ct)
+        {
+            var (from, to, customer) = await SaleFilters.ResolveAsync(_db, vendorId, q, ct);
+            return await _db.ProcAsync(
+                "sp_vp_orders_export",
+                new (string, object?)[]
+                {
+                    ("p_vendor", vendorId),
+                    ("p_search", Args.Clean(q.Search)),
+                    ("p_status", Args.Clean(q.Status)),
+                    ("p_otp", Args.Clean(q.OtpStatus)),
+                    ("p_payment", Args.Clean(q.PaymentStatus)),
+                    ("p_customer", customer),
+                    ("p_product", Args.Clean(q.Product)),
+                    ("p_from", from),
+                    ("p_to", to)
+                },
+                RowMapper.ReadListAsync<OrderExportRowDto>,
+                ct);
+        }
+
+        public async Task<OrderFilterOptionsDto> GetFilterOptionsAsync(long vendorId, CancellationToken ct)
+        {
+            var summary = await GetSummaryAsync(vendorId, ct);
+            var customers = await _db.ProcAsync(
+                "sp_vp_orders_filter_options",
+                new (string, object?)[] { ("p_vendor", vendorId) },
+                RowMapper.ReadListAsync<OrderCustomerOptionDto>,
+                ct);
+            return VendorOrderMapper.BuildOrderFilterOptions(summary, customers);
+        }
+
+        public async Task<List<OrderTimelineEntryDto>> GetTimelineAsync(
+            long vendorId, IEnumerable<long> orderIds, CancellationToken ct)
+        {
+            var ids = string.Join(",", orderIds.Distinct());
+            if (ids.Length == 0) return new List<OrderTimelineEntryDto>();
+
+            var rows = await _db.ProcAsync(
+                "sp_vp_order_timeline",
+                new (string, object?)[] { ("p_vendor", vendorId), ("p_ids", ids) },
+                RowMapper.ReadListAsync<OrderTimelineEntryDto>,
+                ct);
+
+            rows.ForEach(r => r.Timestamp = r.EventAt.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture));
+            return rows;
+        }
     }
 
     // =============================================================
@@ -315,6 +427,44 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
         {
             var page = await ListAsync(vendorId, id, new OtpQuery { Page = 1, PageSize = 1 }, ct);
             return page.Items.FirstOrDefault();
+        }
+
+        public async Task<List<OtpConfirmationDto>> ExportAsync(long vendorId, OtpQuery q, CancellationToken ct)
+        {
+            const int ExportLimit = 100_000;
+            var page = await ListAsync(
+                vendorId, null,
+                new OtpQuery
+                {
+                    Category = q.Category, Status = q.Status, Search = q.Search, From = q.From, To = q.To, DatePreset = q.DatePreset,
+                    Ascending = q.Ascending, Page = 1, PageSize = ExportLimit
+                },
+                ct, ExportLimit);
+            return page.Items;
+        }
+
+        public Task<OtpFilterOptionsDto> GetFilterOptionsAsync(long vendorId, CancellationToken ct) =>
+            _db.ProcAsync(
+                "sp_vp_otp_filter_options",
+                new (string, object?)[] { ("p_vendor", vendorId) },
+                async r =>
+                {
+                    var c = await RowMapper.ReadFirstAsync<OtpCountsRow>(r) ?? new OtpCountsRow();
+                    return VendorOtpMapper.BuildFilterOptions(c.Total, c.Farmer, c.Middleman, c.Customer, c.Pending, c.Verified, c.Expired, c.Failed, c.Cancelled);
+                },
+                ct);
+
+        private sealed class OtpCountsRow
+        {
+            public long Total { get; set; }
+            public long Farmer { get; set; }
+            public long Middleman { get; set; }
+            public long Customer { get; set; }
+            public long Pending { get; set; }
+            public long Verified { get; set; }
+            public long Expired { get; set; }
+            public long Failed { get; set; }
+            public long Cancelled { get; set; }
         }
 
         public Task<OtpConfirmationDto> CreateAsync(
@@ -358,10 +508,19 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
             return Shape(row);
         }
 
-        private async Task<PagedResult<OtpConfirmationDto>> ListAsync(long vendorId, long? id, OtpQuery q, CancellationToken ct)
+        private async Task<PagedResult<OtpConfirmationDto>> ListAsync(
+            long vendorId, long? id, OtpQuery q, CancellationToken ct, int maxSize = 200)
         {
             var page = Args.Page(q.Page);
-            var size = Args.Size(q.PageSize);
+            var size = Math.Clamp(q.PageSize, 1, maxSize);
+
+            DateTime? fromParam = Args.Day(q.From);
+            DateTime? toExclParam = Args.NextDay(q.To);
+            if (VendorLedgerMapper.ResolveDateRange(q.DatePreset, DateTime.UtcNow) is { } range)
+            {
+                fromParam = range.From;
+                toExclParam = range.ToExclusive;
+            }
 
             var result = await _db.ProcAsync(
                 "sp_vp_otp_list",
@@ -372,8 +531,8 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
                     ("p_category", Args.Clean(q.Category)),
                     ("p_status", Args.Clean(q.Status)),
                     ("p_search", Args.Clean(q.Search)),
-                    ("p_from", Args.Day(q.From)),
-                    ("p_to_excl", Args.NextDay(q.To)),
+                    ("p_from", fromParam),
+                    ("p_to_excl", toExclParam),
                     ("p_page", page),
                     ("p_size", size),
                     ("p_asc", q.Ascending ? 1 : 0)
@@ -391,11 +550,11 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
             return result;
         }
 
-        // A "Sent" OTP past its expiry is shown as Expired; the mobile number is masked.
+        // A "Sent" OTP past its expiry is shown as Expired, an unverified OTP of a cancelled order as Cancelled;
+        // the mobile number is masked; then the screen's field names and attempt log are filled in.
         private static OtpConfirmationDto Shape(OtpConfirmationDto dto)
         {
-            if (string.Equals(dto.OtpStatus, "Sent", StringComparison.OrdinalIgnoreCase) && dto.ExpiresAt <= DateTime.UtcNow)
-                dto.OtpStatus = "Expired";
+            dto.OtpStatus = VendorOtpMapper.StatusLabel(dto, DateTime.UtcNow);
 
             if (!string.IsNullOrEmpty(dto.Mobile))
             {
@@ -403,7 +562,7 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
                 if (digits.Length >= 6)
                     dto.Mobile = $"{digits[..2]}••••{digits[^4..]}";
             }
-            return dto;
+            return VendorOtpMapper.Enrich(dto);
         }
     }
 
@@ -422,15 +581,48 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
                 async r => await RowMapper.ReadFirstAsync<LedgerSummaryDto>(r) ?? new LedgerSummaryDto(),
                 ct);
 
-        public Task<List<LedgerDayTotalDto>> GetDayTotalsAsync(long vendorId, int days, CancellationToken ct) =>
+        public Task<List<LedgerDayTotalDto>> GetDayTotalsAsync(long vendorId, int days, string? tab, CancellationToken ct) =>
             _db.ProcAsync(
                 "sp_vp_ledger_day_totals",
-                new (string, object?)[] { ("p_vendor", vendorId), ("p_days", Math.Clamp(days, 1, 365)) },
+                new (string, object?)[]
+                {
+                    ("p_vendor", vendorId),
+                    ("p_days", Math.Clamp(days, 1, 365)),
+                    ("p_tab", VendorLedgerMapper.NormalizeTab(tab))
+                },
                 RowMapper.ReadListAsync<LedgerDayTotalDto>,
                 ct);
 
         public Task<PagedResult<LedgerEntryDto>> GetAsync(long vendorId, LedgerQuery q, CancellationToken ct) =>
             ListAsync(vendorId, null, q, ct);
+
+        public Task<LedgerFilterOptionsDto> GetFilterOptionsAsync(long vendorId, CancellationToken ct) =>
+            _db.ProcAsync(
+                "sp_vp_ledger_filter_options",
+                new (string, object?)[] { ("p_vendor", vendorId) },
+                async r =>
+                {
+                    var parties = await RowMapper.ReadListAsync<LedgerPartyOptionDto>(r);
+                    await r.NextResultAsync();
+                    var counts = await RowMapper.ReadFirstAsync<LedgerTabCountsDto>(r) ?? new LedgerTabCountsDto();
+                    return VendorLedgerMapper.BuildFilterOptions(parties, counts);
+                },
+                ct);
+
+        public async Task<List<LedgerEntryDto>> ExportAsync(long vendorId, LedgerQuery q, CancellationToken ct)
+        {
+            const int ExportLimit = 100_000;
+            var page = await ListAsync(
+                vendorId, null,
+                new LedgerQuery
+                {
+                    Tab = q.Tab, LedgerCategory = q.LedgerCategory, PartyCategory = q.PartyCategory, Party = q.Party,
+                    Status = q.Status, EntryType = q.EntryType, Search = q.Search, DatePreset = q.DatePreset,
+                    From = q.From, To = q.To, Ascending = q.Ascending, Page = 1, PageSize = ExportLimit
+                },
+                ct, ExportLimit);
+            return page.Items;
+        }
 
         public async Task<LedgerEntryDto?> GetByIdAsync(long vendorId, long id, CancellationToken ct)
         {
@@ -438,33 +630,82 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
             return page.Items.FirstOrDefault();
         }
 
-        public Task<LedgerPaymentResultDto> PaySupplierAsync(long vendorId, PaySupplierRequest r, CancellationToken ct) =>
-            PaymentAsync(
+        public async Task<LedgerPaymentResultDto> PaySupplierAsync(long vendorId, PaySupplierRequest r, CancellationToken ct)
+        {
+            var entryId = r.LedgerEntryId;
+
+            // A voucher / purchase code selects one open payable.
+            var code = Args.Clean(r.LedgerEntryCode);
+            if (code is not null)
+            {
+                var ids = await _db.ProcAsync(
+                    "sp_vp_ledger_resolve_payable",
+                    new (string, object?)[] { ("p_vendor", vendorId), ("p_ref", code) },
+                    RowMapper.ReadScalarLongAsync,
+                    ct);
+                if (ids <= 0)
+                    throw new VendorPortalException(404, $"No open payable matches '{code}'.");
+                entryId = ids;
+            }
+
+            if (entryId is null && Args.Clean(r.PartyName) is null)
+                throw new VendorPortalException(400, "Provide a payable (LedgerEntryId / LedgerEntryCode) or a PartyName.");
+
+            return await PaymentAsync(
                 "sp_vp_ledger_pay_supplier",
                 new (string, object?)[]
                 {
                     ("p_vendor", vendorId),
-                    ("p_entry", r.LedgerEntryId),
+                    ("p_entry", entryId),
                     ("p_party", Args.Clean(r.PartyName)),
                     ("p_amount", r.Amount),
                     ("p_mode", Args.Clean(r.PaymentMode)),
                     ("p_ref", Args.Clean(r.ReferenceNo))
                 },
                 ct);
+        }
 
-        public Task<LedgerPaymentResultDto> RecordReceiptAsync(long vendorId, RecordReceiptRequest r, CancellationToken ct) =>
-            PaymentAsync(
+        public async Task<LedgerPaymentResultDto> RecordReceiptAsync(long vendorId, RecordReceiptRequest r, CancellationToken ct)
+        {
+            // Sale / customer may be given as ids or as codes (SALE-0001, CUST-2026-0063): resolve them to real ids.
+            var saleRef = Args.Clean(r.SaleCode) ?? r.SaleId?.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var customerRef = Args.Clean(r.CustomerCode) ?? r.CustomerUserId?.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (saleRef is null && customerRef is null)
+                throw new VendorPortalException(400, "Provide a sale (SaleId / SaleCode) or a customer (CustomerUserId / CustomerCode).");
+
+            var (saleId, customerUserId) = await _db.ProcAsync(
+                "sp_vp_ledger_resolve_receipt",
+                new (string, object?)[] { ("p_vendor", vendorId), ("p_customer_ref", customerRef), ("p_sale_ref", saleRef) },
+                async rd =>
+                {
+                    long? sale = null, customer = null;
+                    if (await rd.ReadAsync())
+                    {
+                        sale = rd.IsDBNull(0) ? null : Convert.ToInt64(rd.GetValue(0));
+                        customer = rd.IsDBNull(1) ? null : Convert.ToInt64(rd.GetValue(1));
+                    }
+                    return (sale, customer);
+                },
+                ct);
+
+            if (saleId is null && Args.Clean(r.SaleCode) is not null)
+                throw new VendorPortalException(404, $"Sale '{r.SaleCode}' was not found.");
+            if (saleId is null && customerUserId is null)
+                throw new VendorPortalException(404, "Customer not found. Use the customer's code (for example CUST-2026-0063) or user id.");
+
+            return await PaymentAsync(
                 "sp_vp_ledger_record_receipt",
                 new (string, object?)[]
                 {
                     ("p_vendor", vendorId),
-                    ("p_sale", r.SaleId),
-                    ("p_customer", r.CustomerUserId),
+                    ("p_sale", saleId),
+                    ("p_customer", customerUserId),
                     ("p_amount", r.Amount),
                     ("p_mode", Args.Clean(r.PaymentMode)),
                     ("p_ref", Args.Clean(r.ReferenceNo))
                 },
                 ct);
+        }
 
         public Task<LedgerPaymentResultDto> SettleAsync(long vendorId, long id, SettleLedgerEntryRequest r, CancellationToken ct) =>
             PaymentAsync(
@@ -494,30 +735,43 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
                     }
                     await r.NextResultAsync();
                     result.Entries = await RowMapper.ReadListAsync<LedgerEntryDto>(r);
+                    result.Entries.ForEach(e => VendorLedgerMapper.Enrich(e));
                     return result;
                 },
                 ct);
 
-        private async Task<PagedResult<LedgerEntryDto>> ListAsync(long vendorId, long? id, LedgerQuery q, CancellationToken ct)
+        private async Task<PagedResult<LedgerEntryDto>> ListAsync(
+            long vendorId, long? id, LedgerQuery q, CancellationToken ct, int maxSize = 200)
         {
             var page = Args.Page(q.Page);
-            var size = Args.Size(q.PageSize);
+            var size = Math.Clamp(q.PageSize, 1, maxSize);
+            var (ledgerCategory, partyCategory) =
+                VendorLedgerMapper.NormalizeCategory(Args.Clean(q.LedgerCategory), Args.Clean(q.PartyCategory));
 
-            return await _db.ProcAsync(
+            // A Date Range preset (Today, Last 7 Days, ...) replaces the explicit from / to dates.
+            DateTime? fromParam = Args.Day(q.From);
+            DateTime? toExclParam = Args.NextDay(q.To);
+            if (VendorLedgerMapper.ResolveDateRange(q.DatePreset, DateTime.UtcNow) is { } range)
+            {
+                fromParam = range.From;
+                toExclParam = range.ToExclusive;
+            }
+
+            var result = await _db.ProcAsync(
                 "sp_vp_ledger_list",
                 new (string, object?)[]
                 {
                     ("p_vendor", vendorId),
                     ("p_id", id),
-                    ("p_tab", Args.Clean(q.Tab)?.ToLowerInvariant()),
-                    ("p_ledger_cat", Args.Clean(q.LedgerCategory)),
-                    ("p_party_cat", Args.Clean(q.PartyCategory)),
+                    ("p_tab", VendorLedgerMapper.NormalizeTab(q.Tab)),
+                    ("p_ledger_cat", ledgerCategory),
+                    ("p_party_cat", partyCategory),
                     ("p_party", Args.Clean(q.Party)),
                     ("p_status", Args.Clean(q.Status)),
                     ("p_entry_type", Args.Clean(q.EntryType)?.ToLowerInvariant()),
                     ("p_search", Args.Clean(q.Search)),
-                    ("p_from", Args.Day(q.From)),
-                    ("p_to_excl", Args.NextDay(q.To)),
+                    ("p_from", fromParam),
+                    ("p_to_excl", toExclParam),
                     ("p_page", page),
                     ("p_size", size),
                     ("p_asc", q.Ascending ? 1 : 0)
@@ -530,11 +784,14 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
                     return new PagedResult<LedgerEntryDto> { Total = total, Page = page, PageSize = size, Items = rows };
                 },
                 ct);
+
+            result.Items.ForEach(e => VendorLedgerMapper.Enrich(e));
+            return result;
         }
     }
 
     // =============================================================
-    // Notifications (Stored Procedures on vp_notifications)
+    // Notifications (sp_vp_notifications_* / sp_vp_header_counts)
     // =============================================================
     public sealed class VendorNotificationsRepository : IVendorNotificationsRepository
     {
@@ -553,17 +810,28 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
             var page = Args.Page(q.Page);
             var size = Args.Size(q.PageSize);
 
-            return await _db.ProcAsync(
+            // A Date Range preset (Today, Last 7 Days, ...) replaces the explicit from / to dates.
+            DateTime? from = Args.Day(q.From);
+            DateTime? toExcl = Args.NextDay(q.To);
+            if (VendorLedgerMapper.ResolveDateRange(q.DatePreset, DateTime.UtcNow) is { } range)
+            {
+                from = range.From;
+                toExcl = range.ToExclusive;
+            }
+
+            var read = VendorNotificationMapper.ResolveRead(q);
+
+            var result = await _db.ProcAsync(
                 "sp_vp_notifications_list",
                 new (string, object?)[]
                 {
                     ("p_vendor", vendorId),
+                    ("p_search", Args.Clean(q.Search)),
                     ("p_category", Args.Clean(q.Category)),
                     ("p_priority", Args.Clean(q.Priority)),
-                    ("p_is_read", q.IsRead.HasValue ? (q.IsRead.Value ? 1 : 0) : null),
-                    ("p_from", Args.Day(q.From)),
-                    ("p_to_excl", Args.NextDay(q.To)),
-                    ("p_search", Args.Clean(q.Search)),
+                    ("p_read", read.HasValue ? (read.Value ? 1 : 0) : null),
+                    ("p_from", from),
+                    ("p_to_excl", toExcl),
                     ("p_page", page),
                     ("p_size", size)
                 },
@@ -575,33 +843,59 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
                     return new PagedResult<NotificationDto> { Total = total, Page = page, PageSize = size, Items = items };
                 },
                 ct);
+
+            result.Items.ForEach(n => VendorNotificationMapper.Enrich(n));
+            return result;
         }
 
-        public Task<NotificationDto?> MarkReadAsync(long vendorId, long id, CancellationToken ct) =>
+        public async Task<NotificationFilterOptionsDto> GetFilterOptionsAsync(long vendorId, CancellationToken ct)
+        {
+            var stored = await _db.ProcAsync(
+                "sp_vp_notification_filter_options",
+                new (string, object?)[] { ("p_vendor", vendorId) },
+                async r =>
+                {
+                    var rows = new List<(string Category, long Count)>();
+                    while (await r.ReadAsync())
+                    {
+                        rows.Add((Convert.ToString(r.GetValue(0)) ?? string.Empty, Convert.ToInt64(r.GetValue(1))));
+                    }
+                    return rows;
+                },
+                ct);
+            return VendorNotificationMapper.BuildFilterOptions(stored);
+        }
+
+        public Task<HeaderCountsDto> GetHeaderCountsAsync(long vendorId, CancellationToken ct) =>
             _db.ProcAsync(
+                "sp_vp_header_counts",
+                new (string, object?)[] { ("p_vendor", vendorId) },
+                async r => await RowMapper.ReadFirstAsync<HeaderCountsDto>(r) ?? new HeaderCountsDto(),
+                ct);
+
+        public async Task<NotificationDto?> MarkReadAsync(long vendorId, long id, CancellationToken ct)
+        {
+            var rows = await _db.ProcAsync(
                 "sp_vp_notification_mark_read",
                 new (string, object?)[] { ("p_vendor", vendorId), ("p_id", id) },
-                RowMapper.ReadFirstAsync<NotificationDto>,
+                RowMapper.ReadListAsync<NotificationDto>,
                 ct);
-
-        public async Task<int> MarkAllReadAsync(long vendorId, CancellationToken ct)
-        {
-            var updated = await _db.ProcAsync(
-                "sp_vp_notifications_mark_all_read",
-                new (string, object?)[] { ("p_vendor", vendorId) },
-                RowMapper.ReadScalarLongAsync,
-                ct);
-            return (int)updated;
+            var row = rows.FirstOrDefault();
+            return row is null ? null : VendorNotificationMapper.Enrich(row);
         }
 
-        public async Task<bool> DeleteAsync(long vendorId, long id, CancellationToken ct)
-        {
-            var deleted = await _db.ProcAsync(
+        public Task<int> MarkAllReadAsync(long vendorId, CancellationToken ct) =>
+            _db.ProcAsync(
+                "sp_vp_notifications_mark_all_read",
+                new (string, object?)[] { ("p_vendor", vendorId) },
+                async r => (int)await RowMapper.ReadScalarLongAsync(r),
+                ct);
+
+        public async Task<bool> DeleteAsync(long vendorId, long id, CancellationToken ct) =>
+            await _db.ProcAsync(
                 "sp_vp_notification_delete",
                 new (string, object?)[] { ("p_vendor", vendorId), ("p_id", id) },
                 RowMapper.ReadScalarLongAsync,
-                ct);
-            return deleted > 0;
-        }
+                ct) > 0;
     }
 }

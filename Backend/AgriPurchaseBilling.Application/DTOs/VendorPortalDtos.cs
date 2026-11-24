@@ -22,6 +22,15 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
         public long ActiveProductsReady { get; set; }
         public decimal AvailableStockMarketValue { get; set; }
         public long VerifiedCustomers { get; set; }
+
+        /// <summary>Header button "Customer Orders (n)": all submitted (non-draft) orders.</summary>
+        public long TotalOrders { get; set; }
+        /// <summary>Header button "Sales History": all submitted (non-draft) sales.</summary>
+        public long TotalSales { get; set; }
+        /// <summary>Orders that are not yet Completed / Cancelled.</summary>
+        public long OpenOrders { get; set; }
+        /// <summary>New orders still waiting for the customer to confirm the OTP.</summary>
+        public long PendingOtpOrders { get; set; }
     }
 
     public sealed class SalesCustomerDto
@@ -70,6 +79,13 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
         public decimal PricePerUnit { get; set; }
         public decimal CostPerUnit { get; set; }
         public decimal LineTotal { get; set; }
+
+        // ---- Sales details popup field names (filled by VendorOrderMapper.EnrichSale; not DB columns) ----
+        /// <summary>The traceable batch code, e.g. FG-GRO-2026-002.</summary>
+        public string BatchNumber { get; set; } = string.Empty;
+        public decimal SellingQuantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal Subtotal { get; set; }
     }
 
     public sealed class SaleDto
@@ -106,7 +122,60 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
         public DateTime? DeliveredAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+
+        /// <summary>Latest customer OTP confirmation of this sale (null for drafts). Use it with the verify / resend endpoints.</summary>
+        public long? OtpConfirmationId { get; set; }
+        public string? OtpConfirmationCode { get; set; }
+        public DateTime? OtpExpiresAt { get; set; }
+        public int? OtpAttempts { get; set; }
+
+        // ---- Sales History / Sell Products screen fields (filled by VendorOrderMapper.EnrichSale; not DB columns) ----
+        /// <summary>First product, e.g. "Rice" or "Rice +1 more".</summary>
+        public string Product { get; set; } = string.Empty;
+        public string BatchNumber { get; set; } = string.Empty;
+        public long? BatchId { get; set; }
+        public decimal Quantity { get; set; }
+        public string Unit { get; set; } = string.Empty;
+        /// <summary>Average price per unit across the lines.</summary>
+        public decimal UnitPrice { get; set; }
+        public decimal Subtotal { get; set; }
+        public decimal Discount { get; set; }
+        public decimal Tax { get; set; }
+        public decimal ReceivedAmount { get; set; }
+        /// <summary>"Balance Receivable Due": total minus received (0 for a cancelled sale).</summary>
+        public decimal BalanceDue { get; set; }
+        public DateTime SalesDate { get; set; }
+        public string? MobileNumber { get; set; }
+        public string? Email { get; set; }
+        public string? District { get; set; }
+        public string? State { get; set; }
+        public string? OtpId { get; set; }
+        /// <summary>Verified, Pending, Not Sent, Expired or Failed.</summary>
+        public string ConfirmationStatus { get; set; } = string.Empty;
+        /// <summary>The order stage: Draft, New, Confirmed, ... Completed or Cancelled.</summary>
+        public string SalesStatus { get; set; } = string.Empty;
+        /// <summary>Reserved, Deducted or Restored.</summary>
+        public string StockAllocationStage { get; set; } = string.Empty;
+
         public List<SaleItemDto> Items { get; set; } = new();
+    }
+
+    /// <summary>One row of the Sales History register (see sp_vp_sales_export).</summary>
+    public sealed class SaleExportRowDto
+    {
+        public string SaleCode { get; set; } = string.Empty;
+        public string OrderCode { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
+        public string Product { get; set; } = string.Empty;
+        public decimal Quantity { get; set; }
+        public string Unit { get; set; } = string.Empty;
+        public decimal UnitPrice { get; set; }
+        public decimal TotalAmount { get; set; }
+        public DateTime SaleDate { get; set; }
+        public string ConfirmationStatus { get; set; } = string.Empty;
+        public DateTime? ExpectedPaymentDate { get; set; }
+        public string PaymentStatus { get; set; } = string.Empty;
+        public string SalesStatus { get; set; } = string.Empty;
     }
 
     public sealed class SaleItemRequest
@@ -142,6 +211,13 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
         public SaleDto? Sale { get; set; }
     }
 
+    /// <summary>Result of "Verify OTP Now" / "Resend Customer OTP" on the post-submit popup.</summary>
+    public sealed class SaleOtpResultDto
+    {
+        public SaleDto? Sale { get; set; }
+        public OtpConfirmationDto? Confirmation { get; set; }
+    }
+
     public sealed class SalesHistorySummaryDto
     {
         public long TotalSales { get; set; }
@@ -159,11 +235,92 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
         public string? OtpStatus { get; set; }
         public string? PaymentStatus { get; set; }
         public long? CustomerUserId { get; set; }
+        /// <summary>Alternative to CustomerUserId: the customer's code, e.g. CUST-2026-0063 (no match = empty result).</summary>
+        public string? CustomerCode { get; set; }
         public string? Product { get; set; }
+        /// <summary>
+        /// The screen's Date Range dropdown: Today, Yesterday, Last 7 Days, This Month, Last Month (All Time / omitted = no limit).
+        /// Days are Indian Standard Time days; when given it replaces From / To.
+        /// </summary>
+        public string? DatePreset { get; set; }
         public DateTime? From { get; set; }
         public DateTime? To { get; set; }
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;
+    }
+
+    /// <summary>"Post Customer Receipt to Ledger" on the Sales Invoice &amp; Order Details popup.</summary>
+    public sealed class SaleReceiptRequest
+    {
+        [Range(0.01, 999999999)] public decimal Amount { get; set; }
+        /// <summary>NEFT / RTGS, UPI / IMPS, Cheque / DD or Cash.</summary>
+        [MaxLength(30)] public string? PaymentMode { get; set; }
+        /// <summary>UTR / reference number or remarks.</summary>
+        [MaxLength(80)] public string? ReferenceNo { get; set; }
+    }
+
+    public sealed class SaleReceiptResultDto
+    {
+        public LedgerPaymentResultDto Receipt { get; set; } = new();
+        /// <summary>The sale after the receipt: updated received amount, balance and payment status.</summary>
+        public SaleDto? Sale { get; set; }
+    }
+
+    /// <summary>A finished product that appears on this vendor's sales (Products dropdown).</summary>
+    public sealed class SalesProductOptionDto
+    {
+        public string ProductName { get; set; } = string.Empty;
+        public long Sales { get; set; }
+    }
+
+    /// <summary>Every dropdown of the Sales History screen.</summary>
+    public sealed class SalesFilterOptionsDto
+    {
+        public List<SelectOptionDto> DateRanges { get; set; } = new();
+        public List<OrderCustomerOptionDto> Customers { get; set; } = new();
+        public List<SalesProductOptionDto> Products { get; set; } = new();
+        public List<SelectOptionDto> ConfirmationStatuses { get; set; } = new();
+        public List<SelectOptionDto> PaymentStatuses { get; set; } = new();
+        /// <summary>Sales status (the order stage) options with counts.</summary>
+        public List<OrderTabDto> SalesStatuses { get; set; } = new();
+        /// <summary>Payment modes of the receipt form.</summary>
+        public List<SelectOptionDto> PaymentModes { get; set; } = new();
+    }
+
+    public sealed class SelectOptionDto
+    {
+        public string Label { get; set; } = string.Empty;
+        /// <summary>Value to send as the filter parameter (empty = "All").</summary>
+        public string Value { get; set; } = string.Empty;
+    }
+
+    public sealed class OrderTabDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
+        /// <summary>Value for the status parameter (empty = All).</summary>
+        public string Status { get; set; } = string.Empty;
+        public long Count { get; set; }
+    }
+
+    /// <summary>A customer that has orders with this vendor (Customer dropdown).</summary>
+    public sealed class OrderCustomerOptionDto
+    {
+        public long CustomerUserId { get; set; }
+        public string? CustomerCode { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
+        public string? BusinessName { get; set; }
+        public long Orders { get; set; }
+    }
+
+    /// <summary>Status tabs (with counts) and every filter dropdown of the Customer Orders screen.</summary>
+    public sealed class OrderFilterOptionsDto
+    {
+        public List<OrderTabDto> Tabs { get; set; } = new();
+        public List<SelectOptionDto> DateRanges { get; set; } = new();
+        public List<OrderCustomerOptionDto> Customers { get; set; } = new();
+        public List<SelectOptionDto> OtpStatuses { get; set; } = new();
+        public List<SelectOptionDto> PaymentStatuses { get; set; } = new();
     }
 
     // ---------------------------------------------------------------
@@ -182,6 +339,117 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
         public long Cancelled { get; set; }
         /// <summary>Confirmed + Processing + Packed + Shipped + Delivered.</summary>
         public long InFulfilmentAndTransit { get; set; }
+    }
+
+    /// <summary>One step of an order's status history.</summary>
+    public sealed class OrderTimelineEntryDto
+    {
+        public long OrderId { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string Note { get; set; } = string.Empty;
+        public DateTime EventAt { get; set; }
+        /// <summary>Display form, e.g. "2026-11-18 07:27".</summary>
+        public string Timestamp { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// A row of the Customer Orders table (and the order details view). Product / quantity / price are flattened
+    /// from the order lines, and OTP / payment use the screen's wording (Pending, Verified, Cancelled / Pending, Partial, Paid).
+    /// </summary>
+    public sealed class OrderDto
+    {
+        public long Id { get; set; }
+        public string OrderCode { get; set; } = string.Empty;
+        public string SalesCode { get; set; } = string.Empty;
+        public long CustomerUserId { get; set; }
+        public string? CustomerCode { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
+        public string? BusinessName { get; set; }
+        public string? MobileNumber { get; set; }
+        public string? Email { get; set; }
+        public string? District { get; set; }
+        public string? State { get; set; }
+        public string? DeliveryAddress { get; set; }
+
+        /// <summary>First product, e.g. "Rice" or "Rice +1 more".</summary>
+        public string Product { get; set; } = string.Empty;
+        public List<string> BatchReferences { get; set; } = new();
+        public decimal Quantity { get; set; }
+        public string Unit { get; set; } = string.Empty;
+        /// <summary>Average price per unit across the lines.</summary>
+        public decimal Price { get; set; }
+
+        public decimal Subtotal { get; set; }
+        public decimal Discount { get; set; }
+        public decimal Tax { get; set; }
+        public decimal DeliveryCharges { get; set; }
+        public decimal OtherCharges { get; set; }
+        public decimal TotalAmount { get; set; }
+        public decimal AmountReceived { get; set; }
+
+        public DateTime OrderDate { get; set; }
+        public DateTime? ExpectedDeliveryDate { get; set; }
+        public DateTime? ExpectedPaymentDate { get; set; }
+        public string? PaymentTerms { get; set; }
+        public string? Notes { get; set; }
+
+        /// <summary>OTP confirmation code of this order (e.g. OTP-0001).</summary>
+        public string? OtpId { get; set; }
+        public long? OtpConfirmationId { get; set; }
+        public DateTime? OtpExpiresAt { get; set; }
+        /// <summary>Pending, Verified, Expired, Failed or Cancelled.</summary>
+        public string OtpStatus { get; set; } = string.Empty;
+        /// <summary>Pending, Partial or Paid.</summary>
+        public string PaymentStatus { get; set; } = string.Empty;
+        /// <summary>New, Confirmed, Processing, Packed, Shipped, Delivered, Completed or Cancelled.</summary>
+        public string OrderStatus { get; set; } = string.Empty;
+        /// <summary>Reserved (until shipped), Deducted (shipped onwards) or Restored (cancelled).</summary>
+        public string StockAllocationStage { get; set; } = string.Empty;
+        public string? CancelReason { get; set; }
+        public DateTime? DeliveredAt { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+
+        public List<OrderTimelineEntryDto> Timeline { get; set; } = new();
+        public List<SaleItemDto> Items { get; set; } = new();
+    }
+
+    /// <summary>One row of the Export Orders CSV / Print register (see sp_vp_orders_export).</summary>
+    public sealed class OrderExportRowDto
+    {
+        public string OrderCode { get; set; } = string.Empty;
+        public string SaleCode { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
+        public string? BusinessName { get; set; }
+        public string Product { get; set; } = string.Empty;
+        public decimal Quantity { get; set; }
+        public string Unit { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public decimal TotalAmount { get; set; }
+        public DateTime OrderDate { get; set; }
+        public DateTime? ExpectedDeliveryDate { get; set; }
+        public string OtpStatus { get; set; } = string.Empty;
+        public string PaymentStatus { get; set; } = string.Empty;
+        public string OrderStatus { get; set; } = string.Empty;
+    }
+
+    public sealed class PrintMetadataDto
+    {
+        public string Label { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
+    }
+
+    /// <summary>Data for the "Print" popup: header, totals and the formatted register rows.</summary>
+    public sealed class OrdersPrintDto
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Subtitle { get; set; } = string.Empty;
+        public DateTime GeneratedAt { get; set; }
+        public List<PrintMetadataDto> Metadata { get; set; } = new();
+        /// <summary>Column headers, in print order.</summary>
+        public List<string> Columns { get; set; } = new();
+        /// <summary>One dictionary per order, keyed by <see cref="Columns"/>.</summary>
+        public List<Dictionary<string, string>> Items { get; set; } = new();
     }
 
     public sealed class UpdateOrderStatusRequest
@@ -204,6 +472,8 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
         public long PendingOrSent { get; set; }
         public long VerifiedTransactions { get; set; }
         public long FailedExpiredRejected { get; set; }
+        /// <summary>Unverified OTPs of cancelled orders (shown as "Cancelled").</summary>
+        public long CancelledConfirmations { get; set; }
         public long FarmerConfirmations { get; set; }
         public long MiddlemanConfirmations { get; set; }
         public long CustomerConfirmations { get; set; }
@@ -233,6 +503,32 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
         public long? SaleId { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+
+        /// <summary>Order status / code of the related sale (customer confirmations only).</summary>
+        public string? SaleOrderStatus { get; set; }
+        public string? SaleOrderCode { get; set; }
+
+        // ---- OTP Confirmations screen fields (filled by VendorOtpMapper.Enrich; not DB columns) ----
+        public string TransactionId { get; set; } = string.Empty;
+        public string? PartyId { get; set; }
+        /// <summary>Masked, e.g. 98••••1223.</summary>
+        public string? MobileNumber { get; set; }
+        /// <summary>"yyyy-MM-dd HH:mm" (UTC).</summary>
+        public string InitiatedDate { get; set; } = string.Empty;
+        public string? ConfirmationDate { get; set; }
+        public string ExpiryTime { get; set; } = string.Empty;
+        /// <summary>Wrong attempts allowed before the OTP must be resent.</summary>
+        public int MaxAttempts { get; set; } = 5;
+        public string? Notes { get; set; }
+        public List<OtpAttemptLogDto> AttemptHistory { get; set; } = new();
+    }
+
+    /// <summary>One line of the "OTP Verification Attempt Log".</summary>
+    public sealed class OtpAttemptLogDto
+    {
+        public string Timestamp { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string Note { get; set; } = string.Empty;
     }
 
     public sealed class OtpQuery
@@ -244,9 +540,29 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
         public string? Search { get; set; }
         public DateTime? From { get; set; }
         public DateTime? To { get; set; }
+        /// <summary>All Time, Today, Yesterday, Last 7 Days or This Month (by the OTP initiated time, IST); replaces From / To.</summary>
+        public string? DatePreset { get; set; }
         public bool Ascending { get; set; }
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;
+    }
+
+    public sealed class OtpFilterOptionDto
+    {
+        public string Label { get; set; } = string.Empty;
+        /// <summary>Value to send as the filter parameter (empty = All).</summary>
+        public string Value { get; set; } = string.Empty;
+        /// <summary>Confirmations in this option (0 for date ranges).</summary>
+        public long Count { get; set; }
+    }
+
+    /// <summary>Tabs and every dropdown of the OTP Confirmations screen.</summary>
+    public sealed class OtpFilterOptionsDto
+    {
+        public List<OtpFilterOptionDto> Tabs { get; set; } = new();
+        public List<OtpFilterOptionDto> Categories { get; set; } = new();
+        public List<OtpFilterOptionDto> Statuses { get; set; } = new();
+        public List<OtpFilterOptionDto> DateRanges { get; set; } = new();
     }
 
     public sealed class CreateOtpConfirmationRequest
@@ -284,6 +600,14 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
         public decimal OutstandingAmount { get; set; }
         public decimal EstimatedProfit { get; set; }
         public long VoucherCount { get; set; }
+
+        // Names the My Ledger screen's KPI cards use.
+        public decimal TotalPurchasesAmount => TotalPurchases;
+        public decimal TotalSalesRevenue => TotalSales;
+        public decimal TotalProcessingExpenses => ProcessingExpenses;
+        public decimal ExpectedPayables => TotalPayables;
+        public decimal CustomerReceiptsTotal => AmountReceived;
+        public decimal ExpectedReceivables => OutstandingAmount;
     }
 
     public sealed class LedgerDayTotalDto
@@ -317,11 +641,27 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
         public decimal RunningBalance { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+
+        // ---- My Ledger screen fields (filled by VendorLedgerMapper.Enrich; not DB columns) ----
+        /// <summary>Voucher code, e.g. VCH-0003. Accepted by the voucher, settle and print routes.</summary>
+        public string LedgerCode { get; set; } = string.Empty;
+        public string TransactionId { get; set; } = string.Empty;
+        /// <summary>Screen wording: Customer Sale, Customer Payment, Farmer Purchase, Middleman Purchase, Supplier Payment, Processing Expense.</summary>
+        public string Category { get; set; } = string.Empty;
+        public string? PartyId { get; set; }
+        public DateTime Date { get; set; }
+        public decimal ProcessingExpenses { get; set; }
+        /// <summary>Still to be settled on this voucher (payables: credit - settled, sales: debit - settled).</summary>
+        public decimal OutstandingAmount { get; set; }
+        /// <summary>e.g. "Budigina Receivable Due", "Ramesh Payable Due", "Cum. Expense".</summary>
+        public string BalanceLabel { get; set; } = string.Empty;
     }
 
     public sealed class LedgerQuery
     {
-        /// <summary>suppliers, customers or processing (omit for All Journal Entries).</summary>
+        /// <summary>
+        /// suppliers (payables) | customers (receivables) | processing (expenses); omit or "all" for All Journal Entries.
+        /// </summary>
         public string? Tab { get; set; }
         public string? LedgerCategory { get; set; }
         public string? PartyCategory { get; set; }
@@ -330,11 +670,61 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
         /// <summary>debit or credit (omit for both).</summary>
         public string? EntryType { get; set; }
         public string? Search { get; set; }
+        /// <summary>
+        /// The screen's Date Range dropdown: Today, Yesterday, Last 7 Days, This Month, Last Month (All Time / omitted = no limit).
+        /// Days are Indian Standard Time days. When given it replaces From / To.
+        /// </summary>
+        public string? DatePreset { get; set; }
         public DateTime? From { get; set; }
         public DateTime? To { get; set; }
         public bool Ascending { get; set; }
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;
+    }
+
+    // ---- My Ledger filter dropdowns ----
+    public sealed class LedgerFilterOptionDto
+    {
+        public string Label { get; set; } = string.Empty;
+        /// <summary>The value to send as the filter parameter ("All" options use an empty value).</summary>
+        public string Value { get; set; } = string.Empty;
+    }
+
+    public sealed class LedgerPartyOptionDto
+    {
+        public string PartyName { get; set; } = string.Empty;
+        public string? PartyCode { get; set; }
+        public string PartyCategory { get; set; } = string.Empty;
+        public long Vouchers { get; set; }
+    }
+
+    public sealed class LedgerTabDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
+        /// <summary>Value for the tab parameter (empty = All Journal Entries).</summary>
+        public string Tab { get; set; } = string.Empty;
+        public long Count { get; set; }
+    }
+
+    public sealed class LedgerTabCountsDto
+    {
+        public long AllEntries { get; set; }
+        public long Payables { get; set; }
+        public long Receivables { get; set; }
+        public long Expenses { get; set; }
+    }
+
+    /// <summary>Everything the My Ledger sub-ledger buttons and filter dropdowns offer.</summary>
+    public sealed class LedgerFilterOptionsDto
+    {
+        public List<LedgerTabDto> Tabs { get; set; } = new();
+        public List<LedgerFilterOptionDto> DateRanges { get; set; } = new();
+        public List<LedgerFilterOptionDto> LedgerCategories { get; set; } = new();
+        public List<LedgerFilterOptionDto> PartyCategories { get; set; } = new();
+        public List<LedgerPartyOptionDto> Parties { get; set; } = new();
+        public List<LedgerFilterOptionDto> EntryTypes { get; set; } = new();
+        public List<LedgerFilterOptionDto> Statuses { get; set; } = new();
     }
 
     public sealed class LedgerPaymentResultDto
@@ -348,6 +738,8 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
     public sealed class PaySupplierRequest
     {
         public long? LedgerEntryId { get; set; }
+        /// <summary>Alternative to LedgerEntryId: voucher code (VCH-0007) or purchase code (PUR-F-0001) of an open payable.</summary>
+        [MaxLength(60)] public string? LedgerEntryCode { get; set; }
         [MaxLength(150)] public string? PartyName { get; set; }
         [Range(0.01, 999999999)] public decimal Amount { get; set; }
         [MaxLength(30)] public string? PaymentMode { get; set; }
@@ -359,6 +751,10 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
     {
         public long? SaleId { get; set; }
         public long? CustomerUserId { get; set; }
+        /// <summary>Alternative to SaleId: SALE-0001 or ORD-0001.</summary>
+        [MaxLength(60)] public string? SaleCode { get; set; }
+        /// <summary>Alternative to CustomerUserId: customer code, e.g. CUST-2026-0063.</summary>
+        [MaxLength(60)] public string? CustomerCode { get; set; }
         [Range(0.01, 999999999)] public decimal Amount { get; set; }
         [MaxLength(30)] public string? PaymentMode { get; set; }
         [MaxLength(80)] public string? ReferenceNo { get; set; }
@@ -387,6 +783,47 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
         public bool IsRead { get; set; }
         public DateTime? ReadAt { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        // ---- Notifications screen fields (filled by VendorNotificationMapper.Enrich; not DB columns) ----
+        /// <summary>NTF-0007. Accepted by the mark-read and delete routes.</summary>
+        public string NotificationCode { get; set; } = string.Empty;
+        /// <summary>The related order / sale / purchase code ("Ref: ORD-0007").</summary>
+        public string? TransactionId { get; set; }
+        /// <summary>Where "Open Module" goes, e.g. /vendor/orders.</summary>
+        public string? TargetPath { get; set; }
+        /// <summary>"yyyy-MM-dd HH:mm" (UTC).</summary>
+        public string Date { get; set; } = string.Empty;
+    }
+
+    public sealed class NotificationFilterOptionDto
+    {
+        public string Label { get; set; } = string.Empty;
+        /// <summary>Value to send as the filter parameter (empty = "All").</summary>
+        public string Value { get; set; } = string.Empty;
+        /// <summary>How many of this vendor's notifications are in the category (0 for other options).</summary>
+        public long Count { get; set; }
+    }
+
+    /// <summary>Every dropdown of the Notifications screen.</summary>
+    public sealed class NotificationFilterOptionsDto
+    {
+        public List<NotificationFilterOptionDto> Categories { get; set; } = new();
+        public List<NotificationFilterOptionDto> Priorities { get; set; } = new();
+        public List<NotificationFilterOptionDto> ReadStates { get; set; } = new();
+        public List<NotificationFilterOptionDto> DateRanges { get; set; } = new();
+    }
+
+    /// <summary>Badges shown in the header of every vendor page.</summary>
+    public sealed class HeaderCountsDto
+    {
+        /// <summary>Bell badge.</summary>
+        public long UnreadNotifications { get; set; }
+        public long HighPriorityUnread { get; set; }
+        /// <summary>"OTP Queue" badge: OTPs still waiting to be entered.</summary>
+        public long PendingOtps { get; set; }
+        /// <summary>Where the "OTP Queue" button goes.</summary>
+        public string OtpQueuePath => "/vendor/confirmations";
+        public string NotificationsPath => "/vendor/notifications";
     }
 
     public sealed class NotificationSummaryDto
@@ -405,6 +842,10 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorPortal
         public string? Priority { get; set; }
         /// <summary>true = read only, false = unread only, omitted = all.</summary>
         public bool? IsRead { get; set; }
+        /// <summary>The screen's Read / Unread dropdown: All | Unread | Read (used when IsRead is not given).</summary>
+        public string? ReadStatus { get; set; }
+        /// <summary>The screen's Date Range dropdown: Today, Yesterday, Last 7 Days, This Month, Last Month (replaces From / To).</summary>
+        public string? DatePreset { get; set; }
         public DateTime? From { get; set; }
         public DateTime? To { get; set; }
         public int Page { get; set; } = 1;
