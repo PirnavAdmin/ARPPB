@@ -47,7 +47,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
             var totalItems = await queryable.CountAsync();
             var page = query.Page > 0 ? query.Page : 1;
-            var pageSize = query.PageSize > 0 ? query.PageSize : 10;
+            var pageSize = query.PageSize > 0 ? query.PageSize : 1000;
 
             var items = await queryable
                 .OrderByDescending(x => x.PurchaseDate)

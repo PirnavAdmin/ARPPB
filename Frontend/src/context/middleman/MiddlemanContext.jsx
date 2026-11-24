@@ -580,8 +580,9 @@ export const MiddlemanProvider = ({ children }) => {
 
   // Vendor actions
   const addVendor = useCallback(async (data) => {
-    const newVendor = {
-      vendorId: generateId('VEN'),
+    const tempId = generateId('VEN');
+    let newVendor = {
+      vendorId: tempId,
       totalPurchases: 0,
       totalPurchaseValue: 0,
       outstandingReceivables: 0,
@@ -593,8 +594,9 @@ export const MiddlemanProvider = ({ children }) => {
     try {
       const saved = await registerMiddlemanVendorApi(data);
       if (saved && (saved.vendorId || saved.id)) {
+        newVendor = { ...newVendor, ...saved };
         setVendors((prev) =>
-          prev.map((v) => (v.vendorId === newVendor.vendorId ? { ...v, ...saved } : v))
+          prev.map((v) => (v.vendorId === tempId ? newVendor : v))
         );
       }
     } catch (err) {
@@ -645,8 +647,9 @@ export const MiddlemanProvider = ({ children }) => {
 
   // Customer actions
   const addCustomer = useCallback(async (data) => {
+    const tempId = generateId('CUS');
     let newCustomer = {
-      customerId: generateId('CUS'),
+      customerId: tempId,
       totalPurchases: 0,
       totalPurchaseValue: 0,
       outstandingReceivables: 0,
@@ -657,9 +660,9 @@ export const MiddlemanProvider = ({ children }) => {
 
     try {
       const saved = await registerMiddlemanCustomerApi(data);
-      if (saved && saved.customerId) {
-        newCustomer = saved;
-        setCustomers((prev) => prev.map((c) => (c.customerId === newCustomer.customerId ? saved : c)));
+      if (saved && (saved.customerId || saved.id)) {
+        newCustomer = { ...newCustomer, ...saved };
+        setCustomers((prev) => prev.map((c) => (c.customerId === tempId ? newCustomer : c)));
       }
     } catch (err) {
       console.warn('registerMiddlemanCustomerApi fallback:', err?.message || err);

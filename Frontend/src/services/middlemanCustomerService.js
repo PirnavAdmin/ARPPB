@@ -58,7 +58,8 @@ export function mapMiddlemanCustomerSaleDto(dto) {
 
 export async function fetchMiddlemanCustomersApi(params = {}) {
   try {
-    const res = await api.get(Endpoints.MiddlemanCustomers.getAll, { params });
+    const effectiveParams = { pageSize: 1000, page: 1, ...params };
+    const res = await api.get(Endpoints.MiddlemanCustomers.getAll, { params: effectiveParams });
     const data = res.data?.data;
     if (data && Array.isArray(data.items)) {
       return data.items.map(mapMiddlemanCustomerDto);
@@ -127,7 +128,8 @@ export async function updateMiddlemanCustomerApi(id, customerData) {
 
 export async function fetchMiddlemanCustomerSalesApi(params = {}) {
   try {
-    const res = await api.get(Endpoints.MiddlemanCustomerSales.getAll, { params });
+    const effectiveParams = { pageSize: 1000, page: 1, ...params };
+    const res = await api.get(Endpoints.MiddlemanCustomerSales.getAll, { params: effectiveParams });
     const data = res.data?.data;
     if (data && Array.isArray(data.items)) {
       return data.items.map(mapMiddlemanCustomerSaleDto);
