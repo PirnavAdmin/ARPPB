@@ -340,10 +340,24 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             await EnsureSeedDataAsync(middlemanId);
 
+            var cleanId = id?.Trim() ?? string.Empty;
             var entity = await _context.MiddlemanConfirmations
                 .FirstOrDefaultAsync(x =>
                     (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
-                    (x.ConfirmationCode == id || x.TransactionId == id || x.Id.ToString() == id));
+                    (x.ConfirmationCode == cleanId ||
+                     x.TransactionId == cleanId ||
+                     x.Id.ToString() == cleanId ||
+                     x.ConfirmationCode.EndsWith(cleanId) ||
+                     cleanId.EndsWith(x.ConfirmationCode)));
+
+            if (entity == null)
+            {
+                entity = await _context.MiddlemanConfirmations
+                    .FirstOrDefaultAsync(x =>
+                        x.TransactionId.ToLower() == cleanId.ToLower() ||
+                        x.ConfirmationCode.ToLower() == cleanId.ToLower() ||
+                        x.Id.ToString() == cleanId);
+            }
 
             if (entity == null)
             {
@@ -354,26 +368,54 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             entity.ConfirmationDate = DateTime.UtcNow;
             entity.UpdatedAt = DateTime.UtcNow;
 
-            // Link updates to purchases or vendor sales if exists
+            // Link updates to purchases, vendor sales, or customer sales
             try
             {
-                if (entity.TransactionType == "Farmer Purchase")
+                var txnId = entity.TransactionId?.Trim() ?? string.Empty;
+                var isFarmer = string.Equals(entity.PartyType, "Farmer", StringComparison.OrdinalIgnoreCase) ||
+                               entity.TransactionType.Contains("Farmer", StringComparison.OrdinalIgnoreCase) ||
+                               txnId.StartsWith("PUR-", StringComparison.OrdinalIgnoreCase);
+
+                var isVendor = string.Equals(entity.PartyType, "Vendor", StringComparison.OrdinalIgnoreCase) ||
+                               entity.TransactionType.Contains("Vendor", StringComparison.OrdinalIgnoreCase) ||
+                               txnId.StartsWith("SAL-", StringComparison.OrdinalIgnoreCase);
+
+                var isCustomer = string.Equals(entity.PartyType, "Customer", StringComparison.OrdinalIgnoreCase) ||
+                                 entity.TransactionType.Contains("Customer", StringComparison.OrdinalIgnoreCase) ||
+                                 txnId.StartsWith("CUS-", StringComparison.OrdinalIgnoreCase);
+
+                if (isFarmer)
                 {
-                    var p = await _context.MiddlemanPurchases.FirstOrDefaultAsync(x => x.PurchaseCode == entity.TransactionId);
+                    var p = await _context.MiddlemanPurchases.FirstOrDefaultAsync(x =>
+                        x.PurchaseCode == txnId || x.PurchaseCode.ToLower() == txnId.ToLower() || x.Id.ToString() == txnId);
                     if (p != null)
                     {
                         p.OtpStatus = "Confirmed";
                         p.Status = "Completed";
+                        p.UpdatedAt = DateTime.UtcNow;
                     }
                 }
-                else if (entity.TransactionType == "Vendor Sale")
+                else if (isVendor)
                 {
-                    var s = await _context.MiddlemanVendorSales.FirstOrDefaultAsync(x => x.SaleId == entity.TransactionId);
+                    var s = await _context.MiddlemanVendorSales.FirstOrDefaultAsync(x =>
+                        x.SaleId == txnId || x.SaleId.ToLower() == txnId.ToLower() || x.Id.ToString() == txnId);
                     if (s != null)
                     {
                         s.OtpStatus = "Confirmed";
                         s.Status = "Completed";
                         s.ConfirmationDate = DateTime.UtcNow;
+                        s.UpdatedAt = DateTime.UtcNow;
+                    }
+                }
+                else if (isCustomer)
+                {
+                    var c = await _context.MiddlemanSales.FirstOrDefaultAsync(x =>
+                        x.SaleCode == txnId || x.SaleCode.ToLower() == txnId.ToLower() || x.Id.ToString() == txnId);
+                    if (c != null)
+                    {
+                        c.OtpStatus = "Confirmed";
+                        c.Status = "Completed";
+                        c.UpdatedAt = DateTime.UtcNow;
                     }
                 }
             }
@@ -387,10 +429,24 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             await EnsureSeedDataAsync(middlemanId);
 
+            var cleanId = id?.Trim() ?? string.Empty;
             var entity = await _context.MiddlemanConfirmations
                 .FirstOrDefaultAsync(x =>
                     (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
-                    (x.ConfirmationCode == id || x.TransactionId == id || x.Id.ToString() == id));
+                    (x.ConfirmationCode == cleanId ||
+                     x.TransactionId == cleanId ||
+                     x.Id.ToString() == cleanId ||
+                     x.ConfirmationCode.EndsWith(cleanId) ||
+                     cleanId.EndsWith(x.ConfirmationCode)));
+
+            if (entity == null)
+            {
+                entity = await _context.MiddlemanConfirmations
+                    .FirstOrDefaultAsync(x =>
+                        x.TransactionId.ToLower() == cleanId.ToLower() ||
+                        x.ConfirmationCode.ToLower() == cleanId.ToLower() ||
+                        x.Id.ToString() == cleanId);
+            }
 
             if (entity == null)
             {
@@ -410,10 +466,24 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             await EnsureSeedDataAsync(middlemanId);
 
+            var cleanId = id?.Trim() ?? string.Empty;
             var entity = await _context.MiddlemanConfirmations
                 .FirstOrDefaultAsync(x =>
                     (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
-                    (x.ConfirmationCode == id || x.TransactionId == id || x.Id.ToString() == id));
+                    (x.ConfirmationCode == cleanId ||
+                     x.TransactionId == cleanId ||
+                     x.Id.ToString() == cleanId ||
+                     x.ConfirmationCode.EndsWith(cleanId) ||
+                     cleanId.EndsWith(x.ConfirmationCode)));
+
+            if (entity == null)
+            {
+                entity = await _context.MiddlemanConfirmations
+                    .FirstOrDefaultAsync(x =>
+                        x.TransactionId.ToLower() == cleanId.ToLower() ||
+                        x.ConfirmationCode.ToLower() == cleanId.ToLower() ||
+                        x.Id.ToString() == cleanId);
+            }
 
             if (entity == null)
             {
@@ -426,15 +496,36 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
             try
             {
-                if (entity.TransactionType == "Farmer Purchase")
+                var txnId = entity.TransactionId?.Trim() ?? string.Empty;
+                var isFarmer = string.Equals(entity.PartyType, "Farmer", StringComparison.OrdinalIgnoreCase) ||
+                               entity.TransactionType.Contains("Farmer", StringComparison.OrdinalIgnoreCase) ||
+                               txnId.StartsWith("PUR-", StringComparison.OrdinalIgnoreCase);
+
+                var isVendor = string.Equals(entity.PartyType, "Vendor", StringComparison.OrdinalIgnoreCase) ||
+                               entity.TransactionType.Contains("Vendor", StringComparison.OrdinalIgnoreCase) ||
+                               txnId.StartsWith("SAL-", StringComparison.OrdinalIgnoreCase);
+
+                var isCustomer = string.Equals(entity.PartyType, "Customer", StringComparison.OrdinalIgnoreCase) ||
+                                 entity.TransactionType.Contains("Customer", StringComparison.OrdinalIgnoreCase) ||
+                                 txnId.StartsWith("CUS-", StringComparison.OrdinalIgnoreCase);
+
+                if (isFarmer)
                 {
-                    var p = await _context.MiddlemanPurchases.FirstOrDefaultAsync(x => x.PurchaseCode == entity.TransactionId);
-                    if (p != null) { p.OtpStatus = "Rejected"; p.Status = "Cancelled"; }
+                    var p = await _context.MiddlemanPurchases.FirstOrDefaultAsync(x =>
+                        x.PurchaseCode == txnId || x.PurchaseCode.ToLower() == txnId.ToLower() || x.Id.ToString() == txnId);
+                    if (p != null) { p.OtpStatus = "Rejected"; p.Status = "Cancelled"; p.UpdatedAt = DateTime.UtcNow; }
                 }
-                else if (entity.TransactionType == "Vendor Sale")
+                else if (isVendor)
                 {
-                    var s = await _context.MiddlemanVendorSales.FirstOrDefaultAsync(x => x.SaleId == entity.TransactionId);
-                    if (s != null) { s.OtpStatus = "Rejected"; s.Status = "Cancelled"; }
+                    var s = await _context.MiddlemanVendorSales.FirstOrDefaultAsync(x =>
+                        x.SaleId == txnId || x.SaleId.ToLower() == txnId.ToLower() || x.Id.ToString() == txnId);
+                    if (s != null) { s.OtpStatus = "Rejected"; s.Status = "Cancelled"; s.UpdatedAt = DateTime.UtcNow; }
+                }
+                else if (isCustomer)
+                {
+                    var c = await _context.MiddlemanSales.FirstOrDefaultAsync(x =>
+                        x.SaleCode == txnId || x.SaleCode.ToLower() == txnId.ToLower() || x.Id.ToString() == txnId);
+                    if (c != null) { c.OtpStatus = "Rejected"; c.Status = "Cancelled"; c.UpdatedAt = DateTime.UtcNow; }
                 }
             }
             catch { }
