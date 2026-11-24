@@ -8,6 +8,7 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
 {
     /// <summary>Vendor Purchases &amp; Raw Material Procurement Management API.</summary>
     [Route("api/v1/vendor/purchases")]
+    [Route("api/v1/vendor/procurement")]
     public sealed class VendorPurchasesController : VendorPortalControllerBase
     {
         private readonly IVendorPurchasesRepository _purchases;
@@ -29,10 +30,10 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
         public async Task<IActionResult> GetPurchases([FromQuery] PurchasesQuery query, CancellationToken ct) =>
             Success(await _purchases.GetPurchasesAsync(await VendorIdAsync(ct), query, ct));
 
-        /// <summary>Get a single purchase invoice/order by ID.</summary>
-        [HttpGet("{id:long}")]
+        /// <summary>Get a single purchase invoice/order by ID or purchase code (e.g. PUR-F-XXXX).</summary>
+        [HttpGet("{id}")]
         public async Task<IActionResult> GetPurchaseById(
-            long id,
+            string id,
             [FromQuery] string supplierCategory = "Farmer",
             CancellationToken ct = default)
         {
@@ -49,9 +50,9 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
         }
 
         /// <summary>Update payment status or due amount of a purchase order.</summary>
-        [HttpPatch("{id:long}/status")]
+        [HttpPatch("{id}/status")]
         public async Task<IActionResult> UpdatePurchaseStatus(
-            long id,
+            string id,
             [FromQuery] string supplierCategory,
             [FromBody] UpdateVendorPurchaseStatusRequest request,
             CancellationToken ct)

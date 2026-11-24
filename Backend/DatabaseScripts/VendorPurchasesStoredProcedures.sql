@@ -236,7 +236,7 @@ DROP PROCEDURE IF EXISTS `sp_Vendor_GetPurchaseById`;
 DELIMITER $$
 CREATE PROCEDURE `sp_Vendor_GetPurchaseById`(
     IN p_vendor_id BIGINT,
-    IN p_purchase_id BIGINT,
+    IN p_purchase_id VARCHAR(50),
     IN p_supplier_category VARCHAR(30)
 )
 BEGIN
@@ -269,7 +269,8 @@ BEGIN
             p.`CreatedAt`
         FROM `vendor_middleman_purchases` p
         INNER JOIN `vendor_middlemen` m ON p.`MiddlemanId` = m.`Id`
-        WHERE m.`VendorId` = p_vendor_id AND p.`Id` = p_purchase_id
+        WHERE m.`VendorId` = p_vendor_id 
+          AND (CAST(p.`Id` AS CHAR) = p_purchase_id OR p.`PurchaseCode` = p_purchase_id)
         LIMIT 1;
     ELSE
         SELECT
@@ -300,7 +301,8 @@ BEGIN
             p.`CreatedAt`
         FROM `vendor_farmer_purchases` p
         INNER JOIN `vendor_farmers` f ON p.`FarmerId` = f.`Id`
-        WHERE f.`VendorId` = p_vendor_id AND p.`Id` = p_purchase_id
+        WHERE f.`VendorId` = p_vendor_id 
+          AND (CAST(p.`Id` AS CHAR) = p_purchase_id OR p.`PurchaseCode` = p_purchase_id)
         LIMIT 1;
     END IF;
 END$$
@@ -543,7 +545,7 @@ DROP PROCEDURE IF EXISTS `sp_Vendor_UpdatePurchaseStatus`;
 DELIMITER $$
 CREATE PROCEDURE `sp_Vendor_UpdatePurchaseStatus`(
     IN p_vendor_id BIGINT,
-    IN p_purchase_id BIGINT,
+    IN p_purchase_id VARCHAR(50),
     IN p_supplier_category VARCHAR(30),
     IN p_payment_status VARCHAR(30),
     IN p_due_amount DECIMAL(14,2)
@@ -555,14 +557,16 @@ BEGIN
         SET
             p.`PaymentStatus` = COALESCE(p_payment_status, p.`PaymentStatus`),
             p.`DueAmount` = COALESCE(p_due_amount, p.`DueAmount`)
-        WHERE m.`VendorId` = p_vendor_id AND p.`Id` = p_purchase_id;
+        WHERE m.`VendorId` = p_vendor_id
+          AND (CAST(p.`Id` AS CHAR) = p_purchase_id OR p.`PurchaseCode` = p_purchase_id);
     ELSE
         UPDATE `vendor_farmer_purchases` p
         INNER JOIN `vendor_farmers` f ON p.`FarmerId` = f.`Id`
         SET
             p.`PaymentStatus` = COALESCE(p_payment_status, p.`PaymentStatus`),
             p.`DueAmount` = COALESCE(p_due_amount, p.`DueAmount`)
-        WHERE f.`VendorId` = p_vendor_id AND p.`Id` = p_purchase_id;
+        WHERE f.`VendorId` = p_vendor_id
+          AND (CAST(p.`Id` AS CHAR) = p_purchase_id OR p.`PurchaseCode` = p_purchase_id);
     END IF;
 
     -- Return updated purchase

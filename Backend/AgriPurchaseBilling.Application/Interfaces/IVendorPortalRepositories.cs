@@ -82,9 +82,9 @@ namespace AgriPurchaseBilling.Application.Interfaces.VendorPortal
     {
         Task<VendorPurchasesSummaryDto> GetSummaryAsync(long vendorId, CancellationToken ct);
         Task<PagedResult<VendorPurchaseItemDto>> GetPurchasesAsync(long vendorId, PurchasesQuery query, CancellationToken ct);
-        Task<VendorPurchaseItemDto?> GetPurchaseByIdAsync(long vendorId, long id, string supplierCategory, CancellationToken ct);
+        Task<VendorPurchaseItemDto?> GetPurchaseByIdAsync(long vendorId, string id, string supplierCategory, CancellationToken ct);
         Task<VendorPurchaseItemDto> CreatePurchaseAsync(long vendorId, CreateVendorPurchaseRequest request, CancellationToken ct);
-        Task<VendorPurchaseItemDto> UpdatePurchaseStatusAsync(long vendorId, long id, string supplierCategory, UpdateVendorPurchaseStatusRequest request, CancellationToken ct);
+        Task<VendorPurchaseItemDto> UpdatePurchaseStatusAsync(long vendorId, string id, string supplierCategory, UpdateVendorPurchaseStatusRequest request, CancellationToken ct);
         Task<byte[]> ExportPurchasesCsvAsync(long vendorId, PurchasesQuery query, CancellationToken ct);
     }
 }

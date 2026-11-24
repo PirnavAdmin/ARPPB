@@ -38,6 +38,7 @@ namespace AgriPurchaseBilling.Api.Controllers
             return Ok(ApiResponse<VendorProcessingOverviewDto>.Ok(overview, "Product processing overview retrieved successfully."));
         }
 
+        [HttpGet("")]
         [HttpGet("batches")]
         [ProducesResponseType(typeof(ApiResponse<List<VendorProcessingBatchDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetBatches(
@@ -51,6 +52,7 @@ namespace AgriPurchaseBilling.Api.Controllers
             return Ok(ApiResponse<List<VendorProcessingBatchDto>>.Ok(batches, "Processing batches retrieved successfully."));
         }
 
+        [HttpGet("{processingId}")]
         [HttpGet("batches/{processingId}")]
         [ProducesResponseType(typeof(ApiResponse<VendorProcessingBatchDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<VendorProcessingBatchDto>), StatusCodes.Status404NotFound)]
@@ -62,6 +64,7 @@ namespace AgriPurchaseBilling.Api.Controllers
                 : Ok(ApiResponse<VendorProcessingBatchDto>.Ok(batch, "Processing batch details retrieved successfully."));
         }
 
+        [HttpPost("")]
         [HttpPost("batches")]
         [ProducesResponseType(typeof(ApiResponse<VendorProcessingBatchDto>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiResponse<VendorProcessingBatchDto>), StatusCodes.Status400BadRequest)]
