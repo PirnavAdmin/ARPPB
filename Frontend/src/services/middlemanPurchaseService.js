@@ -76,7 +76,8 @@ export function mapMiddlemanPurchaseDto(dto = {}, existing = {}) {
 
 export async function fetchMiddlemanPurchasesApi(params = {}) {
   try {
-    const res = await api.get(Endpoints.MiddlemanPurchases.getAll, { params });
+    const effectiveParams = { pageSize: 1000, page: 1, ...params };
+    const res = await api.get(Endpoints.MiddlemanPurchases.getAll, { params: effectiveParams });
     const data = res.data?.data ?? res.data;
     const list = Array.isArray(data?.items)
       ? data.items

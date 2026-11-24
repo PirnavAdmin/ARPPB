@@ -16,12 +16,13 @@ export async function fetchMiddlemanConfirmationsSummaryApi() {
 
 export async function fetchMiddlemanConfirmationsApi(query = {}) {
   try {
+    const effectivePageSize = query.pageSize || 1000;
     const params = new URLSearchParams();
     if (query.category && query.category !== 'All') params.append('category', query.category);
     if (query.otpStatus && query.otpStatus !== 'All') params.append('otpStatus', query.otpStatus);
     if (query.search) params.append('search', query.search);
     if (query.page) params.append('page', query.page);
-    if (query.pageSize) params.append('pageSize', query.pageSize);
+    params.append('pageSize', effectivePageSize);
 
     const url = `${Endpoints.MiddlemanConfirmations.getAll}?${params.toString()}`;
     const res = await api.get(url);

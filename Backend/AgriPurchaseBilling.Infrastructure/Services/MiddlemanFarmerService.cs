@@ -64,10 +64,10 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             var activeSupplying = await queryable.CountAsync(x => x.Status == "Active");
 
             var page = query.Page > 0 ? query.Page : 1;
-            var pageSize = query.PageSize > 0 ? query.PageSize : 8;
+            var pageSize = query.PageSize > 0 ? query.PageSize : 1000;
 
             var items = await queryable
-                .OrderBy(x => x.Id)
+                .OrderByDescending(x => x.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
