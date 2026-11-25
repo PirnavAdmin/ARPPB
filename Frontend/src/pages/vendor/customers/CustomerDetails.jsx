@@ -51,28 +51,54 @@ export function CustomerDetails({
   const [receiptAmount, setReceiptAmount] = useState('');
   const [paymentMode, setPaymentMode] = useState('NEFT / RTGS');
 
+  const isMatchCustomer = useCallback((recordPartyId, recordPartyName = '') => {
+    if (!customer) return false;
+    const pStr = String(recordPartyId || '').trim().toLowerCase();
+    const idStr = String(customer.id || '').trim().toLowerCase();
+    const rawIdStr = String(customer.rawId || '').trim().toLowerCase();
+    const codeStr = String(customer.customerCode || customer.code || '').trim().toLowerCase();
+    const nameStr = String(customer.name || customer.customerName || customer.businessName || '').trim().toLowerCase();
+    const rName = String(recordPartyName || '').trim().toLowerCase();
+
+    if (pStr && (pStr === idStr || pStr === rawIdStr || (codeStr && pStr === codeStr))) return true;
+    const numP = pStr.replace(/\D/g, '');
+    const numC = (idStr || rawIdStr).replace(/\D/g, '');
+    if (numP && numC && numP === numC) return true;
+    if (rName && nameStr && rName === nameStr) return true;
+    return false;
+  }, [customer]);
+
   const custSales = useMemo(() => {
     if (!customer) return [];
-    return sales.filter((s) => s.customerId === customer.id);
-  }, [sales, customer]);
+    return sales.filter(
+      (s) => isMatchCustomer(s.customerId, s.customerName) || s.customerId === customer.id
+    );
+  }, [sales, customer, isMatchCustomer]);
 
   const custOrders = useMemo(() => {
     if (!customer) return [];
-    return orders.filter((o) => o.customerId === customer.id);
-  }, [orders, customer]);
+    return orders.filter(
+      (o) => isMatchCustomer(o.customerId, o.customerName) || o.customerId === customer.id
+    );
+  }, [orders, customer, isMatchCustomer]);
 
   const custLedger = useMemo(() => {
     if (!customer) return [];
-    return ledger.filter((l) => l.partyId === customer.id);
-  }, [ledger, customer]);
+    return ledger.filter(
+      (l) => isMatchCustomer(l.partyId, l.partyName) || l.partyId === customer.id
+    );
+  }, [ledger, customer, isMatchCustomer]);
 
   const custConfirmations = useMemo(() => {
     if (!customer) return [];
     const saleIds = new Set(custSales.map((s) => s.id));
     return confirmations.filter(
-      (c) => c.partyId === customer.id || saleIds.has(c.transactionId)
+      (c) =>
+        isMatchCustomer(c.partyId, c.partyName) ||
+        c.partyId === customer.id ||
+        saleIds.has(c.transactionId)
     );
-  }, [confirmations, customer, custSales]);
+  }, [confirmations, customer, custSales, isMatchCustomer]);
 
   if (!customer) return null;
 

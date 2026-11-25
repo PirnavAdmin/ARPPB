@@ -1011,7 +1011,26 @@ DROP PROCEDURE IF EXISTS `sp_vp_vendor_resolve`;
 DELIMITER $$
 CREATE PROCEDURE `sp_vp_vendor_resolve`(IN p_user BIGINT)
 BEGIN
-  SELECT Id AS vendor_id FROM Vendors WHERE UserId = p_user LIMIT 1;
+  DECLARE v_vendor_id BIGINT;
+  DECLARE v_full_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  DECLARE v_phone VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  DECLARE v_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  DECLARE v_cnt INT DEFAULT 0;
+
+  SELECT Id INTO v_vendor_id FROM Vendors WHERE UserId = p_user LIMIT 1;
+
+  IF v_vendor_id IS NULL THEN
+    SELECT FullName, ContactNumber INTO v_full_name, v_phone FROM Users WHERE Id = p_user LIMIT 1;
+    IF v_full_name IS NOT NULL THEN
+      SELECT COUNT(*) INTO v_cnt FROM Vendors;
+      SET v_code = CONCAT('VND-', LPAD(v_cnt + 1, 4, '0'));
+      INSERT INTO Vendors (UserId, VendorCode, BusinessName, ContactPerson, PhoneNumber, Status, CreatedAt, UpdatedAt)
+      VALUES (p_user, v_code, COALESCE(v_full_name, 'Vendor Business'), COALESCE(v_full_name, 'Vendor'), COALESCE(v_phone, '9999999999'), 'Active', CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6));
+      SET v_vendor_id = LAST_INSERT_ID();
+    END IF;
+  END IF;
+
+  SELECT v_vendor_id AS vendor_id;
 END$$
 DELIMITER ;
 

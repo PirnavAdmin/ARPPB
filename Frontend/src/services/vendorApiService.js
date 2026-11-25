@@ -1760,15 +1760,14 @@ export async function fetchVendorLedgerByIdApi(id) {
 
 export async function payVendorSupplierApi(payload = {}) {
   try {
-    const rawEntryId = Number(
-      String(payload.ledgerEntryId || payload.referenceTransactionId || '0').replace(
-        /\D/g,
-        ''
-      )
-    );
+    const rawEntryId = payload.ledgerEntryId && !isNaN(Number(payload.ledgerEntryId))
+      ? Number(payload.ledgerEntryId)
+      : null;
+    const refCode = payload.ledgerEntryCode || payload.referenceTransactionId || payload.id || null;
     const reqBody = {
-      ledgerEntryId: rawEntryId > 0 ? rawEntryId : null,
-      partyName: String(payload.partyName || 'Supplier').trim(),
+      ledgerEntryId: rawEntryId,
+      ledgerEntryCode: refCode ? String(refCode).trim() : null,
+      partyName: String(payload.partyName || '').trim() || null,
       amount: Number(payload.amount) || 0,
       paymentMode: payload.paymentMode || 'NEFT / RTGS',
       referenceNo: String(payload.referenceTransactionId || payload.referenceNo || '').trim() || null,
@@ -1784,15 +1783,15 @@ export async function payVendorSupplierApi(payload = {}) {
 
 export async function recordVendorCustomerReceiptApi(payload = {}) {
   try {
-    const rawSaleId = Number(
-      String(payload.saleId || payload.referenceTransactionId || '0').replace(/\D/g, '')
-    );
-    const rawCustomerUserId = Number(
-      String(payload.partyId || payload.customerUserId || '0').replace(/\D/g, '')
-    );
+    const rawSaleId = payload.saleId && !isNaN(Number(payload.saleId)) ? Number(payload.saleId) : null;
+    const rawCustomerUserId = payload.customerUserId && !isNaN(Number(payload.customerUserId))
+      ? Number(payload.customerUserId)
+      : null;
+    const refCode = payload.saleCode || payload.referenceTransactionId || payload.id || null;
     const reqBody = {
-      saleId: rawSaleId > 0 ? rawSaleId : null,
-      customerUserId: rawCustomerUserId > 0 ? rawCustomerUserId : null,
+      saleId: rawSaleId,
+      saleCode: refCode ? String(refCode).trim() : null,
+      customerUserId: rawCustomerUserId,
       amount: Number(payload.amount) || 0,
       paymentMode: payload.paymentMode || 'NEFT / RTGS',
       referenceNo: String(payload.referenceTransactionId || payload.referenceNo || '').trim() || null,

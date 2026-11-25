@@ -331,12 +331,18 @@ CREATE PROCEDURE `sp_Vendor_CreateFarmerPurchase`(
 BEGIN
     DECLARE v_new_id BIGINT;
     DECLARE v_farmer_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_farmer_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_farmer_mobile VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_stock_id BIGINT;
     DECLARE v_stock_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_batch_num VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_mov_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_stock_cnt INT DEFAULT 0;
     DECLARE v_mov_cnt INT DEFAULT 0;
+    DECLARE v_vch_cnt INT DEFAULT 0;
+    DECLARE v_vch_code VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_otpc_cnt INT DEFAULT 0;
+    DECLARE v_otpc_code VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
     -- Validate farmer belongs to this vendor
     IF NOT EXISTS (SELECT 1 FROM `vendor_farmers` WHERE `Id` = p_farmer_id AND `VendorId` = p_vendor_id) THEN
@@ -359,8 +365,13 @@ BEGIN
 
     SET v_new_id = LAST_INSERT_ID();
 
+    -- Fetch farmer details
+    SELECT `FullName`, `FarmerCode`, `MobileNumber`
+      INTO v_farmer_name, v_farmer_code, v_farmer_mobile
+      FROM `vendor_farmers`
+     WHERE `Id` = p_farmer_id;
+
     -- Auto-inward to vendor_raw_material_stocks
-    SELECT `FullName` INTO v_farmer_name FROM `vendor_farmers` WHERE `Id` = p_farmer_id;
     SELECT COUNT(*) INTO v_stock_cnt FROM `vendor_raw_material_stocks`;
     SET v_stock_code = CONCAT('STK-', LPAD(v_stock_cnt + 1, 4, '0'));
     SET v_batch_num = CONCAT('BCH-', UPPER(LEFT(REPLACE(p_crop_name, ' ', ''), 3)), '-', LPAD(v_stock_cnt + 1, 3, '0'));
@@ -395,6 +406,63 @@ BEGIN
         CONCAT('Stock inward for ', p_crop_name, ' (Farmer purchase from ', COALESCE(v_farmer_name, 'Farmer'), ')'),
         CURRENT_TIMESTAMP(6)
     );
+
+    -- Cross-populate vp_ledger_entries for financial ledger persistence
+    SELECT COUNT(*) INTO v_vch_cnt FROM `vp_ledger_entries`;
+    SET v_vch_code = CONCAT('VCH-', LPAD(v_vch_cnt + 1, 4, '0'));
+
+    INSERT INTO `vp_ledger_entries` (
+        `vendor_id`, `voucher_code`, `transaction_code`, `entry_date`,
+        `description`, `party_name`, `party_code`, `party_category`,
+        `ledger_category`, `debit`, `credit`, `expected_payment_date`,
+        `status`, `settled_amount`, `created_at`, `updated_at`
+    ) VALUES (
+        p_vendor_id, v_vch_code, p_purchase_code, p_purchase_date,
+        CONCAT('Farmer Procurement - ', p_crop_name, ' (', p_quantity, ' ', p_unit, ')'),
+        COALESCE(v_farmer_name, 'Farmer'), v_farmer_code, 'Farmer',
+        'Purchase', 0.00, p_total_amount, DATE(p_purchase_date),
+        CASE WHEN p_due_amount <= 0 THEN 'Paid' WHEN p_due_amount < p_total_amount THEN 'Partial' ELSE 'Unpaid' END,
+        p_total_amount - p_due_amount, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6)
+    );
+
+    -- Cross-populate vp_otp_confirmations and vendor_farmer_otp_logs
+    SELECT COUNT(*) INTO v_otpc_cnt FROM `vp_otp_confirmations`;
+    SET v_otpc_code = CONCAT('OTP-', LPAD(v_otpc_cnt + 1, 4, '0'));
+
+    INSERT INTO `vp_otp_confirmations` (
+        `vendor_id`, `confirmation_code`, `transaction_code`, `party_category`,
+        `party_name`, `party_code`, `mobile`, `transaction_type`,
+        `product`, `quantity`, `unit`, `amount`,
+        `otp_hash`, `otp_status`, `attempts`, `sent_at`,
+        `expires_at`, `confirmed_at`, `created_at`, `updated_at`
+    ) VALUES (
+        p_vendor_id, v_otpc_code, p_purchase_code, 'Farmer',
+        COALESCE(v_farmer_name, 'Farmer'), v_farmer_code, COALESCE(v_farmer_mobile, ''), 'Procurement Inward',
+        p_crop_name, p_quantity, p_unit, p_total_amount,
+        SHA2('123456', 256), 'Verified', 1, CURRENT_TIMESTAMP(6),
+        DATE_ADD(CURRENT_TIMESTAMP(6), INTERVAL 30 MINUTE), CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6)
+    );
+
+    INSERT INTO `vendor_farmer_otp_logs` (
+        `FarmerId`, `OtpCode`, `Purpose`, `ActionDetails`, `Status`, `VerifiedAt`, `CreatedAt`
+    ) VALUES (
+        p_farmer_id, '123456', 'Purchase Confirmation',
+        CONCAT('Procurement inward of ', p_quantity, ' ', p_unit, ' ', p_crop_name, ' (', p_purchase_code, ')'),
+        'Verified', CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6)
+    );
+
+    -- Initial payment record if paid
+    IF (p_total_amount - p_due_amount) > 0 THEN
+        INSERT INTO `vendor_farmer_payments` (
+            `FarmerId`, `PaymentCode`, `VoucherNumber`, `Amount`,
+            `PaymentMethod`, `PaymentDate`, `ReferenceNumber`, `Status`,
+            `Notes`, `CreatedAt`
+        ) VALUES (
+            p_farmer_id, CONCAT('PAY-F-', LPAD(v_new_id, 4, '0')), v_vch_code, p_total_amount - p_due_amount,
+            'Bank Transfer', p_purchase_date, p_purchase_code, 'Completed',
+            CONCAT('Initial payment for purchase ', p_purchase_code), CURRENT_TIMESTAMP(6)
+        );
+    END IF;
 
     -- Return newly created purchase row
     SELECT
@@ -446,12 +514,18 @@ CREATE PROCEDURE `sp_Vendor_CreateMiddlemanPurchase`(
 BEGIN
     DECLARE v_new_id BIGINT;
     DECLARE v_agency_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_mid_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_mid_mobile VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_stock_id BIGINT;
     DECLARE v_stock_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_batch_num VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_mov_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_stock_cnt INT DEFAULT 0;
     DECLARE v_mov_cnt INT DEFAULT 0;
+    DECLARE v_vch_cnt INT DEFAULT 0;
+    DECLARE v_vch_code VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_otpc_cnt INT DEFAULT 0;
+    DECLARE v_otpc_code VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
     -- Validate middleman belongs to this vendor
     IF NOT EXISTS (SELECT 1 FROM `vendor_middlemen` WHERE `Id` = p_middleman_id AND `VendorId` = p_vendor_id) THEN
@@ -474,8 +548,13 @@ BEGIN
 
     SET v_new_id = LAST_INSERT_ID();
 
+    -- Fetch middleman details
+    SELECT COALESCE(`BusinessName`, `FullName`), `MiddlemanCode`, `MobileNumber`
+      INTO v_agency_name, v_mid_code, v_mid_mobile
+      FROM `vendor_middlemen`
+     WHERE `Id` = p_middleman_id;
+
     -- Auto-inward to vendor_raw_material_stocks
-    SELECT COALESCE(`AgencyName`, `FullName`) INTO v_agency_name FROM `vendor_middlemen` WHERE `Id` = p_middleman_id;
     SELECT COUNT(*) INTO v_stock_cnt FROM `vendor_raw_material_stocks`;
     SET v_stock_code = CONCAT('STK-', LPAD(v_stock_cnt + 1, 4, '0'));
     SET v_batch_num = CONCAT('BCH-', UPPER(LEFT(REPLACE(p_crop_name, ' ', ''), 3)), '-', LPAD(v_stock_cnt + 1, 3, '0'));
@@ -510,6 +589,63 @@ BEGIN
         CONCAT('Stock inward for ', p_crop_name, ' (Middleman purchase from ', COALESCE(v_agency_name, 'Middleman'), ')'),
         CURRENT_TIMESTAMP(6)
     );
+
+    -- Cross-populate vp_ledger_entries for financial ledger persistence
+    SELECT COUNT(*) INTO v_vch_cnt FROM `vp_ledger_entries`;
+    SET v_vch_code = CONCAT('VCH-', LPAD(v_vch_cnt + 1, 4, '0'));
+
+    INSERT INTO `vp_ledger_entries` (
+        `vendor_id`, `voucher_code`, `transaction_code`, `entry_date`,
+        `description`, `party_name`, `party_code`, `party_category`,
+        `ledger_category`, `debit`, `credit`, `expected_payment_date`,
+        `status`, `settled_amount`, `created_at`, `updated_at`
+    ) VALUES (
+        p_vendor_id, v_vch_code, p_purchase_code, p_purchase_date,
+        CONCAT('Middleman Procurement - ', p_crop_name, ' (', p_quantity, ' ', p_unit, ')'),
+        COALESCE(v_agency_name, 'Middleman'), v_mid_code, 'Middleman',
+        'Purchase', 0.00, p_total_amount, DATE(p_purchase_date),
+        CASE WHEN p_due_amount <= 0 THEN 'Paid' WHEN p_due_amount < p_total_amount THEN 'Partial' ELSE 'Unpaid' END,
+        p_total_amount - p_due_amount, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6)
+    );
+
+    -- Cross-populate vp_otp_confirmations and vendor_middleman_otp_logs
+    SELECT COUNT(*) INTO v_otpc_cnt FROM `vp_otp_confirmations`;
+    SET v_otpc_code = CONCAT('OTP-', LPAD(v_otpc_cnt + 1, 4, '0'));
+
+    INSERT INTO `vp_otp_confirmations` (
+        `vendor_id`, `confirmation_code`, `transaction_code`, `party_category`,
+        `party_name`, `party_code`, `mobile`, `transaction_type`,
+        `product`, `quantity`, `unit`, `amount`,
+        `otp_hash`, `otp_status`, `attempts`, `sent_at`,
+        `expires_at`, `confirmed_at`, `created_at`, `updated_at`
+    ) VALUES (
+        p_vendor_id, v_otpc_code, p_purchase_code, 'Middleman',
+        COALESCE(v_agency_name, 'Middleman'), v_mid_code, COALESCE(v_mid_mobile, ''), 'Procurement Inward',
+        p_crop_name, p_quantity, p_unit, p_total_amount,
+        SHA2('123456', 256), 'Verified', 1, CURRENT_TIMESTAMP(6),
+        DATE_ADD(CURRENT_TIMESTAMP(6), INTERVAL 30 MINUTE), CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6)
+    );
+
+    INSERT INTO `vendor_middleman_otp_logs` (
+        `MiddlemanId`, `OtpCode`, `Purpose`, `ActionDetails`, `Status`, `VerifiedAt`, `CreatedAt`
+    ) VALUES (
+        p_middleman_id, '123456', 'Purchase Confirmation',
+        CONCAT('Procurement inward of ', p_quantity, ' ', p_unit, ' ', p_crop_name, ' (', p_purchase_code, ')'),
+        'Verified', CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6)
+    );
+
+    -- Initial payment record if paid
+    IF (p_total_amount - p_due_amount) > 0 THEN
+        INSERT INTO `vendor_middleman_payments` (
+            `MiddlemanId`, `PaymentCode`, `VoucherNumber`, `Amount`,
+            `PaymentMethod`, `PaymentDate`, `ReferenceNumber`, `Status`,
+            `Notes`, `CreatedAt`
+        ) VALUES (
+            p_middleman_id, CONCAT('PAY-M-', LPAD(v_new_id, 4, '0')), v_vch_code, p_total_amount - p_due_amount,
+            'RTGS/NEFT', p_purchase_date, p_purchase_code, 'Completed',
+            CONCAT('Initial payment for purchase ', p_purchase_code), CURRENT_TIMESTAMP(6)
+        );
+    END IF;
 
     -- Return newly created purchase row
     SELECT
