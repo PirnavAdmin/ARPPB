@@ -81,7 +81,15 @@ export function Customers() {
   // Resolve active customer for the full-page profile view (driven by URL query params)
   const activeProfileCustomer = useMemo(() => {
     if (!queryCustomerId) return null;
-    return customersWithQty.find((c) => c.id === queryCustomerId) || null;
+    return (
+      customersWithQty.find(
+        (c) =>
+          c.id === queryCustomerId ||
+          String(c.id) === String(queryCustomerId) ||
+          String(c.rawId) === String(queryCustomerId) ||
+          c.customerCode === queryCustomerId
+      ) || null
+    );
   }, [customersWithQty, queryCustomerId]);
 
   const isProfileView = Boolean(activeProfileCustomer);

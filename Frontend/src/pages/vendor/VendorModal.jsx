@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
+import VendorErrorBoundary from './VendorErrorBoundary';
 
 export function VendorModal({
   isOpen,
@@ -58,7 +59,11 @@ export function VendorModal({
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1">{children}</div>
+        <div className="p-6 overflow-y-auto flex-1">
+          <VendorErrorBoundary fallbackTitle="Unable to display modal content" onReset={onClose} resetLabel="Close Dialog">
+            {children}
+          </VendorErrorBoundary>
+        </div>
 
         {footer && (
           <div className="px-6 py-3.5 bg-brand-background border-t border-brand-border flex items-center justify-end gap-2.5 shrink-0">

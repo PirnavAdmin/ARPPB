@@ -70,14 +70,32 @@ export function Farmers() {
   // Resolve active farmer for the full-page profile view (driven by URL query params)
   const activeProfileFarmer = useMemo(() => {
     if (queryFarmerId) {
-      return farmers.find((f) => f.id === queryFarmerId) || null;
+      return (
+        farmers.find(
+          (f) =>
+            f.id === queryFarmerId ||
+            String(f.id) === String(queryFarmerId) ||
+            String(f.rawId) === String(queryFarmerId) ||
+            f.farmerCode === queryFarmerId
+        ) || null
+      );
     }
     if (queryPurchaseId) {
       const matchedPurchase = purchases.find(
-        (p) => p.id === queryPurchaseId && p.supplierCategory === 'Farmer'
+        (p) =>
+          p.id === queryPurchaseId &&
+          (p.supplierCategory === 'Farmer' || !p.supplierCategory)
       );
       if (matchedPurchase) {
-        return farmers.find((f) => f.id === matchedPurchase.supplierId) || null;
+        return (
+          farmers.find(
+            (f) =>
+              f.id === matchedPurchase.supplierId ||
+              String(f.id) === String(matchedPurchase.supplierId) ||
+              String(f.rawId) === String(matchedPurchase.supplierId) ||
+              f.farmerCode === matchedPurchase.supplierId
+          ) || null
+        );
       }
     }
     return null;

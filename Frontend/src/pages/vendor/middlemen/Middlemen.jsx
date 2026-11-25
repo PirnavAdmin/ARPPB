@@ -69,14 +69,32 @@ export function Middlemen() {
   // Resolve active middleman for the full-page profile view (driven by URL query params)
   const activeProfileMiddleman = useMemo(() => {
     if (queryMiddlemanId) {
-      return middlemen.find((m) => m.id === queryMiddlemanId) || null;
+      return (
+        middlemen.find(
+          (m) =>
+            m.id === queryMiddlemanId ||
+            String(m.id) === String(queryMiddlemanId) ||
+            String(m.rawId) === String(queryMiddlemanId) ||
+            m.middlemanCode === queryMiddlemanId
+        ) || null
+      );
     }
     if (queryPurchaseId) {
       const matchedPurchase = purchases.find(
-        (p) => p.id === queryPurchaseId && p.supplierCategory === 'Middleman'
+        (p) =>
+          p.id === queryPurchaseId &&
+          (p.supplierCategory === 'Middleman' || !p.supplierCategory)
       );
       if (matchedPurchase) {
-        return middlemen.find((m) => m.id === matchedPurchase.supplierId) || null;
+        return (
+          middlemen.find(
+            (m) =>
+              m.id === matchedPurchase.supplierId ||
+              String(m.id) === String(matchedPurchase.supplierId) ||
+              String(m.rawId) === String(matchedPurchase.supplierId) ||
+              m.middlemanCode === matchedPurchase.supplierId
+          ) || null
+        );
       }
     }
     return null;

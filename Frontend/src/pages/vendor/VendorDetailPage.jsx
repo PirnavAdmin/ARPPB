@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import VendorPageHeader from './VendorPageHeader';
+import VendorErrorBoundary from './VendorErrorBoundary';
 
 /**
  * Full-page detail view shell used by the Partners & Directory screens
@@ -28,7 +29,9 @@ export function VendorDetailPage({
       <VendorPageHeader title={title} subtitle={subtitle} icon={icon} showBreadcrumb={false} />
 
       <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs p-4 sm:p-6">
-        {children}
+        <VendorErrorBoundary fallbackTitle="Unable to display profile details" onReset={onBack} resetLabel={backLabel}>
+          {children}
+        </VendorErrorBoundary>
       </div>
     </div>
   );
