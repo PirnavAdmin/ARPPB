@@ -89,6 +89,9 @@ export function mapVendorFarmerDto(dto = {}, existing = {}) {
       existing.accountNumber ||
       '',
     ifscCode: dto.ifscCode || dto.bankDetails?.ifscCode || existing.ifscCode || '',
+    accountHolderName: dto.accountHolderName || dto.bankDetails?.accountHolderName || existing.accountHolderName || '',
+    branchName: dto.branchName || dto.bankDetails?.branchName || existing.branchName || '',
+    bankAccountNumber: dto.bankAccountNumber || dto.accountNumber || existing.bankAccountNumber || '',
     totalPurchases: Number(dto.totalPurchases ?? existing.totalPurchases ?? 0),
     totalQuantity: Number(
       dto.totalPurchaseQuantity ?? dto.totalQuantity ?? existing.totalQuantity ?? 0
@@ -156,6 +159,9 @@ export function mapVendorMiddlemanDto(dto = {}, existing = {}) {
       existing.accountNumber ||
       '',
     ifscCode: dto.ifscCode || dto.bankDetails?.ifscCode || existing.ifscCode || '',
+    accountHolderName: dto.accountHolderName || dto.bankDetails?.accountHolderName || existing.accountHolderName || '',
+    branchName: dto.branchName || dto.bankDetails?.branchName || existing.branchName || '',
+    bankAccountNumber: dto.bankAccountNumber || dto.accountNumber || existing.bankAccountNumber || '',
     openingBalance: Number(dto.openingBalance ?? existing.openingBalance ?? 0),
     totalTransactions: Number(
       dto.totalTransactions ?? dto.totalTransactionsCount ?? existing.totalTransactions ?? 0
@@ -225,6 +231,9 @@ export function mapVendorCustomerDto(dto = {}, existing = {}) {
       existing.accountNumber ||
       '',
     ifscCode: dto.ifscCode || dto.bankDetails?.ifscCode || existing.ifscCode || '',
+    accountHolderName: dto.accountHolderName || dto.bankDetails?.accountHolderName || existing.accountHolderName || '',
+    branchName: dto.branchName || dto.bankDetails?.branchName || existing.branchName || '',
+    bankAccountNumber: dto.bankAccountNumber || dto.accountNumber || existing.bankAccountNumber || '',
     totalOrders: Number(dto.totalOrders ?? existing.totalOrders ?? 0),
     totalPurchasedQty: Number(
       dto.totalPurchaseQuantity ?? dto.totalPurchasedQty ?? existing.totalPurchasedQty ?? 0
@@ -771,6 +780,10 @@ function buildVendorFarmerRequestDto(payload = {}) {
     bankAccountNumber: String(payload.accountNumber || payload.bankAccountNumber || '').trim() || null,
     ifscCode: String(payload.ifscCode || '').trim().toUpperCase() || null,
     bankName: String(payload.bankName || '').trim() || null,
+    accountHolderName: String(payload.accountHolderName || payload.accountName || '').trim() || null,
+    branchName: String(payload.branchName || payload.branch || '').trim() || null,
+    mandal: String(payload.mandal || '').trim() || null,
+    address: String(payload.address || '').trim() || null,
     aadhaarNumber: String(payload.aadhaarId || payload.aadhaarNumber || '').trim() || null,
     status: payload.status || 'Active',
   };
@@ -907,6 +920,11 @@ function buildVendorMiddlemanRequestDto(payload = {}) {
     state: String(payload.state || 'Andhra Pradesh').trim(),
     pinCode: String(payload.pinCode || '').trim() || null,
     openingBalance: Number(payload.openingBalance) || 0,
+    bankAccountNumber: String(payload.accountNumber || payload.bankAccountNumber || '').trim() || null,
+    accountHolderName: String(payload.accountHolderName || payload.accountName || '').trim() || null,
+    bankName: String(payload.bankName || '').trim() || null,
+    ifscCode: String(payload.ifscCode || '').trim().toUpperCase() || null,
+    branchName: String(payload.branchName || payload.branch || '').trim() || null,
     status: payload.status || 'Active',
   };
 }
@@ -1040,7 +1058,14 @@ function buildVendorCustomerRequestDto(payload = {}) {
     state: String(payload.state || 'Andhra Pradesh').trim(),
     pinCode: String(payload.pinCode || '').trim() || null,
     gstin: String(payload.gstNumber || payload.gstin || '').trim().toUpperCase() || null,
+    pan: String(payload.pan || payload.panNumber || '').trim().toUpperCase() || null,
     creditLimit: Number(payload.creditLimit) || 0,
+    openingBalance: Number(payload.openingBalance) || 0,
+    bankAccountNumber: String(payload.accountNumber || payload.bankAccountNumber || '').trim() || null,
+    accountHolderName: String(payload.accountHolderName || payload.accountName || '').trim() || null,
+    bankName: String(payload.bankName || '').trim() || null,
+    ifscCode: String(payload.ifscCode || '').trim().toUpperCase() || null,
+    branchName: String(payload.branchName || payload.branch || '').trim() || null,
     status: payload.status || 'Active',
   };
 }

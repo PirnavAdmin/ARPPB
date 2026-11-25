@@ -119,7 +119,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             var conn = await GetOpenConnectionAsync(cancellationToken);
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "CALL sp_VendorPartners_CreateFarmer(@p_vendor_id, @p_full_name, @p_father_or_spouse_name, @p_mobile_number, @p_email, @p_village, @p_district, @p_state, @p_pin_code, @p_land_acres, @p_registered_crops, @p_bank_account_number, @p_ifsc_code, @p_bank_name, @p_aadhaar_number);";
+            cmd.CommandText = "CALL sp_VendorPartners_CreateFarmer(@p_vendor_id, @p_full_name, @p_father_or_spouse_name, @p_mobile_number, @p_email, @p_village, @p_district, @p_state, @p_pin_code, @p_land_acres, @p_registered_crops, @p_bank_account_number, @p_ifsc_code, @p_bank_name, @p_aadhaar_number, @p_account_holder_name, @p_branch_name, @p_mandal, @p_address);";
 
             AddParam(cmd, "@p_vendor_id", vendorId);
             AddParam(cmd, "@p_full_name", request.FullName.Trim());
@@ -136,6 +136,10 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             AddParam(cmd, "@p_ifsc_code", Clean(request.IfscCode));
             AddParam(cmd, "@p_bank_name", Clean(request.BankName));
             AddParam(cmd, "@p_aadhaar_number", Clean(request.AadhaarNumber));
+            AddParam(cmd, "@p_account_holder_name", Clean(request.AccountHolderName));
+            AddParam(cmd, "@p_branch_name", Clean(request.BranchName));
+            AddParam(cmd, "@p_mandal", Clean(request.Mandal));
+            AddParam(cmd, "@p_address", Clean(request.Address));
 
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             return (await ReadFarmerDetailFromResultSetsAsync(reader, cancellationToken))!;
@@ -145,7 +149,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             var conn = await GetOpenConnectionAsync(cancellationToken);
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "CALL sp_VendorPartners_UpdateFarmer(@p_vendor_id, @p_farmer_id_or_code, @p_full_name, @p_father_or_spouse_name, @p_mobile_number, @p_email, @p_village, @p_district, @p_state, @p_pin_code, @p_land_acres, @p_registered_crops, @p_bank_account_number, @p_ifsc_code, @p_bank_name, @p_aadhaar_number, @p_status);";
+            cmd.CommandText = "CALL sp_VendorPartners_UpdateFarmer(@p_vendor_id, @p_farmer_id_or_code, @p_full_name, @p_father_or_spouse_name, @p_mobile_number, @p_email, @p_village, @p_district, @p_state, @p_pin_code, @p_land_acres, @p_registered_crops, @p_bank_account_number, @p_ifsc_code, @p_bank_name, @p_aadhaar_number, @p_status, @p_account_holder_name, @p_branch_name, @p_mandal, @p_address);";
 
             AddParam(cmd, "@p_vendor_id", vendorId);
             AddParam(cmd, "@p_farmer_id_or_code", farmerCodeOrId.Trim());
@@ -164,6 +168,10 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             AddParam(cmd, "@p_bank_name", Clean(request.BankName));
             AddParam(cmd, "@p_aadhaar_number", Clean(request.AadhaarNumber));
             AddParam(cmd, "@p_status", Clean(request.Status));
+            AddParam(cmd, "@p_account_holder_name", Clean(request.AccountHolderName));
+            AddParam(cmd, "@p_branch_name", Clean(request.BranchName));
+            AddParam(cmd, "@p_mandal", Clean(request.Mandal));
+            AddParam(cmd, "@p_address", Clean(request.Address));
 
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             return await ReadFarmerDetailFromResultSetsAsync(reader, cancellationToken);
@@ -264,14 +272,18 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 MobileNumber = SafeString(reader["MobileNumber"]),
                 Email = SafeNullableString(reader["Email"]),
                 Village = SafeString(reader["Village"]),
+                Mandal = SafeNullableString(reader["Mandal"]),
                 District = SafeString(reader["District"]),
                 State = SafeString(reader["State"]),
+                Address = SafeNullableString(reader["Address"]),
                 PinCode = SafeNullableString(reader["PinCode"]),
                 LandAcres = SafeDecimal(reader["LandAcres"]),
                 RegisteredCrops = SafeString(reader["RegisteredCrops"]),
                 BankAccountNumber = SafeNullableString(reader["BankAccountNumber"]),
                 IfscCode = SafeNullableString(reader["IfscCode"]),
                 BankName = SafeNullableString(reader["BankName"]),
+                AccountHolderName = SafeNullableString(reader["AccountHolderName"]),
+                BranchName = SafeNullableString(reader["BranchName"]),
                 AadhaarNumber = SafeNullableString(reader["AadhaarNumber"]),
                 Status = SafeString(reader["Status"]),
                 RegisteredAt = SafeDateTime(reader["RegisteredAt"])
@@ -444,7 +456,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             var conn = await GetOpenConnectionAsync(cancellationToken);
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "CALL sp_VendorPartners_CreateMiddleman(@p_vendor_id, @p_full_name, @p_email, @p_mobile_number, @p_business_name, @p_gstin, @p_pan, @p_market_yard_location, @p_district, @p_state, @p_pin_code, @p_opening_balance);";
+            cmd.CommandText = "CALL sp_VendorPartners_CreateMiddleman(@p_vendor_id, @p_full_name, @p_email, @p_mobile_number, @p_business_name, @p_gstin, @p_pan, @p_market_yard_location, @p_district, @p_state, @p_pin_code, @p_opening_balance, @p_bank_account_number, @p_account_holder_name, @p_bank_name, @p_ifsc_code, @p_branch_name);";
 
             AddParam(cmd, "@p_vendor_id", vendorId);
             AddParam(cmd, "@p_full_name", request.FullName.Trim());
@@ -458,6 +470,11 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             AddParam(cmd, "@p_state", request.State.Trim());
             AddParam(cmd, "@p_pin_code", Clean(request.PinCode));
             AddParam(cmd, "@p_opening_balance", request.OpeningBalance);
+            AddParam(cmd, "@p_bank_account_number", Clean(request.BankAccountNumber));
+            AddParam(cmd, "@p_account_holder_name", Clean(request.AccountHolderName));
+            AddParam(cmd, "@p_bank_name", Clean(request.BankName));
+            AddParam(cmd, "@p_ifsc_code", Clean(request.IfscCode));
+            AddParam(cmd, "@p_branch_name", Clean(request.BranchName));
 
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             return (await ReadMiddlemanDetailFromResultSetsAsync(reader, cancellationToken))!;
@@ -467,7 +484,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             var conn = await GetOpenConnectionAsync(cancellationToken);
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "CALL sp_VendorPartners_UpdateMiddleman(@p_vendor_id, @p_middleman_id_or_code, @p_full_name, @p_email, @p_mobile_number, @p_business_name, @p_gstin, @p_pan, @p_market_yard_location, @p_district, @p_state, @p_pin_code, @p_opening_balance, @p_status);";
+            cmd.CommandText = "CALL sp_VendorPartners_UpdateMiddleman(@p_vendor_id, @p_middleman_id_or_code, @p_full_name, @p_email, @p_mobile_number, @p_business_name, @p_gstin, @p_pan, @p_market_yard_location, @p_district, @p_state, @p_pin_code, @p_opening_balance, @p_status, @p_bank_account_number, @p_account_holder_name, @p_bank_name, @p_ifsc_code, @p_branch_name);";
 
             AddParam(cmd, "@p_vendor_id", vendorId);
             AddParam(cmd, "@p_middleman_id_or_code", middlemanCodeOrId.Trim());
@@ -483,6 +500,11 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             AddParam(cmd, "@p_pin_code", Clean(request.PinCode));
             AddParam(cmd, "@p_opening_balance", request.OpeningBalance);
             AddParam(cmd, "@p_status", Clean(request.Status));
+            AddParam(cmd, "@p_bank_account_number", Clean(request.BankAccountNumber));
+            AddParam(cmd, "@p_account_holder_name", Clean(request.AccountHolderName));
+            AddParam(cmd, "@p_bank_name", Clean(request.BankName));
+            AddParam(cmd, "@p_ifsc_code", Clean(request.IfscCode));
+            AddParam(cmd, "@p_branch_name", Clean(request.BranchName));
 
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             return await ReadMiddlemanDetailFromResultSetsAsync(reader, cancellationToken);
@@ -589,6 +611,11 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 State = SafeString(reader["State"]),
                 PinCode = SafeNullableString(reader["PinCode"]),
                 OpeningBalance = SafeDecimal(reader["OpeningBalance"]),
+                BankAccountNumber = SafeNullableString(reader["BankAccountNumber"]),
+                AccountHolderName = SafeNullableString(reader["AccountHolderName"]),
+                BankName = SafeNullableString(reader["BankName"]),
+                IfscCode = SafeNullableString(reader["IfscCode"]),
+                BranchName = SafeNullableString(reader["BranchName"]),
                 Status = SafeString(reader["Status"]),
                 RegisteredAt = SafeDateTime(reader["RegisteredAt"])
             };
@@ -756,7 +783,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             var conn = await GetOpenConnectionAsync(cancellationToken);
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "CALL sp_VendorPartners_CreateCustomer(@p_vendor_id, @p_customer_name, @p_business_name, @p_customer_type, @p_mobile_number, @p_email, @p_address, @p_district, @p_state, @p_pin_code, @p_gstin, @p_credit_limit);";
+            cmd.CommandText = "CALL sp_VendorPartners_CreateCustomer(@p_vendor_id, @p_customer_name, @p_business_name, @p_customer_type, @p_mobile_number, @p_email, @p_address, @p_district, @p_state, @p_pin_code, @p_gstin, @p_credit_limit, @p_pan, @p_opening_balance, @p_bank_account_number, @p_account_holder_name, @p_bank_name, @p_ifsc_code, @p_branch_name);";
 
             AddParam(cmd, "@p_vendor_id", vendorId);
             AddParam(cmd, "@p_customer_name", request.CustomerName.Trim());
@@ -770,6 +797,13 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             AddParam(cmd, "@p_pin_code", Clean(request.PinCode));
             AddParam(cmd, "@p_gstin", Clean(request.Gstin)?.ToUpperInvariant());
             AddParam(cmd, "@p_credit_limit", request.CreditLimit);
+            AddParam(cmd, "@p_pan", Clean(request.Pan)?.ToUpperInvariant());
+            AddParam(cmd, "@p_opening_balance", request.OpeningBalance);
+            AddParam(cmd, "@p_bank_account_number", Clean(request.BankAccountNumber));
+            AddParam(cmd, "@p_account_holder_name", Clean(request.AccountHolderName));
+            AddParam(cmd, "@p_bank_name", Clean(request.BankName));
+            AddParam(cmd, "@p_ifsc_code", Clean(request.IfscCode));
+            AddParam(cmd, "@p_branch_name", Clean(request.BranchName));
 
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             return (await ReadCustomerDetailFromResultSetsAsync(reader, cancellationToken))!;
@@ -779,7 +813,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             var conn = await GetOpenConnectionAsync(cancellationToken);
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "CALL sp_VendorPartners_UpdateCustomer(@p_vendor_id, @p_customer_id_or_code, @p_customer_name, @p_business_name, @p_customer_type, @p_mobile_number, @p_email, @p_address, @p_district, @p_state, @p_pin_code, @p_gstin, @p_credit_limit, @p_status);";
+            cmd.CommandText = "CALL sp_VendorPartners_UpdateCustomer(@p_vendor_id, @p_customer_id_or_code, @p_customer_name, @p_business_name, @p_customer_type, @p_mobile_number, @p_email, @p_address, @p_district, @p_state, @p_pin_code, @p_gstin, @p_credit_limit, @p_status, @p_pan, @p_opening_balance, @p_bank_account_number, @p_account_holder_name, @p_bank_name, @p_ifsc_code, @p_branch_name);";
 
             AddParam(cmd, "@p_vendor_id", vendorId);
             AddParam(cmd, "@p_customer_id_or_code", customerCodeOrId.Trim());
@@ -795,6 +829,13 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             AddParam(cmd, "@p_gstin", Clean(request.Gstin)?.ToUpperInvariant());
             AddParam(cmd, "@p_credit_limit", request.CreditLimit);
             AddParam(cmd, "@p_status", Clean(request.Status));
+            AddParam(cmd, "@p_pan", Clean(request.Pan)?.ToUpperInvariant());
+            AddParam(cmd, "@p_opening_balance", request.OpeningBalance);
+            AddParam(cmd, "@p_bank_account_number", Clean(request.BankAccountNumber));
+            AddParam(cmd, "@p_account_holder_name", Clean(request.AccountHolderName));
+            AddParam(cmd, "@p_bank_name", Clean(request.BankName));
+            AddParam(cmd, "@p_ifsc_code", Clean(request.IfscCode));
+            AddParam(cmd, "@p_branch_name", Clean(request.BranchName));
 
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             return await ReadCustomerDetailFromResultSetsAsync(reader, cancellationToken);
@@ -849,7 +890,14 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 State = SafeString(reader["State"]),
                 PinCode = SafeNullableString(reader["PinCode"]),
                 Gstin = SafeNullableString(reader["Gstin"]),
+                Pan = SafeNullableString(reader["Pan"]),
                 CreditLimit = SafeDecimal(reader["CreditLimit"]),
+                OpeningBalance = SafeDecimal(reader["OpeningBalance"]),
+                BankAccountNumber = SafeNullableString(reader["BankAccountNumber"]),
+                AccountHolderName = SafeNullableString(reader["AccountHolderName"]),
+                BankName = SafeNullableString(reader["BankName"]),
+                IfscCode = SafeNullableString(reader["IfscCode"]),
+                BranchName = SafeNullableString(reader["BranchName"]),
                 Status = SafeString(reader["Status"])
             };
 

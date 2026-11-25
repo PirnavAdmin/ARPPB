@@ -55,6 +55,10 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorOperations
         public string? BankAccountNumber { get; set; }
         public string? IfscCode { get; set; }
         public string? BankName { get; set; }
+        public string? AccountHolderName { get; set; }
+        public string? BranchName { get; set; }
+        public string? Mandal { get; set; }
+        public string? Address { get; set; }
         public string? AadhaarNumber { get; set; }
         public string Status { get; set; } = "Active";
         public DateTime RegisteredAt { get; set; }
@@ -88,6 +92,10 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorOperations
         public string? BankAccountNumber { get; set; }
         public string? IfscCode { get; set; }
         public string? BankName { get; set; }
+        public string? AccountHolderName { get; set; }
+        public string? BranchName { get; set; }
+        public string? Mandal { get; set; }
+        public string? Address { get; set; }
         public string? AadhaarNumber { get; set; }
     }
 
@@ -106,6 +114,10 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorOperations
         public string? BankAccountNumber { get; set; }
         public string? IfscCode { get; set; }
         public string? BankName { get; set; }
+        public string? AccountHolderName { get; set; }
+        public string? BranchName { get; set; }
+        public string? Mandal { get; set; }
+        public string? Address { get; set; }
         public string? AadhaarNumber { get; set; }
         public string? Status { get; set; }
     }
@@ -201,6 +213,11 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorOperations
         public string State { get; set; } = string.Empty;
         public string? PinCode { get; set; }
         public decimal OpeningBalance { get; set; }
+        public string? BankAccountNumber { get; set; }
+        public string? AccountHolderName { get; set; }
+        public string? BankName { get; set; }
+        public string? IfscCode { get; set; }
+        public string? BranchName { get; set; }
         public string Status { get; set; } = "Active";
         public DateTime RegisteredAt { get; set; }
 
@@ -229,6 +246,11 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorOperations
         public required string State { get; set; }
         public string? PinCode { get; set; }
         public decimal OpeningBalance { get; set; }
+        public string? BankAccountNumber { get; set; }
+        public string? AccountHolderName { get; set; }
+        public string? BankName { get; set; }
+        public string? IfscCode { get; set; }
+        public string? BranchName { get; set; }
     }
 
     public class UpdateVendorMiddlemanRequest
@@ -244,6 +266,11 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorOperations
         public required string State { get; set; }
         public string? PinCode { get; set; }
         public decimal OpeningBalance { get; set; }
+        public string? BankAccountNumber { get; set; }
+        public string? AccountHolderName { get; set; }
+        public string? BankName { get; set; }
+        public string? IfscCode { get; set; }
+        public string? BranchName { get; set; }
         public string? Status { get; set; }
     }
 
@@ -325,7 +352,14 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorOperations
     {
         public string? PinCode { get; set; }
         public string? Gstin { get; set; }
+        public string? Pan { get; set; }
         public decimal CreditLimit { get; set; }
+        public decimal OpeningBalance { get; set; }
+        public string? BankAccountNumber { get; set; }
+        public string? AccountHolderName { get; set; }
+        public string? BankName { get; set; }
+        public string? IfscCode { get; set; }
+        public string? BranchName { get; set; }
         public List<VendorCustomerOrderDto> Orders { get; set; } = new();
     }
 
@@ -354,7 +388,14 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorOperations
         public required string State { get; set; }
         public string? PinCode { get; set; }
         public string? Gstin { get; set; }
+        public string? Pan { get; set; }
         public decimal CreditLimit { get; set; }
+        public decimal OpeningBalance { get; set; }
+        public string? BankAccountNumber { get; set; }
+        public string? AccountHolderName { get; set; }
+        public string? BankName { get; set; }
+        public string? IfscCode { get; set; }
+        public string? BranchName { get; set; }
     }
 
     public class UpdateVendorCustomerRequest
@@ -369,7 +410,14 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorOperations
         public required string State { get; set; }
         public string? PinCode { get; set; }
         public string? Gstin { get; set; }
+        public string? Pan { get; set; }
         public decimal CreditLimit { get; set; }
+        public decimal OpeningBalance { get; set; }
+        public string? BankAccountNumber { get; set; }
+        public string? AccountHolderName { get; set; }
+        public string? BankName { get; set; }
+        public string? IfscCode { get; set; }
+        public string? BranchName { get; set; }
         public string? Status { get; set; }
     }
 }
