@@ -125,10 +125,11 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
             Success(await _sales.GetSalesAsync(await VendorIdAsync(ct), "draft", query, ct));
 
         /// <summary>Sale details with its product lines (the "Details" button).</summary>
-        [HttpGet("{id:long}")]
-        public async Task<IActionResult> GetSale(long id, CancellationToken ct)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetSale(string id, CancellationToken ct)
         {
-            var sale = await _sales.GetSaleAsync(await VendorIdAsync(ct), id, "sales", ct);
+            var numericId = ParseNumericId(id);
+            var sale = await _sales.GetSaleAsync(await VendorIdAsync(ct), numericId, "sales", ct);
             return sale is null ? NotFoundResponse("Sale not found.") : Success(sale);
         }
 
@@ -151,11 +152,12 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
         }
 
         /// <summary>Edit a draft sale (and optionally submit it).</summary>
-        [HttpPut("{id:long}")]
-        public async Task<IActionResult> UpdateSale(long id, [FromBody] SaveSaleRequest request, CancellationToken ct)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateSale(string id, [FromBody] SaveSaleRequest request, CancellationToken ct)
         {
+            var numericId = ParseNumericId(id);
             var (otp, hash) = _otp.Generate();
-            var result = await _sales.SaveSaleAsync(await VendorIdAsync(ct), id, request, hash, _otp.ExpiryMinutes, ct);
+            var result = await _sales.SaveSaleAsync(await VendorIdAsync(ct), numericId, request, hash, _otp.ExpiryMinutes, ct);
             return Success(
                 result,
                 request.Submit ? "Sales order submitted and OTP sent." : "Draft updated.",
@@ -163,11 +165,12 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
         }
 
         /// <summary>Submit an existing draft: reserves stock and sends the customer OTP.</summary>
-        [HttpPost("{id:long}/submit")]
-        public async Task<IActionResult> SubmitSale(long id, CancellationToken ct)
+        [HttpPost("{id}/submit")]
+        public async Task<IActionResult> SubmitSale(string id, CancellationToken ct)
         {
+            var numericId = ParseNumericId(id);
             var (otp, hash) = _otp.Generate();
-            var result = await _sales.SubmitSaleAsync(await VendorIdAsync(ct), id, hash, _otp.ExpiryMinutes, ct);
+            var result = await _sales.SubmitSaleAsync(await VendorIdAsync(ct), numericId, hash, _otp.ExpiryMinutes, ct);
             return Success(
                 result,
                 "Sales order submitted and OTP sent.",
@@ -177,18 +180,20 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
         // ---------- Sales Invoice & Order Details popup (the "Details" eye icon) ----------
 
         /// <summary>"Print Invoice": the tax invoice header, detail lines and one row per sold product.</summary>
-        [HttpGet("{id:long}/print")]
-        public async Task<IActionResult> PrintInvoice(long id, CancellationToken ct)
+        [HttpGet("{id}/print")]
+        public async Task<IActionResult> PrintInvoice(string id, CancellationToken ct)
         {
-            var sale = await _sales.GetSaleAsync(await VendorIdAsync(ct), id, "sales", ct);
+            var numericId = ParseNumericId(id);
+            var sale = await _sales.GetSaleAsync(await VendorIdAsync(ct), numericId, "sales", ct);
             return sale is null ? NotFoundResponse("Sale not found.") : Success(VendorOrderMapper.ToInvoicePrint(sale, DateTime.UtcNow));
         }
 
         /// <summary>"Download Summary": downloads Sales_Invoice_SALE-0015.csv (one row with the invoice and balance).</summary>
-        [HttpGet("{id:long}/export")]
-        public async Task<IActionResult> ExportInvoice(long id, CancellationToken ct)
+        [HttpGet("{id}/export")]
+        public async Task<IActionResult> ExportInvoice(string id, CancellationToken ct)
         {
-            var sale = await _sales.GetSaleAsync(await VendorIdAsync(ct), id, "sales", ct);
+            var numericId = ParseNumericId(id);
+            var sale = await _sales.GetSaleAsync(await VendorIdAsync(ct), numericId, "sales", ct);
             return sale is null
                 ? NotFoundResponse("Sale not found.")
                 : File(VendorOrderMapper.ToInvoiceCsv(sale), "text/csv; charset=utf-8", $"Sales_Invoice_{sale.SaleCode}.csv");
@@ -199,23 +204,24 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
         /// UPI / IMPS, Cheque / DD or Cash; reference = UTR or remarks). Only OTP-verified, active sales can be paid, and
         /// not more than the balance due. Returns the receipt vouchers and the refreshed sale.
         /// </summary>
-        [HttpPost("{id:long}/receipts")]
-        public async Task<IActionResult> PostReceipt(long id, [FromBody] SaleReceiptRequest request, CancellationToken ct)
+        [HttpPost("{id}/receipts")]
+        public async Task<IActionResult> PostReceipt(string id, [FromBody] SaleReceiptRequest request, CancellationToken ct)
         {
+            var numericId = ParseNumericId(id);
             var mode = string.IsNullOrWhiteSpace(request.PaymentMode) ? VendorOrderMapper.ReceiptPaymentModes[0] : request.PaymentMode.Trim();
             if (!VendorOrderMapper.ReceiptPaymentModes.Contains(mode, StringComparer.OrdinalIgnoreCase))
                 throw new VendorPortalException(400, "Choose a valid payment mode: " + string.Join(", ", VendorOrderMapper.ReceiptPaymentModes) + ".");
 
             var vendorId = await VendorIdAsync(ct);
-            if (await _sales.GetSaleAsync(vendorId, id, "sales", ct) is null)
+            if (await _sales.GetSaleAsync(vendorId, numericId, "sales", ct) is null)
                 throw new VendorPortalException(404, "Sale not found.");
 
             var receipt = await _ledger.RecordReceiptAsync(
                 vendorId,
-                new RecordReceiptRequest { SaleId = id, Amount = request.Amount, PaymentMode = mode, ReferenceNo = request.ReferenceNo },
+                new RecordReceiptRequest { SaleId = numericId, Amount = request.Amount, PaymentMode = mode, ReferenceNo = request.ReferenceNo },
                 ct);
 
-            var sale = await _sales.GetSaleAsync(vendorId, id, "sales", ct);
+            var sale = await _sales.GetSaleAsync(vendorId, numericId, "sales", ct);
             return Success(new SaleReceiptResultDto { Receipt = receipt, Sale = sale }, "Customer receipt recorded.");
         }
 
@@ -226,27 +232,29 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
         /// the order moves New → Confirmed and the receivable is posted to the ledger.
         /// Returns the refreshed sale together with the confirmation.
         /// </summary>
-        [HttpPost("{id:long}/verify-otp")]
-        public async Task<IActionResult> VerifySaleOtp(long id, [FromBody] VerifyOtpRequest request, CancellationToken ct)
+        [HttpPost("{id}/verify-otp")]
+        public async Task<IActionResult> VerifySaleOtp(string id, [FromBody] VerifyOtpRequest request, CancellationToken ct)
         {
+            var numericId = ParseNumericId(id);
             var vendorId = await VendorIdAsync(ct);
-            var confirmationId = await ConfirmationIdAsync(vendorId, id, ct);
+            var confirmationId = await ConfirmationIdAsync(vendorId, numericId, ct);
 
             var confirmation = await _confirmations.VerifyAsync(vendorId, confirmationId, request.Otp, ct);
-            var sale = await _sales.GetSaleAsync(vendorId, id, "sales", ct);
+            var sale = await _sales.GetSaleAsync(vendorId, numericId, "sales", ct);
             return Success(new SaleOtpResultDto { Sale = sale, Confirmation = confirmation }, "Customer order confirmed.");
         }
 
         /// <summary>"Resend Customer OTP": issues a fresh OTP (returned as devOtp in Development) and resets attempts / expiry.</summary>
-        [HttpPost("{id:long}/resend-otp")]
-        public async Task<IActionResult> ResendSaleOtp(long id, CancellationToken ct)
+        [HttpPost("{id}/resend-otp")]
+        public async Task<IActionResult> ResendSaleOtp(string id, CancellationToken ct)
         {
+            var numericId = ParseNumericId(id);
             var vendorId = await VendorIdAsync(ct);
-            var confirmationId = await ConfirmationIdAsync(vendorId, id, ct);
+            var confirmationId = await ConfirmationIdAsync(vendorId, numericId, ct);
 
             var (otp, hash) = _otp.Generate();
             var confirmation = await _confirmations.ResendAsync(vendorId, confirmationId, hash, _otp.ExpiryMinutes, ct);
-            var sale = await _sales.GetSaleAsync(vendorId, id, "sales", ct);
+            var sale = await _sales.GetSaleAsync(vendorId, numericId, "sales", ct);
             return Success(
                 new SaleOtpResultDto { Sale = sale, Confirmation = confirmation },
                 "A new OTP has been sent.",
@@ -264,11 +272,19 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
         }
 
         /// <summary>Delete a draft sale (the "Cancel" action on an unsent draft).</summary>
-        [HttpDelete("{id:long}")]
-        public async Task<IActionResult> DeleteDraft(long id, CancellationToken ct)
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteDraft(string id, CancellationToken ct)
         {
-            await _sales.DeleteDraftAsync(await VendorIdAsync(ct), id, ct);
+            var numericId = ParseNumericId(id);
+            await _sales.DeleteDraftAsync(await VendorIdAsync(ct), numericId, ct);
             return Success(new { deleted = true }, "Draft deleted.");
+        }
+
+        private static long ParseNumericId(string value)
+        {
+            if (long.TryParse(value, out var id)) return id;
+            var digits = System.Text.RegularExpressions.Regex.Replace(value ?? "", @"\D", "");
+            return long.TryParse(digits, out var parsed) ? parsed : 0;
         }
     }
 }

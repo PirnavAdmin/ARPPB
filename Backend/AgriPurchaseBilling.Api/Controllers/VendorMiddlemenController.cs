@@ -12,6 +12,7 @@ namespace AgriPurchaseBilling.Api.Controllers
     [ApiController]
     [Authorize(Roles = "Vendor")]
     [Route("api/v1/vendor/partners/middlemen")]
+    [Route("api/v1/vendor/middlemen")]
     [Produces("application/json")]
     public sealed class VendorMiddlemenController : ControllerBase
     {
