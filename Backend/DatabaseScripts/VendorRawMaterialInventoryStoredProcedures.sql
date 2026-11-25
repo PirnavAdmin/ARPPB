@@ -61,11 +61,11 @@ END$$
 
 CREATE PROCEDURE `sp_Vendor_GetRawMaterialStocks`(
     IN p_vendor_id BIGINT,
-    IN p_search VARCHAR(100),
-    IN p_crop VARCHAR(100),
-    IN p_supplier_type VARCHAR(30),
-    IN p_grade VARCHAR(100),
-    IN p_status VARCHAR(30)
+    IN p_search VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_crop VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_supplier_type VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_grade VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_status VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     SELECT
@@ -105,7 +105,7 @@ END$$
 
 CREATE PROCEDURE `sp_Vendor_GetRawMaterialStockById`(
     IN p_vendor_id BIGINT,
-    IN p_stock_id_or_code VARCHAR(50)
+    IN p_stock_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     SELECT
@@ -133,17 +133,17 @@ END$$
 
 CREATE PROCEDURE `sp_Vendor_CreateRawMaterialStock`(
     IN p_vendor_id BIGINT,
-    IN p_crop_name VARCHAR(100),
-    IN p_crop_variety VARCHAR(100),
-    IN p_supplier_name VARCHAR(150),
-    IN p_supplier_category VARCHAR(30),
-    IN p_purchase_id VARCHAR(50),
-    IN p_batch_number VARCHAR(50),
+    IN p_crop_name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_crop_variety VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_supplier_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_supplier_category VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_purchase_id VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_batch_number VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_purchase_date DATETIME(6),
     IN p_purchased_quantity DECIMAL(12,2),
-    IN p_unit VARCHAR(20),
+    IN p_unit VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_average_cost DECIMAL(14,2),
-    IN p_quality_grade VARCHAR(100),
+    IN p_quality_grade VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_min_threshold DECIMAL(12,2)
 )
 BEGIN
@@ -269,9 +269,9 @@ END$$
 
 CREATE PROCEDURE `sp_Vendor_GetProcessingBatches`(
     IN p_vendor_id BIGINT,
-    IN p_search VARCHAR(150),
-    IN p_raw_material VARCHAR(100),
-    IN p_status VARCHAR(30)
+    IN p_search VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_raw_material VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_status VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     -- Result Set 1: Matching Batches
@@ -325,7 +325,7 @@ END$$
 
 CREATE PROCEDURE `sp_Vendor_GetProcessingBatchById`(
     IN p_vendor_id BIGINT,
-    IN p_processing_id_or_code VARCHAR(50)
+    IN p_processing_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_batch_id BIGINT DEFAULT NULL;
@@ -372,13 +372,13 @@ END$$
 
 CREATE PROCEDURE `sp_Vendor_CreateProcessingBatch`(
     IN p_vendor_id BIGINT,
-    IN p_raw_material_name VARCHAR(100),
-    IN p_source_stock_id VARCHAR(50),
+    IN p_raw_material_name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_source_stock_id VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_input_quantity DECIMAL(12,2),
-    IN p_unit VARCHAR(20),
+    IN p_unit VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_total_output_quantity DECIMAL(12,2),
     IN p_processing_expenses DECIMAL(14,2),
-    IN p_notes VARCHAR(500)
+    IN p_notes VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_count INT DEFAULT 0;
@@ -465,10 +465,10 @@ END$$
 
 CREATE PROCEDURE `sp_Vendor_AddProcessingOutput`(
     IN p_processing_batch_id BIGINT,
-    IN p_output_product_name VARCHAR(150),
+    IN p_output_product_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_output_quantity DECIMAL(12,2),
-    IN p_unit VARCHAR(20),
-    IN p_output_type VARCHAR(30)
+    IN p_unit VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_output_type VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     INSERT INTO `vendor_processing_outputs` (
@@ -498,10 +498,10 @@ END$$
 
 CREATE PROCEDURE `sp_Vendor_GetFinishedProducts`(
     IN p_vendor_id BIGINT,
-    IN p_search VARCHAR(150),
-    IN p_category VARCHAR(100),
-    IN p_source_raw_material VARCHAR(100),
-    IN p_status VARCHAR(30)
+    IN p_search VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_category VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_source_raw_material VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_status VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     SELECT
@@ -540,7 +540,7 @@ END$$
 
 CREATE PROCEDURE `sp_Vendor_GetFinishedProductById`(
     IN p_vendor_id BIGINT,
-    IN p_product_id_or_code VARCHAR(50)
+    IN p_product_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     SELECT
@@ -570,19 +570,19 @@ END$$
 
 CREATE PROCEDURE `sp_Vendor_CreateFinishedProduct`(
     IN p_vendor_id BIGINT,
-    IN p_product_name VARCHAR(150),
-    IN p_category VARCHAR(100),
-    IN p_source_raw_material VARCHAR(100),
-    IN p_brand_name VARCHAR(150),
-    IN p_packaging VARCHAR(100),
+    IN p_product_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_category VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_source_raw_material VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_brand_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_packaging VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_initial_quantity DECIMAL(12,2),
-    IN p_unit VARCHAR(20),
+    IN p_unit VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_mfg_date DATETIME(6),
     IN p_expiry_date DATETIME(6),
     IN p_production_cost DECIMAL(14,2),
     IN p_selling_price DECIMAL(14,2),
     IN p_min_threshold_quantity DECIMAL(12,2),
-    IN p_image_url VARCHAR(500)
+    IN p_image_url VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_count INT DEFAULT 0;
@@ -623,19 +623,19 @@ END$$
 
 CREATE PROCEDURE `sp_Vendor_UpdateFinishedProduct`(
     IN p_vendor_id BIGINT,
-    IN p_product_id_or_code VARCHAR(50),
-    IN p_product_name VARCHAR(150),
-    IN p_category VARCHAR(100),
-    IN p_source_raw_material VARCHAR(100),
-    IN p_brand_name VARCHAR(150),
-    IN p_packaging VARCHAR(100),
+    IN p_product_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_product_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_category VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_source_raw_material VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_brand_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_packaging VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_mfg_date DATETIME(6),
     IN p_expiry_date DATETIME(6),
     IN p_production_cost DECIMAL(14,2),
     IN p_selling_price DECIMAL(14,2),
     IN p_min_threshold_quantity DECIMAL(12,2),
-    IN p_status VARCHAR(20),
-    IN p_image_url VARCHAR(500)
+    IN p_status VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_image_url VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_prod_id BIGINT DEFAULT NULL;
@@ -674,10 +674,10 @@ END$$
 
 CREATE PROCEDURE `sp_Vendor_AdjustFinishedProductStock`(
     IN p_vendor_id BIGINT,
-    IN p_product_id_or_code VARCHAR(50),
+    IN p_product_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_quantity_adjustment DECIMAL(12,2),
-    IN p_reference_id VARCHAR(50),
-    IN p_reason VARCHAR(500)
+    IN p_reference_id VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_reason VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_prod_id BIGINT DEFAULT NULL;
@@ -719,7 +719,7 @@ END$$
 
 CREATE PROCEDURE `sp_Vendor_GetFinishedProductMovements`(
     IN p_vendor_id BIGINT,
-    IN p_product_id_or_code VARCHAR(50)
+    IN p_product_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     SELECT
@@ -741,7 +741,7 @@ END$$
 
 CREATE PROCEDURE `sp_Vendor_ToggleFinishedProductStatus`(
     IN p_vendor_id BIGINT,
-    IN p_product_id_or_code VARCHAR(50)
+    IN p_product_id_or_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_prod_id BIGINT DEFAULT NULL;

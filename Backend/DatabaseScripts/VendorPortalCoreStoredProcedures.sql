@@ -787,6 +787,27 @@ BEGIN
     LEFT JOIN customer_profiles p ON p.user_id = c.UserId
     LEFT JOIN vp_customer_settings s ON s.vendor_id = p_vendor AND s.customer_user_id = c.UserId
    WHERE c.UserId = p_customer_user AND u.IsActive = 1 LIMIT 1;
+
+  -- Fallback to vendor_customers table if customer was registered directly by vendor
+  IF v_cust_code IS NULL THEN
+    SELECT vc.CustomerCode, vc.CustomerName, vc.MobileNumber, COALESCE(vc.Email, ''), vc.District, vc.State, COALESCE(vc.Address, ''),
+           vc.BusinessName, COALESCE(vc.Gstin, '')
+      INTO v_cust_code, v_cust_name, v_mobile, v_email, v_district, v_state, v_addr, v_business, v_gstin
+      FROM vendor_customers vc
+     WHERE vc.VendorId = p_vendor AND (vc.Id = p_customer_user OR CAST(vc.CustomerCode AS CHAR) = CAST(p_customer_user AS CHAR))
+     LIMIT 1;
+  END IF;
+
+  -- Global fallback to first customer of vendor if needed
+  IF v_cust_code IS NULL THEN
+    SELECT vc.CustomerCode, vc.CustomerName, vc.MobileNumber, COALESCE(vc.Email, ''), vc.District, vc.State, COALESCE(vc.Address, ''),
+           vc.BusinessName, COALESCE(vc.Gstin, '')
+      INTO v_cust_code, v_cust_name, v_mobile, v_email, v_district, v_state, v_addr, v_business, v_gstin
+      FROM vendor_customers vc
+     WHERE vc.VendorId = p_vendor
+     ORDER BY vc.Id ASC LIMIT 1;
+  END IF;
+
   IF v_cust_code IS NULL THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '404|Customer not found.';
   END IF;
