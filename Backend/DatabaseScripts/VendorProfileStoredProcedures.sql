@@ -22,13 +22,13 @@ CREATE PROCEDURE `sp_VendorProfile_GetOrCreateByUserId`(
 )
 BEGIN
     DECLARE v_user_id BIGINT DEFAULT NULL;
-    DECLARE v_full_name VARCHAR(100);
-    DECLARE v_mobile VARCHAR(20);
-    DECLARE v_email VARCHAR(150);
+    DECLARE v_full_name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_mobile VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_email VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_is_active TINYINT(1);
     DECLARE v_created_at DATETIME(6);
     DECLARE v_vendor_id BIGINT DEFAULT NULL;
-    DECLARE v_vendor_code VARCHAR(30);
+    DECLARE v_vendor_code VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_profile_id BIGINT DEFAULT NULL;
 
     SELECT `Id`, `FullName`, `Mobile`, COALESCE(`Email`, ''), `IsActive`, `CreatedAt`
@@ -182,15 +182,15 @@ END$$
 -- 4. sp_VendorProfile_Update
 CREATE PROCEDURE `sp_VendorProfile_Update`(
     IN p_id BIGINT,
-    IN p_business_name VARCHAR(200),
-    IN p_gstin VARCHAR(15),
-    IN p_business_reg_number VARCHAR(50),
-    IN p_apmc_license_number VARCHAR(100),
-    IN p_business_type VARCHAR(100),
-    IN p_business_address VARCHAR(500),
-    IN p_district VARCHAR(100),
-    IN p_state VARCHAR(100),
-    IN p_pin_code VARCHAR(10)
+    IN p_business_name VARCHAR(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_gstin VARCHAR(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_business_reg_number VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_apmc_license_number VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_business_type VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_business_address VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_district VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_state VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_pin_code VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     UPDATE `vendor_profiles`
@@ -255,11 +255,11 @@ END$$
 -- 7. sp_VendorProfile_UpsertBank
 CREATE PROCEDURE `sp_VendorProfile_UpsertBank`(
     IN p_vendor_profile_id BIGINT,
-    IN p_account_holder_name VARCHAR(200),
-    IN p_bank_name VARCHAR(150),
-    IN p_branch_name VARCHAR(150),
-    IN p_account_number VARCHAR(20),
-    IN p_ifsc_code VARCHAR(11)
+    IN p_account_holder_name VARCHAR(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_bank_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_branch_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_account_number VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_ifsc_code VARCHAR(11) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_bank_id BIGINT DEFAULT NULL;
@@ -295,7 +295,7 @@ END$$
 -- 8. sp_VendorProfile_IsMobileInUse
 CREATE PROCEDURE `sp_VendorProfile_IsMobileInUse`(
     IN p_user_id BIGINT,
-    IN p_mobile VARCHAR(20)
+    IN p_mobile VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     DECLARE v_vendor_id BIGINT DEFAULT 0;
@@ -315,7 +315,7 @@ END$$
 
 -- 9. sp_VendorProfile_HasRecentMobileOtp
 CREATE PROCEDURE `sp_VendorProfile_HasRecentMobileOtp`(
-    IN p_purpose VARCHAR(50),
+    IN p_purpose VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_since_utc DATETIME(6)
 )
 BEGIN
@@ -329,10 +329,10 @@ END$$
 -- 10. sp_VendorProfile_UpdateMobileWithHistory
 CREATE PROCEDURE `sp_VendorProfile_UpdateMobileWithHistory`(
     IN p_user_id BIGINT,
-    IN p_new_mobile VARCHAR(20)
+    IN p_new_mobile VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
-    DECLARE v_old_mobile VARCHAR(20) DEFAULT NULL;
+    DECLARE v_old_mobile VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL;
     DECLARE v_vendor_id BIGINT DEFAULT NULL;
     DECLARE v_profile_id BIGINT DEFAULT NULL;
 

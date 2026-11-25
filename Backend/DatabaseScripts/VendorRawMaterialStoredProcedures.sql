@@ -12,27 +12,27 @@ DROP PROCEDURE IF EXISTS `sp_Vendor_CreateRawMaterialStock`;
 DELIMITER $$
 CREATE PROCEDURE `sp_Vendor_CreateRawMaterialStock`(
     IN p_vendor_id BIGINT,
-    IN p_crop_name VARCHAR(100),
-    IN p_crop_variety VARCHAR(100),
-    IN p_supplier_name VARCHAR(150),
-    IN p_supplier_category VARCHAR(30),
-    IN p_purchase_id VARCHAR(50),
-    IN p_batch_number VARCHAR(50),
+    IN p_crop_name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_crop_variety VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_supplier_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_supplier_category VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_purchase_id VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_batch_number VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_purchase_date DATETIME(6),
     IN p_purchased_quantity DECIMAL(12,2),
-    IN p_unit VARCHAR(20),
+    IN p_unit VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_average_cost DECIMAL(14,2),
-    IN p_quality_grade VARCHAR(100),
+    IN p_quality_grade VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     IN p_min_threshold DECIMAL(12,2)
 )
 BEGIN
     DECLARE v_new_stock_id BIGINT;
     DECLARE v_stock_count INT DEFAULT 0;
     DECLARE v_mov_count INT DEFAULT 0;
-    DECLARE v_stock_code VARCHAR(50);
-    DECLARE v_batch_num VARCHAR(50);
-    DECLARE v_mov_code VARCHAR(50);
-    DECLARE v_crop_clean VARCHAR(100);
+    DECLARE v_stock_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_batch_num VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_mov_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_crop_clean VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
     SET v_crop_clean = TRIM(p_crop_name);
 
@@ -130,11 +130,11 @@ DROP PROCEDURE IF EXISTS `sp_Vendor_GetRawMaterialStocks`;
 DELIMITER $$
 CREATE PROCEDURE `sp_Vendor_GetRawMaterialStocks`(
     IN p_vendor_id BIGINT,
-    IN p_search VARCHAR(100),
-    IN p_crop VARCHAR(100),
-    IN p_supplier_type VARCHAR(30),
-    IN p_grade VARCHAR(100),
-    IN p_status VARCHAR(30)
+    IN p_search VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_crop VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_supplier_type VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_grade VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_status VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )
 BEGIN
     SELECT

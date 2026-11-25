@@ -48,12 +48,12 @@ END$$
 -- 3. sp_vp_notifications_list
 CREATE PROCEDURE `sp_vp_notifications_list`(
     IN p_vendor BIGINT,
-    IN p_category VARCHAR(100),
-    IN p_priority VARCHAR(30),
-    IN p_is_read TINYINT,
+    IN p_search VARCHAR(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_category VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_priority VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    IN p_read TINYINT,
     IN p_from DATETIME(6),
     IN p_to_excl DATETIME(6),
-    IN p_search VARCHAR(200),
     IN p_page INT,
     IN p_size INT
 )
@@ -67,7 +67,7 @@ BEGIN
     WHERE `vendor_id` = p_vendor
       AND (p_category IS NULL OR `category` = p_category)
       AND (p_priority IS NULL OR `priority` = p_priority)
-      AND (p_is_read IS NULL OR `is_read` = p_is_read)
+      AND (p_read IS NULL OR `is_read` = p_read)
       AND (p_from IS NULL OR `created_at` >= p_from)
       AND (p_to_excl IS NULL OR `created_at` < p_to_excl)
       AND (p_search IS NULL OR `title` LIKE CONCAT('%', p_search, '%')
@@ -91,7 +91,7 @@ BEGIN
     WHERE `vendor_id` = p_vendor
       AND (p_category IS NULL OR `category` = p_category)
       AND (p_priority IS NULL OR `priority` = p_priority)
-      AND (p_is_read IS NULL OR `is_read` = p_is_read)
+      AND (p_read IS NULL OR `is_read` = p_read)
       AND (p_from IS NULL OR `created_at` >= p_from)
       AND (p_to_excl IS NULL OR `created_at` < p_to_excl)
       AND (p_search IS NULL OR `title` LIKE CONCAT('%', p_search, '%')

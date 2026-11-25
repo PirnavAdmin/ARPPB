@@ -201,7 +201,7 @@ CREATE PROCEDURE `sp_VendorPartners_CreateFarmer`(
 )
 BEGIN
     DECLARE v_count INT DEFAULT 0;
-    DECLARE v_code VARCHAR(50);
+    DECLARE v_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
     SELECT COUNT(*) INTO v_count FROM `vendor_farmers` WHERE `VendorId` = p_vendor_id;
     SET v_code = CONCAT('FARM-', LPAD(v_count + 1, 4, '0'));
@@ -242,7 +242,7 @@ CREATE PROCEDURE `sp_VendorPartners_UpdateFarmer`(
 )
 BEGIN
     DECLARE v_farmer_id BIGINT DEFAULT NULL;
-    DECLARE v_code VARCHAR(50) DEFAULT NULL;
+    DECLARE v_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL;
 
     SELECT `Id`, `FarmerCode` INTO v_farmer_id, v_code
     FROM `vendor_farmers`
@@ -528,7 +528,7 @@ CREATE PROCEDURE `sp_VendorPartners_CreateMiddleman`(
 )
 BEGIN
     DECLARE v_count INT DEFAULT 0;
-    DECLARE v_code VARCHAR(50);
+    DECLARE v_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
     SELECT COUNT(*) INTO v_count FROM `vendor_middlemen` WHERE `VendorId` = p_vendor_id;
     SET v_code = CONCAT('MID-', LPAD(v_count + 1, 4, '0'));
@@ -564,7 +564,7 @@ CREATE PROCEDURE `sp_VendorPartners_UpdateMiddleman`(
 )
 BEGIN
     DECLARE v_mid_id BIGINT DEFAULT NULL;
-    DECLARE v_code VARCHAR(50) DEFAULT NULL;
+    DECLARE v_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL;
 
     SELECT `Id`, `MiddlemanCode` INTO v_mid_id, v_code
     FROM `vendor_middlemen`
@@ -813,7 +813,7 @@ CREATE PROCEDURE `sp_VendorPartners_CreateCustomer`(
 )
 BEGIN
     DECLARE v_count INT DEFAULT 0;
-    DECLARE v_code VARCHAR(50);
+    DECLARE v_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
     SELECT COUNT(*) INTO v_count FROM `vendor_customers` WHERE `VendorId` = p_vendor_id;
     SET v_code = CONCAT('CUST-', LPAD(v_count + 1, 4, '0'));
@@ -849,7 +849,7 @@ CREATE PROCEDURE `sp_VendorPartners_UpdateCustomer`(
 )
 BEGIN
     DECLARE v_cust_id BIGINT DEFAULT NULL;
-    DECLARE v_code VARCHAR(50) DEFAULT NULL;
+    DECLARE v_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL;
 
     SELECT `Id`, `CustomerCode` INTO v_cust_id, v_code
     FROM `vendor_customers`

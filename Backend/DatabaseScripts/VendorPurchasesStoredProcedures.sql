@@ -330,11 +330,11 @@ CREATE PROCEDURE `sp_Vendor_CreateFarmerPurchase`(
 )
 BEGIN
     DECLARE v_new_id BIGINT;
-    DECLARE v_farmer_name VARCHAR(150);
+    DECLARE v_farmer_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_stock_id BIGINT;
-    DECLARE v_stock_code VARCHAR(50);
-    DECLARE v_batch_num VARCHAR(50);
-    DECLARE v_mov_code VARCHAR(50);
+    DECLARE v_stock_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_batch_num VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_mov_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_stock_cnt INT DEFAULT 0;
     DECLARE v_mov_cnt INT DEFAULT 0;
 
@@ -445,11 +445,11 @@ CREATE PROCEDURE `sp_Vendor_CreateMiddlemanPurchase`(
 )
 BEGIN
     DECLARE v_new_id BIGINT;
-    DECLARE v_agency_name VARCHAR(150);
+    DECLARE v_agency_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_stock_id BIGINT;
-    DECLARE v_stock_code VARCHAR(50);
-    DECLARE v_batch_num VARCHAR(50);
-    DECLARE v_mov_code VARCHAR(50);
+    DECLARE v_stock_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_batch_num VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_mov_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_stock_cnt INT DEFAULT 0;
     DECLARE v_mov_cnt INT DEFAULT 0;
 

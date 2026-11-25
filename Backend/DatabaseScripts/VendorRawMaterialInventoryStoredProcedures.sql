@@ -150,10 +150,10 @@ BEGIN
     DECLARE v_new_stock_id BIGINT;
     DECLARE v_stock_count INT DEFAULT 0;
     DECLARE v_mov_count INT DEFAULT 0;
-    DECLARE v_stock_code VARCHAR(50);
-    DECLARE v_batch_num VARCHAR(50);
-    DECLARE v_mov_code VARCHAR(50);
-    DECLARE v_crop_clean VARCHAR(100);
+    DECLARE v_stock_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_batch_num VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_mov_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_crop_clean VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
     SET v_crop_clean = TRIM(p_crop_name);
 
@@ -382,12 +382,12 @@ CREATE PROCEDURE `sp_Vendor_CreateProcessingBatch`(
 )
 BEGIN
     DECLARE v_count INT DEFAULT 0;
-    DECLARE v_proc_code VARCHAR(50);
-    DECLARE v_batch_number VARCHAR(50);
+    DECLARE v_proc_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_batch_number VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_stock_id BIGINT DEFAULT NULL;
-    DECLARE v_stock_code VARCHAR(50);
-    DECLARE v_stock_batch VARCHAR(50);
-    DECLARE v_stock_crop VARCHAR(100);
+    DECLARE v_stock_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_stock_batch VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_stock_crop VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_avg_cost DECIMAL(14,2) DEFAULT 0;
     DECLARE v_avail_qty DECIMAL(12,2) DEFAULT 0;
     DECLARE v_min_thresh DECIMAL(12,2) DEFAULT 15;
@@ -586,7 +586,7 @@ CREATE PROCEDURE `sp_Vendor_CreateFinishedProduct`(
 )
 BEGIN
     DECLARE v_count INT DEFAULT 0;
-    DECLARE v_prod_code VARCHAR(50);
+    DECLARE v_prod_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_margin DECIMAL(6,2) DEFAULT 0;
     DECLARE v_new_id BIGINT;
 
@@ -639,7 +639,7 @@ CREATE PROCEDURE `sp_Vendor_UpdateFinishedProduct`(
 )
 BEGIN
     DECLARE v_prod_id BIGINT DEFAULT NULL;
-    DECLARE v_code VARCHAR(50) DEFAULT NULL;
+    DECLARE v_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL;
     DECLARE v_margin DECIMAL(6,2) DEFAULT 0;
 
     SELECT `Id`, `ProductCode` INTO v_prod_id, v_code
@@ -681,7 +681,7 @@ CREATE PROCEDURE `sp_Vendor_AdjustFinishedProductStock`(
 )
 BEGIN
     DECLARE v_prod_id BIGINT DEFAULT NULL;
-    DECLARE v_unit VARCHAR(20);
+    DECLARE v_unit VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_avail_qty DECIMAL(12,2) DEFAULT 0;
     DECLARE v_mov_count INT DEFAULT 0;
 
