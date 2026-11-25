@@ -682,6 +682,8 @@ export async function exportVendorDashboardTransactionsApi(params = {}) {
 function buildVendorFarmerRequestDto(payload = {}) {
   const cropsArr = Array.isArray(payload.availableCrops)
     ? payload.availableCrops
+    : Array.isArray(payload.registeredCrops)
+    ? payload.registeredCrops
     : typeof payload.registeredCrops === 'string'
     ? payload.registeredCrops.split(',').map((c) => c.trim()).filter(Boolean)
     : [];
