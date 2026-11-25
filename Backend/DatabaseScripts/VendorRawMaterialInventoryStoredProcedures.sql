@@ -587,6 +587,7 @@ CREATE PROCEDURE `sp_Vendor_CreateFinishedProduct`(
 BEGIN
     DECLARE v_count INT DEFAULT 0;
     DECLARE v_prod_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    DECLARE v_fp_batch_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     DECLARE v_margin DECIMAL(6,2) DEFAULT 0;
     DECLARE v_new_id BIGINT;
 
@@ -617,6 +618,24 @@ BEGIN
             p_initial_quantity, p_unit, p_initial_quantity, UTC_TIMESTAMP(6), 'Initial SKU stock registration', UTC_TIMESTAMP(6)
         );
     END IF;
+
+    -- Also register / update batch in vp_finished_product_batches for Sell Products & Sales History
+    SET v_fp_batch_code = CONCAT('FG-', UPPER(LEFT(REPLACE(p_product_name, ' ', ''), 3)), '-', YEAR(UTC_DATE()), '-', LPAD(v_count + 1, 3, '0'));
+
+    INSERT INTO `vp_finished_product_batches` (
+        `vendor_id`, `batch_code`, `product_name`, `processing_batch_ref`,
+        `unit`, `quantity_available`, `cost_per_unit`, `suggested_price`,
+        `status`, `created_at`, `updated_at`
+    ) VALUES (
+        p_vendor_id, v_fp_batch_code, TRIM(p_product_name), v_prod_code,
+        p_unit, p_initial_quantity, p_production_cost, p_selling_price,
+        'Active', UTC_TIMESTAMP(6), UTC_TIMESTAMP(6)
+    )
+    ON DUPLICATE KEY UPDATE
+        `quantity_available` = `quantity_available` + VALUES(`quantity_available`),
+        `cost_per_unit` = VALUES(`cost_per_unit`),
+        `suggested_price` = VALUES(`suggested_price`),
+        `updated_at` = UTC_TIMESTAMP(6);
 
     CALL `sp_Vendor_GetFinishedProductById`(p_vendor_id, v_prod_code);
 END$$

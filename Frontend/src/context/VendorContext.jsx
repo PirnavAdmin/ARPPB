@@ -181,7 +181,20 @@ export function VendorProvider({ children }) {
         updateStateAndStorage(setProducts, STORAGE_KEYS.PRODUCTS, finishedProductsList);
       }
       if (Array.isArray(salesBatchesList)) {
-        updateStateAndStorage(setProductBatches, STORAGE_KEYS.PRODUCT_BATCHES, salesBatchesList);
+        const prods = Array.isArray(finishedProductsList) ? finishedProductsList : products;
+        const linkedBatches = salesBatchesList.map((batch) => {
+          if (batch.productId) return batch;
+          const matchingProd = (prods || []).find(
+            (p) =>
+              String(p.productName).trim().toLowerCase() ===
+              String(batch.productName).trim().toLowerCase()
+          );
+          return {
+            ...batch,
+            productId: matchingProd?.id || batch.productId || '',
+          };
+        });
+        updateStateAndStorage(setProductBatches, STORAGE_KEYS.PRODUCT_BATCHES, linkedBatches);
       }
 
       if (onlyCatalog) return;
@@ -2179,6 +2192,8 @@ export function VendorProvider({ children }) {
         id: newSaleId,
         orderId: newOrderId,
         customerId: payload.customerId,
+        customerUserId: payload.customerUserId || payload.rawCustomerId || payload.rawId || payload.customerId,
+        rawCustomerId: payload.rawCustomerId || payload.customerUserId || payload.customerId,
         customerName: payload.customerName,
         businessName: payload.businessName || '',
         mobileNumber: payload.mobileNumber || '',

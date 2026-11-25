@@ -36,6 +36,9 @@ export function ProductForm({
     initialData?.packageSize || '25 Kg / 50 Kg Bag'
   );
   const [unit, setUnit] = useState(initialData?.unit || 'Quintal');
+  const [availableQuantity, setAvailableQuantity] = useState(
+    initialData?.availableQuantity ?? 25
+  );
   const [minimumStockLevel, setMinimumStockLevel] = useState(
     initialData?.minimumStockLevel ?? 15
   );
@@ -77,6 +80,8 @@ export function ProductForm({
       packagingType,
       packageSize,
       unit,
+      availableQuantity: Number(availableQuantity) || 0,
+      initialQuantity: Number(availableQuantity) || 0,
       minimumStockLevel: Number(minimumStockLevel) || 0,
       productionCost: Number(productionCost) || 0,
       sellingPrice: Number(sellingPrice) || 0,
@@ -197,6 +202,18 @@ export function ProductForm({
               </option>
             ))}
           </select>
+        </VendorFormField>
+
+        <VendorFormField label="Available / Initial Quantity" id="prod-avail" hint={`Stock in ${unit}`}>
+          <input
+            id="prod-avail"
+            type="number"
+            min="0"
+            step="0.01"
+            value={availableQuantity}
+            onChange={(e) => setAvailableQuantity(e.target.value)}
+            className={INPUT_CLASSES}
+          />
         </VendorFormField>
 
         <VendorFormField label="Minimum Stock Level" id="prod-min">

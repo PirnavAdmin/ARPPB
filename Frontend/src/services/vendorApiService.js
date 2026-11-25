@@ -457,6 +457,51 @@ export function mapVendorFinishedProductDto(dto = {}, existing = {}) {
   };
 }
 
+export function mapVendorSalesBatchDto(dto = {}, existing = {}) {
+  if (!dto || typeof dto !== 'object') return existing;
+  const rawId = dto.id ?? dto.batchId ?? existing.rawId ?? existing.id ?? null;
+  const id = rawId || existing.id;
+  const batchNumber =
+    dto.batchCode ||
+    dto.batch_code ||
+    dto.batchNumber ||
+    existing.batchNumber ||
+    (rawId ? `PBAT-${String(rawId).padStart(4, '0')}` : 'Batch');
+  const productName = dto.productName || dto.product_name || existing.productName || '';
+  const availableQuantity = Number(
+    dto.quantityAvailable ??
+      dto.quantity_available ??
+      dto.availableQuantity ??
+      dto.quantity ??
+      existing.availableQuantity ??
+      0
+  );
+  const costPerUnit = Number(
+    dto.costPerUnit ?? dto.cost_per_unit ?? dto.productionCost ?? existing.productionCost ?? 0
+  );
+  const suggestedPrice = Number(
+    dto.suggestedPrice ?? dto.suggested_price ?? dto.sellingPrice ?? existing.sellingPrice ?? 0
+  );
+  const unit = dto.unit || existing.unit || 'Quintal';
+
+  return {
+    ...existing,
+    rawId,
+    id,
+    batchId: id,
+    batchNumber,
+    productName,
+    productId: dto.productId || dto.productCode || existing.productId || '',
+    availableQuantity,
+    quantity: availableQuantity,
+    unit,
+    productionCost: costPerUnit,
+    sellingPrice: suggestedPrice,
+    status: dto.status || 'Active',
+    created_at: dto.created_at || dto.createdAt || existing.created_at,
+  };
+}
+
 export function mapVendorSaleDto(dto = {}, existing = {}) {
   if (!dto || typeof dto !== 'object') return existing;
   const rawId = dto.id ?? dto.saleId ?? existing.rawId ?? null;
@@ -1458,17 +1503,23 @@ export async function exportVendorFinishedProductsApi(params = {}) {
 
 function buildVendorSaleRequestDto(payload = {}, isDraft = false) {
   const customerUserId =
-    Number(payload.customerUserId || payload.rawCustomerId) ||
-    Number(String(payload.customerId || '1').replace(/\D/g, '')) ||
+    Number(payload.customerUserId || payload.rawCustomerId || payload.rawId) ||
+    Number(String(payload.customerId || '').replace(/\D/g, '')) ||
     1;
-  const items = (payload.items || []).map((i) => ({
-    finishedBatchId:
-      Number(i.finishedBatchId || i.batchRawId || i.rawId) ||
-      Number(String(i.batchId || i.productId || '1').replace(/\D/g, '')) ||
-      1,
-    quantity: Number(i.sellingQuantity ?? i.quantity ?? 1),
-    pricePerUnit: Number(i.pricePerUnit ?? i.unitPrice ?? 0),
-  }));
+  const items = (payload.items || []).map((i) => {
+    const rawBatchId =
+      i.finishedBatchId ||
+      i.batchRawId ||
+      i.rawId ||
+      (i.batchId && !isNaN(Number(i.batchId)) ? Number(i.batchId) : null) ||
+      (i.productId && !isNaN(Number(i.productId)) ? Number(i.productId) : null);
+
+    return {
+      finishedBatchId: Number(rawBatchId) || 1,
+      quantity: Number(i.sellingQuantity ?? i.quantity ?? 1),
+      pricePerUnit: Number(i.pricePerUnit ?? i.unitPrice ?? 0),
+    };
+  });
 
   const expDelivery = payload.expectedDeliveryDate
     ? new Date(payload.expectedDeliveryDate).toISOString()
@@ -1527,7 +1578,8 @@ export async function fetchVendorSalesCustomerByIdApi(id) {
 export async function fetchVendorSalesBatchesApi(params = {}) {
   try {
     const res = await api.get(Endpoints.VendorSales.batches, { params });
-    return extractList(res, ['items', 'batches', 'data']);
+    const list = extractList(res, ['items', 'batches', 'data']);
+    return list ? list.map((item) => mapVendorSalesBatchDto(item)) : null;
   } catch {
     return null;
   }

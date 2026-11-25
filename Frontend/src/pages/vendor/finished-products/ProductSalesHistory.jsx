@@ -9,7 +9,14 @@ export function ProductSalesHistory({ product, sales = [] }) {
   const productSales = sales.filter(
     (s) =>
       s.productId === product?.id ||
-      (s.items || []).some((it) => it.productId === product?.id) ||
+      s.productId === product?.productId ||
+      (s.items || []).some(
+        (it) =>
+          it.productId === product?.id ||
+          it.productId === product?.productId ||
+          String(it.productName || it.product || '').trim().toLowerCase() ===
+            String(product?.productName || '').trim().toLowerCase()
+      ) ||
       String(s.product || s.productName || '')
         .toLowerCase()
         .includes(String(product?.productName || '').toLowerCase())
