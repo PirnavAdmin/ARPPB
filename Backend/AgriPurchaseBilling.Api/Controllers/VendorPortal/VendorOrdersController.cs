@@ -90,11 +90,12 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
         }
 
         /// <summary>Order details with product lines and status history (the "Manage" button).</summary>
-        [HttpGet("{id:long}")]
-        public async Task<IActionResult> GetOrder(long id, CancellationToken ct)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetOrder(string id, CancellationToken ct)
         {
             var vendorId = await VendorIdAsync(ct);
-            var sale = await _sales.GetSaleAsync(vendorId, id, "orders", ct);
+            var numericId = ParseNumericId(id);
+            var sale = await _sales.GetSaleAsync(vendorId, numericId, "orders", ct);
             return sale is null ? NotFoundResponse("Order not found.") : Success(await ToOrderAsync(vendorId, sale, ct));
         }
 
@@ -102,21 +103,30 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
         /// Moves the order to its next stage (Confirmed → Processing → Packed → Shipped → Delivered → Completed).
         /// A "New" order must have its customer OTP verified first.
         /// </summary>
-        [HttpPut("{id:long}/status")]
-        public async Task<IActionResult> UpdateStatus(long id, [FromBody] UpdateOrderStatusRequest request, CancellationToken ct)
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(string id, [FromBody] UpdateOrderStatusRequest request, CancellationToken ct)
         {
             var vendorId = await VendorIdAsync(ct);
-            var sale = await _orders.UpdateStatusAsync(vendorId, id, request.Status, ct);
+            var numericId = ParseNumericId(id);
+            var sale = await _orders.UpdateStatusAsync(vendorId, numericId, request.Status, ct);
             return Success(await ToOrderAsync(vendorId, sale, ct), "Order status updated.");
         }
 
         /// <summary>Cancels an order that is still New/Confirmed/Processing/Packed and has no payments; restores stock.</summary>
-        [HttpPost("{id:long}/cancel")]
-        public async Task<IActionResult> Cancel(long id, [FromBody] CancelOrderRequest request, CancellationToken ct)
+        [HttpPost("{id}/cancel")]
+        public async Task<IActionResult> Cancel(string id, [FromBody] CancelOrderRequest request, CancellationToken ct)
         {
             var vendorId = await VendorIdAsync(ct);
-            var sale = await _orders.CancelAsync(vendorId, id, request.Reason, ct);
+            var numericId = ParseNumericId(id);
+            var sale = await _orders.CancelAsync(vendorId, numericId, request.Reason, ct);
             return Success(await ToOrderAsync(vendorId, sale, ct), "Order cancelled.");
+        }
+
+        private static long ParseNumericId(string value)
+        {
+            if (long.TryParse(value, out var id)) return id;
+            var digits = System.Text.RegularExpressions.Regex.Replace(value ?? "", @"\D", "");
+            return long.TryParse(digits, out var parsed) ? parsed : 0;
         }
 
         private async Task<OrderDto> ToOrderAsync(long vendorId, SaleDto sale, CancellationToken ct) =>

@@ -64,10 +64,11 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
             Success(await _confirmations.GetFilterOptionsAsync(await VendorIdAsync(ct), ct));
 
         /// <summary>One confirmation (the "Details" button).</summary>
-        [HttpGet("{id:long}")]
-        public async Task<IActionResult> GetConfirmation(long id, CancellationToken ct)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetConfirmation(string id, CancellationToken ct)
         {
-            var row = await _confirmations.GetByIdAsync(await VendorIdAsync(ct), id, ct);
+            var numericId = ParseNumericId(id);
+            var row = await _confirmations.GetByIdAsync(await VendorIdAsync(ct), numericId, ct);
             return row is null ? NotFoundResponse("OTP confirmation not found.") : Success(row);
         }
 
@@ -81,17 +82,28 @@ namespace AgriPurchaseBilling.Api.Controllers.VendorPortal
         }
 
         /// <summary>Verifies the OTP entered by the party (5 attempts, then the OTP must be resent).</summary>
-        [HttpPost("{id:long}/verify")]
-        public async Task<IActionResult> Verify(long id, [FromBody] VerifyOtpRequest request, CancellationToken ct) =>
-            Success(await _confirmations.VerifyAsync(await VendorIdAsync(ct), id, request.Otp, ct), "Transaction verified.");
+        [HttpPost("{id}/verify")]
+        public async Task<IActionResult> Verify(string id, [FromBody] VerifyOtpRequest request, CancellationToken ct)
+        {
+            var numericId = ParseNumericId(id);
+            return Success(await _confirmations.VerifyAsync(await VendorIdAsync(ct), numericId, request.Otp, ct), "Transaction verified.");
+        }
 
         /// <summary>Issues a fresh OTP and resets attempts / expiry.</summary>
-        [HttpPost("{id:long}/resend")]
-        public async Task<IActionResult> Resend(long id, CancellationToken ct)
+        [HttpPost("{id}/resend")]
+        public async Task<IActionResult> Resend(string id, CancellationToken ct)
         {
+            var numericId = ParseNumericId(id);
             var (otp, hash) = _otp.Generate();
-            var row = await _confirmations.ResendAsync(await VendorIdAsync(ct), id, hash, _otp.ExpiryMinutes, ct);
+            var row = await _confirmations.ResendAsync(await VendorIdAsync(ct), numericId, hash, _otp.ExpiryMinutes, ct);
             return Success(row, "A new OTP has been sent.", _environment.IsDevelopment() ? otp : null);
+        }
+
+        private static long ParseNumericId(string value)
+        {
+            if (long.TryParse(value, out var id)) return id;
+            var digits = System.Text.RegularExpressions.Regex.Replace(value ?? "", @"\D", "");
+            return long.TryParse(digits, out var parsed) ? parsed : 0;
         }
     }
 }
