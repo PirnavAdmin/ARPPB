@@ -22,14 +22,17 @@ import {
   fetchVendorDashboardOtpConfirmationsApi,
   verifyVendorDashboardOtpApi,
   fetchVendorFarmersApi,
+  fetchVendorFarmerByIdApi,
   createVendorFarmerApi,
   updateVendorFarmerApi,
   updateVendorFarmerStatusApi,
   fetchVendorMiddlemenApi,
+  fetchVendorMiddlemanByIdApi,
   createVendorMiddlemanApi,
   updateVendorMiddlemanApi,
   updateVendorMiddlemanStatusApi,
   fetchVendorCustomersApi,
+  fetchVendorCustomerByIdApi,
   createVendorCustomerApi,
   updateVendorCustomerApi,
   updateVendorCustomerStatusApi,
@@ -205,13 +208,85 @@ export function VendorProvider({ children }) {
       ]);
 
       if (Array.isArray(farmersList)) {
-        updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, farmersList);
+        updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev = []) => {
+          const prevMap = new Map(
+            (prev || []).map((f) => [String(f.id || f.farmerCode || f.rawId), f])
+          );
+          return farmersList.map((apiF) => {
+            const existing =
+              prevMap.get(String(apiF.id)) ||
+              prevMap.get(String(apiF.farmerCode)) ||
+              prevMap.get(String(apiF.rawId));
+            if (!existing) return apiF;
+            return {
+              ...existing,
+              ...apiF,
+              bankName: existing.bankName || apiF.bankName || '',
+              accountNumber: existing.accountNumber || apiF.accountNumber || '',
+              ifscCode: existing.ifscCode || apiF.ifscCode || '',
+              aadhaarId: existing.aadhaarId || apiF.aadhaarId || '',
+              fatherName: existing.fatherName || apiF.fatherName || '',
+              address: existing.address || apiF.address || '',
+              mandal: existing.mandal || apiF.mandal || '',
+              pinCode: existing.pinCode || apiF.pinCode || '',
+              landAcres: existing.landAcres || apiF.landAcres || 0,
+            };
+          });
+        });
       }
       if (Array.isArray(middlemenList)) {
-        updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, middlemenList);
+        updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev = []) => {
+          const prevMap = new Map(
+            (prev || []).map((m) => [String(m.id || m.middlemanCode || m.rawId), m])
+          );
+          return middlemenList.map((apiM) => {
+            const existing =
+              prevMap.get(String(apiM.id)) ||
+              prevMap.get(String(apiM.middlemanCode)) ||
+              prevMap.get(String(apiM.rawId));
+            if (!existing) return apiM;
+            return {
+              ...existing,
+              ...apiM,
+              bankName: existing.bankName || apiM.bankName || '',
+              accountNumber: existing.accountNumber || apiM.accountNumber || '',
+              ifscCode: existing.ifscCode || apiM.ifscCode || '',
+              pan: existing.pan || apiM.pan || '',
+              gstNumber: existing.gstNumber || apiM.gstNumber || '',
+              address: existing.address || apiM.address || '',
+              village: existing.village || apiM.village || '',
+              pinCode: existing.pinCode || apiM.pinCode || '',
+              openingBalance: existing.openingBalance || apiM.openingBalance || 0,
+            };
+          });
+        });
       }
       if (Array.isArray(customersList)) {
-        updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, customersList);
+        updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev = []) => {
+          const prevMap = new Map(
+            (prev || []).map((c) => [String(c.id || c.customerCode || c.rawId), c])
+          );
+          return customersList.map((apiC) => {
+            const existing =
+              prevMap.get(String(apiC.id)) ||
+              prevMap.get(String(apiC.customerCode)) ||
+              prevMap.get(String(apiC.rawId));
+            if (!existing) return apiC;
+            return {
+              ...existing,
+              ...apiC,
+              bankName: existing.bankName || apiC.bankName || '',
+              accountNumber: existing.accountNumber || apiC.accountNumber || '',
+              ifscCode: existing.ifscCode || apiC.ifscCode || '',
+              pan: existing.pan || apiC.pan || '',
+              gstNumber: existing.gstNumber || apiC.gstNumber || '',
+              address: existing.address || apiC.address || '',
+              pinCode: existing.pinCode || apiC.pinCode || '',
+              creditLimit: existing.creditLimit ?? apiC.creditLimit ?? 0,
+              openingBalance: existing.openingBalance ?? apiC.openingBalance ?? 0,
+            };
+          });
+        });
       }
       if (Array.isArray(rawMovementsList)) {
         updateStateAndStorage(setStockMovements, STORAGE_KEYS.STOCK_MOVEMENTS, rawMovementsList);
@@ -339,8 +414,50 @@ export function VendorProvider({ children }) {
     });
   }, [farmers, purchases]);
 
+  const fetchFarmerDetails = useCallback(
+    async (id) => {
+      if (!id) return null;
+      try {
+        const detailed = await fetchVendorFarmerByIdApi(id);
+        if (detailed) {
+          updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev = []) => {
+            const targetKey = String(id).toLowerCase();
+            const exists = prev.some(
+              (f) =>
+                String(f.id).toLowerCase() === targetKey ||
+                String(f.farmerCode).toLowerCase() === targetKey ||
+                String(f.rawId) === String(id)
+            );
+            if (exists) {
+              return prev.map((f) =>
+                String(f.id).toLowerCase() === targetKey ||
+                String(f.farmerCode).toLowerCase() === targetKey ||
+                String(f.rawId) === String(id)
+                  ? { ...f, ...detailed }
+                  : f
+              );
+            }
+            return [detailed, ...prev];
+          });
+          return detailed;
+        }
+      } catch (err) {
+        console.warn('Failed to fetch farmer details:', err);
+      }
+      return (
+        farmers.find(
+          (f) =>
+            f.id === id ||
+            f.farmerCode === id ||
+            String(f.rawId) === String(id)
+        ) || null
+      );
+    },
+    [farmers]
+  );
+
   const addFarmer = useCallback(
-    (payload) => {
+    async (payload) => {
       const newId = generateNextId('FARM-', farmers, 'id', 4);
       const newFarmer = {
         ...payload,
@@ -350,38 +467,61 @@ export function VendorProvider({ children }) {
         createdAt: dayjs().format('YYYY-MM-DD'),
       };
       updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev) => [newFarmer, ...prev]);
-      createVendorFarmerApi(newFarmer).then((created) => {
+      try {
+        const created = await createVendorFarmerApi(newFarmer);
         if (created) {
+          const merged = { ...newFarmer, ...created };
           updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev) =>
-            prev.map((f) =>
-              f.id === newId
-                ? {
-                    ...f,
-                    ...created,
-                    id: created.id || created.farmerCode || newId,
-                    farmerCode: created.farmerCode || created.id || newId,
-                    rawId: created.rawId ?? f.rawId,
-                  }
-                : f
-            )
+            prev.map((f) => (f.id === newId ? merged : f))
           );
+          toast.success(`Farmer ${newFarmer.farmerName} registered successfully.`);
+          return merged;
         }
-      });
+      } catch (err) {
+        console.error('Failed to create farmer on backend:', err);
+      }
       toast.success(`Farmer ${newFarmer.farmerName} registered successfully.`);
       return newFarmer;
     },
     [farmers]
   );
 
-  const updateFarmer = useCallback((id, payload) => {
-    const targetFarmer = farmers.find((f) => f.id === id);
-    const targetId = targetFarmer?.farmerCode || targetFarmer?.rawId || payload?.rawId || id;
-    updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev) =>
-      prev.map((f) => (f.id === id ? { ...f, ...payload } : f))
-    );
-    updateVendorFarmerApi(targetId, { ...targetFarmer, ...payload, rawId: targetFarmer?.rawId });
-    toast.success(`Farmer ${id} updated successfully.`);
-  }, [farmers]);
+  const updateFarmer = useCallback(
+    async (id, payload) => {
+      const targetFarmer = farmers.find(
+        (f) => f.id === id || f.farmerCode === id || String(f.rawId) === String(id)
+      );
+      const targetId = targetFarmer?.farmerCode || targetFarmer?.rawId || payload?.rawId || id;
+      const updatedLocal = { ...targetFarmer, ...payload, rawId: targetFarmer?.rawId };
+      updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev) =>
+        prev.map((f) =>
+          f.id === id || f.farmerCode === id || String(f.rawId) === String(id)
+            ? updatedLocal
+            : f
+        )
+      );
+      try {
+        const res = await updateVendorFarmerApi(targetId, updatedLocal);
+        if (res) {
+          const merged = { ...updatedLocal, ...res };
+          updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, (prev) =>
+            prev.map((f) =>
+              f.id === id || f.farmerCode === id || String(f.rawId) === String(id)
+                ? merged
+                : f
+            )
+          );
+          toast.success(`Farmer ${id} updated successfully.`);
+          return merged;
+        }
+      } catch (err) {
+        console.error('Failed to update farmer on backend:', err);
+      }
+      toast.success(`Farmer ${id} updated successfully.`);
+      return updatedLocal;
+    },
+    [farmers]
+  );
 
   const toggleFarmerStatus = useCallback((id) => {
     const targetFarmer = farmers.find((f) => f.id === id);
@@ -438,8 +578,50 @@ export function VendorProvider({ children }) {
     });
   }, [middlemen, purchases]);
 
+  const fetchMiddlemanDetails = useCallback(
+    async (id) => {
+      if (!id) return null;
+      try {
+        const detailed = await fetchVendorMiddlemanByIdApi(id);
+        if (detailed) {
+          updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev = []) => {
+            const targetKey = String(id).toLowerCase();
+            const exists = prev.some(
+              (m) =>
+                String(m.id).toLowerCase() === targetKey ||
+                String(m.middlemanCode).toLowerCase() === targetKey ||
+                String(m.rawId) === String(id)
+            );
+            if (exists) {
+              return prev.map((m) =>
+                String(m.id).toLowerCase() === targetKey ||
+                String(m.middlemanCode).toLowerCase() === targetKey ||
+                String(m.rawId) === String(id)
+                  ? { ...m, ...detailed }
+                  : m
+              );
+            }
+            return [detailed, ...prev];
+          });
+          return detailed;
+        }
+      } catch (err) {
+        console.warn('Failed to fetch middleman details:', err);
+      }
+      return (
+        middlemen.find(
+          (m) =>
+            m.id === id ||
+            m.middlemanCode === id ||
+            String(m.rawId) === String(id)
+        ) || null
+      );
+    },
+    [middlemen]
+  );
+
   const addMiddleman = useCallback(
-    (payload) => {
+    async (payload) => {
       const newId = generateNextId('MID-', middlemen, 'id', 4);
       const newMid = {
         ...payload,
@@ -450,38 +632,61 @@ export function VendorProvider({ children }) {
         createdAt: dayjs().format('YYYY-MM-DD'),
       };
       updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev) => [newMid, ...prev]);
-      createVendorMiddlemanApi(newMid).then((created) => {
+      try {
+        const created = await createVendorMiddlemanApi(newMid);
         if (created) {
+          const merged = { ...newMid, ...created };
           updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev) =>
-            prev.map((m) =>
-              m.id === newId
-                ? {
-                    ...m,
-                    ...created,
-                    id: created.id || created.middlemanCode || newId,
-                    middlemanCode: created.middlemanCode || created.id || newId,
-                    rawId: created.rawId ?? m.rawId,
-                  }
-                : m
-            )
+            prev.map((m) => (m.id === newId ? merged : m))
           );
+          toast.success(`Middleman ${newMid.businessName} registered successfully.`);
+          return merged;
         }
-      });
+      } catch (err) {
+        console.error('Failed to create middleman on backend:', err);
+      }
       toast.success(`Middleman ${newMid.businessName} registered successfully.`);
       return newMid;
     },
     [middlemen]
   );
 
-  const updateMiddleman = useCallback((id, payload) => {
-    const targetMid = middlemen.find((m) => m.id === id);
-    const targetId = targetMid?.middlemanCode || targetMid?.rawId || payload?.rawId || id;
-    updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev) =>
-      prev.map((m) => (m.id === id ? { ...m, ...payload } : m))
-    );
-    updateVendorMiddlemanApi(targetId, { ...targetMid, ...payload, rawId: targetMid?.rawId });
-    toast.success(`Middleman ${id} updated successfully.`);
-  }, [middlemen]);
+  const updateMiddleman = useCallback(
+    async (id, payload) => {
+      const targetMid = middlemen.find(
+        (m) => m.id === id || m.middlemanCode === id || String(m.rawId) === String(id)
+      );
+      const targetId = targetMid?.middlemanCode || targetMid?.rawId || payload?.rawId || id;
+      const updatedLocal = { ...targetMid, ...payload, rawId: targetMid?.rawId };
+      updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev) =>
+        prev.map((m) =>
+          m.id === id || m.middlemanCode === id || String(m.rawId) === String(id)
+            ? updatedLocal
+            : m
+        )
+      );
+      try {
+        const res = await updateVendorMiddlemanApi(targetId, updatedLocal);
+        if (res) {
+          const merged = { ...updatedLocal, ...res };
+          updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, (prev) =>
+            prev.map((m) =>
+              m.id === id || m.middlemanCode === id || String(m.rawId) === String(id)
+                ? merged
+                : m
+            )
+          );
+          toast.success(`Middleman ${id} updated successfully.`);
+          return merged;
+        }
+      } catch (err) {
+        console.error('Failed to update middleman on backend:', err);
+      }
+      toast.success(`Middleman ${id} updated successfully.`);
+      return updatedLocal;
+    },
+    [middlemen]
+  );
 
   const toggleMiddlemanStatus = useCallback((id) => {
     const targetMid = middlemen.find((m) => m.id === id);
@@ -544,8 +749,50 @@ export function VendorProvider({ children }) {
     });
   }, [customers, orders, sales]);
 
+  const fetchCustomerDetails = useCallback(
+    async (id) => {
+      if (!id) return null;
+      try {
+        const detailed = await fetchVendorCustomerByIdApi(id);
+        if (detailed) {
+          updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev = []) => {
+            const targetKey = String(id).toLowerCase();
+            const exists = prev.some(
+              (c) =>
+                String(c.id).toLowerCase() === targetKey ||
+                String(c.customerCode).toLowerCase() === targetKey ||
+                String(c.rawId) === String(id)
+            );
+            if (exists) {
+              return prev.map((c) =>
+                String(c.id).toLowerCase() === targetKey ||
+                String(c.customerCode).toLowerCase() === targetKey ||
+                String(c.rawId) === String(id)
+                  ? { ...c, ...detailed }
+                  : c
+              );
+            }
+            return [detailed, ...prev];
+          });
+          return detailed;
+        }
+      } catch (err) {
+        console.warn('Failed to fetch customer details:', err);
+      }
+      return (
+        customers.find(
+          (c) =>
+            c.id === id ||
+            c.customerCode === id ||
+            String(c.rawId) === String(id)
+        ) || null
+      );
+    },
+    [customers]
+  );
+
   const addCustomer = useCallback(
-    (payload) => {
+    async (payload) => {
       const newId = generateNextId('CUST-', customers, 'id', 4);
       const newCust = {
         ...payload,
@@ -557,39 +804,61 @@ export function VendorProvider({ children }) {
         createdAt: dayjs().format('YYYY-MM-DD'),
       };
       updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev) => [newCust, ...prev]);
-      createVendorCustomerApi(newCust).then((created) => {
+      try {
+        const created = await createVendorCustomerApi(newCust);
         if (created) {
+          const merged = { ...newCust, ...created };
           updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev) =>
-            prev.map((c) =>
-              c.id === newId
-                ? {
-                    ...c,
-                    ...created,
-                    id: created.id || created.customerCode || newId,
-                    customerCode: created.customerCode || created.id || newId,
-                    customerUserId: created.customerUserId || created.rawId || c.customerUserId,
-                    rawId: created.rawId ?? c.rawId,
-                  }
-                : c
-            )
+            prev.map((c) => (c.id === newId ? merged : c))
           );
+          toast.success(`Customer ${newCust.customerName} registered successfully.`);
+          return merged;
         }
-      });
+      } catch (err) {
+        console.error('Failed to create customer on backend:', err);
+      }
       toast.success(`Customer ${newCust.customerName} registered successfully.`);
       return newCust;
     },
     [customers]
   );
 
-  const updateCustomer = useCallback((id, payload) => {
-    const targetCust = customers.find((c) => c.id === id);
-    const targetId = targetCust?.customerCode || targetCust?.rawId || payload?.rawId || id;
-    updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...payload } : c))
-    );
-    updateVendorCustomerApi(targetId, { ...targetCust, ...payload, rawId: targetCust?.rawId });
-    toast.success(`Customer ${id} updated successfully.`);
-  }, [customers]);
+  const updateCustomer = useCallback(
+    async (id, payload) => {
+      const targetCust = customers.find(
+        (c) => c.id === id || c.customerCode === id || String(c.rawId) === String(id)
+      );
+      const targetId = targetCust?.customerCode || targetCust?.rawId || payload?.rawId || id;
+      const updatedLocal = { ...targetCust, ...payload, rawId: targetCust?.rawId };
+      updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev) =>
+        prev.map((c) =>
+          c.id === id || c.customerCode === id || String(c.rawId) === String(id)
+            ? updatedLocal
+            : c
+        )
+      );
+      try {
+        const res = await updateVendorCustomerApi(targetId, updatedLocal);
+        if (res) {
+          const merged = { ...updatedLocal, ...res };
+          updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, (prev) =>
+            prev.map((c) =>
+              c.id === id || c.customerCode === id || String(c.rawId) === String(id)
+                ? merged
+                : c
+            )
+          );
+          toast.success(`Customer ${id} updated successfully.`);
+          return merged;
+        }
+      } catch (err) {
+        console.error('Failed to update customer on backend:', err);
+      }
+      toast.success(`Customer ${id} updated successfully.`);
+      return updatedLocal;
+    },
+    [customers]
+  );
 
   const toggleCustomerStatus = useCallback((id) => {
     const targetCust = customers.find((c) => c.id === id);
@@ -2617,14 +2886,17 @@ export function VendorProvider({ children }) {
       financialSummary,
       // Actions
       refreshVendorPortalData,
+      fetchFarmerDetails,
       addFarmer,
       updateFarmer,
       toggleFarmerStatus,
       deleteFarmer,
+      fetchMiddlemanDetails,
       addMiddleman,
       updateMiddleman,
       toggleMiddlemanStatus,
       deleteMiddleman,
+      fetchCustomerDetails,
       addCustomer,
       updateCustomer,
       toggleCustomerStatus,
@@ -2668,14 +2940,17 @@ export function VendorProvider({ children }) {
       pendingConfirmationsCount,
       financialSummary,
       refreshVendorPortalData,
+      fetchFarmerDetails,
       addFarmer,
       updateFarmer,
       toggleFarmerStatus,
       deleteFarmer,
+      fetchMiddlemanDetails,
       addMiddleman,
       updateMiddleman,
       toggleMiddlemanStatus,
       deleteMiddleman,
+      fetchCustomerDetails,
       addCustomer,
       updateCustomer,
       toggleCustomerStatus,

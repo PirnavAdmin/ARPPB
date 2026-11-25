@@ -50,6 +50,7 @@ export function Farmers() {
     farmers,
     purchases,
     ledger,
+    fetchFarmerDetails,
     addFarmer,
     updateFarmer,
     toggleFarmerStatus,
@@ -118,7 +119,7 @@ export function Farmers() {
     const params = { farmerId };
     if (tab && tab !== 'overview') params.tab = tab;
     setSearchParams(params, { state: { fromDirectory: true } });
-    fetchVendorFarmerByIdApi(farmerId);
+    fetchFarmerDetails(farmerId);
     fetchVendorFarmerTransactionsApi(farmerId);
     fetchVendorFarmerPaymentsApi(farmerId);
     fetchVendorFarmerOtpConfirmationsApi(farmerId);
@@ -198,11 +199,23 @@ export function Farmers() {
     [farmers]
   );
 
-  const handleSaveFarmer = (formData) => {
+  const handleOpenEdit = async (farmer) => {
+    setEditingFarmer(farmer);
+    setIsFormOpen(true);
+    const targetId = farmer.id || farmer.farmerCode || farmer.rawId;
+    if (targetId && (!farmer.bankName || !farmer.accountNumber || !farmer.aadhaarId)) {
+      const detailed = await fetchFarmerDetails(targetId);
+      if (detailed) {
+        setEditingFarmer(detailed);
+      }
+    }
+  };
+
+  const handleSaveFarmer = async (formData) => {
     if (editingFarmer) {
-      updateFarmer(editingFarmer.id, formData);
+      await updateFarmer(editingFarmer.id, formData);
     } else {
-      addFarmer(formData);
+      await addFarmer(formData);
     }
     setIsFormOpen(false);
     setEditingFarmer(null);
@@ -339,10 +352,7 @@ export function Farmers() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              setEditingFarmer(row);
-              setIsFormOpen(true);
-            }}
+            onClick={() => handleOpenEdit(row)}
             title="Edit Farmer"
             className="w-8 h-8 inline-flex items-center justify-center shrink-0 rounded-lg bg-[#F5FAF8] border border-[#E2E8F0] text-[#172B29] hover:bg-[#CCFBF1] hover:text-[#0F766E] transition-colors cursor-pointer"
           >
@@ -507,8 +517,7 @@ export function Farmers() {
             initialPurchaseId={queryPurchaseId}
             onEdit={(f) => {
               handleCloseProfile();
-              setEditingFarmer(f);
-              setIsFormOpen(true);
+              handleOpenEdit(f);
             }}
           />
         </VendorDetailPage>

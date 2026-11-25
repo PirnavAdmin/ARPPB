@@ -44,6 +44,7 @@ export function Customers() {
     customers,
     orders,
     sales,
+    fetchCustomerDetails,
     addCustomer,
     updateCustomer,
     toggleCustomerStatus,
@@ -107,7 +108,7 @@ export function Customers() {
   const openProfile = (customerId) => {
     listScrollRef.current = window.scrollY;
     setSearchParams({ customerId }, { state: { fromDirectory: true } });
-    fetchVendorCustomerByIdApi(customerId);
+    fetchCustomerDetails(customerId);
     exportVendorCustomersApi({ customerId });
   };
 
@@ -176,11 +177,23 @@ export function Customers() {
     [customers]
   );
 
-  const handleSave = (formData) => {
+  const handleOpenEdit = async (cust) => {
+    setEditingCustomer(cust);
+    setIsFormOpen(true);
+    const targetId = cust.id || cust.customerCode || cust.rawId;
+    if (targetId && (!cust.pan || !cust.gstNumber || !cust.creditLimit)) {
+      const detailed = await fetchCustomerDetails(targetId);
+      if (detailed) {
+        setEditingCustomer(detailed);
+      }
+    }
+  };
+
+  const handleSave = async (formData) => {
     if (editingCustomer) {
-      updateCustomer(editingCustomer.id, formData);
+      await updateCustomer(editingCustomer.id, formData);
     } else {
-      addCustomer(formData);
+      await addCustomer(formData);
     }
     setIsFormOpen(false);
     setEditingCustomer(null);
@@ -319,10 +332,7 @@ export function Customers() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              setEditingCustomer(row);
-              setIsFormOpen(true);
-            }}
+            onClick={() => handleOpenEdit(row)}
             title="Edit Customer"
             className="w-8 h-8 inline-flex items-center justify-center shrink-0 rounded-lg bg-[#F5FAF8] border border-[#E2E8F0] text-[#172B29] hover:bg-[#CCFBF1] hover:text-[#0F766E] transition-colors cursor-pointer"
           >
@@ -480,8 +490,7 @@ export function Customers() {
             sales={sales}
             onEdit={(c) => {
               handleCloseProfile();
-              setEditingCustomer(c);
-              setIsFormOpen(true);
+              handleOpenEdit(c);
             }}
           />
         </VendorDetailPage>

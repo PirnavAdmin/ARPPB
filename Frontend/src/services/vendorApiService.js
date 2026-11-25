@@ -67,6 +67,7 @@ export function mapVendorFarmerDto(dto = {}, existing = {}) {
     ...existing,
     rawId,
     id,
+    farmerCode: dto.farmerCode || id,
     farmerName: dto.farmerName || dto.fullName || dto.name || existing.farmerName || '',
     fatherName: dto.fatherName ?? dto.fatherOrSpouseName ?? existing.fatherName ?? '',
     mobileNumber: dto.mobileNumber || dto.mobile || dto.phone || existing.mobileNumber || '',
@@ -88,6 +89,14 @@ export function mapVendorFarmerDto(dto = {}, existing = {}) {
       existing.accountNumber ||
       '',
     ifscCode: dto.ifscCode || dto.bankDetails?.ifscCode || existing.ifscCode || '',
+    totalPurchases: Number(dto.totalPurchases ?? existing.totalPurchases ?? 0),
+    totalQuantity: Number(
+      dto.totalPurchaseQuantity ?? dto.totalQuantity ?? existing.totalQuantity ?? 0
+    ),
+    totalPurchaseValue: Number(
+      dto.totalPurchaseAmount ?? dto.totalPurchaseValue ?? existing.totalPurchaseValue ?? 0
+    ),
+    pendingPayables: Number(dto.dueAmount ?? dto.pendingPayables ?? existing.pendingPayables ?? 0),
     status: dto.status || (dto.isActive === false ? 'Inactive' : existing.status || 'Active'),
     createdAt:
       dto.createdAt || dto.registeredAt
@@ -111,6 +120,7 @@ export function mapVendorMiddlemanDto(dto = {}, existing = {}) {
     ...existing,
     rawId,
     id,
+    middlemanCode: dto.middlemanCode || id,
     businessName: dto.businessName || dto.registeredBusinessName || existing.businessName || '',
     ownerName:
       dto.ownerName ||
@@ -139,9 +149,35 @@ export function mapVendorMiddlemanDto(dto = {}, existing = {}) {
     state: dto.state || existing.state || 'Andhra Pradesh',
     pinCode: dto.pinCode ?? existing.pinCode ?? '',
     bankName: dto.bankName || dto.bankDetails?.bankName || existing.bankName || '',
-    accountNumber: dto.accountNumber || dto.bankDetails?.accountNumber || existing.accountNumber || '',
+    accountNumber:
+      dto.accountNumber ||
+      dto.bankAccountNumber ||
+      dto.bankDetails?.accountNumber ||
+      existing.accountNumber ||
+      '',
     ifscCode: dto.ifscCode || dto.bankDetails?.ifscCode || existing.ifscCode || '',
     openingBalance: Number(dto.openingBalance ?? existing.openingBalance ?? 0),
+    totalTransactions: Number(
+      dto.totalTransactions ?? dto.totalTransactionsCount ?? existing.totalTransactions ?? 0
+    ),
+    totalPurchases: Number(
+      dto.totalTransactions ?? dto.totalTransactionsCount ?? dto.totalPurchases ?? existing.totalPurchases ?? 0
+    ),
+    totalQuantity: Number(
+      dto.totalTransactionQuantity ?? dto.totalTransactionsQuantity ?? dto.totalQuantity ?? existing.totalQuantity ?? 0
+    ),
+    purchaseValue: Number(
+      dto.totalTransactionAmount ?? dto.purchaseValue ?? existing.purchaseValue ?? 0
+    ),
+    totalPurchaseValue: Number(
+      dto.totalTransactionAmount ?? dto.totalPurchaseValue ?? existing.totalPurchaseValue ?? 0
+    ),
+    outstandingPayables: Number(
+      dto.dueAmount ?? dto.outstandingPayables ?? existing.outstandingPayables ?? 0
+    ),
+    pendingPayables: Number(
+      dto.dueAmount ?? dto.pendingPayables ?? existing.pendingPayables ?? 0
+    ),
     status: dto.status || (dto.isActive === false ? 'Inactive' : existing.status || 'Active'),
     createdAt:
       dto.createdAt || dto.registeredAt
@@ -181,6 +217,33 @@ export function mapVendorCustomerDto(dto = {}, existing = {}) {
     pinCode: dto.pinCode ?? existing.pinCode ?? '',
     creditLimit: Number(dto.creditLimit ?? existing.creditLimit ?? 0),
     openingBalance: Number(dto.openingBalance ?? existing.openingBalance ?? 0),
+    bankName: dto.bankName || dto.bankDetails?.bankName || existing.bankName || '',
+    accountNumber:
+      dto.accountNumber ||
+      dto.bankAccountNumber ||
+      dto.bankDetails?.accountNumber ||
+      existing.accountNumber ||
+      '',
+    ifscCode: dto.ifscCode || dto.bankDetails?.ifscCode || existing.ifscCode || '',
+    totalOrders: Number(dto.totalOrders ?? existing.totalOrders ?? 0),
+    totalPurchasedQty: Number(
+      dto.totalPurchaseQuantity ?? dto.totalPurchasedQty ?? existing.totalPurchasedQty ?? 0
+    ),
+    totalPurchaseQuantity: Number(
+      dto.totalPurchaseQuantity ?? dto.totalPurchaseQuantity ?? existing.totalPurchaseQuantity ?? 0
+    ),
+    totalPurchaseValue: Number(
+      dto.totalSalesAmount ?? dto.totalPurchaseValue ?? existing.totalPurchaseValue ?? 0
+    ),
+    totalSalesAmount: Number(
+      dto.totalSalesAmount ?? dto.totalSalesAmount ?? existing.totalSalesAmount ?? 0
+    ),
+    outstandingReceivables: Number(
+      dto.dueAmount ?? dto.receivableAmount ?? dto.outstandingReceivables ?? existing.outstandingReceivables ?? 0
+    ),
+    receivableAmount: Number(
+      dto.dueAmount ?? dto.receivableAmount ?? dto.receivableAmount ?? existing.receivableAmount ?? 0
+    ),
     status: dto.status || (dto.isActive === false ? 'Inactive' : existing.status || 'Active'),
     createdAt: dto.createdAt
       ? String(dto.createdAt).slice(0, 10)

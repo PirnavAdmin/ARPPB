@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Phone,
@@ -43,7 +43,15 @@ export function CustomerDetails({
     verifyTransactionOtp,
     resendTransactionOtp,
     recordFinancialSettlement,
+    fetchCustomerDetails,
   } = useVendor();
+
+  useEffect(() => {
+    const id = customer?.id || customer?.customerCode || customer?.rawId;
+    if (id && (!customer.pan || !customer.gstNumber || !customer.creditLimit)) {
+      fetchCustomerDetails?.(id);
+    }
+  }, [customer, fetchCustomerDetails]);
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [selectedSale, setSelectedSale] = useState(null);

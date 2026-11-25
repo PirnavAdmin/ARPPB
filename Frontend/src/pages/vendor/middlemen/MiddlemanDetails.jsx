@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Phone,
   Mail,
@@ -43,7 +43,15 @@ export function MiddlemanDetails({
     verifyTransactionOtp,
     resendTransactionOtp,
     recordFinancialSettlement,
+    fetchMiddlemanDetails,
   } = useVendor();
+
+  useEffect(() => {
+    const id = middleman?.id || middleman?.middlemanCode || middleman?.rawId;
+    if (id && (!middleman.pan || !middleman.bankName || !middleman.accountNumber)) {
+      fetchMiddlemanDetails?.(id);
+    }
+  }, [middleman, fetchMiddlemanDetails]);
 
   const [activeTab, setActiveTab] = useState(
     initialPurchaseId ? 'transactions' : initialTab

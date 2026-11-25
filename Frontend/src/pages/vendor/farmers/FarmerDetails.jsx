@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   MapPin,
   Phone,
@@ -43,7 +43,15 @@ export function FarmerDetails({
     verifyTransactionOtp,
     resendTransactionOtp,
     recordFinancialSettlement,
+    fetchFarmerDetails,
   } = useVendor();
+
+  useEffect(() => {
+    const id = farmer?.id || farmer?.farmerCode || farmer?.rawId;
+    if (id && (!farmer.bankName || !farmer.accountNumber || !farmer.aadhaarId)) {
+      fetchFarmerDetails?.(id);
+    }
+  }, [farmer, fetchFarmerDetails]);
 
   const [activeTab, setActiveTab] = useState(
     initialPurchaseId ? 'transactions' : initialTab
