@@ -7,9 +7,16 @@ import {
   Package,
   Plus,
   Minus,
+  Store,
 } from 'lucide-react';
 import CustomerStatusBadge from './CustomerStatusBadge';
 import { formatCurrency } from '../../../utils/formatCurrency';
+
+const SELLER_TYPE_STYLE = {
+  Farmer: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  Middleman: 'bg-amber-50 text-amber-700 border-amber-200',
+  Vendor: 'bg-[#CCFBF1] text-[#0F766E] border-[#14B8A6]/30',
+};
 
 export function CustomerProductCard({
   product,
@@ -50,6 +57,16 @@ export function CustomerProductCard({
           <CustomerStatusBadge status={availabilityLabel} size="xs" />
         </div>
 
+        <div className="absolute top-3 right-3">
+          <span
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shadow-2xs ${
+              SELLER_TYPE_STYLE[product.sellerType || 'Vendor'] || SELLER_TYPE_STYLE.Vendor
+            }`}
+          >
+            {product.sellerType || 'Vendor'}
+          </span>
+        </div>
+
         {product.isBestPrice && !isOutOfStock && (
           <span className="absolute bottom-2.5 left-3 px-2 py-0.5 rounded-md bg-[#0F766E] text-white text-[10px] font-bold tracking-wide shadow-xs">
             BEST PRICE
@@ -68,8 +85,17 @@ export function CustomerProductCard({
           </h3>
         </div>
 
-        {/* Grade & Origin Location */}
+        {/* Seller, Grade & Origin Location */}
         <div className="space-y-1.5 text-xs text-[#64748B]">
+          <div className="flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5 truncate">
+              <Store className="w-3.5 h-3.5 text-[#0F766E] shrink-0" />
+              <span className="truncate font-semibold text-[#0F172A]">
+                {product.sellerName || `Verified ${product.sellerType || 'Vendor'}`}
+              </span>
+            </span>
+          </div>
+
           <div className="flex items-center justify-between gap-2">
             <span className="inline-flex items-center gap-1.5 truncate">
               <Award className="w-3.5 h-3.5 text-[#0F766E] shrink-0" />
@@ -171,7 +197,7 @@ export function CustomerProductCard({
               type="button"
               disabled={isOutOfStock}
               onClick={() => {
-                onAddToCart?.(product.id, qty);
+                onAddToCart?.(product, qty);
                 setQty(1);
               }}
               className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-[#0F766E] text-white hover:bg-[#115E59] disabled:bg-slate-300 disabled:text-slate-600 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-2xs"
