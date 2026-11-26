@@ -11,6 +11,10 @@ import {
   ShieldCheck,
   PackageCheck,
   Award,
+  Store,
+  AlertCircle,
+  Loader2,
+  UserCheck,
 } from 'lucide-react';
 import { useCustomer } from '../context/useCustomer';
 import CustomerPageHeader from '../components/CustomerPageHeader';
@@ -26,6 +30,10 @@ export function MyCart() {
     cartItemCount,
     cartTotalUnits,
     cartSubtotal,
+    cartLoading,
+    cartError,
+    checkoutLoading,
+    checkoutError,
     updateCartQuantity,
     removeFromCart,
     placeOrdersFromCart,
@@ -45,11 +53,11 @@ export function MyCart() {
 
   const handleConfirmReviewOrder = async () => {
     const res = await placeOrdersFromCart(selectedAddressObj);
-    if (res.success) {
+    if (res && res.success) {
       setIsReviewOpen(false);
       setOrderSubmittedInfo({
-        orders: res.orders,
-        otps: res.otps,
+        orders: res.orders || [],
+        otps: res.otps || [],
       });
     }
   };
@@ -110,7 +118,19 @@ export function MyCart() {
         </div>
       )}
 
-      {cartItems.length === 0 ? (
+      {cartError && (
+        <div className="p-4 rounded-2xl bg-[#FEE2E2] border border-[#DC2626]/20 text-xs text-[#DC2626] font-semibold flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{cartError}</span>
+        </div>
+      )}
+
+      {cartLoading ? (
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-10 flex items-center justify-center gap-2.5 text-sm text-[#64748B]">
+          <Loader2 className="w-5 h-5 animate-spin text-[#0F766E]" />
+          <span>Loading your shopping cart...</span>
+        </div>
+      ) : cartItems.length === 0 ? (
         <CustomerEmptyState
           icon={ShoppingCart}
           title="Your Cart Is Empty"
@@ -122,9 +142,12 @@ export function MyCart() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
           {/* Cart Items List */}
           <div className="xl:col-span-2 space-y-4">
-            {cartItems.map(({ productId, quantity, product, lineTotal }) => (
+            {cartItems.map(({ cartKey, productId, sellerType, quantity, product, lineTotal }) => {
+              const itemActionKey = cartKey || productId;
+              const resolvedSellerType = sellerType || product.sellerType || 'Vendor';
+              return (
               <article
-                key={productId}
+                key={itemActionKey}
                 className="bg-white rounded-2xl border border-[#E2E8F0] p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row gap-4 sm:items-center justify-between"
               >
                 <div className="flex items-start sm:items-center gap-4 min-w-0 flex-1">
@@ -141,6 +164,9 @@ export function MyCart() {
                       <span className="text-[11px] font-bold uppercase tracking-wider text-[#0F766E]">
                         {product.category}
                       </span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#CCFBF1] text-[#0F766E] border border-[#14B8A6]/30">
+                        {resolvedSellerType}
+                      </span>
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A]">
                         Lot {product.batchCode}
                       </span>
@@ -151,13 +177,17 @@ export function MyCart() {
                     </h3>
 
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#64748B]">
+                      <span className="inline-flex items-center gap-1 font-semibold text-[#0F172A]">
+                        <Store className="w-3.5 h-3.5 text-[#0F766E]" />
+                        {product.sellerName || `Verified ${resolvedSellerType}`}
+                      </span>
                       <span className="inline-flex items-center gap-1">
                         <Award className="w-3.5 h-3.5 text-[#0F766E]" />
                         {product.qualityGrade}
                       </span>
                       <span className="inline-flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5 text-[#14B8A6]" />
-                        {product.location}, {product.state}
+                        {product.location}{product.state ? `, ${product.state}` : ''}
                       </span>
                     </div>
 
@@ -191,7 +221,7 @@ export function MyCart() {
                     <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]">
                       <button
                         type="button"
-                        onClick={() => updateCartQuantity(productId, quantity - 1)}
+                        onClick={() => updateCartQuantity(itemActionKey, quantity - 1)}
                         disabled={quantity <= 1}
                         aria-label={`Decrease quantity of ${product.name}`}
                         className="w-7 h-7 rounded-lg bg-white border border-[#E2E8F0] text-[#0F766E] flex items-center justify-center hover:bg-[#CCFBF1] disabled:opacity-40 cursor-pointer"
@@ -205,7 +235,7 @@ export function MyCart() {
 
                       <button
                         type="button"
-                        onClick={() => updateCartQuantity(productId, quantity + 1)}
+                        onClick={() => updateCartQuantity(itemActionKey, quantity + 1)}
                         disabled={quantity >= product.availableQuantity}
                         aria-label={`Increase quantity of ${product.name}`}
                         className="w-7 h-7 rounded-lg bg-white border border-[#E2E8F0] text-[#0F766E] flex items-center justify-center hover:bg-[#CCFBF1] disabled:opacity-40 cursor-pointer"
@@ -216,7 +246,7 @@ export function MyCart() {
 
                     <button
                       type="button"
-                      onClick={() => removeFromCart(productId)}
+                      onClick={() => removeFromCart(itemActionKey)}
                       aria-label={`Remove ${product.name} from cart`}
                       title="Remove Product"
                       className="p-2 rounded-xl border border-red-200 text-[#DC2626] hover:bg-[#FEE2E2] transition-colors cursor-pointer"
@@ -226,7 +256,8 @@ export function MyCart() {
                   </div>
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
 
           {/* Right Column: Order Summary */}
@@ -315,17 +346,48 @@ export function MyCart() {
               </button>
               <button
                 type="button"
+                disabled={checkoutLoading}
                 onClick={handleConfirmReviewOrder}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-[#0F766E] text-white hover:bg-[#115E59] cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-[#0F766E] text-white hover:bg-[#115E59] disabled:opacity-50 cursor-pointer"
               >
-                <PackageCheck className="w-4 h-4" />
-                <span>Submit Order for OTP Verification</span>
+                {checkoutLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <PackageCheck className="w-4 h-4" />
+                )}
+                <span>{checkoutLoading ? 'Submitting...' : 'Submit Order for OTP Verification'}</span>
               </button>
             </div>
           </div>
         }
       >
         <div className="space-y-5 text-xs">
+          {checkoutError && (
+            <div className="p-3 rounded-xl bg-[#FEE2E2] border border-[#DC2626]/20 text-[#DC2626] font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{checkoutError}</span>
+            </div>
+          )}
+
+          {/* Customer Information */}
+          <div className="p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-[#0F766E]" />
+              <div>
+                <span className="text-[11px] text-[#64748B] block">Customer</span>
+                <strong className="text-[#0F172A]">{profile.fullName || 'Customer'}</strong>
+              </div>
+            </div>
+            <div>
+              <span className="text-[11px] text-[#64748B] block">Customer ID</span>
+              <span className="font-mono font-semibold text-[#0F172A]">{profile.customerId || '—'}</span>
+            </div>
+            <div>
+              <span className="text-[11px] text-[#64748B] block">Contact</span>
+              <span className="font-semibold text-[#0F172A]">{profile.mobileNumber || '—'}</span>
+            </div>
+          </div>
+
           {/* Delivery Address Selection */}
           <div className="space-y-2">
             <label className="font-bold text-[#0F172A] flex items-center gap-1.5">
@@ -364,43 +426,71 @@ export function MyCart() {
             </div>
           </div>
 
-          {/* Itemized Review Table */}
-          <div className="rounded-xl border border-[#E2E8F0] overflow-hidden">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#CCFBF1]/45 border-b border-[#E2E8F0] text-[#0F766E]">
-                  <th className="px-3.5 py-2.5 font-bold uppercase">Product</th>
-                  <th className="px-3.5 py-2.5 font-bold uppercase">Grade &amp; Origin</th>
-                  <th className="px-3.5 py-2.5 font-bold uppercase">Qty</th>
-                  <th className="px-3.5 py-2.5 font-bold uppercase text-right">Unit Price</th>
-                  <th className="px-3.5 py-2.5 font-bold uppercase text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E2E8F0]">
-                {cartItems.map(({ productId, quantity, product, lineTotal }) => (
-                  <tr key={productId}>
-                    <td className="px-3.5 py-2.5 font-semibold text-[#0F172A]">
-                      {product.name}
-                    </td>
-                    <td className="px-3.5 py-2.5">
-                      <span className="block text-[#0F172A]">{product.qualityGrade}</span>
-                      <span className="text-[11px] text-[#64748B]">
-                        {product.location}, {product.state}
-                      </span>
-                    </td>
-                    <td className="px-3.5 py-2.5 font-semibold">
-                      {quantity} {product.unit}
-                    </td>
-                    <td className="px-3.5 py-2.5 text-right">
-                      {formatCurrency(product.price)}
-                    </td>
-                    <td className="px-3.5 py-2.5 text-right font-bold text-[#0F766E]">
-                      {formatCurrency(lineTotal)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Itemized Review Grouped by Seller */}
+          <div className="space-y-3">
+            {Object.entries(
+              cartItems.reduce((groups, item) => {
+                const sType = item.sellerType || item.product.sellerType || 'Vendor';
+                const sName = item.product.sellerName || `Verified ${sType}`;
+                const groupKey = `${sType}::${sName}`;
+                if (!groups[groupKey]) {
+                  groups[groupKey] = { sellerType: sType, sellerName: sName, items: [], subtotal: 0 };
+                }
+                groups[groupKey].items.push(item);
+                groups[groupKey].subtotal += item.lineTotal;
+                return groups;
+              }, {})
+            ).map(([groupKey, group]) => (
+              <div key={groupKey} className="rounded-xl border border-[#E2E8F0] overflow-hidden">
+                <div className="px-3.5 py-2 bg-[#F8FAFC] border-b border-[#E2E8F0] flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Store className="w-3.5 h-3.5 text-[#0F766E]" />
+                    <span className="font-bold text-[#0F172A]">{group.sellerName}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#CCFBF1] text-[#0F766E]">
+                      {group.sellerType}
+                    </span>
+                  </div>
+                  <span className="font-bold text-[#0F766E]">
+                    Seller Subtotal: {formatCurrency(group.subtotal)}
+                  </span>
+                </div>
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#CCFBF1]/35 border-b border-[#E2E8F0] text-[#0F766E]">
+                      <th className="px-3.5 py-2 font-bold uppercase">Product</th>
+                      <th className="px-3.5 py-2 font-bold uppercase">Grade &amp; Origin</th>
+                      <th className="px-3.5 py-2 font-bold uppercase">Qty</th>
+                      <th className="px-3.5 py-2 font-bold uppercase text-right">Unit Price</th>
+                      <th className="px-3.5 py-2 font-bold uppercase text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E2E8F0]">
+                    {group.items.map(({ cartKey, productId, quantity, product, lineTotal }) => (
+                      <tr key={cartKey || productId}>
+                        <td className="px-3.5 py-2.5 font-semibold text-[#0F172A]">
+                          {product.name}
+                        </td>
+                        <td className="px-3.5 py-2.5">
+                          <span className="block text-[#0F172A]">{product.qualityGrade}</span>
+                          <span className="text-[11px] text-[#64748B]">
+                            {product.location}{product.state ? `, ${product.state}` : ''}
+                          </span>
+                        </td>
+                        <td className="px-3.5 py-2.5 font-semibold">
+                          {quantity} {product.unit}
+                        </td>
+                        <td className="px-3.5 py-2.5 text-right">
+                          {formatCurrency(product.price)}
+                        </td>
+                        <td className="px-3.5 py-2.5 text-right font-bold text-[#0F766E]">
+                          {formatCurrency(lineTotal)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
           </div>
         </div>
       </CustomerModal>

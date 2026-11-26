@@ -283,6 +283,14 @@ export function AuthProvider({ children }) {
 
     setAuthSession((prev) => {
       if (!prev?.user) return prev;
+      if (
+        prev.user.mobile === cleanedMobile &&
+        prev.user.contactNumber === cleanedMobile &&
+        prev.user.phone === cleanedMobile &&
+        prev.user.mobileVerifiedViaOtp === true
+      ) {
+        return prev;
+      }
       const nextSession = {
         ...prev,
         user: {

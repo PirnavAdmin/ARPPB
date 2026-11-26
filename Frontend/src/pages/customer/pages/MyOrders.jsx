@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import dayjs from 'dayjs';
 import {
   Truck,
   Clock,
@@ -6,6 +7,9 @@ import {
   XCircle,
   Package,
   Eye,
+  AlertCircle,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { useCustomer } from '../context/useCustomer';
 import { CUSTOMER_ORDER_STATUSES } from '../data/customerData';
@@ -23,7 +27,7 @@ import CustomerStatusBadge from '../components/CustomerStatusBadge';
 import CustomerOrderDetailsModal from '../components/CustomerOrderDetailsModal';
 
 export function MyOrders() {
-  const { orders, categories } = useCustomer();
+  const { orders, categories, ordersLoading, ordersError, loadOrders } = useCustomer();
 
   const [activeTab, setActiveTab] = useState('All Orders');
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,12 +61,12 @@ export function MyOrders() {
       }
       if (
         datePreset !== 'all' &&
-        !isDateInRange(o.orderDate, datePreset, '', '', '2026-11-11')
+        !isDateInRange(o.orderDate, datePreset, '', '', dayjs().format('YYYY-MM-DD'))
       ) {
         return false;
       }
       if (q) {
-        const hit = [o.id, o.transactionId, o.product, o.category, o.batchReference]
+        const hit = [o.id, o.transactionId, o.product, o.category, o.sellerName, o.sellerType, o.batchReference]
           .filter(Boolean)
           .some((v) => String(v).toLowerCase().includes(q));
         if (!hit) return false;
@@ -137,12 +141,17 @@ export function MyOrders() {
     },
     {
       key: 'product',
-      label: 'Product',
+      label: 'Product & Seller',
       sortable: true,
       render: (row) => (
-        <div>
+        <div className="space-y-0.5">
           <span className="font-semibold text-[#0F172A] block">{row.product}</span>
-          <span className="text-[11px] text-[#64748B]">{row.category}</span>
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[#64748B]">
+            <span>{row.sellerName || 'Verified Seller'}</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#CCFBF1] text-[#0F766E]">
+              {row.sellerType || 'Vendor'}
+            </span>
+          </div>
         </div>
       ),
     },
@@ -168,8 +177,17 @@ export function MyOrders() {
     },
     {
       key: 'orderStatus',
-      label: 'Order Status',
-      render: (row) => <CustomerStatusBadge status={row.orderStatus} size="xs" />,
+      label: 'Order & OTP Status',
+      render: (row) => (
+        <div className="flex flex-col items-start gap-1">
+          <CustomerStatusBadge status={row.orderStatus} size="xs" />
+          {row.otpStatus && (
+            <span className="text-[10px] font-semibold text-[#64748B]">
+              OTP: <strong className="text-[#0F766E]">{row.otpStatus}</strong>
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       key: 'expectedDeliveryDate',
@@ -214,6 +232,30 @@ export function MyOrders() {
         icon={Truck}
         badge={`${orders.length} Total Orders`}
       />
+
+      {ordersError && (
+        <div className="p-4 rounded-xl bg-[#FEE2E2] border border-[#DC2626]/20 text-xs text-[#DC2626] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-2 font-semibold">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {ordersError}
+          </span>
+          <button
+            type="button"
+            onClick={loadOrders}
+            className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-white border border-[#DC2626]/30 font-bold hover:bg-red-50 cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Retry
+          </button>
+        </div>
+      )}
+
+      {ordersLoading && (
+        <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] text-xs text-[#64748B] flex items-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin text-[#0F766E]" />
+          <span>Refreshing orders...</span>
+        </div>
+      )}
 
       {/* Quick Order Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

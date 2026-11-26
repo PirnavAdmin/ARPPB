@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import dayjs from 'dayjs';
 import {
   History,
   CheckCircle2,
@@ -43,12 +44,12 @@ export function PurchaseHistory() {
       if (statusFilter !== 'All' && item.status !== statusFilter) return false;
 
       if (fromDate || toDate) {
-        if (!isDateInRange(item.purchaseDate, 'custom', fromDate, toDate, '2026-11-11')) {
+        if (!isDateInRange(item.purchaseDate, 'custom', fromDate, toDate, dayjs().format('YYYY-MM-DD'))) {
           return false;
         }
       } else if (
         datePreset !== 'all' &&
-        !isDateInRange(item.purchaseDate, datePreset, '', '', '2026-11-11')
+        !isDateInRange(item.purchaseDate, datePreset, '', '', dayjs().format('YYYY-MM-DD'))
       ) {
         return false;
       }

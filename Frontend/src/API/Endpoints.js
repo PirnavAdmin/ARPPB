@@ -32,6 +32,50 @@ export const endpoint = (method, path) => {
   return fn;
 };
 
+export const CUSTOMER_MARKETPLACE = {
+  CATEGORIES: "/api/v1/customer/marketplace/categories",
+  PRODUCTS: "/api/v1/customer/marketplace/products",
+  PRODUCT_BY_ID: (id) => `/api/v1/customer/marketplace/products/${id}`,
+};
+
+export const CUSTOMER_CART = {
+  BASE: "/api/v1/customer/cart",
+  ITEMS: "/api/v1/customer/cart/items",
+  ITEM_BY_ID: (id) => `/api/v1/customer/cart/items/${id}`,
+  CHECKOUT: "/api/v1/customer/cart/checkout",
+};
+
+export const CUSTOMER_ORDERS = {
+  BASE: "/api/v1/customer/orders",
+  BY_ID: (id) => `/api/v1/customer/orders/${id}`,
+};
+
+export const CUSTOMER_DASHBOARD = {
+  SUMMARY: "/api/v1/customer/dashboard/summary",
+};
+
+export const CUSTOMER_NOTIFICATIONS = {
+  BASE: "/api/v1/customer/notifications",
+  SUMMARY: "/api/v1/customer/notifications/summary",
+  MARK_READ: (id) => `/api/v1/customer/notifications/${id}/read`,
+  READ_ALL: "/api/v1/customer/notifications/read-all",
+  DELETE: (id) => `/api/v1/customer/notifications/${id}`,
+};
+
+export const CUSTOMER_PURCHASES = {
+  BASE: "/api/v1/customer/purchases",
+  SUMMARY: "/api/v1/customer/purchases/summary",
+  BY_ID: (id) => `/api/v1/customer/purchases/${id}`,
+};
+
+export const CUSTOMER_CONFIRMATIONS = {
+  BASE: "/api/v1/customer/confirmations",
+  BY_ID: (id) => `/api/v1/customer/confirmations/${id}`,
+  VERIFY: (id) => `/api/v1/customer/confirmations/${id}/verify`,
+  RESEND: (id) => `/api/v1/customer/confirmations/${id}/resend`,
+  REJECT: (id) => `/api/v1/customer/confirmations/${id}/reject`,
+};
+
 // --------------------------------------------------
 // AUTHENTICATION
 // --------------------------------------------------
@@ -615,6 +659,13 @@ const API_ENDPOINTS = {
   MIDDLEMAN_PROFILE,
   VENDOR_PROFILE,
   CUSTOMER_PROFILE,
+  CUSTOMER_MARKETPLACE,
+  CUSTOMER_CART,
+  CUSTOMER_ORDERS,
+  CUSTOMER_DASHBOARD,
+  CUSTOMER_NOTIFICATIONS,
+  CUSTOMER_PURCHASES,
+  CUSTOMER_CONFIRMATIONS,
   CUSTOMER,
   FARMER_PROFILE,
 };

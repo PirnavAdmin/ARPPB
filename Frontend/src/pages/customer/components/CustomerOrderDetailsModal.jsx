@@ -150,8 +150,17 @@ export function CustomerOrderDetailsModal({ order, isOpen, onClose }) {
               <span className="font-bold text-[#0F766E]">{order.id}</span>
             </div>
             <div>
+              <span className="text-[#64748B] block">Seller</span>
+              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                <span className="font-semibold text-[#0F172A]">{order.sellerName || 'Verified Seller'}</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#CCFBF1] text-[#0F766E]">
+                  {order.sellerType || 'Vendor'}
+                </span>
+              </div>
+            </div>
+            <div>
               <span className="text-[#64748B] block">Category</span>
-              <span className="font-semibold text-[#0F172A]">{order.category}</span>
+              <span className="font-semibold text-[#0F766E]">{order.category}</span>
             </div>
             <div>
               <span className="text-[#64748B] block flex items-center gap-1">
@@ -242,6 +251,46 @@ export function CustomerOrderDetailsModal({ order, isOpen, onClose }) {
             )}
           </div>
         </div>
+
+        {/* Multi-Seller Order Items Breakdown (when available) */}
+        {Array.isArray(order.items) && order.items.length > 0 && (
+          <div className="rounded-xl border border-[#E2E8F0] overflow-hidden text-xs">
+            <div className="px-4 py-2.5 bg-[#F8FAFC] border-b border-[#E2E8F0] font-bold text-[#0F172A]">
+              Ordered Items &amp; Sellers ({order.items.length})
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#CCFBF1]/35 border-b border-[#E2E8F0] text-[#0F766E]">
+                    <th className="px-3.5 py-2 font-bold uppercase">Product</th>
+                    <th className="px-3.5 py-2 font-bold uppercase">Seller</th>
+                    <th className="px-3.5 py-2 font-bold uppercase">Qty</th>
+                    <th className="px-3.5 py-2 font-bold uppercase text-right">Unit Price</th>
+                    <th className="px-3.5 py-2 font-bold uppercase text-right">Line Total</th>
+                    <th className="px-3.5 py-2 font-bold uppercase">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E2E8F0]">
+                  {order.items.map((item, idx) => (
+                    <tr key={item.id || idx}>
+                      <td className="px-3.5 py-2 font-semibold text-[#0F172A]">{item.productName}</td>
+                      <td className="px-3.5 py-2">
+                        <span className="font-medium text-[#0F172A] mr-1.5">{item.sellerName}</span>
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#CCFBF1] text-[#0F766E]">
+                          {item.sellerType}
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-2">{item.quantity} {item.unit}</td>
+                      <td className="px-3.5 py-2 text-right">{formatCurrency(item.pricePerUnit)}</td>
+                      <td className="px-3.5 py-2 text-right font-bold text-[#0F766E]">{formatCurrency(item.lineTotal)}</td>
+                      <td className="px-3.5 py-2"><CustomerStatusBadge status={item.itemStatus || order.orderStatus} size="xs" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Chronological Timeline Log */}
         {timeline.length > 0 && (

@@ -262,16 +262,18 @@ export function MobileOTPVerification({
 
         <div className="p-6 overflow-y-auto flex-1 text-[#0F172A]">
           {/* Dev OTP banner when returned by backend in Development mode */}
-          <div className="mb-4 rounded-lg border border-[#14B8A6]/30 bg-[#CCFBF1]/20 p-3 text-xs">
-            <div className="flex items-start gap-2">
-              <span className="text-[#0F766E] font-semibold">Developer Preview</span>
-              <span className="text-[#64748B]">
-                OTP display is available only when provided by the backend in development mode.
-                Production verification uses the profile service.
-              </span>
+          {import.meta.env.DEV && (
+            <div className="mb-4 rounded-lg border border-[#14B8A6]/30 bg-[#CCFBF1]/20 p-3 text-xs">
+              <div className="flex items-start gap-2">
+                <span className="text-[#0F766E] font-semibold">Developer Preview</span>
+                <span className="text-[#64748B]">
+                  OTP display is available only when provided by the backend in development mode.
+                  Production verification uses the profile service.
+                </span>
+              </div>
             </div>
-          </div>
-          {activeDemoOtp && (
+          )}
+          {import.meta.env.DEV && activeDemoOtp && (
             <div className="mb-4 rounded-lg border border-[#14B8A6]/30 bg-[#CCFBF1]/20 p-3 text-xs flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-[#0F766E] font-semibold">Developer OTP:</span>
@@ -314,6 +316,18 @@ export function MobileOTPVerification({
               </div>
             </div>
           )}
+
+          {/* OTP input label & small dev OTP label */}
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-xs font-semibold text-[#0F172A]">
+              Enter 6-Digit Verification Code
+            </label>
+            {import.meta.env.DEV && activeDemoOtp && (
+              <span className="text-xs font-semibold text-[#0F766E] bg-[#CCFBF1] px-2 py-0.5 rounded border border-[#14B8A6]/30">
+                OTP: <span className="font-mono font-bold tracking-wider">{activeDemoOtp}</span>
+              </span>
+            )}
+          </div>
 
           {/* OTP input fields */}
           <div className="mb-6 flex items-center justify-between gap-1.5 sm:gap-2">
