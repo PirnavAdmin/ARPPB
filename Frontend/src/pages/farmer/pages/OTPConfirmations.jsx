@@ -8,6 +8,7 @@ import {
   Eye,
   KeyRound,
   Download,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFarmer } from '../context/FarmerContext';
@@ -27,6 +28,11 @@ const TABS = [
 export default function OTPConfirmations() {
   const {
     otpRequests,
+    otpSummary,
+    otpChannels,
+    isOtpLoading,
+    otpError,
+    refreshOtpRequests,
     setActiveOtpRequest,
     setSelectedTransaction,
     sales,
@@ -41,21 +47,33 @@ export default function OTPConfirmations() {
 
   // Tab counts
   const tabCounts = useMemo(() => {
+    const localPending = otpRequests.filter((o) => o.otpStatus === 'Pending' && o.direction !== 'farmer_initiated').length;
+    const localConfirmed = otpRequests.filter((o) => o.otpStatus === 'Confirmed' && o.direction !== 'farmer_initiated').length;
+    const localRejected = otpRequests.filter((o) => o.otpStatus === 'Rejected' && o.direction !== 'farmer_initiated').length;
+    const localExpired = otpRequests.filter((o) => o.otpStatus === 'Expired' && o.direction !== 'farmer_initiated').length;
+
+    const pending = otpSummary?.pendingCount ?? otpSummary?.pending ?? localPending;
+    const confirmed = otpSummary?.confirmedCount ?? otpSummary?.confirmed ?? localConfirmed;
+    const rejected = otpSummary?.rejectedCount ?? otpSummary?.rejected ?? localRejected;
+    const expired = otpSummary?.expiredCount ?? otpSummary?.expired ?? localExpired;
+
     return {
-      Pending: otpRequests.filter((o) => o.otpStatus === 'Pending' && o.direction !== 'farmer_initiated').length,
-      Confirmed: otpRequests.filter((o) => o.otpStatus === 'Confirmed' && o.direction !== 'farmer_initiated').length,
-      Rejected: otpRequests.filter((o) => o.otpStatus === 'Rejected' && o.direction !== 'farmer_initiated').length,
-      Expired: otpRequests.filter((o) => o.otpStatus === 'Expired' && o.direction !== 'farmer_initiated').length,
-      All: otpRequests.filter((o) => o.direction !== 'farmer_initiated').length,
+      Pending: Number(pending) || 0,
+      Confirmed: Number(confirmed) || 0,
+      Rejected: Number(rejected) || 0,
+      Expired: Number(expired) || 0,
+      All: (Number(pending) || 0) + (Number(confirmed) || 0) + (Number(rejected) || 0) + (Number(expired) || 0),
     };
-  }, [otpRequests]);
+  }, [otpRequests, otpSummary]);
 
   // Total secured value
   const totalSecuredValue = useMemo(() => {
+    if (otpSummary?.totalSecuredValue != null) return Number(otpSummary.totalSecuredValue) || 0;
+    if (otpSummary?.totalAmount != null) return Number(otpSummary.totalAmount) || 0;
     return otpRequests
       .filter((o) => o.direction !== 'farmer_initiated')
       .reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
-  }, [otpRequests]);
+  }, [otpRequests, otpSummary]);
 
   const filteredRequests = useMemo(() => {
     return otpRequests.filter((item) => {
@@ -115,16 +133,42 @@ export default function OTPConfirmations() {
         icon={ShieldCheck}
         badge="Kisan Dispatch Security"
         actions={
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-4 h-9 rounded-xl text-xs font-semibold bg-[#0F766E] text-white hover:bg-[#115E59] transition-all duration-200 cursor-pointer shadow-xs"
-          >
-            <Download className="w-3.5 h-3.5 stroke-[2] shrink-0" />
-            <span>Export Audit Log</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refreshOtpRequests?.()}
+              disabled={isOtpLoading}
+              className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] hover:text-[#0F766E] transition-all duration-200 cursor-pointer shadow-xs disabled:opacity-60"
+              title="Sync OTP Confirmations from backend"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isOtpLoading ? 'animate-spin text-[#0F766E]' : 'text-[#64748B]'}`} />
+              <span>{isOtpLoading ? 'Syncing...' : 'Sync'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="inline-flex items-center gap-1.5 px-4 h-9 rounded-xl text-xs font-semibold bg-[#0F766E] text-white hover:bg-[#115E59] transition-all duration-200 cursor-pointer shadow-xs"
+            >
+              <Download className="w-3.5 h-3.5 stroke-[2] shrink-0" />
+              <span>Export Audit Log</span>
+            </button>
+          </div>
         }
       />
+
+      {/* Backend error status banner if any */}
+      {otpError && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-center justify-between gap-2 shadow-xs">
+          <span>Backend sync: {otpError}. Showing saved OTP records.</span>
+          <button
+            type="button"
+            onClick={() => refreshOtpRequests?.()}
+            className="underline font-bold text-amber-900 cursor-pointer hover:opacity-80"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* 4 Standard Summary KPI Cards (Using FarmerStatCard) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -202,9 +246,23 @@ export default function OTPConfirmations() {
             className="px-3 py-1.5 text-xs bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] focus:bg-white transition-all cursor-pointer"
           >
             <option value="All">All Buyer Channels</option>
-            <option value="Vendor">Vendors Only</option>
-            <option value="Middleman">Middlemen Only</option>
-            <option value="Customer">Retail Customers</option>
+            {Array.isArray(otpChannels) && otpChannels.length > 0 ? (
+              otpChannels.map((ch, idx) => {
+                const val = typeof ch === 'string' ? ch : ch.id || ch.value || ch.name;
+                const label = typeof ch === 'string' ? ch : ch.label || ch.name || val;
+                return (
+                  <option key={val || idx} value={val}>
+                    {label}
+                  </option>
+                );
+              })
+            ) : (
+              <>
+                <option value="Vendor">Vendors Only</option>
+                <option value="Middleman">Middlemen Only</option>
+                <option value="Customer">Retail Customers</option>
+              </>
+            )}
           </select>
 
           <div className="relative w-full sm:w-64">
@@ -239,7 +297,16 @@ export default function OTPConfirmations() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8F0]">
-              {filteredRequests.length === 0 ? (
+              {isOtpLoading && filteredRequests.length === 0 ? (
+                <tr>
+                  <td colSpan="10" className="py-12 text-center text-xs text-[#64748B]">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <div className="w-6 h-6 border-2 border-[#0F766E] border-t-transparent rounded-full animate-spin" />
+                      <span>Loading OTP authorizations from backend...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredRequests.length === 0 ? (
                 <tr>
                   <td colSpan="10" className="py-12 text-center text-xs text-[#64748B]">
                     No OTP verification records match your selected tab or search query.

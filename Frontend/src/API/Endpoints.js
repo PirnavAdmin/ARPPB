@@ -61,6 +61,56 @@ const Endpoints = {
         ADD_STOCK: (id) => `/api/v1/farmer/crops/${id}/add-stock`,
     },
 
+    FARMER_MY_SALES: {
+        SUMMARY: "/api/v1/farmer/my-sales/summary",
+        SUMMARY_ALT: "/api/v1/farmer/sales/summary",
+        BASE: "/api/v1/farmer/sales",
+        BASE_ALT: "/api/v1/farmer/my-sales",
+        BY_ID: (id) => `/api/v1/farmer/my-sales/${id}`,
+        BY_ID_ALT: (id) => `/api/v1/farmer/sales/${id}`,
+    },
+
+    FARMER_SELL_PRODUCTS: {
+        BASE: "/api/v1/farmer/sales",
+        BASE_ALT: "/api/v1/farmer/sell-products",
+        OPTIONS: "/api/v1/farmer/sell-products/options",
+        OPTIONS_ALT: "/api/v1/farmer/sales/options",
+        VERIFY_OTP: (id) => `/api/v1/farmer/sell-products/${id}/verify-otp`,
+        VERIFY_OTP_ALT1: (id) => `/api/v1/farmer/sell-products/${id}/verify`,
+        VERIFY_OTP_ALT2: (id) => `/api/v1/farmer/sales/${id}/verify-otp`,
+        VERIFY_OTP_ALT3: (id) => `/api/v1/farmer/sales/${id}/verify`,
+        RESEND_OTP: (id) => `/api/v1/farmer/sell-products/${id}/resend-otp`,
+        RESEND_OTP_ALT1: (id) => `/api/v1/farmer/sell-products/${id}/resend`,
+        RESEND_OTP_ALT2: (id) => `/api/v1/farmer/sales/${id}/resend-otp`,
+        RESEND_OTP_ALT3: (id) => `/api/v1/farmer/sales/${id}/resend`,
+    },
+
+    FARMER_SALES: {
+        BASE: "/api/v1/farmer/sales",
+        BASE_ALT: "/api/v1/farmer/my-sales",
+        OPTIONS: "/api/v1/farmer/sales/options",
+        OPTIONS_ALT: "/api/v1/farmer/sell-products/options",
+        SUMMARY: "/api/v1/farmer/sales/summary",
+        SUMMARY_ALT: "/api/v1/farmer/my-sales/summary",
+        BY_ID: (id) => `/api/v1/farmer/sales/${id}`,
+        BY_ID_ALT: (id) => `/api/v1/farmer/my-sales/${id}`,
+        VERIFY_OTP: (id) => `/api/v1/farmer/sales/${id}/verify-otp`,
+        RESEND_OTP: (id) => `/api/v1/farmer/sales/${id}/resend-otp`,
+    },
+
+    FARMER_OTP_CONFIRMATIONS: {
+        SUMMARY: "/api/v1/farmer/otp-confirmations/summary",
+        CHANNELS: "/api/v1/farmer/otp-confirmations/channels",
+        BASE: "/api/v1/farmer/otp-confirmations",
+        BY_ID: (id) => `/api/v1/farmer/otp-confirmations/${id}`,
+        VERIFY: (id) => `/api/v1/farmer/otp-confirmations/${id}/verify`,
+        VERIFY_ALT: (id) => `/api/v1/farmer/otp-confirmations/${id}/verify-otp`,
+        RESEND: (id) => `/api/v1/farmer/otp-confirmations/${id}/resend`,
+        RESEND_ALT: (id) => `/api/v1/farmer/otp-confirmations/${id}/resend-otp`,
+        REJECT: (id) => `/api/v1/farmer/otp-confirmations/${id}/reject`,
+        REJECT_ALT: (id) => `/api/v1/farmer/otp-confirmations/${id}/decline`,
+    },
+
     MIDDLEMAN_FARMERS: {
         BASE: "/api/v1/middleman/farmers",
         BY_ID: (id) => `/api/v1/middleman/farmers/${id}`,

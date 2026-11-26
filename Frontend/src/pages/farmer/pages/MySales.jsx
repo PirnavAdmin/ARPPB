@@ -4,7 +4,18 @@ import DataTable from '../components/DataTable';
 import { formatCurrency, formatDate, buyerCategoryStyles } from '../utils/farmerHelpers';
 
 function MySales() {
-  const { sales, searchQuery, setSelectedTransaction, setActiveOtpRequest, otpRequests, navigateTo } = useFarmer();
+  const {
+    sales,
+    salesSummary,
+    isSalesLoading,
+    salesError,
+    refreshSales,
+    searchQuery,
+    setSelectedTransaction,
+    setActiveOtpRequest,
+    otpRequests,
+    navigateTo,
+  } = useFarmer();
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState('All');
@@ -16,17 +27,20 @@ function MySales() {
 
   // Unique crops for filter
   const uniqueCrops = useMemo(() => {
-    return Array.from(new Set(sales.map((s) => s.cropName)));
+    return Array.from(new Set((sales || []).map((s) => s.cropName).filter(Boolean)));
   }, [sales]);
 
   // Filtered sales
   const filteredSales = useMemo(() => {
-    return sales.filter((item) => {
+    return (sales || []).filter((item) => {
+      const q = String(searchQuery || '').trim().toLowerCase();
       const matchSearch =
-        !searchQuery ||
-        item.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.cropName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.buyerName.toLowerCase().includes(searchQuery.toLowerCase());
+        !q ||
+        (item.id && String(item.id).toLowerCase().includes(q)) ||
+        (item.transactionId && String(item.transactionId).toLowerCase().includes(q)) ||
+        (item.cropName && item.cropName.toLowerCase().includes(q)) ||
+        (item.buyerName && item.buyerName.toLowerCase().includes(q)) ||
+        (item.buyerMobile && item.buyerMobile.includes(q));
 
       const matchCategory =
         categoryFilter === 'All' || item.buyerCategory === categoryFilter;
@@ -53,21 +67,22 @@ function MySales() {
     setCurrentPage(1);
   }, [searchQuery, categoryFilter, cropFilter, statusFilter, otpFilter]);
 
-  // Summary Metrics
+  // Summary Metrics (fallback to client calculations if server summary not yet loaded)
   const totalVolume = useMemo(
-    () => filteredSales.reduce((acc, s) => acc + (Number(s.quantity) || 0), 0),
-    [filteredSales]
+    () => salesSummary?.totalVolume ?? filteredSales.reduce((acc, s) => acc + (Number(s.quantity) || 0), 0),
+    [filteredSales, salesSummary]
   );
   const totalTurnover = useMemo(
     () =>
+      salesSummary?.totalTurnover ??
       filteredSales
         .filter((s) => s.transactionStatus === 'Confirmed')
         .reduce((acc, s) => acc + (Number(s.totalAmount) || 0), 0),
-    [filteredSales]
+    [filteredSales, salesSummary]
   );
   const pendingCount = useMemo(
-    () => filteredSales.filter((s) => s.transactionStatus === 'Pending Confirmation').length,
-    [filteredSales]
+    () => salesSummary?.pendingCount ?? filteredSales.filter((s) => s.transactionStatus === 'Pending Confirmation').length,
+    [filteredSales, salesSummary]
   );
 
   const columns = [
@@ -78,6 +93,7 @@ function MySales() {
         <span
           style={{ fontWeight: 700, color: 'var(--farmer-primary)', cursor: 'pointer' }}
           onClick={() => setSelectedTransaction(row)}
+          title="Click to view details"
         >
           {val}
         </span>
@@ -164,8 +180,8 @@ function MySales() {
       key: 'action',
       label: 'Actions',
       render: (_, row) => {
-        const linkedOtp = otpRequests.find(
-          (o) => o.transactionId === row.id && o.otpStatus === 'Pending'
+        const linkedOtp = (otpRequests || []).find(
+          (o) => (o.transactionId === row.id || o.transactionId === row.transactionId) && o.otpStatus === 'Pending'
         );
 
         return (
@@ -183,11 +199,11 @@ function MySales() {
                 type="button"
                 className="farmer-btn farmer-btn-primary farmer-btn-sm"
                 onClick={() => setActiveOtpRequest(linkedOtp)}
+                title="Verify OTP Code"
               >
                 🔐 OTP
               </button>
             )}
-
           </div>
         );
       },
@@ -206,6 +222,17 @@ function MySales() {
         </div>
 
         <div className="farmer-header-actions">
+          {/* Refresh / Sync with Backend */}
+          <button
+            type="button"
+            className="farmer-btn farmer-btn-outline"
+            onClick={() => refreshSales && refreshSales()}
+            disabled={isSalesLoading}
+            title="Sync sales with server"
+          >
+            {isSalesLoading ? '⏳ Syncing...' : '🔄 Sync'}
+          </button>
+
           <button
             type="button"
             className="farmer-btn farmer-btn-primary"
@@ -215,6 +242,34 @@ function MySales() {
           </button>
         </div>
       </div>
+
+      {/* Sync Error Banner if any */}
+      {salesError && (
+        <div
+          style={{
+            padding: '12px 18px',
+            marginBottom: 20,
+            borderRadius: 10,
+            background: '#FEF2F2',
+            border: '1px solid #FCA5A5',
+            color: '#991B1B',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: '0.88rem',
+          }}
+        >
+          <span>⚠️ {salesError}</span>
+          <button
+            type="button"
+            className="farmer-btn farmer-btn-outline farmer-btn-sm"
+            onClick={() => refreshSales && refreshSales()}
+            disabled={isSalesLoading}
+          >
+            🔄 Retry Sync
+          </button>
+        </div>
+      )}
 
       {/* Summary KPI Strip */}
       <div
@@ -286,9 +341,9 @@ function MySales() {
             }}
           >
             <option value="All">All Categories</option>
-            <option value="Middleman">Middleman</option>
-            <option value="Vendor">Vendor</option>
-            <option value="Customer">Customer</option>
+            <option value="Middleman">Middleman / Mandi</option>
+            <option value="Vendor">Processing Vendor</option>
+            <option value="Customer">Direct Consumer</option>
           </select>
         </div>
 
@@ -309,14 +364,16 @@ function MySales() {
           >
             <option value="All">All Crops</option>
             {uniqueCrops.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>
+                {c}
+              </option>
             ))}
           </select>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--farmer-secondary)' }}>
-            Status:
+            Confirmation:
           </span>
           <select
             value={statusFilter}
@@ -338,7 +395,7 @@ function MySales() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--farmer-secondary)' }}>
-            OTP Status:
+            OTP:
           </span>
           <select
             value={otpFilter}
@@ -373,42 +430,83 @@ function MySales() {
         </button>
       </div>
 
-      {/* Main Table */}
-      <div className="farmer-card" style={{ padding: '20px' }}>
-        <DataTable columns={columns} rows={paginatedSales} />
+      {/* Main Table / Loading / Empty State */}
+      {isSalesLoading && (!sales || sales.length === 0) ? (
         <div
+          className="farmer-card"
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginTop: 16,
-            gap: 12,
-            flexWrap: 'wrap',
+            padding: '48px 24px',
+            textAlign: 'center',
+            color: 'var(--farmer-secondary)',
           }}
         >
-          <span style={{ fontSize: '0.82rem', color: 'var(--farmer-secondary)' }}>
-            Page {currentPage} of {totalPages}
-          </span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              type="button"
-              className="farmer-btn farmer-btn-outline farmer-btn-sm"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              className="farmer-btn farmer-btn-outline farmer-btn-sm"
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-            >
-              Next
-            </button>
+          <div style={{ fontSize: '2rem', marginBottom: 12 }}>⏳</div>
+          <p style={{ fontWeight: 600, fontSize: '1rem', margin: '0 0 6px' }}>
+            Fetching Sales Orders from Server...
+          </p>
+          <small>Please wait while we sync your transactions.</small>
+        </div>
+      ) : filteredSales.length === 0 ? (
+        <div
+          className="farmer-card"
+          style={{
+            padding: '48px 24px',
+            textAlign: 'center',
+            color: 'var(--farmer-secondary)',
+          }}
+        >
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📋</div>
+          <h4 style={{ margin: '0 0 8px', color: 'var(--farmer-text)' }}>No Sales Orders Found</h4>
+          <p style={{ margin: '0 0 16px', fontSize: '0.9rem', color: 'var(--farmer-secondary)' }}>
+            {searchQuery || categoryFilter !== 'All' || cropFilter !== 'All' || statusFilter !== 'All' || otpFilter !== 'All'
+              ? 'No sales orders match your selected filters. Try resetting the filters.'
+              : 'You have not initiated any sale orders yet. Create your first sale order to start trading.'}
+          </p>
+          <button
+            type="button"
+            className="farmer-btn farmer-btn-primary farmer-btn-sm"
+            onClick={() => navigateTo('sell')}
+          >
+            ➕ Create New Sale Order
+          </button>
+        </div>
+      ) : (
+        <div className="farmer-card" style={{ padding: '20px' }}>
+          <DataTable columns={columns} rows={paginatedSales} />
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: 16,
+              gap: 12,
+              flexWrap: 'wrap',
+            }}
+          >
+            <span style={{ fontSize: '0.82rem', color: 'var(--farmer-secondary)' }}>
+              Page {currentPage} of {totalPages} (Showing {filteredSales.length} items)
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                className="farmer-btn farmer-btn-outline farmer-btn-sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className="farmer-btn farmer-btn-outline farmer-btn-sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

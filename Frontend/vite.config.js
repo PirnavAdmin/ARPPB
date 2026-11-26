@@ -7,11 +7,11 @@ export default defineConfig(({ mode }) => {
 
   const commonApiBaseUrl =
     env.VITE_API_BASE_URL ||
-    'https://flatterer-exalted-anthem.ngrok-free.dev'
+    'https://zodiac-excursion-rendition.ngrok-free.dev'
 
   const farmerCropsApiBaseUrl =
     env.VITE_FARMER_CROPS_API_BASE_URL ||
-    'https://pogo-musty-monument.ngrok-free.dev'
+    commonApiBaseUrl
 
   const apiProxyConfig = {
     '/api/v1/farmer/crops': {

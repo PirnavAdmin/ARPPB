@@ -58,6 +58,7 @@ function CropForm({ initialData = null, onSave, onCancel }) {
       : new Date().toISOString().split('T')[0],
     availableQuantity: initialData?.availableQuantity ?? initialData?.harvestedQuantity ?? '',
     unit: resolveInitialUnit(),
+    
     expectedSellingPrice: initialData?.expectedSellingPrice || '',
     qualityGrade: initialData?.qualityGrade || gradeOptions[0]?.code || 'Grade A',
     storageLocation: resolveInitialLocation(),

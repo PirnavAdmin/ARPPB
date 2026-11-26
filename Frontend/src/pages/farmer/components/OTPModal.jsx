@@ -13,6 +13,7 @@ function OTPModal({ request, onClose }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputRefs = useRef([]);
 
@@ -89,22 +90,51 @@ function OTPModal({ request, onClose }) {
 
   const fullCode = otpDigits.join('');
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (fullCode.length !== 6) {
       setErrorMsg('Please enter the complete 6-digit OTP code.');
       return;
     }
-    const success = verifyOTP(request.id, fullCode);
-    if (!success) {
-      setErrorMsg('Verification failed. Please check the code and try again.');
-    } else {
-      onClose();
+    setIsSubmitting(true);
+    setErrorMsg('');
+    try {
+      const success = await verifyOTP(request.id, fullCode);
+      if (success) {
+        onClose();
+      } else {
+        setErrorMsg('Verification failed. Please check the code and try again.');
+      }
+    } catch (err) {
+      setErrorMsg(err?.message || 'Verification failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleRejectConfirm = () => {
-    rejectOTP(request.id, rejectReason || 'Transaction rejected by farmer.');
-    onClose();
+  const handleRejectConfirm = async () => {
+    setIsSubmitting(true);
+    setErrorMsg('');
+    try {
+      await rejectOTP(request.id, rejectReason || 'Transaction rejected by farmer.');
+      onClose();
+    } catch (err) {
+      setErrorMsg(err?.message || 'Failed to reject transaction.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setIsSubmitting(true);
+    setErrorMsg('');
+    try {
+      await resendOTP(request.id);
+      setResendCooldown(30);
+    } catch (err) {
+      setErrorMsg(err?.message || 'Failed to resend OTP.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const formatTimer = (sec) => {
@@ -239,21 +269,19 @@ function OTPModal({ request, onClose }) {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => {
-                      resendOTP(request.id);
-                      setResendCooldown(30);
-                      setErrorMsg('');
-                    }}
+                    onClick={handleResend}
+                    disabled={isSubmitting}
                     style={{
                       background: 'none',
                       border: 'none',
                       color: 'var(--farmer-primary)',
                       fontWeight: 700,
-                      cursor: 'pointer',
+                      cursor: isSubmitting ? 'not-allowed' : 'pointer',
                       fontSize: '0.86rem',
+                      opacity: isSubmitting ? 0.6 : 1,
                     }}
                   >
-                    🔄 Resend OTP Code
+                    {isSubmitting ? 'Sending...' : '🔄 Resend OTP Code'}
                   </button>
                 )}
               </div>
@@ -271,6 +299,7 @@ function OTPModal({ request, onClose }) {
                   placeholder="e.g., Buyer cancelled order, price mismatch, inspection failure..."
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
@@ -284,6 +313,7 @@ function OTPModal({ request, onClose }) {
                 type="button"
                 className="farmer-btn farmer-btn-danger"
                 onClick={() => setIsRejecting(true)}
+                disabled={isSubmitting}
               >
                 Reject Transaction
               </button>
@@ -291,6 +321,7 @@ function OTPModal({ request, onClose }) {
                 type="button"
                 className="farmer-btn farmer-btn-outline"
                 onClick={onClose}
+                disabled={isSubmitting}
               >
                 Cancel
               </button>
@@ -298,9 +329,9 @@ function OTPModal({ request, onClose }) {
                 type="button"
                 className="farmer-btn farmer-btn-primary"
                 onClick={handleVerify}
-                disabled={fullCode.length !== 6 || countdown <= 0}
+                disabled={fullCode.length !== 6 || countdown <= 0 || isSubmitting}
               >
-                Confirm Transaction
+                {isSubmitting ? 'Verifying...' : 'Confirm Transaction'}
               </button>
             </>
           ) : (
@@ -309,6 +340,7 @@ function OTPModal({ request, onClose }) {
                 type="button"
                 className="farmer-btn farmer-btn-outline"
                 onClick={() => setIsRejecting(false)}
+                disabled={isSubmitting}
               >
                 Back
               </button>
@@ -316,8 +348,9 @@ function OTPModal({ request, onClose }) {
                 type="button"
                 className="farmer-btn farmer-btn-danger"
                 onClick={handleRejectConfirm}
+                disabled={isSubmitting}
               >
-                Confirm Rejection
+                {isSubmitting ? 'Rejecting...' : 'Confirm Rejection'}
               </button>
             </>
           )}

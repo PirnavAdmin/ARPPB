@@ -5,11 +5,13 @@ export const AUTH_SESSION_STORAGE_KEY = "arppb_auth_session_v1";
 
 export const COMMON_API_BASE_URL =
     import.meta.env?.VITE_API_BASE_URL ||
-    "https://flatterer-exalted-anthem.ngrok-free.dev";
+    "https://zodiac-excursion-rendition.ngrok-free.dev";
 
 export const FARMER_CROPS_API_BASE_URL =
     import.meta.env?.VITE_FARMER_CROPS_API_BASE_URL ||
-    "https://pogo-musty-monument.ngrok-free.dev";
+    COMMON_API_BASE_URL;
+
+export const FARMER_SALES_API_BASE_URL = COMMON_API_BASE_URL;
 
 export const REMOTE_API_BASE_URL = COMMON_API_BASE_URL;
 
@@ -54,6 +56,13 @@ export function getFarmerCropsBaseURL() {
     return FARMER_CROPS_API_BASE_URL;
 }
 
+/**
+ * Resolves the Base URL for Farmer Sales & OTP APIs.
+ */
+export function getFarmerSalesBaseURL() {
+    return FARMER_SALES_API_BASE_URL;
+}
+
 const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
@@ -75,8 +84,8 @@ api.interceptors.request.use(
 
         if (config._retriedViaProxy || isBrowserLocalhost) {
             config.baseURL = "";
-        } else if (typeof config.url === "string" && config.url.startsWith("/api/v1/farmer/crops")) {
-            config.baseURL = FARMER_CROPS_API_BASE_URL;
+        } else if (typeof config.url === "string" && (config.url.startsWith("/api/v1/farmer/crops") || config.url.startsWith("/api/v1/farmer/"))) {
+            config.baseURL = COMMON_API_BASE_URL;
         } else {
             config.baseURL = COMMON_API_BASE_URL;
         }

@@ -24,6 +24,7 @@ import { useFarmer } from '../context/FarmerContext';
 import FarmerPageHeader from '../components/FarmerPageHeader';
 import FarmerStatCard from '../components/FarmerStatCard';
 import { formatCurrency, formatDate, buyerCategoryStyles } from '../utils/farmerHelpers';
+import FarmerCardsDataModule from '../components/FarmerCardsDataModule';
 
 export default function FarmerDashboard() {
   const {
@@ -36,6 +37,7 @@ export default function FarmerDashboard() {
     profile,
   } = useFarmer();
 
+  const [dashboardView, setDashboardView] = useState('all-cards'); // 'all-cards' | 'farm-kpis'
   const [activeChartMetric, setActiveChartMetric] = useState('value'); // 'value' or 'quantity'
   const [lastRefreshed, setLastRefreshed] = useState(() => new Date());
 
@@ -173,6 +175,18 @@ export default function FarmerDashboard() {
             </button>
             <button
               type="button"
+              onClick={() => setDashboardView((v) => (v === 'all-cards' ? 'farm-kpis' : 'all-cards'))}
+              className={`inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-xl text-xs font-semibold border transition-all duration-200 cursor-pointer shadow-2xs ${
+                dashboardView === 'all-cards'
+                  ? 'bg-[#0F766E] text-white border-[#0F766E]'
+                  : 'bg-white text-[#0F766E] border-[#E2E8F0] hover:bg-slate-50'
+              }`}
+            >
+              <LayoutDashboard className="w-3.5 h-3.5 stroke-[2] shrink-0" />
+              <span>{dashboardView === 'all-cards' ? 'View My Farm KPIs' : '15 Cards Data'}</span>
+            </button>
+            <button
+              type="button"
               onClick={handleRefresh}
               className="inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-xl text-xs font-semibold bg-white text-[#0F766E] border border-[#E2E8F0] hover:bg-slate-50 transition-all duration-200 cursor-pointer shadow-2xs"
             >
@@ -228,55 +242,110 @@ export default function FarmerDashboard() {
         </div>
       </div>
 
-      {/* 6 Standard Summary KPI Cards (Using FarmerStatCard matching VendorStatCard) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <FarmerStatCard
-          title="Total Crops"
-          value={`${totalCropTypes} Types`}
-          subtitle="Paddy, Turmeric, Groundnut"
-          icon={Sprout}
-          trend={{ value: '+2 Season', direction: 'up' }}
-          onClick={() => navigateTo('crops')}
-        />
-        <FarmerStatCard
-          title="Available Stock"
-          value={`${totalAvailableStock} qtl`}
-          subtitle="Ready for dispatch"
-          icon={Boxes}
-          onClick={() => navigateTo('crops')}
-        />
-        <FarmerStatCard
-          title="Quantity Sold"
-          value={`${totalQuantitySold} qtl`}
-          subtitle="Dispatched across orders"
-          icon={CheckCircle2}
-          trend={{ value: '+18.4% MoM', direction: 'up' }}
-          onClick={() => navigateTo('sales')}
-        />
-        <FarmerStatCard
-          title="Gross Sales"
-          value={formatCurrency(totalSalesAmount)}
-          subtitle="Total confirmed sales"
-          icon={TrendingUp}
-          onClick={() => navigateTo('sales')}
-        />
-        <FarmerStatCard
-          title="Receivables"
-          value={formatCurrency(expectedReceivables)}
-          subtitle="Pending settlement"
-          icon={CreditCard}
-          trend={{ value: 'Expected', direction: 'up' }}
-          onClick={() => navigateTo('sales')}
-        />
-        <FarmerStatCard
-          title="Buyer OTP Pending"
-          value={`${pendingOtpList.length} Pending`}
-          subtitle="Awaiting authorization"
-          icon={ShieldCheck}
-          trend={pendingOtpList.length > 0 ? { value: 'Action req.', direction: 'down' } : null}
-          onClick={() => navigateTo('otp')}
-        />
+      {/* Dashboard View Switcher: 15 Agricultural Operations Cards vs 6 Personal Farm Financial KPIs */}
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] p-2.5 px-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setDashboardView('all-cards')}
+            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              dashboardView === 'all-cards'
+                ? 'bg-[#0F766E] text-white shadow-xs'
+                : 'bg-[#F8FAFC] border border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100'
+            }`}
+          >
+            <LayoutDashboard className="w-3.5 h-3.5" />
+            <span>15 Agricultural Operations Cards</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                dashboardView === 'all-cards' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+              }`}
+            >
+              15
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDashboardView('farm-kpis')}
+            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              dashboardView === 'farm-kpis'
+                ? 'bg-[#0F766E] text-white shadow-xs'
+                : 'bg-[#F8FAFC] border border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100'
+            }`}
+          >
+            <Sprout className="w-3.5 h-3.5" />
+            <span>My Farm Financial KPIs</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                dashboardView === 'farm-kpis' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+              }`}
+            >
+              6
+            </span>
+          </button>
+        </div>
+
+        <span className="text-xs text-[#64748B] font-medium hidden md:inline-block">
+          {dashboardView === 'all-cards'
+            ? 'Interactive reverse-engineered card metrics across land, inputs & schemes'
+            : 'Personal harvest inventory, sales turnover & receivables metrics'}
+        </span>
       </div>
+
+      {/* Conditionally Display 15 Agricultural Operations Cards OR 6 Summary KPI Cards */}
+      {dashboardView === 'all-cards' ? (
+        <FarmerCardsDataModule onNavigate={navigateTo} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <FarmerStatCard
+            title="Total Crops"
+            value={`${totalCropTypes} Types`}
+            subtitle="Paddy, Turmeric, Groundnut"
+            icon={Sprout}
+            trend={{ value: '+2 Season', direction: 'up' }}
+            onClick={() => navigateTo('crops')}
+          />
+          <FarmerStatCard
+            title="Available Stock"
+            value={`${totalAvailableStock} qtl`}
+            subtitle="Ready for dispatch"
+            icon={Boxes}
+            onClick={() => navigateTo('crops')}
+          />
+          <FarmerStatCard
+            title="Quantity Sold"
+            value={`${totalQuantitySold} qtl`}
+            subtitle="Dispatched across orders"
+            icon={CheckCircle2}
+            trend={{ value: '+18.4% MoM', direction: 'up' }}
+            onClick={() => navigateTo('sales')}
+          />
+          <FarmerStatCard
+            title="Gross Sales"
+            value={formatCurrency(totalSalesAmount)}
+            subtitle="Total confirmed sales"
+            icon={TrendingUp}
+            onClick={() => navigateTo('sales')}
+          />
+          <FarmerStatCard
+            title="Receivables"
+            value={formatCurrency(expectedReceivables)}
+            subtitle="Pending settlement"
+            icon={CreditCard}
+            trend={{ value: 'Expected', direction: 'up' }}
+            onClick={() => navigateTo('sales')}
+          />
+          <FarmerStatCard
+            title="Buyer OTP Pending"
+            value={`${pendingOtpList.length} Pending`}
+            subtitle="Awaiting authorization"
+            icon={ShieldCheck}
+            trend={pendingOtpList.length > 0 ? { value: 'Action req.', direction: 'down' } : null}
+            onClick={() => navigateTo('otp')}
+          />
+        </div>
+      )}
 
       {/* Pending OTP Authorization Alert Bar if any */}
       {pendingOtpList.length > 0 && (
