@@ -109,5 +109,38 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string TokenType { get; set; } = "Bearer";
 
         public DateTime ExpiresAt { get; set; }
+
+        public required string RefreshToken { get; set; }
+
+        public DateTime RefreshTokenExpiresAt { get; set; }
     }
+
+    /// <summary>Refreshes an access token using a valid refresh token.</summary>
+    public sealed record RefreshTokenRequestDto
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(256)]
+        public required string RefreshToken { get; init; }
+    }
+
+    /// <summary>Represents a user's identity returned after refresh-token rotation.</summary>
+    public sealed record RefreshTokenUserIdentity(
+        long UserId,
+        string FullName,
+        string? Email,
+        string Mobile,
+        string Role);
+
+    /// <summary>Contains replacement access and refresh tokens.</summary>
+    public sealed record RefreshTokenResponseDto(
+        long UserId,
+        string FullName,
+        string? Email,
+        string Mobile,
+        string Role,
+        string AccessToken,
+        string TokenType,
+        DateTime ExpiresAt,
+        string RefreshToken,
+        DateTime RefreshTokenExpiresAt);
 }

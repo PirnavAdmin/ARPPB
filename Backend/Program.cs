@@ -84,6 +84,7 @@ builder.Services.AddFarmerMarketPricesModule();
 // REPOSITORY REGISTRATIONS
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IOtpRepository, OtpRepository>();
 builder.Services.AddScoped<IFarmerProfileRepository, FarmerProfileRepository>();
 builder.Services.AddScoped<IVendorProfileRepository, VendorProfileRepository>();
@@ -99,6 +100,7 @@ builder.Services.AddScoped<IMiddlemanNotificationRepository, MiddlemanNotificati
 // SERVICE REGISTRATIONS
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<ILoginService, LoginService>();
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IOtpService>(serviceProvider =>
     new OtpService(
         serviceProvider.GetRequiredService<IOtpRepository>(),

@@ -18,6 +18,21 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
         public (string Token, DateTime ExpiresAt) GenerateToken(User user)
         {
+            return GenerateToken(
+                user.Id,
+                user.FullName,
+                user.Mobile,
+                user.Email,
+                user.Role.ToString());
+        }
+
+        public (string Token, DateTime ExpiresAt) GenerateToken(
+            long userId,
+            string fullName,
+            string mobile,
+            string? email,
+            string role)
+        {
             var secret = _configuration["JwtSettings:SecretKey"]
                 ?? throw new InvalidOperationException(
                     "JWT secret is missing.");
@@ -39,18 +54,18 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
             var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
 
-            new Claim(ClaimTypes.Name, user.FullName),
+            new Claim(ClaimTypes.Name, fullName),
 
-            new Claim(ClaimTypes.Role, user.Role.ToString()),
+            new Claim(ClaimTypes.Role, role),
 
-            new Claim("Mobile", user.Mobile)
+            new Claim("Mobile", mobile)
         };
 
-            if (!string.IsNullOrWhiteSpace(user.Email))
+            if (!string.IsNullOrWhiteSpace(email))
             {
-                claims.Add(new Claim(ClaimTypes.Email, user.Email));
+                claims.Add(new Claim(ClaimTypes.Email, email));
             }
 
             var jwtToken = new JwtSecurityToken(
