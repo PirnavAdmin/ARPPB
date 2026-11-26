@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Sprout,
   LayoutDashboard,
@@ -15,12 +15,14 @@ import {
   BookOpen,
   Bell,
   UserCheck,
+  LogOut,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
   FileSpreadsheet,
 } from 'lucide-react';
 import { useMiddleman } from '../../../../context/middleman';
+import { useAuth } from '../../../../hooks/useAuth';
 
 /**
  * Category-Based Navigation Structure for Middleman Portal
@@ -158,7 +160,17 @@ export const MiddlemanSidebar = ({
   onItemClick,
 }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const { confirmations, notifications } = useMiddleman();
+
+  const handleLogout = () => {
+    if (onItemClick) {
+      onItemClick();
+    }
+    logout();
+    navigate('/login');
+  };
 
   const activeGroupFromRoute = getGroupIdForPath(location.pathname);
 
@@ -205,7 +217,7 @@ export const MiddlemanSidebar = ({
       `}
     >
       {/* Top Branding Section */}
-      <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
           <NavLink
             to="/middleman/dashboard"
@@ -391,14 +403,25 @@ export const MiddlemanSidebar = ({
         </nav>
       </div>
 
-      {/* Footer Version / Info */}
-      {!isCollapsed && (
-        <div className="p-3 border-t border-white/10 bg-[#0F766E]">
-          <div className="text-[11px] text-[#CCFBF1] text-center font-medium">
-            <span className="font-bold text-white">AgriConnect ERP</span> &bull; <span>v2.6 Enterprise</span>
-          </div>
-        </div>
-      )}
+      {/* Footer / Logout Button */}
+      <div className="p-3 border-t border-white/10 bg-[#0F766E] shrink-0">
+        <button
+          type="button"
+          onClick={handleLogout}
+          title={isCollapsed ? 'Logout' : undefined}
+          aria-label="Logout"
+          className={`w-full group flex items-center gap-3 px-3 py-2.5 rounded-xl !text-xs sm:!text-sm !font-medium text-[#CCFBF1] hover:bg-[#14B8A6]/20 hover:text-white transition-all duration-150 cursor-pointer ${
+            isCollapsed ? 'justify-center px-2' : ''
+          }`}
+        >
+          <LogOut
+            className={`shrink-0 transition-colors ${
+              isCollapsed ? 'w-5 h-5' : 'w-4 h-4'
+            } text-[#CCFBF1] group-hover:text-white`}
+          />
+          {!isCollapsed && <span className="truncate">Logout</span>}
+        </button>
+      </div>
     </aside>
   );
 };
