@@ -688,10 +688,8 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
                 },
                 ct);
 
-            if (saleId is null && Args.Clean(r.SaleCode) is not null)
-                throw new VendorPortalException(404, $"Sale '{r.SaleCode}' was not found.");
             if (saleId is null && customerUserId is null)
-                throw new VendorPortalException(404, "Customer not found. Use the customer's code (for example CUST-2026-0063) or user id.");
+                throw new VendorPortalException(404, "Sale or Customer not found. Provide a valid sale or customer reference.");
 
             return await PaymentAsync(
                 "sp_vp_ledger_record_receipt",

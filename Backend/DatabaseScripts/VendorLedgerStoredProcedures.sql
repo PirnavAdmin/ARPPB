@@ -132,18 +132,53 @@ BEGIN
      WHERE s.vendor_id = p_vendor AND s.order_status <> 'Draft'
        AND (s.sale_code = v_ref OR s.order_code = v_ref OR CAST(s.id AS CHAR) COLLATE utf8mb4_unicode_ci = v_ref)
      LIMIT 1;
+
+    -- Also check vp_ledger_entries by voucher code, transaction code, or id
+    IF v_sale IS NULL THEN
+      SELECT e.sale_id, s.customer_user_id INTO v_sale, v_cust
+        FROM vp_ledger_entries e
+        LEFT JOIN vp_sales s ON s.id = e.sale_id
+       WHERE e.vendor_id = p_vendor
+         AND (e.voucher_code = v_ref OR e.transaction_code = v_ref OR CAST(e.id AS CHAR) COLLATE utf8mb4_unicode_ci = v_ref)
+       LIMIT 1;
+    END IF;
   END IF;
 
   SET v_ref = NULLIF(TRIM(COALESCE(p_customer_ref, '')), '');
   IF v_cust IS NULL AND v_ref IS NOT NULL THEN
     SET v_digits = REGEXP_REPLACE(v_ref, '[^0-9]', '');
-    SELECT c.UserId INTO v_cust
-      FROM Customers c
-     WHERE CAST(c.UserId AS CHAR) COLLATE utf8mb4_unicode_ci = v_ref
-        OR c.CustomerCode COLLATE utf8mb4_unicode_ci = v_ref
-        OR (v_digits <> '' AND REGEXP_REPLACE(c.CustomerCode, '[^0-9]', '') COLLATE utf8mb4_unicode_ci = v_digits)
-     ORDER BY (CAST(c.UserId AS CHAR) COLLATE utf8mb4_unicode_ci = v_ref) DESC, c.UserId
+
+    -- 1. Check vendor_customers table
+    SELECT vc.Id INTO v_cust
+      FROM vendor_customers vc
+     WHERE vc.VendorId = p_vendor
+       AND (CAST(vc.Id AS CHAR) COLLATE utf8mb4_unicode_ci = v_ref
+            OR vc.CustomerCode COLLATE utf8mb4_unicode_ci = v_ref
+            OR vc.CustomerName COLLATE utf8mb4_unicode_ci = v_ref
+            OR (v_digits <> '' AND REGEXP_REPLACE(vc.CustomerCode, '[^0-9]', '') COLLATE utf8mb4_unicode_ci = v_digits))
+     ORDER BY (CAST(vc.Id AS CHAR) COLLATE utf8mb4_unicode_ci = v_ref) DESC, vc.Id
      LIMIT 1;
+
+    -- 2. Check Customers table
+    IF v_cust IS NULL THEN
+      SELECT c.UserId INTO v_cust
+        FROM Customers c
+       WHERE CAST(c.UserId AS CHAR) COLLATE utf8mb4_unicode_ci = v_ref
+          OR c.CustomerCode COLLATE utf8mb4_unicode_ci = v_ref
+          OR (v_digits <> '' AND REGEXP_REPLACE(c.CustomerCode, '[^0-9]', '') COLLATE utf8mb4_unicode_ci = v_digits)
+       ORDER BY (CAST(c.UserId AS CHAR) COLLATE utf8mb4_unicode_ci = v_ref) DESC, c.UserId
+       LIMIT 1;
+    END IF;
+
+    -- 3. Check Users table
+    IF v_cust IS NULL THEN
+      SELECT u.Id INTO v_cust
+        FROM Users u
+       WHERE CAST(u.Id AS CHAR) COLLATE utf8mb4_unicode_ci = v_ref
+          OR u.FullName COLLATE utf8mb4_unicode_ci = v_ref
+          OR u.Mobile COLLATE utf8mb4_unicode_ci = v_ref
+       LIMIT 1;
+    END IF;
   END IF;
 
   SELECT v_sale AS sale_id, v_cust AS customer_user_id;

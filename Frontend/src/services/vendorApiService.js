@@ -1969,10 +1969,12 @@ export async function recordVendorCustomerReceiptApi(payload = {}) {
       ? Number(payload.customerUserId)
       : null;
     const refCode = payload.saleCode || payload.referenceTransactionId || payload.id || null;
+    const customerCode = payload.customerCode || (payload.partyCategory === 'Customer' ? payload.partyId : null);
     const reqBody = {
       saleId: rawSaleId,
       saleCode: refCode ? String(refCode).trim() : null,
       customerUserId: rawCustomerUserId,
+      customerCode: customerCode ? String(customerCode).trim() : null,
       amount: Number(payload.amount) || 0,
       paymentMode: payload.paymentMode || 'NEFT / RTGS',
       referenceNo: String(payload.referenceTransactionId || payload.referenceNo || '').trim() || null,

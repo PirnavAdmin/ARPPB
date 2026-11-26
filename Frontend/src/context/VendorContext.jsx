@@ -1314,15 +1314,23 @@ export function VendorProvider({ children }) {
             : c
         )
       );
-      verifyVendorConfirmationOtpApi(
-        otpRecord.rawId || otpRecord.id,
-        cleanedInput
-      );
-      verifyVendorDashboardOtpApi(
-        String(otpRecord.partyCategory || 'farmer').toLowerCase(),
-        otpRecord.rawId || otpRecord.id,
-        cleanedInput
-      );
+      Promise.allSettled([
+        verifyVendorConfirmationOtpApi(
+          otpRecord.rawId || otpRecord.id,
+          cleanedInput
+        ),
+        verifyVendorDashboardOtpApi(
+          String(otpRecord.partyCategory || 'farmer').toLowerCase(),
+          otpRecord.rawId || otpRecord.id,
+          cleanedInput
+        ),
+      ]).then(() => {
+        fetchVendorLedgerApi().then((freshLedger) => {
+          if (Array.isArray(freshLedger) && freshLedger.length > 0) {
+            updateStateAndStorage(setLedger, STORAGE_KEYS.LEDGER, freshLedger);
+          }
+        });
+      });
 
       // CASE A: FARMER OR MIDDLEMAN PURCHASE CONFIRMATION
       if (otpRecord.transactionId.startsWith('PUR-')) {
@@ -2313,6 +2321,11 @@ export function VendorProvider({ children }) {
               )
             );
           }
+          fetchVendorLedgerApi().then((freshLedger) => {
+            if (Array.isArray(freshLedger) && freshLedger.length > 0) {
+              updateStateAndStorage(setLedger, STORAGE_KEYS.LEDGER, freshLedger);
+            }
+          });
         }
       });
 
@@ -2617,6 +2630,7 @@ export function VendorProvider({ children }) {
       partyName,
       partyCategory, // 'Farmer' | 'Middleman' | 'Customer'
       referenceTransactionId = '',
+      ledgerEntryId = '',
       amount,
       paymentMode = 'NEFT / RTGS',
       notes = '',
@@ -2660,8 +2674,9 @@ export function VendorProvider({ children }) {
         // Also update the linked parent purchase or sale entry's settled and outstanding amounts
         const updatedLedger = prevLedger.map((item) => {
           if (
-            referenceTransactionId &&
-            (item.transactionId === referenceTransactionId || item.id === referenceTransactionId)
+            (referenceTransactionId &&
+              (item.transactionId === referenceTransactionId || item.id === referenceTransactionId)) ||
+            (ledgerEntryId && item.id === ledgerEntryId)
           ) {
             const total = item.debit > 0 ? item.debit : item.credit;
             const newSettled = round2(safeNumber(item.settledAmount, 0) + numAmount);
@@ -2673,7 +2688,7 @@ export function VendorProvider({ children }) {
               outstandingAmount: newOutstanding,
               status: newStatus,
               paymentMode: paymentMode || item.paymentMode,
-              referenceNo: referenceTransactionId,
+              referenceNo: referenceTransactionId || item.referenceNo,
             };
           }
           return item;
@@ -2688,6 +2703,7 @@ export function VendorProvider({ children }) {
         partyName,
         partyCategory,
         referenceTransactionId: settlementTxnId,
+        ledgerEntryId,
         amount: numAmount,
         paymentMode,
         notes,
@@ -2696,16 +2712,23 @@ export function VendorProvider({ children }) {
 
       (async () => {
         try {
-          if (isSupplier) {
-            await payVendorSupplierApi(settlementPayload);
-          } else {
-            await recordVendorCustomerReceiptApi(settlementPayload);
-          }
           const linkedLedger = ledger.find(
-            (l) => l.transactionId === referenceTransactionId || l.id === referenceTransactionId
+            (l) =>
+              (ledgerEntryId && (l.id === ledgerEntryId || l.rawId === ledgerEntryId)) ||
+              (referenceTransactionId &&
+                (l.transactionId === referenceTransactionId || l.id === referenceTransactionId))
           );
-          if (linkedLedger) {
-            await settleVendorLedgerEntryApi(linkedLedger.id, settlementPayload);
+          let settledOk = false;
+          if (linkedLedger && linkedLedger.id) {
+            const settleRes = await settleVendorLedgerEntryApi(linkedLedger.id, settlementPayload);
+            if (settleRes) settledOk = true;
+          }
+          if (!settledOk) {
+            if (isSupplier) {
+              await payVendorSupplierApi(settlementPayload);
+            } else {
+              await recordVendorCustomerReceiptApi(settlementPayload);
+            }
           }
           // Refresh ledger from backend to keep MariaDB in sync
           const fresh = await fetchVendorLedgerApi();

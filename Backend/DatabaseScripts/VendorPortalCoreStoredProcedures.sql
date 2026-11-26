@@ -330,13 +330,13 @@ BEGIN
   SET v_cust = p_customer;
   IF p_sale IS NOT NULL THEN
     SET v_sale_otp = NULL;
-    SELECT otp_status, order_status, customer_user_id INTO v_sale_otp, v_sale_status, v_cust
+    SELECT otp_status, order_status, customer_user_id, customer_name INTO v_sale_otp, v_sale_status, v_cust, v_name
       FROM vp_sales WHERE id = p_sale AND vendor_id = p_vendor;
     IF v_sale_otp IS NULL THEN
       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '404|Sale not found.';
     END IF;
-    IF v_sale_otp <> 'Verified' OR v_sale_status = 'Cancelled' THEN
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '409|Receipts can only be recorded against OTP-verified, active sales.';
+    IF v_sale_status = 'Cancelled' THEN
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '409|Receipts cannot be recorded against cancelled sales.';
     END IF;
   ELSEIF v_cust IS NULL THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '400|Provide SaleId or CustomerUserId.';
@@ -344,7 +344,9 @@ BEGIN
 
   SELECT COALESCE(SUM(total_amount - amount_received), 0), MIN(sale_code) INTO v_sales_due, v_first_code
     FROM vp_sales
-   WHERE vendor_id = p_vendor AND customer_user_id = v_cust AND otp_status = 'Verified' AND order_status <> 'Cancelled'
+   WHERE vendor_id = p_vendor
+     AND (customer_user_id = v_cust OR p_sale IS NOT NULL)
+     AND order_status <> 'Cancelled'
      AND total_amount > amount_received AND (p_sale IS NULL OR id = p_sale);
 
   IF p_sale IS NULL THEN
@@ -363,7 +365,16 @@ BEGIN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_msg;
   END IF;
 
-  SELECT FullName INTO v_name FROM Users WHERE Id = v_cust;
+  IF v_name IS NULL THEN
+    SELECT FullName INTO v_name FROM Users WHERE Id = v_cust;
+    IF v_name IS NULL THEN
+      SELECT CustomerName INTO v_name FROM vendor_customers WHERE Id = v_cust LIMIT 1;
+    END IF;
+    IF v_name IS NULL THEN
+      SET v_name = 'Customer';
+    END IF;
+  END IF;
+
   SET v_left = p_amount;
 
   BEGIN
@@ -376,7 +387,9 @@ BEGIN
     DECLARE v_new BIGINT;
     DECLARE cur CURSOR FOR
       SELECT id, total_amount, amount_received FROM vp_sales
-       WHERE vendor_id = p_vendor AND customer_user_id = v_cust AND otp_status = 'Verified' AND order_status <> 'Cancelled'
+       WHERE vendor_id = p_vendor
+         AND (customer_user_id = v_cust OR p_sale IS NOT NULL)
+         AND order_status <> 'Cancelled'
          AND total_amount > amount_received AND (p_sale IS NULL OR id = p_sale)
        ORDER BY sale_date, id;
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET v_done = 1;
@@ -388,16 +401,36 @@ BEGIN
       UPDATE vp_sales
          SET amount_received = amount_received + v_piece,
              payment_status = IF(amount_received + v_piece >= total_amount, 'Paid', IF(amount_received + v_piece > 0, 'Partial', 'Unpaid')),
+             otp_status = IF(otp_status = 'Sent', 'Verified', otp_status),
+             order_status = IF(order_status = 'New', 'Confirmed', order_status),
              updated_at = UTC_TIMESTAMP(6)
        WHERE id = v_sid;
+
+      -- Check or auto-create parent sale ledger entry
       SET v_sale_entry = NULL;
       SELECT id INTO v_sale_entry FROM vp_ledger_entries
        WHERE sale_id = v_sid AND ledger_category = 'Sale' AND status <> 'Cancelled' ORDER BY id LIMIT 1;
-      IF v_sale_entry IS NOT NULL THEN
-        UPDATE vp_ledger_entries
-           SET settled_amount = v_recv + v_piece, status = IF(v_recv + v_piece >= debit, 'Paid', 'Partial'), updated_at = UTC_TIMESTAMP(6)
-         WHERE id = v_sale_entry;
+
+      IF v_sale_entry IS NULL THEN
+        INSERT INTO vp_ledger_entries
+          (vendor_id, transaction_code, entry_date, description, party_name, party_code, party_category, ledger_category,
+           debit, credit, expected_payment_date, status, settled_amount, sale_id)
+        SELECT p_vendor, sale_code, UTC_TIMESTAMP(6), CONCAT('Sale order ', sale_code, ' to ', customer_name),
+               customer_name, customer_code, 'Customer', 'Sale',
+               total_amount, 0, expected_payment_date, 'Unpaid', 0, id
+          FROM vp_sales WHERE id = v_sid;
+        SET v_sale_entry = LAST_INSERT_ID();
+        UPDATE vp_ledger_entries SET voucher_code = CONCAT('VCH-', LPAD(v_sale_entry, 4, '0')) WHERE id = v_sale_entry;
       END IF;
+
+      -- Update parent entry's settled amount and status
+      UPDATE vp_ledger_entries
+         SET settled_amount = v_recv + v_piece,
+             status = IF(v_recv + v_piece >= debit, 'Paid', 'Partial'),
+             updated_at = UTC_TIMESTAMP(6)
+       WHERE id = v_sale_entry;
+
+      -- Insert receipt voucher
       INSERT INTO vp_ledger_entries
         (vendor_id, transaction_code, entry_date, description, party_name, party_code, party_category, ledger_category,
          debit, credit, status, settled_amount, payment_mode, reference_no, sale_id, related_entry_id)
@@ -470,10 +503,11 @@ BEGIN
   DECLARE v_status VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
   DECLARE v_pending DECIMAL(18,2);
   DECLARE v_sale BIGINT;
+  DECLARE v_txn VARCHAR(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
   DECLARE v_amount DECIMAL(18,2);
-  SELECT ledger_category, status, sale_id,
+  SELECT ledger_category, status, sale_id, transaction_code,
          CASE ledger_category WHEN 'Purchase' THEN credit - settled_amount WHEN 'Sale' THEN debit - settled_amount ELSE 0 END
-    INTO v_cat, v_status, v_sale, v_pending
+    INTO v_cat, v_status, v_sale, v_txn, v_pending
     FROM vp_ledger_entries WHERE id = p_id AND vendor_id = p_vendor;
   IF v_cat IS NULL THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '404|Ledger voucher not found.';
@@ -484,7 +518,10 @@ BEGIN
   SET v_amount = COALESCE(p_amount, v_pending);
   IF v_cat = 'Purchase' THEN
     CALL sp_vp_ledger_pay_supplier(p_vendor, p_id, NULL, v_amount, p_mode, p_ref);
-  ELSEIF v_cat = 'Sale' AND v_sale IS NOT NULL THEN
+  ELSEIF v_cat = 'Sale' THEN
+    IF v_sale IS NULL AND v_txn IS NOT NULL THEN
+      SELECT id INTO v_sale FROM vp_sales WHERE vendor_id = p_vendor AND (sale_code = v_txn OR order_code = v_txn) LIMIT 1;
+    END IF;
     CALL sp_vp_ledger_record_receipt(p_vendor, v_sale, NULL, v_amount, p_mode, p_ref);
   ELSE
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '400|Only purchase payables and sale receivables can be settled.';
@@ -763,6 +800,7 @@ BEGIN
   DECLARE v_total DECIMAL(18,2);
   DECLARE v_sale BIGINT;
   DECLARE v_conf BIGINT DEFAULT NULL;
+  DECLARE v_ledger_id BIGINT DEFAULT NULL;
   DECLARE v_msg VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
 
@@ -936,6 +974,30 @@ BEGIN
 
   IF p_submit = 1 THEN
     CALL sp_vp_sale_submit_core(p_vendor, v_sale, p_otp_hash, p_minutes, v_conf);
+
+    -- Ensure a corresponding receivable ledger entry exists in vp_ledger_entries for immediate persistence
+    SET v_ledger_id = NULL;
+    SELECT id INTO v_ledger_id FROM vp_ledger_entries
+     WHERE vendor_id = p_vendor AND sale_id = v_sale AND ledger_category = 'Sale' AND status <> 'Cancelled'
+     LIMIT 1;
+
+    IF v_ledger_id IS NULL THEN
+      INSERT INTO vp_ledger_entries
+        (vendor_id, transaction_code, entry_date, description, party_name, party_code, party_category, ledger_category,
+         debit, credit, expected_payment_date, status, settled_amount, sale_id)
+      VALUES
+        (p_vendor, CONCAT('SALE-', LPAD(v_sale, 4, '0')), UTC_TIMESTAMP(6),
+         CONCAT('Confirmed sale of ', (SELECT COALESCE(product_name, 'Finished Product') FROM vp_sale_items WHERE sale_id = v_sale LIMIT 1), ' to ', v_cust_name),
+         v_cust_name, v_cust_code, 'Customer', 'Sale',
+         v_total, 0, p_exp_payment, 'Unpaid', 0, v_sale);
+      SET v_ledger_id = LAST_INSERT_ID();
+      UPDATE vp_ledger_entries SET voucher_code = CONCAT('VCH-', LPAD(v_ledger_id, 4, '0')) WHERE id = v_ledger_id;
+    ELSE
+      UPDATE vp_ledger_entries
+         SET debit = v_total, party_name = v_cust_name, party_code = v_cust_code,
+             expected_payment_date = p_exp_payment, updated_at = UTC_TIMESTAMP(6)
+       WHERE id = v_ledger_id;
+    END IF;
   END IF;
 
   COMMIT;
@@ -991,8 +1053,8 @@ BEGIN
   IF v_status IS NULL THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '404|Sale not found.';
   END IF;
-  IF v_status <> 'Draft' THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '409|Only draft sales can be submitted.';
+  IF v_status NOT IN ('Draft', 'New') THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '409|Only draft or new sales can be submitted.';
   END IF;
 
   SELECT COUNT(*), COALESCE(SUM(quantity), 0) INTO v_items, v_qty FROM vp_sale_items WHERE sale_id = p_sale;
