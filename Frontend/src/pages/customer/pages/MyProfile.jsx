@@ -28,14 +28,15 @@ import CustomerPageHeader from '../components/CustomerPageHeader';
 import CustomerStatusBadge from '../components/CustomerStatusBadge';
 import CustomerModal from '../components/CustomerModal';
 import MobileOTPVerification from '../components/MobileOTPVerification';
+import { fetchLocationByPincode } from '../../../services/customer/pincodeService';
 
 const EMPTY_ADDRESS = {
   label: '',
   recipientName: '',
   contactNumber: '',
   addressLine: '',
-  district: 'Guntur',
-  state: 'Andhra Pradesh',
+  district: '',
+  state: '',
   pinCode: '',
   isDefault: false,
 };
@@ -162,6 +163,169 @@ export function MyProfile() {
   const [editingAddrId, setEditingAddrId] = useState(null);
   const [addrForm, setAddrForm] = useState(EMPTY_ADDRESS);
   const [addrErrors, setAddrErrors] = useState({});
+  const [isAddrPinLoading, setIsAddrPinLoading] = useState(false);
+  const [addrPinStatus, setAddrPinStatus] = useState(null);
+  const addrPinAbortRef = useRef(null);
+  const addrPinSeqRef = useRef(0);
+
+  // Profile Address PIN lookup state
+  const [isProfilePinLoading, setIsProfilePinLoading] = useState(false);
+  const [profilePinStatus, setProfilePinStatus] = useState(null);
+  const profilePinAbortRef = useRef(null);
+  const profilePinSeqRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (addrPinAbortRef.current) addrPinAbortRef.current.abort();
+      if (profilePinAbortRef.current) profilePinAbortRef.current.abort();
+    };
+  }, []);
+
+  const triggerAddrPinLookup = async (pin) => {
+    if (addrPinAbortRef.current) {
+      addrPinAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    addrPinAbortRef.current = controller;
+    const seq = ++addrPinSeqRef.current;
+
+    setIsAddrPinLoading(true);
+    setAddrPinStatus(null);
+
+    try {
+      const result = await fetchLocationByPincode(pin, { signal: controller.signal });
+
+      if (seq !== addrPinSeqRef.current || result.aborted) {
+        return;
+      }
+
+      if (result.success) {
+        const district = result.district || '';
+        const state = result.state || '';
+
+        setAddrForm((prev) => ({
+          ...prev,
+          district: district || prev.district,
+          state: state || prev.state,
+        }));
+
+        setAddrErrors((prev) => {
+          const next = { ...prev };
+          delete next.pinCode;
+          if (district) delete next.district;
+          if (state) delete next.state;
+          return next;
+        });
+
+        setAddrPinStatus({
+          type: 'success',
+          message: `Location auto-detected: ${district ? district + ', ' : ''}${state}`,
+        });
+      } else {
+        setAddrPinStatus({
+          type: 'error',
+          message: result.message || 'No location found for this PIN code.',
+        });
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      if (seq === addrPinSeqRef.current) {
+        setAddrPinStatus({
+          type: 'error',
+          message: 'Unable to auto-detect location. Please enter district and state manually.',
+        });
+      }
+    } finally {
+      if (seq === addrPinSeqRef.current) {
+        setIsAddrPinLoading(false);
+      }
+    }
+  };
+
+  const handleAddrPinChange = (e) => {
+    const rawValue = e.target.value;
+    const cleanDigits = String(rawValue || '').replace(/\D/g, '').slice(0, 6);
+
+    setAddrForm((prev) => ({ ...prev, pinCode: cleanDigits }));
+
+    if (addrErrors.pinCode) {
+      setAddrErrors((prev) => {
+        const next = { ...prev };
+        delete next.pinCode;
+        return next;
+      });
+    }
+
+    if (cleanDigits.length < 6) {
+      if (addrPinAbortRef.current) {
+        addrPinAbortRef.current.abort();
+        addrPinAbortRef.current = null;
+      }
+      setIsAddrPinLoading(false);
+      setAddrPinStatus(null);
+      return;
+    }
+
+    triggerAddrPinLookup(cleanDigits);
+  };
+
+  const triggerProfilePinLookup = async (pin) => {
+    if (profilePinAbortRef.current) {
+      profilePinAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    profilePinAbortRef.current = controller;
+    const seq = ++profilePinSeqRef.current;
+
+    setIsProfilePinLoading(true);
+    setProfilePinStatus(null);
+
+    try {
+      const result = await fetchLocationByPincode(pin, { signal: controller.signal });
+      if (seq !== profilePinSeqRef.current || result.aborted) return;
+
+      if (result.success) {
+        const district = result.district || '';
+        const state = result.state || '';
+
+        setFormData((prev) => ({
+          ...prev,
+          district: district || prev.district,
+          state: state || prev.state,
+        }));
+
+        setErrors((prev) => {
+          const next = { ...prev };
+          delete next.pinCode;
+          if (district) delete next.district;
+          if (state) delete next.state;
+          return next;
+        });
+
+        setProfilePinStatus({
+          type: 'success',
+          message: `Location auto-detected: ${district ? district + ', ' : ''}${state}`,
+        });
+      } else {
+        setProfilePinStatus({
+          type: 'error',
+          message: result.message || 'No location found for this PIN code.',
+        });
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      if (seq === profilePinSeqRef.current) {
+        setProfilePinStatus({
+          type: 'error',
+          message: 'Unable to auto-detect location. Please enter district and state manually.',
+        });
+      }
+    } finally {
+      if (seq === profilePinSeqRef.current) {
+        setIsProfilePinLoading(false);
+      }
+    }
+  };
 
   const initials = (profile.fullName || 'CUS')
     .trim()
@@ -177,19 +341,21 @@ export function MyProfile() {
       mobileNumber: profile.mobileNumber || '',
       email: profile.email || '',
       profilePhoto: profile.profilePhoto || '',
-    alternateMobileNumber: profile.alternateMobileNumber || '',
-    address: profile.address || '',
-    district: profile.district || '',
-    state: profile.state || '',
-    pinCode: profile.pinCode || '',
-  });
-  setErrors({});
-  setPhotoError('');
-  resetVerification();
-  setOtpCode('');
-  setPhoneValidationError('');
-  setIsEditing(true);
-};
+      alternateMobileNumber: profile.alternateMobileNumber || '',
+      address: profile.address || '',
+      district: profile.district || '',
+      state: profile.state || '',
+      pinCode: profile.pinCode || '',
+    });
+    setErrors({});
+    setPhotoError('');
+    resetVerification();
+    setOtpCode('');
+    setPhoneValidationError('');
+    setProfilePinStatus(null);
+    setIsProfilePinLoading(false);
+    setIsEditing(true);
+  };
 
   const handleCancelEdit = () => {
     setFormData({
@@ -197,19 +363,25 @@ export function MyProfile() {
       mobileNumber: profile.mobileNumber || '',
       email: profile.email || '',
       profilePhoto: profile.profilePhoto || '',
-    alternateMobileNumber: profile.alternateMobileNumber || '',
-    address: profile.address || '',
-    district: profile.district || '',
-    state: profile.state || '',
-    pinCode: profile.pinCode || '',
-  });
-  setErrors({});
-  setPhotoError('');
-  resetVerification();
-  setOtpCode('');
-  setPhoneValidationError('');
-  setIsEditing(false);
-};
+      alternateMobileNumber: profile.alternateMobileNumber || '',
+      address: profile.address || '',
+      district: profile.district || '',
+      state: profile.state || '',
+      pinCode: profile.pinCode || '',
+    });
+    setErrors({});
+    setPhotoError('');
+    resetVerification();
+    setOtpCode('');
+    setPhoneValidationError('');
+    setProfilePinStatus(null);
+    setIsProfilePinLoading(false);
+    if (profilePinAbortRef.current) {
+      profilePinAbortRef.current.abort();
+      profilePinAbortRef.current = null;
+    }
+    setIsEditing(false);
+  };
 
   const handleFieldChange = (e) => {
     const { name, value } = e.target;
@@ -233,6 +405,32 @@ export function MyProfile() {
       }
       return;
     }
+
+    if (name === 'pinCode') {
+      const cleanDigits = String(value || '').replace(/\D/g, '').slice(0, 6);
+      setFormData((prev) => ({ ...prev, pinCode: cleanDigits }));
+      if (errors.pinCode) {
+        setErrors((prev) => {
+          const next = { ...prev };
+          delete next.pinCode;
+          return next;
+        });
+      }
+
+      if (cleanDigits.length < 6) {
+        if (profilePinAbortRef.current) {
+          profilePinAbortRef.current.abort();
+          profilePinAbortRef.current = null;
+        }
+        setIsProfilePinLoading(false);
+        setProfilePinStatus(null);
+        return;
+      }
+
+      triggerProfilePinLookup(cleanDigits);
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors((prev) => {
@@ -429,6 +627,12 @@ export function MyProfile() {
       contactNumber: profile.mobileNumber || '',
     });
     setAddrErrors({});
+    setAddrPinStatus(null);
+    setIsAddrPinLoading(false);
+    if (addrPinAbortRef.current) {
+      addrPinAbortRef.current.abort();
+      addrPinAbortRef.current = null;
+    }
     setIsAddressModalOpen(true);
   };
 
@@ -439,12 +643,18 @@ export function MyProfile() {
       recipientName: addr.recipientName || '',
       contactNumber: addr.contactNumber || '',
       addressLine: addr.addressLine || '',
-      district: addr.district || 'Guntur',
-      state: addr.state || 'Andhra Pradesh',
+      district: addr.district || '',
+      state: addr.state || '',
       pinCode: addr.pinCode || '',
       isDefault: Boolean(addr.isDefault),
     });
     setAddrErrors({});
+    setAddrPinStatus(null);
+    setIsAddrPinLoading(false);
+    if (addrPinAbortRef.current) {
+      addrPinAbortRef.current.abort();
+      addrPinAbortRef.current = null;
+    }
     setIsAddressModalOpen(true);
   };
 
@@ -779,15 +989,10 @@ export function MyProfile() {
                     <span className="text-[11px] font-bold text-[#0F766E]">
                       {statusMessage || 'OTP sent successfully to your new mobile number.'}
                     </span>
-                    {demoOtp && (
-                      <button
-                        type="button"
-                        onClick={() => setOtpCode(demoOtp)}
-                        className="px-2 py-0.5 rounded bg-[#CCFBF1] text-[#0F766E] font-mono text-[11px] font-bold cursor-pointer"
-                        title="Click to auto-fill Dev OTP"
-                      >
-                        Dev OTP: {demoOtp}
-                      </button>
+                    {import.meta.env.DEV && demoOtp && (
+                      <span className="text-xs font-semibold text-[#0F766E] bg-[#CCFBF1] px-2 py-0.5 rounded border border-[#14B8A6]/30">
+                        OTP: <span className="font-mono font-bold tracking-wider">{demoOtp}</span>
+                      </span>
                     )}
                   </div>
 
@@ -808,6 +1013,16 @@ export function MyProfile() {
                       }}
                       className="w-full px-3 py-1.5 text-xs font-mono tracking-widest rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
                     />
+                    {import.meta.env.DEV && demoOtp && (
+                      <button
+                        type="button"
+                        onClick={() => setOtpCode(demoOtp)}
+                        className="px-2.5 py-1.5 rounded-lg bg-[#CCFBF1] text-[#0F766E] font-mono text-xs font-bold hover:bg-[#14B8A6] hover:text-white cursor-pointer transition-colors shrink-0"
+                        title="Click to auto-fill Dev OTP"
+                      >
+                        Auto-Fill
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={handleConfirmOtp}
@@ -878,20 +1093,45 @@ export function MyProfile() {
 
           {/* PIN Code */}
           <div>
-            <label htmlFor="pinCode" className="block text-xs font-semibold text-[#0F172A] mb-1">
-              PIN Code <span className="text-[#DC2626]">*</span>
-            </label>
-            <input
-              id="pinCode"
-              name="pinCode"
-              type="text"
-              maxLength={6}
-              value={isEditing ? formData.pinCode : profile.pinCode}
-              onChange={handleFieldChange}
-              disabled={!isEditing}
-              className="w-full px-3 py-2 text-sm font-mono rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] disabled:bg-[#F8FAFC] disabled:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
-            />
-            {errors.pinCode && (
+            <div className="flex items-center justify-between mb-1">
+              <label htmlFor="pinCode" className="block text-xs font-semibold text-[#0F172A]">
+                PIN Code <span className="text-[#DC2626]">*</span>
+              </label>
+              {isProfilePinLoading && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#0F766E]">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Detecting...</span>
+                </span>
+              )}
+            </div>
+            <div className="relative">
+              <input
+                id="pinCode"
+                name="pinCode"
+                type="text"
+                maxLength={6}
+                value={isEditing ? formData.pinCode : profile.pinCode}
+                onChange={handleFieldChange}
+                disabled={!isEditing}
+                placeholder="6-digit PIN code"
+                className="w-full px-3 py-2 text-sm font-mono rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] disabled:bg-[#F8FAFC] disabled:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
+              />
+              {isProfilePinLoading && (
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <Loader2 className="w-3.5 h-3.5 text-[#0F766E] animate-spin" />
+                </div>
+              )}
+            </div>
+            {profilePinStatus && (
+              <p
+                className={`text-[11px] font-medium mt-1 ${
+                  profilePinStatus.type === 'success' ? 'text-[#0F766E]' : 'text-[#DC2626]'
+                }`}
+              >
+                {profilePinStatus.message}
+              </p>
+            )}
+            {errors.pinCode && !profilePinStatus && (
               <p className="text-[11px] font-medium text-[#DC2626] mt-1">{errors.pinCode}</p>
             )}
           </div>
@@ -931,7 +1171,7 @@ export function MyProfile() {
               className="w-full px-3 py-2 text-sm rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] disabled:bg-[#F8FAFC] disabled:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
             >
               <option value="">Select District</option>
-              {Array.from(new Set([...AP_DISTRICTS, 'Warangal', 'Hyderabad', 'Vijayawada'])).map(
+              {Array.from(new Set([...AP_DISTRICTS, 'Warangal', 'Hyderabad', 'Vijayawada', formData.district, profile.district].filter(Boolean))).map(
                 (dist) => (
                   <option key={dist} value={dist}>
                     {dist}
@@ -958,7 +1198,7 @@ export function MyProfile() {
               className="w-full px-3 py-2 text-sm rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] disabled:bg-[#F8FAFC] disabled:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
             >
               <option value="">Select State</option>
-              {INDIAN_STATES.map((st) => (
+              {Array.from(new Set([...INDIAN_STATES, formData.state, profile.state].filter(Boolean))).map((st) => (
                 <option key={st} value={st}>
                   {st}
                 </option>
@@ -1165,17 +1405,44 @@ export function MyProfile() {
               )}
             </div>
             <div>
-              <label className="block font-semibold text-[#0F172A] mb-1">
-                PIN Code *
-              </label>
-              <input
-                type="text"
-                maxLength={6}
-                value={addrForm.pinCode}
-                onChange={(e) => setAddrForm((p) => ({ ...p, pinCode: e.target.value }))}
-                className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A]"
-              />
-              {addrErrors.pinCode && (
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-semibold text-[#0F172A]">
+                  PIN Code *
+                </label>
+                {isAddrPinLoading && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#0F766E]">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Detecting location...</span>
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={addrForm.pinCode}
+                  onChange={handleAddrPinChange}
+                  placeholder="Enter 6-digit PIN code"
+                  className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
+                />
+                {isAddrPinLoading && (
+                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <Loader2 className="w-3.5 h-3.5 text-[#0F766E] animate-spin" />
+                  </div>
+                )}
+              </div>
+              {addrPinStatus && (
+                <p
+                  className={`text-[11px] font-medium mt-1 ${
+                    addrPinStatus.type === 'success'
+                      ? 'text-[#0F766E]'
+                      : 'text-[#DC2626]'
+                  }`}
+                >
+                  {addrPinStatus.message}
+                </p>
+              )}
+              {addrErrors.pinCode && !addrPinStatus && (
                 <p className="text-[11px] text-[#DC2626] mt-0.5">{addrErrors.pinCode}</p>
               )}
             </div>
@@ -1190,7 +1457,7 @@ export function MyProfile() {
               value={addrForm.addressLine}
               onChange={(e) => setAddrForm((p) => ({ ...p, addressLine: e.target.value }))}
               placeholder="Plot number, market yard, street landmark..."
-              className="w-full px-3 py-2 text-xs rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A]"
+              className="w-full px-3 py-2 text-xs rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
             />
             {addrErrors.addressLine && (
               <p className="text-[11px] text-[#DC2626] mt-0.5">{addrErrors.addressLine}</p>
@@ -1204,7 +1471,8 @@ export function MyProfile() {
                 type="text"
                 value={addrForm.district}
                 onChange={(e) => setAddrForm((p) => ({ ...p, district: e.target.value }))}
-                className="w-full px-3 py-2 text-xs rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A]"
+                placeholder="District (auto-filled from PIN)"
+                className="w-full px-3 py-2 text-xs rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
               />
               {addrErrors.district && (
                 <p className="text-[11px] text-[#DC2626] mt-0.5">{addrErrors.district}</p>
@@ -1215,10 +1483,10 @@ export function MyProfile() {
               <select
                 value={addrForm.state}
                 onChange={(e) => setAddrForm((p) => ({ ...p, state: e.target.value }))}
-                className="w-full px-3 py-2 text-xs rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A]"
+                className="w-full px-3 py-2 text-xs rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
               >
                 <option value="">Select State</option>
-                {INDIAN_STATES.map((st) => (
+                {Array.from(new Set([...INDIAN_STATES, addrForm.state].filter(Boolean))).map((st) => (
                   <option key={st} value={st}>
                     {st}
                   </option>

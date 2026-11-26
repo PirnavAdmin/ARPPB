@@ -65,7 +65,9 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                     SettledAmount = item.SettledAmount,
                     OutstandingAmount = item.OutstandingAmount,
                     ExpectedPaymentDate = item.ExpectedPaymentDate?.ToString("yyyy-MM-dd"),
-                    Status = item.Status
+                    Status = item.Status,
+                    PaymentMode = item.Description?.Contains("UPI") == true ? "UPI / IMPS" : (item.Description?.Contains("Cash") == true ? "Cash" : (item.Description?.Contains("Cheque") == true ? "Cheque" : "NEFT / RTGS")),
+                    ReferenceNo = item.TransactionId
                 });
             }
 
@@ -84,14 +86,14 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
             return new MiddlemanLedgerSummaryDto
             {
-                TotalPurchases = totalPurchases > 0 ? totalPurchases : 4635000m,
-                TotalSales = totalSales > 0 ? totalSales : 3452750m,
-                CostOfGoodsSold = cogs > 0 ? cogs : 2929048.60m,
-                TotalPayables = payables > 0 ? payables : 475000m,
-                TotalReceivables = receivables > 0 ? receivables : 1195000m,
-                AmountReceived = received > 0 ? received : 2081500m,
-                NetPosition = netPos > 0 ? netPos : 720000m,
-                GrossProfit = grossProfit > 0 ? grossProfit : 488701.40m,
+                TotalPurchases = totalPurchases,
+                TotalSales = totalSales,
+                CostOfGoodsSold = cogs,
+                TotalPayables = payables,
+                TotalReceivables = receivables,
+                AmountReceived = received,
+                NetPosition = netPos,
+                GrossProfit = grossProfit,
                 TotalEntries = dtos.Count,
                 Entries = dtos
             };
@@ -214,24 +216,32 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             if (item == null) return null;
 
             var total = item.Debit > 0 ? item.Debit : item.Credit;
+            var settleAmt = (request?.Amount.HasValue == true && request.Amount.Value > 0) ? request.Amount.Value : total;
+            var paymentMode = string.IsNullOrWhiteSpace(request?.PaymentMode) ? "NEFT / RTGS" : request.PaymentMode;
+            var notes = request?.Notes ?? string.Empty;
 
-            if (request?.Amount.HasValue == true && request.Amount.Value > 0)
+            try
             {
-                var newSettled = item.SettledAmount + request.Amount.Value;
+                await _context.Database.ExecuteSqlRawAsync(
+                    "CALL sp_MiddlemanSettleLedgerEntry({0}, {1}, {2}, {3}, {4})",
+                    id, item.MiddlemanId, settleAmt, paymentMode, notes);
+            }
+            catch
+            {
+                var newSettled = Math.Min(total, item.SettledAmount + settleAmt);
                 var newOutstanding = Math.Max(0, total - newSettled);
                 item.SettledAmount = newSettled;
                 item.OutstandingAmount = newOutstanding;
                 item.Status = newOutstanding <= 0 ? "Paid" : "Partially Paid";
+                if (!string.IsNullOrWhiteSpace(notes))
+                {
+                    item.Description = string.IsNullOrWhiteSpace(item.Description)
+                        ? $"{paymentMode}: {notes}"
+                        : $"{item.Description} | {paymentMode}: {notes}";
+                }
+                item.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
             }
-            else
-            {
-                item.SettledAmount = total;
-                item.OutstandingAmount = 0;
-                item.Status = "Paid";
-            }
-
-            item.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
 
             var summary = await GetSummaryAsync(userId);
             return summary.Entries.FirstOrDefault(x => x.Id == id);

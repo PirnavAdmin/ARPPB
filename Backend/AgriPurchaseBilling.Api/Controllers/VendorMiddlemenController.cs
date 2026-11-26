@@ -2,6 +2,7 @@ using System.Security.Claims;
 using AgriPurchaseBilling.Application.DTOs;
 using AgriPurchaseBilling.Application.DTOs.VendorOperations;
 using AgriPurchaseBilling.Application.Interfaces;
+using AgriPurchaseBilling.Application.Interfaces.VendorPortal;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,30 +12,35 @@ namespace AgriPurchaseBilling.Api.Controllers
     [ApiController]
     [Authorize(Roles = "Vendor")]
     [Route("api/v1/vendor/partners/middlemen")]
+    [Route("api/v1/vendor/middlemen")]
     [Produces("application/json")]
     public sealed class VendorMiddlemenController : ControllerBase
     {
         private readonly IVendorPartnersService _partnersService;
+        private readonly IVendorResolver _vendorResolver;
 
-        public VendorMiddlemenController(IVendorPartnersService partnersService)
+        public VendorMiddlemenController(IVendorPartnersService partnersService, IVendorResolver vendorResolver)
         {
             _partnersService = partnersService;
+            _vendorResolver = vendorResolver;
         }
 
-        private long CurrentVendorId
+        private async Task<long> ResolveVendorIdAsync(CancellationToken cancellationToken)
         {
-            get
+            var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (long.TryParse(value, out var userId) && userId > 0)
             {
-                var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                return long.TryParse(value, out var userId) && userId > 0 ? userId : 1;
+                return await _vendorResolver.GetVendorIdAsync(userId, cancellationToken);
             }
+            return 1;
         }
 
         [HttpGet("overview")]
         [ProducesResponseType(typeof(ApiResponse<VendorMiddlemenOverviewDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetOverview(CancellationToken cancellationToken)
         {
-            var overview = await _partnersService.GetMiddlemenOverviewAsync(CurrentVendorId, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var overview = await _partnersService.GetMiddlemenOverviewAsync(vendorId, cancellationToken);
             return Ok(ApiResponse<VendorMiddlemenOverviewDto>.Ok(overview, "Middlemen overview retrieved successfully."));
         }
 
@@ -47,8 +53,9 @@ namespace AgriPurchaseBilling.Api.Controllers
             [FromQuery] string? status = null,
             CancellationToken cancellationToken = default)
         {
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
             var middlemen = await _partnersService.GetMiddlemenAsync(
-                CurrentVendorId, search, district, state, status, cancellationToken);
+                vendorId, search, district, state, status, cancellationToken);
             return Ok(ApiResponse<List<VendorMiddlemanSummaryDto>>.Ok(middlemen, "Middlemen list retrieved successfully."));
         }
 
@@ -57,7 +64,8 @@ namespace AgriPurchaseBilling.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<VendorMiddlemanDetailDto>), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetMiddlemanById(string middlemanId, CancellationToken cancellationToken)
         {
-            var middleman = await _partnersService.GetMiddlemanByIdAsync(CurrentVendorId, middlemanId, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var middleman = await _partnersService.GetMiddlemanByIdAsync(vendorId, middlemanId, cancellationToken);
             return middleman == null
                 ? NotFound(ApiResponse<VendorMiddlemanDetailDto>.Fail("Middleman not found."))
                 : Ok(ApiResponse<VendorMiddlemanDetailDto>.Ok(middleman, "Middleman profile retrieved successfully."));
@@ -70,7 +78,8 @@ namespace AgriPurchaseBilling.Api.Controllers
             [FromBody] CreateVendorMiddlemanRequest request,
             CancellationToken cancellationToken)
         {
-            var created = await _partnersService.CreateMiddlemanAsync(CurrentVendorId, request, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var created = await _partnersService.CreateMiddlemanAsync(vendorId, request, cancellationToken);
             return CreatedAtAction(nameof(GetMiddlemanById), new { middlemanId = created.MiddlemanCode },
                 ApiResponse<VendorMiddlemanDetailDto>.Ok(created, "Middleman registered successfully."));
         }
@@ -83,7 +92,8 @@ namespace AgriPurchaseBilling.Api.Controllers
             [FromBody] UpdateVendorMiddlemanRequest request,
             CancellationToken cancellationToken)
         {
-            var updated = await _partnersService.UpdateMiddlemanAsync(CurrentVendorId, middlemanId, request, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var updated = await _partnersService.UpdateMiddlemanAsync(vendorId, middlemanId, request, cancellationToken);
             return updated == null
                 ? NotFound(ApiResponse<VendorMiddlemanDetailDto>.Fail("Middleman not found."))
                 : Ok(ApiResponse<VendorMiddlemanDetailDto>.Ok(updated, "Middleman profile updated successfully."));
@@ -94,7 +104,8 @@ namespace AgriPurchaseBilling.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> ToggleStatus(string middlemanId, CancellationToken cancellationToken)
         {
-            var success = await _partnersService.ToggleMiddlemanStatusAsync(CurrentVendorId, middlemanId, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var success = await _partnersService.ToggleMiddlemanStatusAsync(vendorId, middlemanId, cancellationToken);
             return success
                 ? Ok(ApiResponse<bool>.Ok(true, "Middleman status toggled successfully."))
                 : NotFound(ApiResponse<bool>.Fail("Middleman not found."));
@@ -104,7 +115,8 @@ namespace AgriPurchaseBilling.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<List<VendorMiddlemanTransactionDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetMiddlemanTransactions(string middlemanId, CancellationToken cancellationToken)
         {
-            var transactions = await _partnersService.GetMiddlemanTransactionsAsync(CurrentVendorId, middlemanId, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var transactions = await _partnersService.GetMiddlemanTransactionsAsync(vendorId, middlemanId, cancellationToken);
             return Ok(ApiResponse<List<VendorMiddlemanTransactionDto>>.Ok(transactions, "Middleman procurement transactions retrieved successfully."));
         }
 
@@ -112,7 +124,8 @@ namespace AgriPurchaseBilling.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<List<VendorMiddlemanPaymentDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetMiddlemanPayments(string middlemanId, CancellationToken cancellationToken)
         {
-            var payments = await _partnersService.GetMiddlemanPaymentsAsync(CurrentVendorId, middlemanId, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var payments = await _partnersService.GetMiddlemanPaymentsAsync(vendorId, middlemanId, cancellationToken);
             return Ok(ApiResponse<List<VendorMiddlemanPaymentDto>>.Ok(payments, "Middleman settlements and ledger retrieved successfully."));
         }
 
@@ -120,14 +133,16 @@ namespace AgriPurchaseBilling.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<List<VendorMiddlemanOtpLogDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetMiddlemanOtpLogs(string middlemanId, CancellationToken cancellationToken)
         {
-            var otpLogs = await _partnersService.GetMiddlemanOtpLogsAsync(CurrentVendorId, middlemanId, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var otpLogs = await _partnersService.GetMiddlemanOtpLogsAsync(vendorId, middlemanId, cancellationToken);
             return Ok(ApiResponse<List<VendorMiddlemanOtpLogDto>>.Ok(otpLogs, "Middleman OTP confirmations retrieved successfully."));
         }
 
         [HttpGet("export")]
         public async Task<IActionResult> ExportCsv(CancellationToken cancellationToken)
         {
-            var csvBytes = await _partnersService.ExportMiddlemenCsvAsync(CurrentVendorId, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var csvBytes = await _partnersService.ExportMiddlemenCsvAsync(vendorId, cancellationToken);
             return File(csvBytes, "text/csv", $"middlemen-directory-{DateTime.UtcNow:yyyyMMdd}.csv");
         }
     }

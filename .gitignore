@@ -7,3 +7,7 @@
 
 # Node modules
 node_modules/
+
+# Local sensitive configuration files (keep local secrets safe)
+appsettings.Development.json
+appsettings.*.local.json

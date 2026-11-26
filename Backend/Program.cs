@@ -67,22 +67,40 @@ var serverVersion = new MariaDbServerVersion(
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(
         connectionString,
-        serverVersion));
+        serverVersion,
+        mySqlOptions => mySqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorNumbersToAdd: null)));
 builder.Services.AddCustomerProfileModule();
 builder.Services.AddFarmerCropsModule();
 builder.Services.AddVendorOperationsModule(connectionString);
+builder.Services.AddVendorPortalModule();
+builder.Services.AddScoped<AgriPurchaseBilling.Api.Controllers.VendorPortal.VendorPortalExceptionFilter>();
+builder.Services.AddFarmerSalesModule();
+builder.Services.AddFarmerNotificationsModule();
+builder.Services.AddFarmerMarketPricesModule();
 
 // REPOSITORY REGISTRATIONS
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IOtpRepository, OtpRepository>();
 builder.Services.AddScoped<IFarmerProfileRepository, FarmerProfileRepository>();
 builder.Services.AddScoped<IVendorProfileRepository, VendorProfileRepository>();
+builder.Services.AddScoped<ICustomerMarketplaceRepository, CustomerMarketplaceRepository>();
+builder.Services.AddScoped<ICustomerPurchaseHistoryRepository, CustomerPurchaseHistoryRepository>();
+builder.Services.AddScoped<ICustomerNotificationRepository, CustomerNotificationRepository>();
+builder.Services.AddScoped<ICustomerCartRepository, CustomerCartRepository>();
+builder.Services.AddScoped<ICustomerDashboardRepository, CustomerDashboardRepository>();
+builder.Services.AddScoped<ICustomerOrderRepository, CustomerOrderRepository>();
+builder.Services.AddScoped<ICustomerOtpRepository, CustomerOtpRepository>();
 builder.Services.AddScoped<IMiddlemanNotificationRepository, MiddlemanNotificationRepository>();
 
 // SERVICE REGISTRATIONS
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<ILoginService, LoginService>();
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IOtpService>(serviceProvider =>
     new OtpService(
         serviceProvider.GetRequiredService<IOtpRepository>(),
@@ -96,12 +114,22 @@ builder.Services.AddScoped<IFarmerProfileService, FarmerProfileService>();
 builder.Services.AddScoped<IMiddlemanProfileService, MiddlemanProfileService>();
 builder.Services.AddScoped<IVendorProfileService, VendorProfileService>();
 builder.Services.AddScoped<IVendorMobileChangeService, VendorMobileChangeService>();
+builder.Services.AddScoped<ICustomerMarketplaceService, CustomerMarketplaceService>();
+builder.Services.AddScoped<ICustomerPurchaseHistoryService, CustomerPurchaseHistoryService>();
+builder.Services.AddScoped<ICustomerNotificationService, CustomerNotificationService>();
+builder.Services.AddScoped<ICustomerCartService, CustomerCartService>();
+builder.Services.AddScoped<ICustomerDashboardService, CustomerDashboardService>();
+builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
+builder.Services.AddScoped<ICustomerOtpService, CustomerOtpService>();
 builder.Services.AddScoped<IMiddlemanNotificationService, MiddlemanNotificationService>();
 builder.Services.AddScoped<IMiddlemanLedgerService, MiddlemanLedgerService>();
 builder.Services.AddScoped<IMiddlemanDashboardService, MiddlemanDashboardService>();
 builder.Services.AddScoped<IMiddlemanInventoryService, MiddlemanInventoryService>();
 builder.Services.AddScoped<IMiddlemanFarmerService, MiddlemanFarmerService>();
 builder.Services.AddScoped<IMiddlemanPurchaseService, MiddlemanPurchaseService>();
+builder.Services.AddScoped<IMiddlemanVendorService, MiddlemanVendorService>();
+builder.Services.AddScoped<IMiddlemanCustomerService, MiddlemanCustomerService>();
+builder.Services.AddScoped<IMiddlemanConfirmationsService, MiddlemanConfirmationsService>();
 
 // JWT registration
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
@@ -208,6 +236,9 @@ builder.Services.AddSwaggerGen(options =>
                 Array.Empty<string>()
             }
         });
+
+    // Clean and unified Middleman module endpoints in Swagger UI
+    options.DocumentFilter<AgriPurchaseBilling.Api.Filters.MiddlemanCanonicalSwaggerFilter>();
 });
 
 
@@ -221,7 +252,6 @@ app.UseForwardedHeaders(new Microsoft.AspNetCore.Builder.ForwardedHeadersOptions
                      | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
                      | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedHost
 });
-
 // SWAGGER MIDDLEWARE
 app.UseSwagger();
 
@@ -244,6 +274,9 @@ app.MapControllers();
 
 // REDIRECT ROOT TO SWAGGER UI (Supports GET and HEAD for tunnel/health probes)
 app.MapMethods("/", new[] { "GET", "HEAD" }, () => Results.Redirect("/swagger")).ExcludeFromDescription();
+
+// ENSURE FARMER SALES TABLES EXIST
+await app.EnsureFarmerSalesTablesAsync();
 
 // RUN
 app.Run();

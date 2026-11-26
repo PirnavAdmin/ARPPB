@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingBag, ShoppingCart, ArrowUpDown } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, ArrowUpDown, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { useCustomer } from '../context/useCustomer';
 import { useDebounce } from '../../../hooks/useDebounce';
 import { usePagination } from '../../../hooks/usePagination';
@@ -31,40 +31,29 @@ const PRODUCT_IMAGE_BY_ID = {
   'CPROD-115': '/assets/product-images/coriander-seeds.jpg',
   'CPROD-116': '/assets/product-images/coconut-copra.jpg',
   'CPROD-117': '/assets/product-images/paddy-straw-husk.jpg',
-  // Vendor Finished Products
-  'PROD-0001': '/assets/product-images/paddy.jpg',
-  'PROD-0002': '/assets/product-images/groundnut.jpg',
-  'PROD-0003': '/assets/product-images/wheat.jpg',
-  'PROD-0004': '/assets/product-images/red-chillies.jpg',
-  'PROD-0005': '/assets/product-images/yellow-maize.jpg',
-  'PROD-0006': '/assets/product-images/turmeric.jpg',
-  'PROD-0007': '/assets/product-images/paddy-straw-husk.jpg',
-  // Vendor Raw Material Inventory Batches
-  'STK-0001': '/assets/product-images/paddy.jpg',
-  'STK-0002': '/assets/product-images/groundnut.jpg',
-  'STK-0003': '/assets/product-images/red-chillies.jpg',
-  'STK-0004': '/assets/product-images/yellow-maize.jpg',
-  'STK-0005': '/assets/product-images/turmeric.jpg',
-  'STK-0006': '/assets/product-images/cotton.jpg',
-  'STK-0007': '/assets/product-images/whole-red-gram.jpg',
-  'STK-0008': '/assets/product-images/wheat.jpg',
-  'STK-0009': '/assets/product-images/paddy.jpg',
-  'STK-0010': '/assets/product-images/groundnut.jpg',
 };
 
 export function BrowseProducts() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { products, categories, addToCart, cartItemCount, cartSubtotal } = useCustomer();
+  const {
+    products,
+    categories,
+    addToCart,
+    cartItemCount,
+    cartSubtotal,
+    marketplaceLoading,
+    marketplaceError,
+    loadMarketplaceData,
+  } = useCustomer();
 
   const navState = location.state || {};
 
   const [searchQuery, setSearchQuery] = useState(navState.initialSearch || '');
   const debouncedSearch = useDebounce(searchQuery, 200);
 
-  const [productCategory, setProductCategory] = useState(
-    navState.initialCategory || navState.selectedCategory || 'All'
-  );
+  const [sellerTypeFilter, setSellerTypeFilter] = useState(navState.initialSellerType || 'All');
+  const [productCategory, setProductCategory] = useState(navState.initialCategory || 'All');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [productLocation, setProductLocation] = useState(navState.initialLocation || 'All');
@@ -81,7 +70,6 @@ export function BrowseProducts() {
     if (incoming) {
       if (incoming.initialSearch !== undefined) setSearchQuery(incoming.initialSearch);
       if (incoming.initialCategory !== undefined) setProductCategory(incoming.initialCategory);
-      if (incoming.selectedCategory !== undefined) setProductCategory(incoming.selectedCategory);
       if (incoming.initialLocation !== undefined) setProductLocation(incoming.initialLocation);
       if (incoming.initialSort !== undefined) setSortBy(incoming.initialSort);
     }
@@ -103,6 +91,7 @@ export function BrowseProducts() {
     const maxVal = maxPrice !== '' ? Number(maxPrice) : null;
 
     const list = products.filter((p) => {
+      if (sellerTypeFilter !== 'All' && (p.sellerType || 'Vendor') !== sellerTypeFilter) return false;
       if (productCategory !== 'All' && p.category !== productCategory) return false;
       if (productLocation !== 'All' && p.location !== productLocation) return false;
       if (qualityGrade !== 'All' && p.qualityGrade !== qualityGrade) return false;
@@ -122,18 +111,12 @@ export function BrowseProducts() {
       if (q) {
         const hit = [
           p.name,
-          p.rawProductName,
-          p.cropVariety,
           p.category,
+          p.sellerName,
+          p.sellerType,
           p.location,
           p.qualityGrade,
           p.batchCode,
-          p.brandName,
-          p.sourceRawMaterial,
-          p.sellerName,
-          p.sourceSupplierName,
-          p.productType,
-          p.description,
         ].some((field) => String(field || '').toLowerCase().includes(q));
         if (!hit) return false;
       }
@@ -151,6 +134,7 @@ export function BrowseProducts() {
   }, [
     products,
     debouncedSearch,
+    sellerTypeFilter,
     productCategory,
     minPrice,
     maxPrice,
@@ -164,6 +148,7 @@ export function BrowseProducts() {
 
   const handleResetAll = () => {
     setSearchQuery('');
+    setSellerTypeFilter('All');
     setProductCategory('All');
     setMinPrice('');
     setMaxPrice('');
@@ -177,14 +162,14 @@ export function BrowseProducts() {
   const filterConfig = [
     {
       key: 'productCategory',
-      label: 'Categories',
+      label: 'Product Category',
       value: productCategory,
       onChange: (val) => {
         setProductCategory(val);
         pagination.goToPage(1);
       },
       options: [
-        { label: 'All Categories', value: 'All' },
+        { label: 'All Product Categories', value: 'All' },
         ...categories.map((c) => ({ label: c.name, value: c.name })),
       ],
     },
@@ -231,7 +216,16 @@ export function BrowseProducts() {
     },
   ];
 
-  const hasExtraFilter = Boolean(minPrice !== '' || maxPrice !== '' || searchQuery.trim());
+  const hasExtraFilter = Boolean(minPrice !== '' || maxPrice !== '' || searchQuery.trim() || sellerTypeFilter !== 'All');
+
+  const sellerTypeCounts = useMemo(() => {
+    const counts = { All: products.length, Farmer: 0, Middleman: 0, Vendor: 0 };
+    products.forEach((p) => {
+      const st = p.sellerType || 'Vendor';
+      counts[st] = (counts[st] || 0) + 1;
+    });
+    return counts;
+  }, [products]);
 
   return (
     <div className="space-y-6">
@@ -253,6 +247,37 @@ export function BrowseProducts() {
           </button>
         }
       />
+
+      {/* Seller Type Filter Chips */}
+      <div className="bg-white border border-[#E2E8F0] rounded-2xl p-2.5 flex flex-wrap items-center gap-2 shadow-2xs">
+        {['All', 'Farmer', 'Middleman', 'Vendor'].map((type) => {
+          const active = sellerTypeFilter === type;
+          return (
+            <button
+              key={type}
+              type="button"
+              onClick={() => {
+                setSellerTypeFilter(type);
+                pagination.goToPage(1);
+              }}
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                active
+                  ? 'bg-[#0F766E] text-white shadow-xs'
+                  : 'text-[#64748B] hover:bg-[#CCFBF1]/50 hover:text-[#0F766E]'
+              }`}
+            >
+              <span>{type === 'All' ? 'All Products' : type}</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                  active ? 'bg-white/20 text-white' : 'bg-[#F8FAFC] text-[#0F172A]'
+                }`}
+              >
+                {sellerTypeCounts[type] || 0}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
       {/* Search, Filters & Sorting Toolbar */}
       <section className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 space-y-4 shadow-2xs">
@@ -326,12 +351,32 @@ export function BrowseProducts() {
       </section>
 
       {/* Product Cards Grid */}
-      {pagination.paginatedData.length > 0 ? (
+      {marketplaceLoading ? (
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-10 flex items-center justify-center gap-2.5 text-sm text-[#64748B]">
+          <Loader2 className="w-5 h-5 animate-spin text-[#0F766E]" />
+          <span>Loading marketplace products...</span>
+        </div>
+      ) : marketplaceError ? (
+        <div className="bg-[#FEE2E2] border border-[#DC2626]/20 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#DC2626]">
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{marketplaceError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={loadMarketplaceData}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#DC2626]/30 text-[#DC2626] font-bold hover:bg-red-50 cursor-pointer shrink-0"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Retry</span>
+          </button>
+        </div>
+      ) : pagination.paginatedData.length > 0 ? (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {pagination.paginatedData.map((product) => (
               <CustomerProductCard
-                key={product.id}
+                key={product.productKey || product.id}
                 product={{ ...product, image: PRODUCT_IMAGE_BY_ID[product.id] || product.image }}
                 onViewDetails={setSelectedProduct}
                 onAddToCart={addToCart}
@@ -357,14 +402,7 @@ export function BrowseProducts() {
       )}
 
       <CustomerProductDetailsModal
-        product={
-          selectedProduct
-            ? {
-                ...selectedProduct,
-                image: PRODUCT_IMAGE_BY_ID[selectedProduct.id] || selectedProduct.image,
-              }
-            : null
-        }
+        product={selectedProduct}
         isOpen={Boolean(selectedProduct)}
         onClose={() => setSelectedProduct(null)}
         onAddToCart={addToCart}

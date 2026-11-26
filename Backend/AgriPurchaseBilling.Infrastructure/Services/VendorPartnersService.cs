@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Data;
+using System.Data.Common;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AgriPurchaseBilling.Application.DTOs.VendorOperations;
 using AgriPurchaseBilling.Application.Interfaces;
-using AgriPurchaseBilling.Domain.Entities.VendorOperations;
 using AgriPurchaseBilling.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,337 +23,225 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             _context = context;
         }
 
+        private async Task<DbConnection> GetOpenConnectionAsync(CancellationToken cancellationToken)
+        {
+            var conn = _context.Database.GetDbConnection();
+            if (conn.State != ConnectionState.Open)
+            {
+                await conn.OpenAsync(cancellationToken);
+            }
+            return conn;
+        }
+
         // ==========================================
         // FARMERS DIRECTORY & PROFILE
         // ==========================================
 
         public async Task<VendorFarmersOverviewDto> GetFarmersOverviewAsync(long vendorId, CancellationToken cancellationToken = default)
         {
-            var farmers = await _context.Farmers.AsNoTracking()
-                .Where(f => f.VendorId == vendorId)
-                .Include(f => f.Purchases)
-                .ToListAsync(cancellationToken);
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_GetFarmersOverview(@p_vendor_id);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
 
-            var totalPurchasesCount = farmers.SelectMany(f => f.Purchases).Count();
-            var totalQty = farmers.SelectMany(f => f.Purchases).Sum(p => p.Quantity);
-            var totalAmount = farmers.SelectMany(f => f.Purchases).Sum(p => p.TotalAmount);
-            var totalDue = farmers.SelectMany(f => f.Purchases).Sum(p => p.DueAmount);
-
-            return new VendorFarmersOverviewDto
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
             {
-                TotalFarmers = farmers.Count,
-                ActiveFarmers = farmers.Count(f => string.Equals(f.Status, "Active", StringComparison.OrdinalIgnoreCase)),
-                InactiveFarmers = farmers.Count(f => !string.Equals(f.Status, "Active", StringComparison.OrdinalIgnoreCase)),
-                TotalPurchases = totalPurchasesCount,
-                TotalQuantityProcured = totalQty,
-                QuantityUnit = "Qtl",
-                TotalPurchaseAmount = totalAmount,
-                TotalPayablesDue = totalDue
-            };
+                return new VendorFarmersOverviewDto
+                {
+                    TotalFarmers = SafeInt(reader["TotalFarmers"]),
+                    ActiveFarmers = SafeInt(reader["ActiveFarmers"]),
+                    InactiveFarmers = SafeInt(reader["InactiveFarmers"]),
+                    TotalPurchases = SafeInt(reader["TotalPurchases"]),
+                    TotalQuantityProcured = SafeDecimal(reader["TotalQuantityProcured"]),
+                    QuantityUnit = SafeString(reader["QuantityUnit"]),
+                    TotalPurchaseAmount = SafeDecimal(reader["TotalPurchaseAmount"]),
+                    TotalPayablesDue = SafeDecimal(reader["TotalPayablesDue"])
+                };
+            }
+
+            return new VendorFarmersOverviewDto { QuantityUnit = "Qtl" };
         }
 
         public async Task<List<VendorFarmerSummaryDto>> GetFarmersAsync(
             long vendorId, string? search, string? district, string? state, string? crop, string? status, CancellationToken cancellationToken = default)
         {
-            var query = _context.Farmers.AsNoTracking()
-                .Where(f => f.VendorId == vendorId)
-                .Include(f => f.Purchases)
-                .AsQueryable();
+            var list = new List<VendorFarmerSummaryDto>();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_GetFarmers(@p_vendor_id, @p_search, @p_district, @p_state, @p_crop, @p_status);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_search", Clean(search));
+            AddParam(cmd, "@p_district", Clean(district));
+            AddParam(cmd, "@p_state", Clean(state));
+            AddParam(cmd, "@p_crop", Clean(crop));
+            AddParam(cmd, "@p_status", Clean(status));
 
-            if (!string.IsNullOrWhiteSpace(district) && !district.Equals("All", StringComparison.OrdinalIgnoreCase))
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
             {
-                query = query.Where(f => f.District.ToLower() == district.ToLower());
+                list.Add(new VendorFarmerSummaryDto
+                {
+                    Id = SafeLong(reader["Id"]),
+                    FarmerCode = SafeString(reader["FarmerCode"]),
+                    FarmerName = SafeString(reader["FarmerName"]),
+                    FatherOrSpouseName = SafeNullableString(reader["FatherOrSpouseName"]),
+                    RegisteredCrops = SafeString(reader["RegisteredCrops"]),
+                    MobileNumber = SafeString(reader["MobileNumber"]),
+                    Village = SafeString(reader["Village"]),
+                    District = SafeString(reader["District"]),
+                    State = SafeString(reader["State"]),
+                    TotalPurchases = SafeInt(reader["TotalPurchases"]),
+                    TotalPurchaseQuantity = SafeDecimal(reader["TotalPurchaseQuantity"]),
+                    QuantityUnit = SafeString(reader["QuantityUnit"]),
+                    TotalPurchaseAmount = SafeDecimal(reader["TotalPurchaseAmount"]),
+                    DueAmount = SafeDecimal(reader["DueAmount"]),
+                    Status = SafeString(reader["Status"])
+                });
             }
 
-            if (!string.IsNullOrWhiteSpace(state) && !state.Equals("All", StringComparison.OrdinalIgnoreCase))
-            {
-                query = query.Where(f => f.State.ToLower() == state.ToLower());
-            }
-
-            if (!string.IsNullOrWhiteSpace(status) && !status.Equals("All", StringComparison.OrdinalIgnoreCase))
-            {
-                query = query.Where(f => f.Status.ToLower() == status.ToLower());
-            }
-
-            if (!string.IsNullOrWhiteSpace(crop) && !crop.Equals("All", StringComparison.OrdinalIgnoreCase))
-            {
-                query = query.Where(f => f.RegisteredCrops.ToLower().Contains(crop.ToLower()));
-            }
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var term = search.Trim().ToLower();
-                query = query.Where(f =>
-                    f.FarmerCode.ToLower().Contains(term) ||
-                    f.FullName.ToLower().Contains(term) ||
-                    f.MobileNumber.ToLower().Contains(term) ||
-                    f.Village.ToLower().Contains(term) ||
-                    f.District.ToLower().Contains(term));
-            }
-
-            var farmers = await query.OrderBy(f => f.FarmerCode).ToListAsync(cancellationToken);
-
-            return farmers.Select(f => new VendorFarmerSummaryDto
-            {
-                Id = f.Id,
-                FarmerCode = f.FarmerCode,
-                FarmerName = f.FullName,
-                FatherOrSpouseName = f.FatherOrSpouseName,
-                RegisteredCrops = f.RegisteredCrops,
-                MobileNumber = f.MobileNumber,
-                Village = f.Village,
-                District = f.District,
-                State = f.State,
-                TotalPurchases = f.Purchases.Count,
-                TotalPurchaseQuantity = f.Purchases.Sum(p => p.Quantity),
-                QuantityUnit = "Qtl",
-                TotalPurchaseAmount = f.Purchases.Sum(p => p.TotalAmount),
-                DueAmount = f.Purchases.Sum(p => p.DueAmount),
-                Status = f.Status
-            }).ToList();
+            return list;
         }
 
         public async Task<VendorFarmerDetailDto?> GetFarmerByIdAsync(long vendorId, string farmerCodeOrId, CancellationToken cancellationToken = default)
         {
-            var query = _context.Farmers.AsNoTracking()
-                .Where(f => f.VendorId == vendorId)
-                .Include(f => f.Purchases)
-                .Include(f => f.Payments)
-                .Include(f => f.OtpLogs)
-                .AsQueryable();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_GetFarmerById(@p_vendor_id, @p_farmer_id_or_code);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_farmer_id_or_code", farmerCodeOrId.Trim());
 
-            if (long.TryParse(farmerCodeOrId, out var id))
-            {
-                query = query.Where(f => f.Id == id || f.FarmerCode == farmerCodeOrId);
-            }
-            else
-            {
-                query = query.Where(f => f.FarmerCode == farmerCodeOrId);
-            }
-
-            var farmer = await query.FirstOrDefaultAsync(cancellationToken);
-            if (farmer == null) return null;
-
-            var purchases = farmer.Purchases.OrderByDescending(p => p.PurchaseDate).ToList();
-            var payments = farmer.Payments.OrderByDescending(p => p.PaymentDate).ToList();
-            var otpLogs = farmer.OtpLogs.OrderByDescending(o => o.CreatedAt).ToList();
-
-            var totalPurchaseAmt = purchases.Sum(p => p.TotalAmount);
-            var completedPayments = payments.Where(p => string.Equals(p.Status, "Completed", StringComparison.OrdinalIgnoreCase)).Sum(p => p.Amount);
-            var pendingPayments = purchases.Sum(p => p.DueAmount);
-
-            return new VendorFarmerDetailDto
-            {
-                Id = farmer.Id,
-                FarmerCode = farmer.FarmerCode,
-                FullName = farmer.FullName,
-                FatherOrSpouseName = farmer.FatherOrSpouseName,
-                MobileNumber = farmer.MobileNumber,
-                Email = farmer.Email,
-                Village = farmer.Village,
-                District = farmer.District,
-                State = farmer.State,
-                PinCode = farmer.PinCode,
-                LandAcres = farmer.LandAcres,
-                RegisteredCrops = farmer.RegisteredCrops,
-                BankAccountNumber = farmer.BankAccountNumber,
-                IfscCode = farmer.IfscCode,
-                BankName = farmer.BankName,
-                AadhaarNumber = farmer.AadhaarNumber,
-                Status = farmer.Status,
-                RegisteredAt = farmer.RegisteredAt,
-
-                AssociatedPurchasesCount = purchases.Count,
-                AssociatedPurchasesQuantity = purchases.Sum(p => p.Quantity),
-                ConfirmedPurchasesCount = purchases.Count(p => !string.Equals(p.PaymentStatus, "Draft", StringComparison.OrdinalIgnoreCase)),
-                PendingPurchasesCount = purchases.Count(p => string.Equals(p.PaymentStatus, "Draft", StringComparison.OrdinalIgnoreCase)),
-                TotalPurchaseAmount = totalPurchaseAmt,
-                CompletedPayments = completedPayments,
-                PendingPayments = pendingPayments,
-
-                Transactions = purchases.Select(p => new VendorFarmerTransactionDto
-                {
-                    Id = p.Id,
-                    PurchaseCode = p.PurchaseCode,
-                    BillNumber = p.BillNumber,
-                    CropName = p.CropName,
-                    CropVariety = p.CropVariety,
-                    Quantity = p.Quantity,
-                    Unit = p.Unit,
-                    RatePerUnit = p.RatePerUnit,
-                    TotalAmount = p.TotalAmount,
-                    DueAmount = p.DueAmount,
-                    PaymentStatus = p.PaymentStatus,
-                    PurchaseDate = p.PurchaseDate
-                }).ToList(),
-
-                Payments = payments.Select(p => new VendorFarmerPaymentDto
-                {
-                    Id = p.Id,
-                    PaymentCode = p.PaymentCode,
-                    VoucherNumber = p.VoucherNumber,
-                    Amount = p.Amount,
-                    PaymentMethod = p.PaymentMethod,
-                    PaymentDate = p.PaymentDate,
-                    ReferenceNumber = p.ReferenceNumber,
-                    Status = p.Status,
-                    Notes = p.Notes
-                }).ToList(),
-
-                OtpLogs = otpLogs.Select(o => new VendorFarmerOtpLogDto
-                {
-                    Id = o.Id,
-                    OtpCode = o.OtpCode,
-                    Purpose = o.Purpose,
-                    ActionDetails = o.ActionDetails,
-                    Status = o.Status,
-                    VerifiedAt = o.VerifiedAt,
-                    CreatedAt = o.CreatedAt
-                }).ToList()
-            };
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            return await ReadFarmerDetailFromResultSetsAsync(reader, cancellationToken);
         }
 
         public async Task<VendorFarmerDetailDto> CreateFarmerAsync(long vendorId, CreateVendorFarmerRequest request, CancellationToken cancellationToken = default)
         {
-            var count = await _context.Farmers.CountAsync(f => f.VendorId == vendorId, cancellationToken);
-            var nextCode = $"FARM-{(count + 1):D4}";
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_CreateFarmer(@p_vendor_id, @p_full_name, @p_father_or_spouse_name, @p_mobile_number, @p_email, @p_village, @p_district, @p_state, @p_pin_code, @p_land_acres, @p_registered_crops, @p_bank_account_number, @p_ifsc_code, @p_bank_name, @p_aadhaar_number, @p_account_holder_name, @p_branch_name, @p_mandal, @p_address);";
 
-            var entity = new VendorFarmer
-            {
-                VendorId = vendorId,
-                FarmerCode = nextCode,
-                FullName = request.FullName.Trim(),
-                FatherOrSpouseName = request.FatherOrSpouseName?.Trim(),
-                MobileNumber = request.MobileNumber.Trim(),
-                Email = request.Email?.Trim(),
-                Village = request.Village.Trim(),
-                District = request.District.Trim(),
-                State = request.State.Trim(),
-                PinCode = request.PinCode?.Trim(),
-                LandAcres = request.LandAcres,
-                RegisteredCrops = request.RegisteredCrops.Trim(),
-                BankAccountNumber = request.BankAccountNumber?.Trim(),
-                IfscCode = request.IfscCode?.Trim(),
-                BankName = request.BankName?.Trim(),
-                AadhaarNumber = request.AadhaarNumber?.Trim(),
-                Status = "Active",
-                RegisteredAt = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_full_name", request.FullName.Trim());
+            AddParam(cmd, "@p_father_or_spouse_name", Clean(request.FatherOrSpouseName));
+            AddParam(cmd, "@p_mobile_number", request.MobileNumber.Trim());
+            AddParam(cmd, "@p_email", Clean(request.Email));
+            AddParam(cmd, "@p_village", request.Village.Trim());
+            AddParam(cmd, "@p_district", request.District.Trim());
+            AddParam(cmd, "@p_state", request.State.Trim());
+            AddParam(cmd, "@p_pin_code", Clean(request.PinCode));
+            AddParam(cmd, "@p_land_acres", request.LandAcres);
+            AddParam(cmd, "@p_registered_crops", request.RegisteredCrops.Trim());
+            AddParam(cmd, "@p_bank_account_number", Clean(request.BankAccountNumber));
+            AddParam(cmd, "@p_ifsc_code", Clean(request.IfscCode));
+            AddParam(cmd, "@p_bank_name", Clean(request.BankName));
+            AddParam(cmd, "@p_aadhaar_number", Clean(request.AadhaarNumber));
+            AddParam(cmd, "@p_account_holder_name", Clean(request.AccountHolderName));
+            AddParam(cmd, "@p_branch_name", Clean(request.BranchName));
+            AddParam(cmd, "@p_mandal", Clean(request.Mandal));
+            AddParam(cmd, "@p_address", Clean(request.Address));
 
-            _context.Farmers.Add(entity);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return (await GetFarmerByIdAsync(vendorId, entity.FarmerCode, cancellationToken))!;
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            return (await ReadFarmerDetailFromResultSetsAsync(reader, cancellationToken))!;
         }
 
         public async Task<VendorFarmerDetailDto?> UpdateFarmerAsync(long vendorId, string farmerCodeOrId, UpdateVendorFarmerRequest request, CancellationToken cancellationToken = default)
         {
-            var entity = await FindFarmerEntityAsync(vendorId, farmerCodeOrId, cancellationToken);
-            if (entity == null) return null;
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_UpdateFarmer(@p_vendor_id, @p_farmer_id_or_code, @p_full_name, @p_father_or_spouse_name, @p_mobile_number, @p_email, @p_village, @p_district, @p_state, @p_pin_code, @p_land_acres, @p_registered_crops, @p_bank_account_number, @p_ifsc_code, @p_bank_name, @p_aadhaar_number, @p_status, @p_account_holder_name, @p_branch_name, @p_mandal, @p_address);";
 
-            entity.FullName = request.FullName.Trim();
-            entity.FatherOrSpouseName = request.FatherOrSpouseName?.Trim();
-            entity.MobileNumber = request.MobileNumber.Trim();
-            entity.Email = request.Email?.Trim();
-            entity.Village = request.Village.Trim();
-            entity.District = request.District.Trim();
-            entity.State = request.State.Trim();
-            entity.PinCode = request.PinCode?.Trim();
-            entity.LandAcres = request.LandAcres;
-            entity.RegisteredCrops = request.RegisteredCrops.Trim();
-            entity.BankAccountNumber = request.BankAccountNumber?.Trim();
-            entity.IfscCode = request.IfscCode?.Trim();
-            entity.BankName = request.BankName?.Trim();
-            entity.AadhaarNumber = request.AadhaarNumber?.Trim();
-            if (!string.IsNullOrWhiteSpace(request.Status))
-            {
-                entity.Status = request.Status.Trim();
-            }
-            entity.UpdatedAt = DateTime.UtcNow;
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_farmer_id_or_code", farmerCodeOrId.Trim());
+            AddParam(cmd, "@p_full_name", request.FullName.Trim());
+            AddParam(cmd, "@p_father_or_spouse_name", Clean(request.FatherOrSpouseName));
+            AddParam(cmd, "@p_mobile_number", request.MobileNumber.Trim());
+            AddParam(cmd, "@p_email", Clean(request.Email));
+            AddParam(cmd, "@p_village", request.Village.Trim());
+            AddParam(cmd, "@p_district", request.District.Trim());
+            AddParam(cmd, "@p_state", request.State.Trim());
+            AddParam(cmd, "@p_pin_code", Clean(request.PinCode));
+            AddParam(cmd, "@p_land_acres", request.LandAcres);
+            AddParam(cmd, "@p_registered_crops", request.RegisteredCrops.Trim());
+            AddParam(cmd, "@p_bank_account_number", Clean(request.BankAccountNumber));
+            AddParam(cmd, "@p_ifsc_code", Clean(request.IfscCode));
+            AddParam(cmd, "@p_bank_name", Clean(request.BankName));
+            AddParam(cmd, "@p_aadhaar_number", Clean(request.AadhaarNumber));
+            AddParam(cmd, "@p_status", Clean(request.Status));
+            AddParam(cmd, "@p_account_holder_name", Clean(request.AccountHolderName));
+            AddParam(cmd, "@p_branch_name", Clean(request.BranchName));
+            AddParam(cmd, "@p_mandal", Clean(request.Mandal));
+            AddParam(cmd, "@p_address", Clean(request.Address));
 
-            await _context.SaveChangesAsync(cancellationToken);
-            return await GetFarmerByIdAsync(vendorId, entity.FarmerCode, cancellationToken);
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            return await ReadFarmerDetailFromResultSetsAsync(reader, cancellationToken);
         }
 
         public async Task<bool> ToggleFarmerStatusAsync(long vendorId, string farmerCodeOrId, CancellationToken cancellationToken = default)
         {
-            var entity = await FindFarmerEntityAsync(vendorId, farmerCodeOrId, cancellationToken);
-            if (entity == null) return false;
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_ToggleFarmerStatus(@p_vendor_id, @p_farmer_id_or_code);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_farmer_id_or_code", farmerCodeOrId.Trim());
 
-            entity.Status = string.Equals(entity.Status, "Active", StringComparison.OrdinalIgnoreCase) ? "Inactive" : "Active";
-            entity.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync(cancellationToken);
-            return true;
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                return SafeBool(reader["Toggled"]);
+            }
+            return false;
         }
 
         public async Task<List<VendorFarmerTransactionDto>> GetFarmerTransactionsAsync(long vendorId, string farmerCodeOrId, CancellationToken cancellationToken = default)
         {
-            var farmer = await FindFarmerEntityAsync(vendorId, farmerCodeOrId, cancellationToken);
-            if (farmer == null) return new List<VendorFarmerTransactionDto>();
+            var list = new List<VendorFarmerTransactionDto>();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_GetFarmerTransactions(@p_vendor_id, @p_farmer_id_or_code);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_farmer_id_or_code", farmerCodeOrId.Trim());
 
-            return await _context.FarmerPurchases.AsNoTracking()
-                .Where(p => p.FarmerId == farmer.Id)
-                .OrderByDescending(p => p.PurchaseDate)
-                .Select(p => new VendorFarmerTransactionDto
-                {
-                    Id = p.Id,
-                    PurchaseCode = p.PurchaseCode,
-                    BillNumber = p.BillNumber,
-                    CropName = p.CropName,
-                    CropVariety = p.CropVariety,
-                    Quantity = p.Quantity,
-                    Unit = p.Unit,
-                    RatePerUnit = p.RatePerUnit,
-                    TotalAmount = p.TotalAmount,
-                    DueAmount = p.DueAmount,
-                    PaymentStatus = p.PaymentStatus,
-                    PurchaseDate = p.PurchaseDate
-                }).ToListAsync(cancellationToken);
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                list.Add(MapFarmerTransaction(reader));
+            }
+            return list;
         }
 
         public async Task<List<VendorFarmerPaymentDto>> GetFarmerPaymentsAsync(long vendorId, string farmerCodeOrId, CancellationToken cancellationToken = default)
         {
-            var farmer = await FindFarmerEntityAsync(vendorId, farmerCodeOrId, cancellationToken);
-            if (farmer == null) return new List<VendorFarmerPaymentDto>();
+            var list = new List<VendorFarmerPaymentDto>();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_GetFarmerPayments(@p_vendor_id, @p_farmer_id_or_code);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_farmer_id_or_code", farmerCodeOrId.Trim());
 
-            return await _context.FarmerPayments.AsNoTracking()
-                .Where(p => p.FarmerId == farmer.Id)
-                .OrderByDescending(p => p.PaymentDate)
-                .Select(p => new VendorFarmerPaymentDto
-                {
-                    Id = p.Id,
-                    PaymentCode = p.PaymentCode,
-                    VoucherNumber = p.VoucherNumber,
-                    Amount = p.Amount,
-                    PaymentMethod = p.PaymentMethod,
-                    PaymentDate = p.PaymentDate,
-                    ReferenceNumber = p.ReferenceNumber,
-                    Status = p.Status,
-                    Notes = p.Notes
-                }).ToListAsync(cancellationToken);
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                list.Add(MapFarmerPayment(reader));
+            }
+            return list;
         }
 
         public async Task<List<VendorFarmerOtpLogDto>> GetFarmerOtpLogsAsync(long vendorId, string farmerCodeOrId, CancellationToken cancellationToken = default)
         {
-            var farmer = await FindFarmerEntityAsync(vendorId, farmerCodeOrId, cancellationToken);
-            if (farmer == null) return new List<VendorFarmerOtpLogDto>();
+            var list = new List<VendorFarmerOtpLogDto>();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_GetFarmerOtpLogs(@p_vendor_id, @p_farmer_id_or_code);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_farmer_id_or_code", farmerCodeOrId.Trim());
 
-            return await _context.FarmerOtpLogs.AsNoTracking()
-                .Where(o => o.FarmerId == farmer.Id)
-                .OrderByDescending(o => o.CreatedAt)
-                .Select(o => new VendorFarmerOtpLogDto
-                {
-                    Id = o.Id,
-                    OtpCode = o.OtpCode,
-                    Purpose = o.Purpose,
-                    ActionDetails = o.ActionDetails,
-                    Status = o.Status,
-                    VerifiedAt = o.VerifiedAt,
-                    CreatedAt = o.CreatedAt
-                }).ToListAsync(cancellationToken);
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                list.Add(MapFarmerOtpLog(reader));
+            }
+            return list;
         }
 
         public async Task<byte[]> ExportFarmersCsvAsync(long vendorId, CancellationToken cancellationToken = default)
@@ -369,14 +258,117 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             return Encoding.UTF8.GetBytes(sb.ToString());
         }
 
-        private async Task<VendorFarmer?> FindFarmerEntityAsync(long vendorId, string farmerCodeOrId, CancellationToken cancellationToken)
+        private static async Task<VendorFarmerDetailDto?> ReadFarmerDetailFromResultSetsAsync(DbDataReader reader, CancellationToken cancellationToken)
         {
-            if (long.TryParse(farmerCodeOrId, out var id))
+            if (!await reader.ReadAsync(cancellationToken))
+                return null;
+
+            var detail = new VendorFarmerDetailDto
             {
-                return await _context.Farmers.FirstOrDefaultAsync(f => f.VendorId == vendorId && (f.Id == id || f.FarmerCode == farmerCodeOrId), cancellationToken);
+                Id = SafeLong(reader["Id"]),
+                FarmerCode = SafeString(reader["FarmerCode"]),
+                FullName = SafeString(reader["FullName"]),
+                FatherOrSpouseName = SafeNullableString(reader["FatherOrSpouseName"]),
+                MobileNumber = SafeString(reader["MobileNumber"]),
+                Email = SafeNullableString(reader["Email"]),
+                Village = SafeString(reader["Village"]),
+                Mandal = SafeNullableString(reader["Mandal"]),
+                District = SafeString(reader["District"]),
+                State = SafeString(reader["State"]),
+                Address = SafeNullableString(reader["Address"]),
+                PinCode = SafeNullableString(reader["PinCode"]),
+                LandAcres = SafeDecimal(reader["LandAcres"]),
+                RegisteredCrops = SafeString(reader["RegisteredCrops"]),
+                BankAccountNumber = SafeNullableString(reader["BankAccountNumber"]),
+                IfscCode = SafeNullableString(reader["IfscCode"]),
+                BankName = SafeNullableString(reader["BankName"]),
+                AccountHolderName = SafeNullableString(reader["AccountHolderName"]),
+                BranchName = SafeNullableString(reader["BranchName"]),
+                AadhaarNumber = SafeNullableString(reader["AadhaarNumber"]),
+                Status = SafeString(reader["Status"]),
+                RegisteredAt = SafeDateTime(reader["RegisteredAt"])
+            };
+
+            var purchases = new List<VendorFarmerTransactionDto>();
+            if (await reader.NextResultAsync(cancellationToken))
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    purchases.Add(MapFarmerTransaction(reader));
+                }
             }
-            return await _context.Farmers.FirstOrDefaultAsync(f => f.VendorId == vendorId && f.FarmerCode == farmerCodeOrId, cancellationToken);
+
+            var payments = new List<VendorFarmerPaymentDto>();
+            if (await reader.NextResultAsync(cancellationToken))
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    payments.Add(MapFarmerPayment(reader));
+                }
+            }
+
+            var otpLogs = new List<VendorFarmerOtpLogDto>();
+            if (await reader.NextResultAsync(cancellationToken))
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    otpLogs.Add(MapFarmerOtpLog(reader));
+                }
+            }
+
+            detail.AssociatedPurchasesCount = purchases.Count;
+            detail.AssociatedPurchasesQuantity = purchases.Sum(p => p.Quantity);
+            detail.ConfirmedPurchasesCount = purchases.Count(p => !string.Equals(p.PaymentStatus, "Draft", StringComparison.OrdinalIgnoreCase));
+            detail.PendingPurchasesCount = purchases.Count(p => string.Equals(p.PaymentStatus, "Draft", StringComparison.OrdinalIgnoreCase));
+            detail.TotalPurchaseAmount = purchases.Sum(p => p.TotalAmount);
+            detail.CompletedPayments = payments.Where(p => string.Equals(p.Status, "Completed", StringComparison.OrdinalIgnoreCase)).Sum(p => p.Amount);
+            detail.PendingPayments = purchases.Sum(p => p.DueAmount);
+            detail.Transactions = purchases;
+            detail.Payments = payments;
+            detail.OtpLogs = otpLogs;
+
+            return detail;
         }
+
+        private static VendorFarmerTransactionDto MapFarmerTransaction(DbDataReader reader) => new()
+        {
+            Id = SafeLong(reader["Id"]),
+            PurchaseCode = SafeString(reader["PurchaseCode"]),
+            BillNumber = SafeString(reader["BillNumber"]),
+            CropName = SafeString(reader["CropName"]),
+            CropVariety = SafeString(reader["CropVariety"]),
+            Quantity = SafeDecimal(reader["Quantity"]),
+            Unit = SafeString(reader["Unit"]),
+            RatePerUnit = SafeDecimal(reader["RatePerUnit"]),
+            TotalAmount = SafeDecimal(reader["TotalAmount"]),
+            DueAmount = SafeDecimal(reader["DueAmount"]),
+            PaymentStatus = SafeString(reader["PaymentStatus"]),
+            PurchaseDate = SafeDateTime(reader["PurchaseDate"])
+        };
+
+        private static VendorFarmerPaymentDto MapFarmerPayment(DbDataReader reader) => new()
+        {
+            Id = SafeLong(reader["Id"]),
+            PaymentCode = SafeString(reader["PaymentCode"]),
+            VoucherNumber = SafeString(reader["VoucherNumber"]),
+            Amount = SafeDecimal(reader["Amount"]),
+            PaymentMethod = SafeString(reader["PaymentMethod"]),
+            PaymentDate = SafeDateTime(reader["PaymentDate"]),
+            ReferenceNumber = SafeNullableString(reader["ReferenceNumber"]),
+            Status = SafeString(reader["Status"]),
+            Notes = SafeNullableString(reader["Notes"])
+        };
+
+        private static VendorFarmerOtpLogDto MapFarmerOtpLog(DbDataReader reader) => new()
+        {
+            Id = SafeLong(reader["Id"]),
+            OtpCode = SafeString(reader["OtpCode"]),
+            Purpose = SafeString(reader["Purpose"]),
+            ActionDetails = SafeString(reader["ActionDetails"]),
+            Status = SafeString(reader["Status"]),
+            VerifiedAt = SafeNullableDateTime(reader["VerifiedAt"]),
+            CreatedAt = SafeDateTime(reader["CreatedAt"])
+        };
 
         // ==========================================
         // MIDDLEMEN DIRECTORY & PROFILE
@@ -384,315 +376,205 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
         public async Task<VendorMiddlemenOverviewDto> GetMiddlemenOverviewAsync(long vendorId, CancellationToken cancellationToken = default)
         {
-            var middlemen = await _context.Middlemen.AsNoTracking()
-                .Where(m => m.VendorId == vendorId)
-                .Include(m => m.Purchases)
-                .ToListAsync(cancellationToken);
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_GetMiddlemenOverview(@p_vendor_id);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
 
-            var totalTx = middlemen.SelectMany(m => m.Purchases).Count();
-            var totalQty = middlemen.SelectMany(m => m.Purchases).Sum(p => p.Quantity);
-            var totalAmt = middlemen.SelectMany(m => m.Purchases).Sum(p => p.TotalAmount);
-            var totalDue = middlemen.SelectMany(m => m.Purchases).Sum(p => p.DueAmount);
-
-            return new VendorMiddlemenOverviewDto
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
             {
-                TotalMiddlemen = middlemen.Count,
-                ActiveMiddlemen = middlemen.Count(m => string.Equals(m.Status, "Active", StringComparison.OrdinalIgnoreCase)),
-                InactiveMiddlemen = middlemen.Count(m => !string.Equals(m.Status, "Active", StringComparison.OrdinalIgnoreCase)),
-                TotalTransactions = totalTx,
-                TotalQuantityProcured = totalQty,
-                QuantityUnit = "Qtl",
-                TotalTransactionAmount = totalAmt,
-                TotalPayablesDue = totalDue
-            };
+                return new VendorMiddlemenOverviewDto
+                {
+                    TotalMiddlemen = SafeInt(reader["TotalMiddlemen"]),
+                    ActiveMiddlemen = SafeInt(reader["ActiveMiddlemen"]),
+                    InactiveMiddlemen = SafeInt(reader["InactiveMiddlemen"]),
+                    TotalTransactions = SafeInt(reader["TotalTransactions"]),
+                    TotalQuantityProcured = SafeDecimal(reader["TotalQuantityProcured"]),
+                    QuantityUnit = SafeString(reader["QuantityUnit"]),
+                    TotalTransactionAmount = SafeDecimal(reader["TotalTransactionAmount"]),
+                    TotalPayablesDue = SafeDecimal(reader["TotalPayablesDue"])
+                };
+            }
+
+            return new VendorMiddlemenOverviewDto { QuantityUnit = "Qtl" };
         }
 
         public async Task<List<VendorMiddlemanSummaryDto>> GetMiddlemenAsync(
             long vendorId, string? search, string? district, string? state, string? status, CancellationToken cancellationToken = default)
         {
-            var query = _context.Middlemen.AsNoTracking()
-                .Where(m => m.VendorId == vendorId)
-                .Include(m => m.Purchases)
-                .AsQueryable();
+            var list = new List<VendorMiddlemanSummaryDto>();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_GetMiddlemen(@p_vendor_id, @p_search, @p_district, @p_state, @p_status);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_search", Clean(search));
+            AddParam(cmd, "@p_district", Clean(district));
+            AddParam(cmd, "@p_state", Clean(state));
+            AddParam(cmd, "@p_status", Clean(status));
 
-            if (!string.IsNullOrWhiteSpace(district) && !district.Equals("All", StringComparison.OrdinalIgnoreCase))
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
             {
-                query = query.Where(m => m.District.ToLower() == district.ToLower());
+                list.Add(new VendorMiddlemanSummaryDto
+                {
+                    Id = SafeLong(reader["Id"]),
+                    MiddlemanCode = SafeString(reader["MiddlemanCode"]),
+                    MiddlemanName = SafeString(reader["MiddlemanName"]),
+                    Email = SafeNullableString(reader["Email"]),
+                    MobileNumber = SafeString(reader["MobileNumber"]),
+                    BusinessName = SafeString(reader["BusinessName"]),
+                    Gstin = SafeString(reader["Gstin"]),
+                    MarketYardLocation = SafeString(reader["MarketYardLocation"]),
+                    District = SafeString(reader["District"]),
+                    State = SafeString(reader["State"]),
+                    TotalTransactions = SafeInt(reader["TotalTransactions"]),
+                    TotalTransactionQuantity = SafeDecimal(reader["TotalTransactionQuantity"]),
+                    QuantityUnit = SafeString(reader["QuantityUnit"]),
+                    TotalTransactionAmount = SafeDecimal(reader["TotalTransactionAmount"]),
+                    DueAmount = SafeDecimal(reader["DueAmount"]),
+                    Status = SafeString(reader["Status"])
+                });
             }
 
-            if (!string.IsNullOrWhiteSpace(state) && !state.Equals("All", StringComparison.OrdinalIgnoreCase))
-            {
-                query = query.Where(m => m.State.ToLower() == state.ToLower());
-            }
-
-            if (!string.IsNullOrWhiteSpace(status) && !status.Equals("All", StringComparison.OrdinalIgnoreCase))
-            {
-                query = query.Where(m => m.Status.ToLower() == status.ToLower());
-            }
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var term = search.Trim().ToLower();
-                query = query.Where(m =>
-                    m.MiddlemanCode.ToLower().Contains(term) ||
-                    m.FullName.ToLower().Contains(term) ||
-                    m.BusinessName.ToLower().Contains(term) ||
-                    m.MobileNumber.ToLower().Contains(term) ||
-                    m.Gstin.ToLower().Contains(term));
-            }
-
-            var list = await query.OrderBy(m => m.MiddlemanCode).ToListAsync(cancellationToken);
-
-            return list.Select(m => new VendorMiddlemanSummaryDto
-            {
-                Id = m.Id,
-                MiddlemanCode = m.MiddlemanCode,
-                MiddlemanName = m.FullName,
-                Email = m.Email,
-                MobileNumber = m.MobileNumber,
-                BusinessName = m.BusinessName,
-                Gstin = m.Gstin,
-                MarketYardLocation = m.MarketYardLocation,
-                District = m.District,
-                State = m.State,
-                TotalTransactions = m.Purchases.Count,
-                TotalTransactionQuantity = m.Purchases.Sum(p => p.Quantity),
-                QuantityUnit = "Qtl",
-                TotalTransactionAmount = m.Purchases.Sum(p => p.TotalAmount),
-                DueAmount = m.Purchases.Sum(p => p.DueAmount),
-                Status = m.Status
-            }).ToList();
+            return list;
         }
 
         public async Task<VendorMiddlemanDetailDto?> GetMiddlemanByIdAsync(long vendorId, string middlemanCodeOrId, CancellationToken cancellationToken = default)
         {
-            var query = _context.Middlemen.AsNoTracking()
-                .Where(m => m.VendorId == vendorId)
-                .Include(m => m.Purchases)
-                .Include(m => m.Payments)
-                .Include(m => m.OtpLogs)
-                .AsQueryable();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_GetMiddlemanById(@p_vendor_id, @p_middleman_id_or_code);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_middleman_id_or_code", middlemanCodeOrId.Trim());
 
-            if (long.TryParse(middlemanCodeOrId, out var id))
-            {
-                query = query.Where(m => m.Id == id || m.MiddlemanCode == middlemanCodeOrId);
-            }
-            else
-            {
-                query = query.Where(m => m.MiddlemanCode == middlemanCodeOrId);
-            }
-
-            var m = await query.FirstOrDefaultAsync(cancellationToken);
-            if (m == null) return null;
-
-            var purchases = m.Purchases.OrderByDescending(p => p.PurchaseDate).ToList();
-            var payments = m.Payments.OrderByDescending(p => p.PaymentDate).ToList();
-            var otpLogs = m.OtpLogs.OrderByDescending(o => o.CreatedAt).ToList();
-
-            var settled = payments.Where(p => string.Equals(p.Status, "Completed", StringComparison.OrdinalIgnoreCase)).Sum(p => p.Amount);
-            var payables = purchases.Sum(p => p.DueAmount);
-
-            return new VendorMiddlemanDetailDto
-            {
-                Id = m.Id,
-                MiddlemanCode = m.MiddlemanCode,
-                FullName = m.FullName,
-                Email = m.Email,
-                MobileNumber = m.MobileNumber,
-                BusinessName = m.BusinessName,
-                Gstin = m.Gstin,
-                Pan = m.Pan,
-                MarketYardLocation = m.MarketYardLocation,
-                District = m.District,
-                State = m.State,
-                PinCode = m.PinCode,
-                OpeningBalance = m.OpeningBalance,
-                Status = m.Status,
-                RegisteredAt = m.RegisteredAt,
-
-                TotalTransactionsCount = purchases.Count,
-                TotalTransactionsQuantity = purchases.Sum(p => p.Quantity),
-                TotalTransactionAmount = purchases.Sum(p => p.TotalAmount),
-                PaymentsSettled = settled,
-                OutstandingPayables = payables,
-
-                Transactions = purchases.Select(p => new VendorMiddlemanTransactionDto
-                {
-                    Id = p.Id,
-                    PurchaseCode = p.PurchaseCode,
-                    BillNumber = p.BillNumber,
-                    CropName = p.CropName,
-                    CropVariety = p.CropVariety,
-                    Quantity = p.Quantity,
-                    Unit = p.Unit,
-                    RatePerUnit = p.RatePerUnit,
-                    TotalAmount = p.TotalAmount,
-                    DueAmount = p.DueAmount,
-                    PaymentStatus = p.PaymentStatus,
-                    PurchaseDate = p.PurchaseDate
-                }).ToList(),
-
-                Payments = payments.Select(p => new VendorMiddlemanPaymentDto
-                {
-                    Id = p.Id,
-                    PaymentCode = p.PaymentCode,
-                    VoucherNumber = p.VoucherNumber,
-                    Amount = p.Amount,
-                    PaymentMethod = p.PaymentMethod,
-                    PaymentDate = p.PaymentDate,
-                    ReferenceNumber = p.ReferenceNumber,
-                    Status = p.Status,
-                    Notes = p.Notes
-                }).ToList(),
-
-                OtpLogs = otpLogs.Select(o => new VendorMiddlemanOtpLogDto
-                {
-                    Id = o.Id,
-                    OtpCode = o.OtpCode,
-                    Purpose = o.Purpose,
-                    ActionDetails = o.ActionDetails,
-                    Status = o.Status,
-                    VerifiedAt = o.VerifiedAt,
-                    CreatedAt = o.CreatedAt
-                }).ToList()
-            };
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            return await ReadMiddlemanDetailFromResultSetsAsync(reader, cancellationToken);
         }
 
         public async Task<VendorMiddlemanDetailDto> CreateMiddlemanAsync(long vendorId, CreateVendorMiddlemanRequest request, CancellationToken cancellationToken = default)
         {
-            var count = await _context.Middlemen.CountAsync(m => m.VendorId == vendorId, cancellationToken);
-            var nextCode = $"MID-{(count + 1):D4}";
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_CreateMiddleman(@p_vendor_id, @p_full_name, @p_email, @p_mobile_number, @p_business_name, @p_gstin, @p_pan, @p_market_yard_location, @p_district, @p_state, @p_pin_code, @p_opening_balance, @p_bank_account_number, @p_account_holder_name, @p_bank_name, @p_ifsc_code, @p_branch_name);";
 
-            var entity = new VendorMiddleman
-            {
-                VendorId = vendorId,
-                MiddlemanCode = nextCode,
-                FullName = request.FullName.Trim(),
-                Email = request.Email?.Trim(),
-                MobileNumber = request.MobileNumber.Trim(),
-                BusinessName = request.BusinessName.Trim(),
-                Gstin = (request.Gstin ?? string.Empty).Trim().ToUpperInvariant(),
-                Pan = (request.Pan ?? string.Empty).Trim().ToUpperInvariant(),
-                MarketYardLocation = request.MarketYardLocation.Trim(),
-                District = request.District.Trim(),
-                State = request.State.Trim(),
-                PinCode = request.PinCode?.Trim(),
-                OpeningBalance = request.OpeningBalance,
-                Status = "Active",
-                RegisteredAt = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_full_name", request.FullName.Trim());
+            AddParam(cmd, "@p_email", Clean(request.Email));
+            AddParam(cmd, "@p_mobile_number", request.MobileNumber.Trim());
+            AddParam(cmd, "@p_business_name", request.BusinessName.Trim());
+            AddParam(cmd, "@p_gstin", (request.Gstin ?? string.Empty).Trim().ToUpperInvariant());
+            AddParam(cmd, "@p_pan", (request.Pan ?? string.Empty).Trim().ToUpperInvariant());
+            AddParam(cmd, "@p_market_yard_location", request.MarketYardLocation.Trim());
+            AddParam(cmd, "@p_district", request.District.Trim());
+            AddParam(cmd, "@p_state", request.State.Trim());
+            AddParam(cmd, "@p_pin_code", Clean(request.PinCode));
+            AddParam(cmd, "@p_opening_balance", request.OpeningBalance);
+            AddParam(cmd, "@p_bank_account_number", Clean(request.BankAccountNumber));
+            AddParam(cmd, "@p_account_holder_name", Clean(request.AccountHolderName));
+            AddParam(cmd, "@p_bank_name", Clean(request.BankName));
+            AddParam(cmd, "@p_ifsc_code", Clean(request.IfscCode));
+            AddParam(cmd, "@p_branch_name", Clean(request.BranchName));
 
-            _context.Middlemen.Add(entity);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return (await GetMiddlemanByIdAsync(vendorId, entity.MiddlemanCode, cancellationToken))!;
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            return (await ReadMiddlemanDetailFromResultSetsAsync(reader, cancellationToken))!;
         }
 
         public async Task<VendorMiddlemanDetailDto?> UpdateMiddlemanAsync(long vendorId, string middlemanCodeOrId, UpdateVendorMiddlemanRequest request, CancellationToken cancellationToken = default)
         {
-            var entity = await FindMiddlemanEntityAsync(vendorId, middlemanCodeOrId, cancellationToken);
-            if (entity == null) return null;
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_UpdateMiddleman(@p_vendor_id, @p_middleman_id_or_code, @p_full_name, @p_email, @p_mobile_number, @p_business_name, @p_gstin, @p_pan, @p_market_yard_location, @p_district, @p_state, @p_pin_code, @p_opening_balance, @p_status, @p_bank_account_number, @p_account_holder_name, @p_bank_name, @p_ifsc_code, @p_branch_name);";
 
-            entity.FullName = request.FullName.Trim();
-            entity.Email = request.Email?.Trim();
-            entity.MobileNumber = request.MobileNumber.Trim();
-            entity.BusinessName = request.BusinessName.Trim();
-            entity.Gstin = (request.Gstin ?? entity.Gstin).Trim().ToUpperInvariant();
-            entity.Pan = (request.Pan ?? entity.Pan).Trim().ToUpperInvariant();
-            entity.MarketYardLocation = request.MarketYardLocation.Trim();
-            entity.District = request.District.Trim();
-            entity.State = request.State.Trim();
-            entity.PinCode = request.PinCode?.Trim();
-            entity.OpeningBalance = request.OpeningBalance;
-            if (!string.IsNullOrWhiteSpace(request.Status))
-            {
-                entity.Status = request.Status.Trim();
-            }
-            entity.UpdatedAt = DateTime.UtcNow;
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_middleman_id_or_code", middlemanCodeOrId.Trim());
+            AddParam(cmd, "@p_full_name", request.FullName.Trim());
+            AddParam(cmd, "@p_email", Clean(request.Email));
+            AddParam(cmd, "@p_mobile_number", request.MobileNumber.Trim());
+            AddParam(cmd, "@p_business_name", request.BusinessName.Trim());
+            AddParam(cmd, "@p_gstin", (request.Gstin ?? string.Empty).Trim().ToUpperInvariant());
+            AddParam(cmd, "@p_pan", (request.Pan ?? string.Empty).Trim().ToUpperInvariant());
+            AddParam(cmd, "@p_market_yard_location", request.MarketYardLocation.Trim());
+            AddParam(cmd, "@p_district", request.District.Trim());
+            AddParam(cmd, "@p_state", request.State.Trim());
+            AddParam(cmd, "@p_pin_code", Clean(request.PinCode));
+            AddParam(cmd, "@p_opening_balance", request.OpeningBalance);
+            AddParam(cmd, "@p_status", Clean(request.Status));
+            AddParam(cmd, "@p_bank_account_number", Clean(request.BankAccountNumber));
+            AddParam(cmd, "@p_account_holder_name", Clean(request.AccountHolderName));
+            AddParam(cmd, "@p_bank_name", Clean(request.BankName));
+            AddParam(cmd, "@p_ifsc_code", Clean(request.IfscCode));
+            AddParam(cmd, "@p_branch_name", Clean(request.BranchName));
 
-            await _context.SaveChangesAsync(cancellationToken);
-            return await GetMiddlemanByIdAsync(vendorId, entity.MiddlemanCode, cancellationToken);
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            return await ReadMiddlemanDetailFromResultSetsAsync(reader, cancellationToken);
         }
 
         public async Task<bool> ToggleMiddlemanStatusAsync(long vendorId, string middlemanCodeOrId, CancellationToken cancellationToken = default)
         {
-            var entity = await FindMiddlemanEntityAsync(vendorId, middlemanCodeOrId, cancellationToken);
-            if (entity == null) return false;
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_ToggleMiddlemanStatus(@p_vendor_id, @p_middleman_id_or_code);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_middleman_id_or_code", middlemanCodeOrId.Trim());
 
-            entity.Status = string.Equals(entity.Status, "Active", StringComparison.OrdinalIgnoreCase) ? "Inactive" : "Active";
-            entity.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync(cancellationToken);
-            return true;
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                return SafeBool(reader["Toggled"]);
+            }
+            return false;
         }
 
         public async Task<List<VendorMiddlemanTransactionDto>> GetMiddlemanTransactionsAsync(long vendorId, string middlemanCodeOrId, CancellationToken cancellationToken = default)
         {
-            var mid = await FindMiddlemanEntityAsync(vendorId, middlemanCodeOrId, cancellationToken);
-            if (mid == null) return new List<VendorMiddlemanTransactionDto>();
+            var list = new List<VendorMiddlemanTransactionDto>();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_GetMiddlemanTransactions(@p_vendor_id, @p_middleman_id_or_code);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_middleman_id_or_code", middlemanCodeOrId.Trim());
 
-            return await _context.MiddlemanPurchases.AsNoTracking()
-                .Where(p => p.MiddlemanId == mid.Id)
-                .OrderByDescending(p => p.PurchaseDate)
-                .Select(p => new VendorMiddlemanTransactionDto
-                {
-                    Id = p.Id,
-                    PurchaseCode = p.PurchaseCode,
-                    BillNumber = p.BillNumber,
-                    CropName = p.CropName,
-                    CropVariety = p.CropVariety,
-                    Quantity = p.Quantity,
-                    Unit = p.Unit,
-                    RatePerUnit = p.RatePerUnit,
-                    TotalAmount = p.TotalAmount,
-                    DueAmount = p.DueAmount,
-                    PaymentStatus = p.PaymentStatus,
-                    PurchaseDate = p.PurchaseDate
-                }).ToListAsync(cancellationToken);
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                list.Add(MapMiddlemanTransaction(reader));
+            }
+            return list;
         }
 
         public async Task<List<VendorMiddlemanPaymentDto>> GetMiddlemanPaymentsAsync(long vendorId, string middlemanCodeOrId, CancellationToken cancellationToken = default)
         {
-            var mid = await FindMiddlemanEntityAsync(vendorId, middlemanCodeOrId, cancellationToken);
-            if (mid == null) return new List<VendorMiddlemanPaymentDto>();
+            var list = new List<VendorMiddlemanPaymentDto>();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_GetMiddlemanPayments(@p_vendor_id, @p_middleman_id_or_code);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_middleman_id_or_code", middlemanCodeOrId.Trim());
 
-            return await _context.MiddlemanPayments.AsNoTracking()
-                .Where(p => p.MiddlemanId == mid.Id)
-                .OrderByDescending(p => p.PaymentDate)
-                .Select(p => new VendorMiddlemanPaymentDto
-                {
-                    Id = p.Id,
-                    PaymentCode = p.PaymentCode,
-                    VoucherNumber = p.VoucherNumber,
-                    Amount = p.Amount,
-                    PaymentMethod = p.PaymentMethod,
-                    PaymentDate = p.PaymentDate,
-                    ReferenceNumber = p.ReferenceNumber,
-                    Status = p.Status,
-                    Notes = p.Notes
-                }).ToListAsync(cancellationToken);
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                list.Add(MapMiddlemanPayment(reader));
+            }
+            return list;
         }
 
         public async Task<List<VendorMiddlemanOtpLogDto>> GetMiddlemanOtpLogsAsync(long vendorId, string middlemanCodeOrId, CancellationToken cancellationToken = default)
         {
-            var mid = await FindMiddlemanEntityAsync(vendorId, middlemanCodeOrId, cancellationToken);
-            if (mid == null) return new List<VendorMiddlemanOtpLogDto>();
+            var list = new List<VendorMiddlemanOtpLogDto>();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_GetMiddlemanOtpLogs(@p_vendor_id, @p_middleman_id_or_code);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_middleman_id_or_code", middlemanCodeOrId.Trim());
 
-            return await _context.MiddlemanOtpLogs.AsNoTracking()
-                .Where(o => o.MiddlemanId == mid.Id)
-                .OrderByDescending(o => o.CreatedAt)
-                .Select(o => new VendorMiddlemanOtpLogDto
-                {
-                    Id = o.Id,
-                    OtpCode = o.OtpCode,
-                    Purpose = o.Purpose,
-                    ActionDetails = o.ActionDetails,
-                    Status = o.Status,
-                    VerifiedAt = o.VerifiedAt,
-                    CreatedAt = o.CreatedAt
-                }).ToListAsync(cancellationToken);
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                list.Add(MapMiddlemanOtpLog(reader));
+            }
+            return list;
         }
 
         public async Task<byte[]> ExportMiddlemenCsvAsync(long vendorId, CancellationToken cancellationToken = default)
@@ -709,14 +591,113 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             return Encoding.UTF8.GetBytes(sb.ToString());
         }
 
-        private async Task<VendorMiddleman?> FindMiddlemanEntityAsync(long vendorId, string middlemanCodeOrId, CancellationToken cancellationToken)
+        private static async Task<VendorMiddlemanDetailDto?> ReadMiddlemanDetailFromResultSetsAsync(DbDataReader reader, CancellationToken cancellationToken)
         {
-            if (long.TryParse(middlemanCodeOrId, out var id))
+            if (!await reader.ReadAsync(cancellationToken))
+                return null;
+
+            var detail = new VendorMiddlemanDetailDto
             {
-                return await _context.Middlemen.FirstOrDefaultAsync(m => m.VendorId == vendorId && (m.Id == id || m.MiddlemanCode == middlemanCodeOrId), cancellationToken);
+                Id = SafeLong(reader["Id"]),
+                MiddlemanCode = SafeString(reader["MiddlemanCode"]),
+                FullName = SafeString(reader["FullName"]),
+                Email = SafeNullableString(reader["Email"]),
+                MobileNumber = SafeString(reader["MobileNumber"]),
+                BusinessName = SafeString(reader["BusinessName"]),
+                Gstin = SafeString(reader["Gstin"]),
+                Pan = SafeString(reader["Pan"]),
+                MarketYardLocation = SafeString(reader["MarketYardLocation"]),
+                District = SafeString(reader["District"]),
+                State = SafeString(reader["State"]),
+                PinCode = SafeNullableString(reader["PinCode"]),
+                OpeningBalance = SafeDecimal(reader["OpeningBalance"]),
+                BankAccountNumber = SafeNullableString(reader["BankAccountNumber"]),
+                AccountHolderName = SafeNullableString(reader["AccountHolderName"]),
+                BankName = SafeNullableString(reader["BankName"]),
+                IfscCode = SafeNullableString(reader["IfscCode"]),
+                BranchName = SafeNullableString(reader["BranchName"]),
+                Status = SafeString(reader["Status"]),
+                RegisteredAt = SafeDateTime(reader["RegisteredAt"])
+            };
+
+            var purchases = new List<VendorMiddlemanTransactionDto>();
+            if (await reader.NextResultAsync(cancellationToken))
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    purchases.Add(MapMiddlemanTransaction(reader));
+                }
             }
-            return await _context.Middlemen.FirstOrDefaultAsync(m => m.VendorId == vendorId && m.MiddlemanCode == middlemanCodeOrId, cancellationToken);
+
+            var payments = new List<VendorMiddlemanPaymentDto>();
+            if (await reader.NextResultAsync(cancellationToken))
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    payments.Add(MapMiddlemanPayment(reader));
+                }
+            }
+
+            var otpLogs = new List<VendorMiddlemanOtpLogDto>();
+            if (await reader.NextResultAsync(cancellationToken))
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    otpLogs.Add(MapMiddlemanOtpLog(reader));
+                }
+            }
+
+            detail.TotalTransactionsCount = purchases.Count;
+            detail.TotalTransactionsQuantity = purchases.Sum(p => p.Quantity);
+            detail.TotalTransactionAmount = purchases.Sum(p => p.TotalAmount);
+            detail.PaymentsSettled = payments.Where(p => string.Equals(p.Status, "Completed", StringComparison.OrdinalIgnoreCase)).Sum(p => p.Amount);
+            detail.OutstandingPayables = purchases.Sum(p => p.DueAmount);
+            detail.Transactions = purchases;
+            detail.Payments = payments;
+            detail.OtpLogs = otpLogs;
+
+            return detail;
         }
+
+        private static VendorMiddlemanTransactionDto MapMiddlemanTransaction(DbDataReader reader) => new()
+        {
+            Id = SafeLong(reader["Id"]),
+            PurchaseCode = SafeString(reader["PurchaseCode"]),
+            BillNumber = SafeString(reader["BillNumber"]),
+            CropName = SafeString(reader["CropName"]),
+            CropVariety = SafeString(reader["CropVariety"]),
+            Quantity = SafeDecimal(reader["Quantity"]),
+            Unit = SafeString(reader["Unit"]),
+            RatePerUnit = SafeDecimal(reader["RatePerUnit"]),
+            TotalAmount = SafeDecimal(reader["TotalAmount"]),
+            DueAmount = SafeDecimal(reader["DueAmount"]),
+            PaymentStatus = SafeString(reader["PaymentStatus"]),
+            PurchaseDate = SafeDateTime(reader["PurchaseDate"])
+        };
+
+        private static VendorMiddlemanPaymentDto MapMiddlemanPayment(DbDataReader reader) => new()
+        {
+            Id = SafeLong(reader["Id"]),
+            PaymentCode = SafeString(reader["PaymentCode"]),
+            VoucherNumber = SafeString(reader["VoucherNumber"]),
+            Amount = SafeDecimal(reader["Amount"]),
+            PaymentMethod = SafeString(reader["PaymentMethod"]),
+            PaymentDate = SafeDateTime(reader["PaymentDate"]),
+            ReferenceNumber = SafeNullableString(reader["ReferenceNumber"]),
+            Status = SafeString(reader["Status"]),
+            Notes = SafeNullableString(reader["Notes"])
+        };
+
+        private static VendorMiddlemanOtpLogDto MapMiddlemanOtpLog(DbDataReader reader) => new()
+        {
+            Id = SafeLong(reader["Id"]),
+            OtpCode = SafeString(reader["OtpCode"]),
+            Purpose = SafeString(reader["Purpose"]),
+            ActionDetails = SafeString(reader["ActionDetails"]),
+            Status = SafeString(reader["Status"]),
+            VerifiedAt = SafeNullableDateTime(reader["VerifiedAt"]),
+            CreatedAt = SafeDateTime(reader["CreatedAt"])
+        };
 
         // ==========================================
         // CUSTOMERS DIRECTORY
@@ -724,205 +705,156 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
         public async Task<VendorCustomersOverviewDto> GetCustomersOverviewAsync(long vendorId, CancellationToken cancellationToken = default)
         {
-            var customers = await _context.Customers.AsNoTracking()
-                .Where(c => c.VendorId == vendorId)
-                .Include(c => c.Orders)
-                .ToListAsync(cancellationToken);
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_GetCustomersOverview(@p_vendor_id);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
 
-            var totalOrders = customers.SelectMany(c => c.Orders).Count();
-            var totalSales = customers.SelectMany(c => c.Orders).Sum(o => o.TotalAmount);
-            var totalDue = customers.SelectMany(c => c.Orders).Sum(o => o.DueAmount);
-
-            return new VendorCustomersOverviewDto
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
             {
-                TotalCustomers = customers.Count,
-                ActiveCustomers = customers.Count(c => string.Equals(c.Status, "Active", StringComparison.OrdinalIgnoreCase)),
-                InactiveCustomers = customers.Count(c => !string.Equals(c.Status, "Active", StringComparison.OrdinalIgnoreCase)),
-                TotalOrders = totalOrders,
-                TotalSalesAmount = totalSales,
-                TotalReceivablesDue = totalDue
-            };
+                return new VendorCustomersOverviewDto
+                {
+                    TotalCustomers = SafeInt(reader["TotalCustomers"]),
+                    ActiveCustomers = SafeInt(reader["ActiveCustomers"]),
+                    InactiveCustomers = SafeInt(reader["InactiveCustomers"]),
+                    TotalOrders = SafeInt(reader["TotalOrders"]),
+                    TotalSalesAmount = SafeDecimal(reader["TotalSalesAmount"]),
+                    TotalReceivablesDue = SafeDecimal(reader["TotalReceivablesDue"])
+                };
+            }
+
+            return new VendorCustomersOverviewDto();
         }
 
         public async Task<List<VendorCustomerSummaryDto>> GetCustomersAsync(
             long vendorId, string? search, string? district, string? state, string? status, CancellationToken cancellationToken = default)
         {
-            var query = _context.Customers.AsNoTracking()
-                .Where(c => c.VendorId == vendorId)
-                .Include(c => c.Orders)
-                .AsQueryable();
+            var list = new List<VendorCustomerSummaryDto>();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_GetCustomers(@p_vendor_id, @p_search, @p_district, @p_state, @p_status);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_search", Clean(search));
+            AddParam(cmd, "@p_district", Clean(district));
+            AddParam(cmd, "@p_state", Clean(state));
+            AddParam(cmd, "@p_status", Clean(status));
 
-            if (!string.IsNullOrWhiteSpace(district) && !district.Equals("All", StringComparison.OrdinalIgnoreCase))
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
             {
-                query = query.Where(c => c.District.ToLower() == district.ToLower());
+                list.Add(new VendorCustomerSummaryDto
+                {
+                    Id = SafeLong(reader["Id"]),
+                    CustomerCode = SafeString(reader["CustomerCode"]),
+                    CustomerName = SafeString(reader["CustomerName"]),
+                    BusinessName = SafeString(reader["BusinessName"]),
+                    CustomerType = SafeString(reader["CustomerType"]),
+                    MobileNumber = SafeString(reader["MobileNumber"]),
+                    Email = SafeNullableString(reader["Email"]),
+                    Address = SafeString(reader["Address"]),
+                    District = SafeString(reader["District"]),
+                    State = SafeString(reader["State"]),
+                    TotalOrders = SafeInt(reader["TotalOrders"]),
+                    TotalPurchaseQuantity = SafeDecimal(reader["TotalPurchaseQuantity"]),
+                    QuantityUnit = SafeString(reader["QuantityUnit"]),
+                    TotalSalesAmount = SafeDecimal(reader["TotalSalesAmount"]),
+                    ReceivableAmount = SafeDecimal(reader["ReceivableAmount"]),
+                    Status = SafeString(reader["Status"])
+                });
             }
 
-            if (!string.IsNullOrWhiteSpace(state) && !state.Equals("All", StringComparison.OrdinalIgnoreCase))
-            {
-                query = query.Where(c => c.State.ToLower() == state.ToLower());
-            }
-
-            if (!string.IsNullOrWhiteSpace(status) && !status.Equals("All", StringComparison.OrdinalIgnoreCase))
-            {
-                query = query.Where(c => c.Status.ToLower() == status.ToLower());
-            }
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var term = search.Trim().ToLower();
-                query = query.Where(c =>
-                    c.CustomerCode.ToLower().Contains(term) ||
-                    c.CustomerName.ToLower().Contains(term) ||
-                    c.BusinessName.ToLower().Contains(term) ||
-                    c.MobileNumber.ToLower().Contains(term) ||
-                    c.District.ToLower().Contains(term));
-            }
-
-            var list = await query.OrderBy(c => c.CustomerCode).ToListAsync(cancellationToken);
-
-            return list.Select(c => new VendorCustomerSummaryDto
-            {
-                Id = c.Id,
-                CustomerCode = c.CustomerCode,
-                CustomerName = c.CustomerName,
-                BusinessName = c.BusinessName,
-                CustomerType = c.CustomerType,
-                MobileNumber = c.MobileNumber,
-                Email = c.Email,
-                Address = c.Address,
-                District = c.District,
-                State = c.State,
-                TotalOrders = c.Orders.Count,
-                TotalPurchaseQuantity = c.Orders.Sum(o => o.Quantity),
-                QuantityUnit = c.Orders.FirstOrDefault()?.Unit ?? "Quintal",
-                TotalSalesAmount = c.Orders.Sum(o => o.TotalAmount),
-                ReceivableAmount = c.Orders.Sum(o => o.DueAmount),
-                Status = c.Status
-            }).ToList();
+            return list;
         }
 
         public async Task<VendorCustomerDetailDto?> GetCustomerByIdAsync(long vendorId, string customerCodeOrId, CancellationToken cancellationToken = default)
         {
-            var query = _context.Customers.AsNoTracking()
-                .Where(c => c.VendorId == vendorId)
-                .Include(c => c.Orders)
-                .AsQueryable();
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_GetCustomerById(@p_vendor_id, @p_customer_id_or_code);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_customer_id_or_code", customerCodeOrId.Trim());
 
-            if (long.TryParse(customerCodeOrId, out var id))
-            {
-                query = query.Where(c => c.Id == id || c.CustomerCode == customerCodeOrId);
-            }
-            else
-            {
-                query = query.Where(c => c.CustomerCode == customerCodeOrId);
-            }
-
-            var c = await query.FirstOrDefaultAsync(cancellationToken);
-            if (c == null) return null;
-
-            return new VendorCustomerDetailDto
-            {
-                Id = c.Id,
-                CustomerCode = c.CustomerCode,
-                CustomerName = c.CustomerName,
-                BusinessName = c.BusinessName,
-                CustomerType = c.CustomerType,
-                MobileNumber = c.MobileNumber,
-                Email = c.Email,
-                Address = c.Address,
-                District = c.District,
-                State = c.State,
-                PinCode = c.PinCode,
-                Gstin = c.Gstin,
-                CreditLimit = c.CreditLimit,
-                TotalOrders = c.Orders.Count,
-                TotalPurchaseQuantity = c.Orders.Sum(o => o.Quantity),
-                QuantityUnit = c.Orders.FirstOrDefault()?.Unit ?? "Quintal",
-                TotalSalesAmount = c.Orders.Sum(o => o.TotalAmount),
-                ReceivableAmount = c.Orders.Sum(o => o.DueAmount),
-                Status = c.Status,
-                Orders = c.Orders.OrderByDescending(o => o.OrderDate).Select(o => new VendorCustomerOrderDto
-                {
-                    Id = o.Id,
-                    OrderCode = o.OrderCode,
-                    ProductName = o.ProductName,
-                    Quantity = o.Quantity,
-                    Unit = o.Unit,
-                    TotalAmount = o.TotalAmount,
-                    DueAmount = o.DueAmount,
-                    OrderStatus = o.OrderStatus,
-                    OrderDate = o.OrderDate
-                }).ToList()
-            };
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            return await ReadCustomerDetailFromResultSetsAsync(reader, cancellationToken);
         }
 
         public async Task<VendorCustomerDetailDto> CreateCustomerAsync(long vendorId, CreateVendorCustomerRequest request, CancellationToken cancellationToken = default)
         {
-            var count = await _context.Customers.CountAsync(c => c.VendorId == vendorId, cancellationToken);
-            var nextCode = $"CUST-{(count + 1):D4}";
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_CreateCustomer(@p_vendor_id, @p_customer_name, @p_business_name, @p_customer_type, @p_mobile_number, @p_email, @p_address, @p_district, @p_state, @p_pin_code, @p_gstin, @p_credit_limit, @p_pan, @p_opening_balance, @p_bank_account_number, @p_account_holder_name, @p_bank_name, @p_ifsc_code, @p_branch_name);";
 
-            var entity = new VendorCustomer
-            {
-                VendorId = vendorId,
-                CustomerCode = nextCode,
-                CustomerName = request.CustomerName.Trim(),
-                BusinessName = request.BusinessName.Trim(),
-                CustomerType = request.CustomerType.Trim(),
-                MobileNumber = request.MobileNumber.Trim(),
-                Email = request.Email?.Trim(),
-                Address = request.Address.Trim(),
-                District = request.District.Trim(),
-                State = request.State.Trim(),
-                PinCode = request.PinCode?.Trim(),
-                Gstin = request.Gstin?.Trim().ToUpperInvariant(),
-                CreditLimit = request.CreditLimit,
-                Status = "Active",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_customer_name", request.CustomerName.Trim());
+            AddParam(cmd, "@p_business_name", request.BusinessName.Trim());
+            AddParam(cmd, "@p_customer_type", request.CustomerType.Trim());
+            AddParam(cmd, "@p_mobile_number", request.MobileNumber.Trim());
+            AddParam(cmd, "@p_email", Clean(request.Email));
+            AddParam(cmd, "@p_address", request.Address.Trim());
+            AddParam(cmd, "@p_district", request.District.Trim());
+            AddParam(cmd, "@p_state", request.State.Trim());
+            AddParam(cmd, "@p_pin_code", Clean(request.PinCode));
+            AddParam(cmd, "@p_gstin", Clean(request.Gstin)?.ToUpperInvariant());
+            AddParam(cmd, "@p_credit_limit", request.CreditLimit);
+            AddParam(cmd, "@p_pan", Clean(request.Pan)?.ToUpperInvariant());
+            AddParam(cmd, "@p_opening_balance", request.OpeningBalance);
+            AddParam(cmd, "@p_bank_account_number", Clean(request.BankAccountNumber));
+            AddParam(cmd, "@p_account_holder_name", Clean(request.AccountHolderName));
+            AddParam(cmd, "@p_bank_name", Clean(request.BankName));
+            AddParam(cmd, "@p_ifsc_code", Clean(request.IfscCode));
+            AddParam(cmd, "@p_branch_name", Clean(request.BranchName));
 
-            _context.Customers.Add(entity);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return (await GetCustomerByIdAsync(vendorId, entity.CustomerCode, cancellationToken))!;
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            return (await ReadCustomerDetailFromResultSetsAsync(reader, cancellationToken))!;
         }
 
         public async Task<VendorCustomerDetailDto?> UpdateCustomerAsync(long vendorId, string customerCodeOrId, UpdateVendorCustomerRequest request, CancellationToken cancellationToken = default)
         {
-            var entity = await FindCustomerEntityAsync(vendorId, customerCodeOrId, cancellationToken);
-            if (entity == null) return null;
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_UpdateCustomer(@p_vendor_id, @p_customer_id_or_code, @p_customer_name, @p_business_name, @p_customer_type, @p_mobile_number, @p_email, @p_address, @p_district, @p_state, @p_pin_code, @p_gstin, @p_credit_limit, @p_status, @p_pan, @p_opening_balance, @p_bank_account_number, @p_account_holder_name, @p_bank_name, @p_ifsc_code, @p_branch_name);";
 
-            entity.CustomerName = request.CustomerName.Trim();
-            entity.BusinessName = request.BusinessName.Trim();
-            entity.CustomerType = request.CustomerType.Trim();
-            entity.MobileNumber = request.MobileNumber.Trim();
-            entity.Email = request.Email?.Trim();
-            entity.Address = request.Address.Trim();
-            entity.District = request.District.Trim();
-            entity.State = request.State.Trim();
-            entity.PinCode = request.PinCode?.Trim();
-            entity.Gstin = request.Gstin?.Trim().ToUpperInvariant();
-            entity.CreditLimit = request.CreditLimit;
-            if (!string.IsNullOrWhiteSpace(request.Status))
-            {
-                entity.Status = request.Status.Trim();
-            }
-            entity.UpdatedAt = DateTime.UtcNow;
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_customer_id_or_code", customerCodeOrId.Trim());
+            AddParam(cmd, "@p_customer_name", request.CustomerName.Trim());
+            AddParam(cmd, "@p_business_name", request.BusinessName.Trim());
+            AddParam(cmd, "@p_customer_type", request.CustomerType.Trim());
+            AddParam(cmd, "@p_mobile_number", request.MobileNumber.Trim());
+            AddParam(cmd, "@p_email", Clean(request.Email));
+            AddParam(cmd, "@p_address", request.Address.Trim());
+            AddParam(cmd, "@p_district", request.District.Trim());
+            AddParam(cmd, "@p_state", request.State.Trim());
+            AddParam(cmd, "@p_pin_code", Clean(request.PinCode));
+            AddParam(cmd, "@p_gstin", Clean(request.Gstin)?.ToUpperInvariant());
+            AddParam(cmd, "@p_credit_limit", request.CreditLimit);
+            AddParam(cmd, "@p_status", Clean(request.Status));
+            AddParam(cmd, "@p_pan", Clean(request.Pan)?.ToUpperInvariant());
+            AddParam(cmd, "@p_opening_balance", request.OpeningBalance);
+            AddParam(cmd, "@p_bank_account_number", Clean(request.BankAccountNumber));
+            AddParam(cmd, "@p_account_holder_name", Clean(request.AccountHolderName));
+            AddParam(cmd, "@p_bank_name", Clean(request.BankName));
+            AddParam(cmd, "@p_ifsc_code", Clean(request.IfscCode));
+            AddParam(cmd, "@p_branch_name", Clean(request.BranchName));
 
-            await _context.SaveChangesAsync(cancellationToken);
-            return await GetCustomerByIdAsync(vendorId, entity.CustomerCode, cancellationToken);
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            return await ReadCustomerDetailFromResultSetsAsync(reader, cancellationToken);
         }
 
         public async Task<bool> ToggleCustomerStatusAsync(long vendorId, string customerCodeOrId, CancellationToken cancellationToken = default)
         {
-            var entity = await FindCustomerEntityAsync(vendorId, customerCodeOrId, cancellationToken);
-            if (entity == null) return false;
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorPartners_ToggleCustomerStatus(@p_vendor_id, @p_customer_id_or_code);";
+            AddParam(cmd, "@p_vendor_id", vendorId);
+            AddParam(cmd, "@p_customer_id_or_code", customerCodeOrId.Trim());
 
-            entity.Status = string.Equals(entity.Status, "Active", StringComparison.OrdinalIgnoreCase) ? "Inactive" : "Active";
-            entity.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync(cancellationToken);
-            return true;
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                return SafeBool(reader["Toggled"]);
+            }
+            return false;
         }
 
         public async Task<byte[]> ExportCustomersCsvAsync(long vendorId, CancellationToken cancellationToken = default)
@@ -939,13 +871,83 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             return Encoding.UTF8.GetBytes(sb.ToString());
         }
 
-        private async Task<VendorCustomer?> FindCustomerEntityAsync(long vendorId, string customerCodeOrId, CancellationToken cancellationToken)
+        private static async Task<VendorCustomerDetailDto?> ReadCustomerDetailFromResultSetsAsync(DbDataReader reader, CancellationToken cancellationToken)
         {
-            if (long.TryParse(customerCodeOrId, out var id))
+            if (!await reader.ReadAsync(cancellationToken))
+                return null;
+
+            var detail = new VendorCustomerDetailDto
             {
-                return await _context.Customers.FirstOrDefaultAsync(c => c.VendorId == vendorId && (c.Id == id || c.CustomerCode == customerCodeOrId), cancellationToken);
+                Id = SafeLong(reader["Id"]),
+                CustomerCode = SafeString(reader["CustomerCode"]),
+                CustomerName = SafeString(reader["CustomerName"]),
+                BusinessName = SafeString(reader["BusinessName"]),
+                CustomerType = SafeString(reader["CustomerType"]),
+                MobileNumber = SafeString(reader["MobileNumber"]),
+                Email = SafeNullableString(reader["Email"]),
+                Address = SafeString(reader["Address"]),
+                District = SafeString(reader["District"]),
+                State = SafeString(reader["State"]),
+                PinCode = SafeNullableString(reader["PinCode"]),
+                Gstin = SafeNullableString(reader["Gstin"]),
+                Pan = SafeNullableString(reader["Pan"]),
+                CreditLimit = SafeDecimal(reader["CreditLimit"]),
+                OpeningBalance = SafeDecimal(reader["OpeningBalance"]),
+                BankAccountNumber = SafeNullableString(reader["BankAccountNumber"]),
+                AccountHolderName = SafeNullableString(reader["AccountHolderName"]),
+                BankName = SafeNullableString(reader["BankName"]),
+                IfscCode = SafeNullableString(reader["IfscCode"]),
+                BranchName = SafeNullableString(reader["BranchName"]),
+                Status = SafeString(reader["Status"])
+            };
+
+            var orders = new List<VendorCustomerOrderDto>();
+            if (await reader.NextResultAsync(cancellationToken))
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    orders.Add(new VendorCustomerOrderDto
+                    {
+                        Id = SafeLong(reader["Id"]),
+                        OrderCode = SafeString(reader["OrderCode"]),
+                        ProductName = SafeString(reader["ProductName"]),
+                        Quantity = SafeDecimal(reader["Quantity"]),
+                        Unit = SafeString(reader["Unit"]),
+                        TotalAmount = SafeDecimal(reader["TotalAmount"]),
+                        DueAmount = SafeDecimal(reader["DueAmount"]),
+                        OrderStatus = SafeString(reader["OrderStatus"]),
+                        OrderDate = SafeDateTime(reader["OrderDate"])
+                    });
+                }
             }
-            return await _context.Customers.FirstOrDefaultAsync(c => c.VendorId == vendorId && c.CustomerCode == customerCodeOrId, cancellationToken);
+
+            detail.TotalOrders = orders.Count;
+            detail.TotalPurchaseQuantity = orders.Sum(o => o.Quantity);
+            detail.QuantityUnit = orders.FirstOrDefault()?.Unit ?? "Quintal";
+            detail.TotalSalesAmount = orders.Sum(o => o.TotalAmount);
+            detail.ReceivableAmount = orders.Sum(o => o.DueAmount);
+            detail.Orders = orders;
+
+            return detail;
         }
+
+        private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+        private static void AddParam(DbCommand cmd, string name, object? value)
+        {
+            var p = cmd.CreateParameter();
+            p.ParameterName = name;
+            p.Value = value ?? DBNull.Value;
+            cmd.Parameters.Add(p);
+        }
+
+        private static string SafeString(object? val) => val == null || val is DBNull ? string.Empty : val.ToString() ?? string.Empty;
+        private static string? SafeNullableString(object? val) => val == null || val is DBNull ? null : val.ToString();
+        private static decimal SafeDecimal(object? val) => val == null || val is DBNull ? 0m : Convert.ToDecimal(val, CultureInfo.InvariantCulture);
+        private static int SafeInt(object? val) => val == null || val is DBNull ? 0 : Convert.ToInt32(val, CultureInfo.InvariantCulture);
+        private static long SafeLong(object? val) => val == null || val is DBNull ? 0L : Convert.ToInt64(val, CultureInfo.InvariantCulture);
+        private static DateTime SafeDateTime(object? val) => val == null || val is DBNull ? DateTime.MinValue : Convert.ToDateTime(val, CultureInfo.InvariantCulture);
+        private static DateTime? SafeNullableDateTime(object? val) => val == null || val is DBNull ? null : Convert.ToDateTime(val, CultureInfo.InvariantCulture);
+        private static bool SafeBool(object? val) => val != null && !(val is DBNull) && (val is bool b ? b : Convert.ToInt32(val, CultureInfo.InvariantCulture) != 0);
     }
 }

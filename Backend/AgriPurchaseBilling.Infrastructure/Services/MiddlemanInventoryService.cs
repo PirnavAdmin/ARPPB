@@ -26,7 +26,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             var batches = await _context.MiddlemanInventories
                 .AsNoTracking()
                 .Where(x => x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0)
-                .OrderBy(x => x.Id)
+                .OrderByDescending(x => x.Id)
                 .ToListAsync();
 
             var totalPurchased = batches.Sum(x => x.PurchasedQuantity);
@@ -88,10 +88,10 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
             var totalItems = await queryable.CountAsync();
             var page = query.Page > 0 ? query.Page : 1;
-            var pageSize = query.PageSize > 0 ? query.PageSize : 8;
+            var pageSize = query.PageSize > 0 ? query.PageSize : 1000;
 
             var items = await queryable
-                .OrderBy(x => x.Id)
+                .OrderByDescending(x => x.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using AgriPurchaseBilling.Application.DTOs;
 using AgriPurchaseBilling.Application.DTOs.VendorOperations;
 using AgriPurchaseBilling.Application.Interfaces;
+using AgriPurchaseBilling.Application.Interfaces.VendorPortal;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,30 +12,35 @@ namespace AgriPurchaseBilling.Api.Controllers
     [ApiController]
     [Authorize(Roles = "Vendor")]
     [Route("api/v1/vendor/partners/customers")]
+    [Route("api/v1/vendor/customers")]
     [Produces("application/json")]
     public sealed class VendorCustomersController : ControllerBase
     {
         private readonly IVendorPartnersService _partnersService;
+        private readonly IVendorResolver _vendorResolver;
 
-        public VendorCustomersController(IVendorPartnersService partnersService)
+        public VendorCustomersController(IVendorPartnersService partnersService, IVendorResolver vendorResolver)
         {
             _partnersService = partnersService;
+            _vendorResolver = vendorResolver;
         }
 
-        private long CurrentVendorId
+        private async Task<long> ResolveVendorIdAsync(CancellationToken cancellationToken)
         {
-            get
+            var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (long.TryParse(value, out var userId) && userId > 0)
             {
-                var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                return long.TryParse(value, out var userId) && userId > 0 ? userId : 1;
+                return await _vendorResolver.GetVendorIdAsync(userId, cancellationToken);
             }
+            return 1;
         }
 
         [HttpGet("overview")]
         [ProducesResponseType(typeof(ApiResponse<VendorCustomersOverviewDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetOverview(CancellationToken cancellationToken)
         {
-            var overview = await _partnersService.GetCustomersOverviewAsync(CurrentVendorId, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var overview = await _partnersService.GetCustomersOverviewAsync(vendorId, cancellationToken);
             return Ok(ApiResponse<VendorCustomersOverviewDto>.Ok(overview, "Customers overview retrieved successfully."));
         }
 
@@ -47,8 +53,9 @@ namespace AgriPurchaseBilling.Api.Controllers
             [FromQuery] string? status = null,
             CancellationToken cancellationToken = default)
         {
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
             var customers = await _partnersService.GetCustomersAsync(
-                CurrentVendorId, search, district, state, status, cancellationToken);
+                vendorId, search, district, state, status, cancellationToken);
             return Ok(ApiResponse<List<VendorCustomerSummaryDto>>.Ok(customers, "Customers list retrieved successfully."));
         }
 
@@ -57,7 +64,8 @@ namespace AgriPurchaseBilling.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<VendorCustomerDetailDto>), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetCustomerById(string customerId, CancellationToken cancellationToken)
         {
-            var customer = await _partnersService.GetCustomerByIdAsync(CurrentVendorId, customerId, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var customer = await _partnersService.GetCustomerByIdAsync(vendorId, customerId, cancellationToken);
             return customer == null
                 ? NotFound(ApiResponse<VendorCustomerDetailDto>.Fail("Customer not found."))
                 : Ok(ApiResponse<VendorCustomerDetailDto>.Ok(customer, "Customer details retrieved successfully."));
@@ -70,7 +78,8 @@ namespace AgriPurchaseBilling.Api.Controllers
             [FromBody] CreateVendorCustomerRequest request,
             CancellationToken cancellationToken)
         {
-            var created = await _partnersService.CreateCustomerAsync(CurrentVendorId, request, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var created = await _partnersService.CreateCustomerAsync(vendorId, request, cancellationToken);
             return CreatedAtAction(nameof(GetCustomerById), new { customerId = created.CustomerCode },
                 ApiResponse<VendorCustomerDetailDto>.Ok(created, "Customer registered successfully."));
         }
@@ -83,7 +92,8 @@ namespace AgriPurchaseBilling.Api.Controllers
             [FromBody] UpdateVendorCustomerRequest request,
             CancellationToken cancellationToken)
         {
-            var updated = await _partnersService.UpdateCustomerAsync(CurrentVendorId, customerId, request, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var updated = await _partnersService.UpdateCustomerAsync(vendorId, customerId, request, cancellationToken);
             return updated == null
                 ? NotFound(ApiResponse<VendorCustomerDetailDto>.Fail("Customer not found."))
                 : Ok(ApiResponse<VendorCustomerDetailDto>.Ok(updated, "Customer profile updated successfully."));
@@ -94,7 +104,8 @@ namespace AgriPurchaseBilling.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> ToggleStatus(string customerId, CancellationToken cancellationToken)
         {
-            var success = await _partnersService.ToggleCustomerStatusAsync(CurrentVendorId, customerId, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var success = await _partnersService.ToggleCustomerStatusAsync(vendorId, customerId, cancellationToken);
             return success
                 ? Ok(ApiResponse<bool>.Ok(true, "Customer status toggled successfully."))
                 : NotFound(ApiResponse<bool>.Fail("Customer not found."));
@@ -103,7 +114,8 @@ namespace AgriPurchaseBilling.Api.Controllers
         [HttpGet("export")]
         public async Task<IActionResult> ExportCsv(CancellationToken cancellationToken)
         {
-            var csvBytes = await _partnersService.ExportCustomersCsvAsync(CurrentVendorId, cancellationToken);
+            var vendorId = await ResolveVendorIdAsync(cancellationToken);
+            var csvBytes = await _partnersService.ExportCustomersCsvAsync(vendorId, cancellationToken);
             return File(csvBytes, "text/csv", $"customers-directory-{DateTime.UtcNow:yyyyMMdd}.csv");
         }
     }

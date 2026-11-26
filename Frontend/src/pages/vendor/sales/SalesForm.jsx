@@ -69,7 +69,10 @@ export default function SalesForm({ preselectedProductId = '', preselectedCustom
       };
     }
     const matchingBatches = productBatches.filter(
-      (b) => b.productId === found.id && b.availableQuantity > 0
+      (b) =>
+        (b.productId === found.id ||
+          String(b.productName).trim().toLowerCase() === String(found.productName).trim().toLowerCase()) &&
+        b.availableQuantity > 0
     );
     const defaultBatch = matchingBatches[0] || null;
     return {
@@ -147,7 +150,10 @@ export default function SalesForm({ preselectedProductId = '', preselectedCustom
     const prod = sellableProducts.find((p) => p.id === newProductId);
     if (!prod) return;
     const batches = productBatches.filter(
-      (b) => b.productId === prod.id && b.availableQuantity > 0
+      (b) =>
+        (b.productId === prod.id ||
+          String(b.productName).trim().toLowerCase() === String(prod.productName).trim().toLowerCase()) &&
+        b.availableQuantity > 0
     );
     const firstBatch = batches[0] || null;
     const maxAvail = firstBatch ? firstBatch.availableQuantity : prod.availableQuantity;
@@ -211,7 +217,10 @@ export default function SalesForm({ preselectedProductId = '', preselectedCustom
       sellableProducts[0];
     if (!unusedProd) return;
     const batches = productBatches.filter(
-      (b) => b.productId === unusedProd.id && b.availableQuantity > 0
+      (b) =>
+        (b.productId === unusedProd.id ||
+          String(b.productName).trim().toLowerCase() === String(unusedProd.productName).trim().toLowerCase()) &&
+        b.availableQuantity > 0
     );
     const firstBatch = batches[0] || null;
     setLineItems((prev) => [
@@ -285,6 +294,8 @@ export default function SalesForm({ preselectedProductId = '', preselectedCustom
 
     const payload = {
       customerId: selectedCustomer.id,
+      customerUserId: selectedCustomer.customerUserId || selectedCustomer.rawId || selectedCustomer.id,
+      rawCustomerId: selectedCustomer.customerUserId || selectedCustomer.rawId || selectedCustomer.id,
       customerName: selectedCustomer.customerName,
       businessName: selectedCustomer.businessName,
       mobileNumber: selectedCustomer.mobileNumber,
@@ -292,7 +303,33 @@ export default function SalesForm({ preselectedProductId = '', preselectedCustom
       deliveryAddress: effectiveAddress,
       district: selectedCustomer.district,
       state: selectedCustomer.state,
-      items: lineItems,
+      items: lineItems.map((item) => {
+        const prod = products.find(
+          (p) => p.id === item.productId || p.productName === item.productName
+        );
+        const matchedBatch = productBatches.find(
+          (b) =>
+            String(b.id) === String(item.batchId) ||
+            b.batchNumber === item.batchNumber ||
+            (String(b.productName).trim().toLowerCase() ===
+              String(item.productName).trim().toLowerCase() &&
+              b.availableQuantity > 0)
+        );
+        const resolvedBatchId =
+          item.finishedBatchId ||
+          item.batchRawId ||
+          item.rawId ||
+          matchedBatch?.id ||
+          (item.batchId && !isNaN(Number(item.batchId)) ? Number(item.batchId) : null) ||
+          prod?.rawId ||
+          null;
+
+        return {
+          ...item,
+          finishedBatchId: resolvedBatchId,
+          batchId: resolvedBatchId || item.batchId,
+        };
+      }),
       ...additionalDetails,
     };
 
@@ -504,7 +541,10 @@ export default function SalesForm({ preselectedProductId = '', preselectedCustom
           <div className="space-y-4">
             {lineItems.map((item, idx) => {
               const availableBatchesForProd = productBatches.filter(
-                (b) => b.productId === item.productId && b.availableQuantity > 0
+                (b) =>
+                  (b.productId === item.productId ||
+                    String(b.productName).trim().toLowerCase() === String(item.productName).trim().toLowerCase()) &&
+                  b.availableQuantity > 0
               );
               const lineSubtotal =
                 safeNumber(item.sellingQuantity, 0) * safeNumber(item.pricePerUnit, 0);

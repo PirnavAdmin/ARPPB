@@ -11,6 +11,8 @@ namespace AgriPurchaseBilling.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/middleman/purchases")]
+    [Route("api/v1/middleman/purchase-history")]
+    [Route("api/v1/middleman/purchase-from-farmers")]
     [Tags("Middleman - Purchases")]
     [Authorize(Roles = "Middleman,Admin")]
     public class MiddlemanPurchaseController : ControllerBase
@@ -32,13 +34,19 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
-        /// Get procurement transactions list with status filtering, search, and pagination.
+        /// Get procurement transactions list with status filtering, search, partyFilter, and pagination.
         /// GET /api/v1/middleman/purchases
+        /// GET /api/v1/middleman/purchase-history
+        /// GET /api/v1/middleman/purchase-from-farmers
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetPurchases([FromQuery] MiddlemanPurchaseQueryDto query)
+        public async Task<IActionResult> GetPurchases([FromQuery] MiddlemanPurchaseQueryDto query, [FromQuery] string? partyFilter = null)
         {
             var userId = GetUserId();
+            if (string.IsNullOrWhiteSpace(query.Search) && !string.IsNullOrWhiteSpace(partyFilter))
+            {
+                query.Search = partyFilter;
+            }
             var result = await _purchaseService.GetPurchasesAsync(userId, query);
             return Ok(new { success = true, data = result });
         }

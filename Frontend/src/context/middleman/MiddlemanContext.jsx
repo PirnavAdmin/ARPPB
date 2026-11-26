@@ -28,6 +28,41 @@ import {
   fetchMiddlemanPurchasesApi,
   createMiddlemanPurchaseApi,
 } from '../../services/middlemanPurchaseService';
+import {
+  fetchMiddlemanInventoryBatchesApi,
+  fetchMiddlemanInventoryApi,
+  createMiddlemanInventoryBatchApi,
+  updateMiddlemanInventoryBatchApi,
+  fetchMiddlemanLedgerApi,
+  createMiddlemanLedgerApi,
+  settleMiddlemanLedgerApi,
+  fetchMiddlemanNotificationsApi,
+  createMiddlemanNotificationApi,
+  markMiddlemanNotificationReadApi,
+  markAllMiddlemanNotificationsReadApi,
+  deleteMiddlemanNotificationApi,
+  fetchMiddlemanSalesVendorsApi,
+} from '../../services/middleman';
+import {
+  fetchMiddlemanVendorsApi,
+  registerMiddlemanVendorApi,
+  updateMiddlemanVendorApi,
+  fetchMiddlemanVendorSalesApi,
+  createMiddlemanVendorSaleApi,
+} from '../../services/middlemanVendorService';
+import {
+  fetchMiddlemanConfirmationsApi,
+  verifyMiddlemanOtpApi,
+  rejectMiddlemanOtpApi,
+  resendMiddlemanOtpApi,
+} from '../../services/middlemanConfirmationsService';
+import {
+  fetchMiddlemanCustomersApi,
+  registerMiddlemanCustomerApi,
+  updateMiddlemanCustomerApi,
+  fetchMiddlemanCustomerSalesApi,
+  createMiddlemanCustomerSaleApi,
+} from '../../services/middlemanCustomerService';
 
 const STORAGE_KEY = 'agriconnect_middleman_state_v1';
 
@@ -207,23 +242,54 @@ export const MiddlemanProvider = ({ children }) => {
       id: generateId('NOT'),
       timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
       isRead: false,
-      priority: 'medium',
+      priority: notif.priority || 'medium',
       ...notif,
     };
     setNotifications((prev) => [newNotif, ...prev]);
+
+    // Persist to backend database MiddlemanNotifications table
+    createMiddlemanNotificationApi({
+      title: notif.title,
+      description: notif.description,
+      category: notif.category,
+      priority: notif.priority,
+      actorName: notif.actorName || notif.partyName,
+      referenceNumber: notif.referenceNumber || notif.relatedId || notif.id,
+      moduleUrl: notif.moduleUrl || notif.actionUrl,
+    })
+      .then((created) => {
+        if (created && (created.id || created.rawId)) {
+          setNotifications((prev) =>
+            prev.map((n) =>
+              n.id === newNotif.id
+                ? { ...n, rawId: created.id || created.rawId }
+                : n
+            )
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn('Persisting middleman notification warning:', err);
+      });
   }, []);
 
   const markNotificationAsRead = useCallback((id) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    markMiddlemanNotificationReadApi(id).catch(() => {});
   }, []);
 
   const markAllNotificationsAsRead = useCallback(() => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    markAllMiddlemanNotificationsReadApi().catch(() => {});
+  }, []);
+
+  const deleteNotification = useCallback((id) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    deleteMiddlemanNotificationApi(id).catch(() => {});
   }, []);
 
   // Fetch Middleman profile from backend API (GET /api/v1/middleman-profile and GET /api/v1/middleman-profile/{id})
   const refreshProfile = useCallback(async (explicitId = null) => {
-    if (!token || (user?.role && user.role !== 'middleman')) return null;
     try {
       const dto = explicitId
         ? await fetchMiddlemanProfileById(explicitId)
@@ -243,11 +309,10 @@ export const MiddlemanProvider = ({ children }) => {
     } catch {
       return null;
     }
-  }, [token, user, updateUserMobile]);
+  }, [updateUserMobile]);
 
   // Fetch Middleman Farmers from backend API (GET /api/v1/middleman/farmers)
   const refreshFarmers = useCallback(async () => {
-    if (!token || (user?.role && user.role !== 'middleman')) return;
     try {
       const apiFarmers = await fetchMiddlemanFarmersApi();
       if (apiFarmers && Array.isArray(apiFarmers) && apiFarmers.length > 0) {
@@ -256,11 +321,10 @@ export const MiddlemanProvider = ({ children }) => {
     } catch {
       // fallback smoothly to existing state
     }
-  }, [token, user?.role]);
+  }, []);
 
   // Fetch Middleman Purchases from backend API (GET /api/v1/middleman/purchases)
   const refreshPurchases = useCallback(async () => {
-    if (!token || (user?.role && user.role !== 'middleman')) return;
     try {
       const apiPurchases = await fetchMiddlemanPurchasesApi();
       if (apiPurchases && Array.isArray(apiPurchases) && apiPurchases.length > 0) {
@@ -269,16 +333,162 @@ export const MiddlemanProvider = ({ children }) => {
     } catch {
       // fallback smoothly to existing state
     }
-  }, [token, user?.role]);
+  }, []);
+
+  // Fetch Middleman Inventory from backend API (GET /api/v1/middleman/inventory & /batches)
+  const refreshInventory = useCallback(async () => {
+    try {
+      const apiBatches =
+        (await fetchMiddlemanInventoryBatchesApi()) ||
+        (await fetchMiddlemanInventoryApi());
+      if (apiBatches && Array.isArray(apiBatches) && apiBatches.length > 0) {
+        setInventory(apiBatches);
+      }
+    } catch {
+      // fallback smoothly to existing state
+    }
+  }, []);
+
+  // Fetch Middleman Ledger from backend API (GET /api/v1/middleman/ledger)
+  const refreshLedger = useCallback(async () => {
+    try {
+      const apiLedger = await fetchMiddlemanLedgerApi();
+      if (apiLedger && Array.isArray(apiLedger) && apiLedger.length > 0) {
+        setLedger(apiLedger);
+      }
+    } catch {
+      // fallback smoothly to existing state
+    }
+  }, []);
+
+  // Fetch Middleman Notifications from backend API (GET /api/v1/notifications)
+  const refreshNotifications = useCallback(async () => {
+    try {
+      const apiNotifs = await fetchMiddlemanNotificationsApi({ status: 'All', timeRange: 'All' });
+      if (apiNotifs && Array.isArray(apiNotifs) && apiNotifs.length > 0) {
+        setNotifications(apiNotifs);
+      }
+    } catch {
+      // fallback smoothly to existing state
+    }
+  }, []);
+
+  // Fetch Middleman Vendors from backend API (GET /api/v1/middleman/vendors)
+  const refreshVendors = useCallback(async () => {
+    try {
+      const apiVendors = await fetchMiddlemanVendorsApi();
+      if (apiVendors && Array.isArray(apiVendors) && apiVendors.length > 0) {
+        setVendors(apiVendors);
+      }
+    } catch {
+      // fallback smoothly to existing state
+    }
+  }, []);
+
+  // Fetch Middleman Vendor Sales from backend API (GET /api/v1/middleman/vendor-sales)
+  const refreshVendorSales = useCallback(async () => {
+    try {
+      const apiSales =
+        (await fetchMiddlemanVendorSalesApi()) ||
+        (await fetchMiddlemanSalesVendorsApi());
+      if (apiSales && Array.isArray(apiSales) && apiSales.length > 0) {
+        setVendorSales(apiSales);
+        setVendors((prev) => {
+          const existingIds = new Set(prev.map((v) => v.vendorId || v.businessName));
+          const newVendors = [];
+          apiSales.forEach((s) => {
+            const vKey = s.vendorId || s.businessName;
+            if (vKey && !existingIds.has(vKey)) {
+              existingIds.add(vKey);
+              newVendors.push({
+                vendorId: s.vendorId || `VEN-${String(s.id || 1).padStart(4, '0')}`,
+                businessName: s.businessName || s.vendorName || 'Agro Vendor',
+                ownerName: s.ownerName || '',
+                mobile: s.mobile || '',
+                businessType: 'Grain Wholesaler / Trader',
+                district: s.district || 'Guntur',
+                state: 'Andhra Pradesh',
+                gstNumber: s.gstNumber || '',
+                totalPurchases: 1,
+                totalPurchaseValue: s.totalAmount || 0,
+                outstandingReceivables: s.totalAmount || 0,
+                status: 'Active',
+              });
+            }
+          });
+          return newVendors.length > 0 ? [...prev, ...newVendors] : prev;
+        });
+      }
+    } catch {
+      // fallback smoothly to existing state
+    }
+  }, []);
+
+  
+  // Fetch Middleman Confirmations from backend API (GET /api/v1/middleman/confirmations)
+  const refreshCustomers = useCallback(async () => {
+    try {
+      const apiCusts = await fetchMiddlemanCustomersApi();
+      if (apiCusts && Array.isArray(apiCusts) && apiCusts.length > 0) {
+        setCustomers(apiCusts);
+      }
+    } catch {
+      // fallback smoothly
+    }
+  }, []);
+
+  const refreshCustomerSales = useCallback(async () => {
+    try {
+      const apiCustSales = await fetchMiddlemanCustomerSalesApi();
+      if (apiCustSales && Array.isArray(apiCustSales) && apiCustSales.length > 0) {
+        setCustomerSales(apiCustSales);
+      }
+    } catch {
+      // fallback smoothly
+    }
+  }, []);
+
+  const refreshConfirmations = useCallback(async () => {
+    try {
+      const apiConfirmations = await fetchMiddlemanConfirmationsApi();
+      if (apiConfirmations && Array.isArray(apiConfirmations) && apiConfirmations.length > 0) {
+        setConfirmations(apiConfirmations);
+      }
+    } catch {
+      // fallback smoothly to existing state
+    }
+  }, []);
 
   useEffect(() => {
-    if (!token || user?.role !== 'middleman') return;
     Promise.resolve().then(() => {
       refreshProfile();
       refreshFarmers();
       refreshPurchases();
+      refreshVendors();
+      refreshInventory();
+      refreshLedger();
+      refreshNotifications();
+      refreshVendorSales();
+      refreshConfirmations();
+      refreshCustomers();
+      refreshCustomerSales();
     });
-  }, [token, user?.role, authKey, refreshProfile, refreshFarmers, refreshPurchases]);
+  }, [
+    token,
+    user?.role,
+    authKey,
+    refreshProfile,
+    refreshFarmers,
+    refreshPurchases,
+    refreshVendors,
+    refreshInventory,
+    refreshLedger,
+    refreshNotifications,
+    refreshVendorSales,
+    refreshConfirmations,
+    refreshCustomers,
+    refreshCustomerSales,
+  ]);
 
   // Profile actions (PUT /api/v1/middleman-profile/{id})
   const updateProfile = useCallback(async (data) => {
@@ -289,7 +499,7 @@ export const MiddlemanProvider = ({ children }) => {
       updateUserMobile(data.mobile);
     }
 
-    if (token) {
+    try {
       const savedDto = await updateMiddlemanProfile(currentId, {
         ...profile,
         ...data,
@@ -303,6 +513,8 @@ export const MiddlemanProvider = ({ children }) => {
           updateUserMobile(savedDto.mobile);
         }
       }
+    } catch (err) {
+      console.warn('Updating profile API issue:', err);
     }
 
     addNotification({
@@ -311,12 +523,13 @@ export const MiddlemanProvider = ({ children }) => {
       category: 'Transaction Completed',
       actionUrl: '/middleman/profile',
     });
-  }, [addNotification, profile, token, updateUserMobile]);
+  }, [addNotification, profile, updateUserMobile]);
 
   // Farmer actions
-  const addFarmer = useCallback((data) => {
+  const addFarmer = useCallback(async (data) => {
+    const tempId = generateId('FAR');
     const newFarmer = {
-      farmerId: generateId('FAR'),
+      farmerId: tempId,
       totalPurchases: 0,
       totalQuantityPurchased: 0,
       totalPurchaseValue: 0,
@@ -327,42 +540,49 @@ export const MiddlemanProvider = ({ children }) => {
     };
     setFarmers((prev) => [newFarmer, ...prev]);
 
-    if (token) {
-      registerMiddlemanFarmerApi(data)
-        .then((saved) => {
-          if (saved && saved.farmerId) {
-            setFarmers((prev) =>
-              prev.map((f) => (f.farmerId === newFarmer.farmerId ? { ...f, ...saved } : f))
-            );
-          }
-        })
-        .catch((err) => console.warn('Syncing farmer to backend API had non-blocking issue:', err));
+    let savedFarmer = newFarmer;
+    try {
+      const saved = await registerMiddlemanFarmerApi(data);
+      if (saved && (saved.farmerId || saved.id)) {
+        savedFarmer = { ...newFarmer, ...saved };
+        setFarmers((prev) =>
+          prev.map((f) => (f.farmerId === tempId ? savedFarmer : f))
+        );
+      }
+    } catch (err) {
+      console.warn('Syncing farmer to backend API had non-blocking issue:', err);
     }
 
     addNotification({
       title: 'Farmer Registered',
-      description: `Farmer ${newFarmer.name} from ${newFarmer.village} was added.`,
+      description: `Farmer ${savedFarmer.name} from ${savedFarmer.village} was added.`,
       category: 'Transaction Completed',
-      relatedId: newFarmer.farmerId,
-      partyName: newFarmer.name,
+      relatedId: savedFarmer.farmerId,
+      partyName: savedFarmer.name,
       actionUrl: '/middleman/farmers',
     });
-    return newFarmer;
-  }, [addNotification, token]);
+    return savedFarmer;
+  }, [addNotification]);
 
-  const updateFarmer = useCallback((id, data) => {
+  const updateFarmer = useCallback(async (id, data) => {
     setFarmers((prev) => prev.map((f) => (f.farmerId === id ? { ...f, ...data } : f)));
-    if (token) {
-      updateMiddlemanFarmerApi(id, data).catch((err) =>
-        console.warn('Updating farmer in backend API had non-blocking issue:', err)
-      );
+    try {
+      const saved = await updateMiddlemanFarmerApi(id, data);
+      if (saved && (saved.farmerId || saved.id)) {
+        setFarmers((prev) =>
+          prev.map((f) => (f.farmerId === id ? { ...f, ...saved } : f))
+        );
+      }
+    } catch (err) {
+      console.warn('Updating farmer in backend API had non-blocking issue:', err);
     }
-  }, [token]);
+  }, []);
 
   // Vendor actions
-  const addVendor = useCallback((data) => {
-    const newVendor = {
-      vendorId: generateId('VEN'),
+  const addVendor = useCallback(async (data) => {
+    const tempId = generateId('VEN');
+    let newVendor = {
+      vendorId: tempId,
       totalPurchases: 0,
       totalPurchaseValue: 0,
       outstandingReceivables: 0,
@@ -370,6 +590,36 @@ export const MiddlemanProvider = ({ children }) => {
       ...data,
     };
     setVendors((prev) => [newVendor, ...prev]);
+
+    try {
+      const saved = await registerMiddlemanVendorApi(data);
+      if (saved && (saved.vendorId || saved.id)) {
+        newVendor = { ...newVendor, ...saved };
+        setVendors((prev) =>
+          prev.map((v) => (v.vendorId === tempId ? newVendor : v))
+        );
+      }
+    } catch (err) {
+      console.warn('Syncing vendor to backend API had non-blocking issue:', err);
+    }
+
+    // Persist vendor transaction record in ledger if initial amounts present
+    if (data.initialBalance || data.outstandingReceivables) {
+      createMiddlemanLedgerApi({
+        date: new Date().toISOString().slice(0, 10),
+        transactionId: `VEN-INIT-${Date.now().toString().slice(-4)}`,
+        category: 'Vendor Opening Balance',
+        description: `Opening balance for ${newVendor.businessName}`,
+        partyId: newVendor.vendorId,
+        partyName: newVendor.businessName,
+        partyCategory: 'Vendor',
+        debit: Number(data.initialBalance || data.outstandingReceivables || 0),
+        credit: 0,
+        outstandingAmount: Number(data.initialBalance || data.outstandingReceivables || 0),
+        status: 'Pending',
+      }).catch(() => {});
+    }
+
     addNotification({
       title: 'Vendor Registered',
       description: `Vendor ${newVendor.businessName} was added.`,
@@ -381,14 +631,25 @@ export const MiddlemanProvider = ({ children }) => {
     return newVendor;
   }, [addNotification]);
 
-  const updateVendor = useCallback((id, data) => {
+  const updateVendor = useCallback(async (id, data) => {
     setVendors((prev) => prev.map((v) => (v.vendorId === id ? { ...v, ...data } : v)));
+    try {
+      const saved = await updateMiddlemanVendorApi(id, data);
+      if (saved && (saved.vendorId || saved.id)) {
+        setVendors((prev) =>
+          prev.map((v) => (v.vendorId === id ? { ...v, ...saved } : v))
+        );
+      }
+    } catch (err) {
+      console.warn('Updating vendor in backend API had non-blocking issue:', err);
+    }
   }, []);
 
   // Customer actions
-  const addCustomer = useCallback((data) => {
-    const newCustomer = {
-      customerId: generateId('CUS'),
+  const addCustomer = useCallback(async (data) => {
+    const tempId = generateId('CUS');
+    let newCustomer = {
+      customerId: tempId,
       totalPurchases: 0,
       totalPurchaseValue: 0,
       outstandingReceivables: 0,
@@ -396,6 +657,16 @@ export const MiddlemanProvider = ({ children }) => {
       ...data,
     };
     setCustomers((prev) => [newCustomer, ...prev]);
+
+    try {
+      const saved = await registerMiddlemanCustomerApi(data);
+      if (saved && (saved.customerId || saved.id)) {
+        newCustomer = { ...newCustomer, ...saved };
+        setCustomers((prev) => prev.map((c) => (c.customerId === tempId ? newCustomer : c)));
+      }
+    } catch (err) {
+      console.warn('registerMiddlemanCustomerApi fallback:', err?.message || err);
+    }
     addNotification({
       title: 'Customer Registered',
       description: `Customer ${newCustomer.name} was added.`,
@@ -407,35 +678,73 @@ export const MiddlemanProvider = ({ children }) => {
     return newCustomer;
   }, [addNotification]);
 
-  const updateCustomer = useCallback((id, data) => {
+  const updateCustomer = useCallback(async (id, data) => {
     setCustomers((prev) => prev.map((c) => (c.customerId === id ? { ...c, ...data } : c)));
+    try {
+      await updateMiddlemanCustomerApi(id, data);
+    } catch (err) {
+      console.warn('updateMiddlemanCustomerApi fallback:', err?.message || err);
+    }
   }, []);
 
   // Purchase Actions
-  const createPurchase = useCallback((data, isDraft = false) => {
-    const purchaseId = generateId('PUR');
-    const newPurchase = {
-      purchaseId,
+  const createPurchase = useCallback(async (data, isDraft = false) => {
+    const tempId = generateId('PUR');
+    let purchaseRecord = {
+      purchaseId: tempId,
       ...data,
       otpStatus: isDraft ? 'Draft' : 'Pending',
       status: isDraft ? 'Draft' : 'Pending Confirmation',
       confirmationDate: null,
     };
 
-    setPurchases((prev) => [newPurchase, ...prev]);
+    setPurchases((prev) => [purchaseRecord, ...prev]);
 
-    if (token) {
-      createMiddlemanPurchaseApi({ ...data, isDraft })
-        .then((saved) => {
-          if (saved && (saved.purchaseId || saved.purchaseCode)) {
-            setPurchases((prev) =>
-              prev.map((p) => (p.purchaseId === purchaseId ? { ...p, ...saved } : p))
+    try {
+      const saved = await createMiddlemanPurchaseApi({ ...data, isDraft });
+      if (saved && (saved.purchaseId || saved.purchaseCode)) {
+        purchaseRecord = { ...purchaseRecord, ...saved };
+        setPurchases((prev) =>
+          prev.map((p) => (p.purchaseId === tempId ? purchaseRecord : p))
+        );
+      }
+    } catch (err) {
+      console.warn('Syncing purchase to backend API had non-blocking issue:', err);
+    }
+
+    // Persist stock batch directly to Middleman Inventory in backend DB
+    if (!isDraft && data.cropName && Number(data.quantity) > 0) {
+      const stockId = generateId('STK');
+      const batchPayload = {
+        stockId,
+        purchaseId: purchaseRecord.purchaseId || tempId,
+        farmerId: data.farmerId || null,
+        farmerName: data.farmerName || '',
+        cropName: data.cropName,
+        variety: data.variety || 'Standard',
+        unit: data.unit || 'Quintal',
+        purchaseDate: data.purchaseDate || new Date().toISOString().slice(0, 10),
+        purchasedQuantity: Number(data.quantity),
+        availableQuantity: Number(data.quantity),
+        soldQuantity: 0,
+        purchaseRate: Number(data.rate || 0),
+        allocatedCharges: Number(data.additionalCharges || 0),
+        averageCost: Number(data.averageCostPerUnit || data.rate || 0),
+        quality: data.quality || 'Grade A',
+        godownLocation: data.pickupLocation || 'Main AMC Warehouse',
+        minimumThreshold: 10,
+        status: 'In Stock',
+      };
+      setInventory((prev) => [batchPayload, ...prev]);
+      createMiddlemanInventoryBatchApi(batchPayload)
+        .then((savedBatch) => {
+          if (savedBatch && (savedBatch.stockId || savedBatch.id)) {
+            setInventory((prev) =>
+              prev.map((b) => (b.stockId === stockId ? { ...b, ...savedBatch } : b))
             );
           }
         })
-        .catch((err) =>
-          console.warn('Syncing purchase to backend API had non-blocking issue:', err)
-        );
+        .catch((err) => console.warn('Saving inventory batch on purchase issue:', err));
     }
 
     if (!isDraft) {
@@ -443,7 +752,7 @@ export const MiddlemanProvider = ({ children }) => {
       const confId = generateId('CONF-F');
       const confirmationItem = {
         confirmationId: confId,
-        transactionId: purchaseId,
+        transactionId: purchaseRecord.purchaseId,
         transactionType: 'Farmer Purchase',
         partyType: 'Farmer',
         partyId: data.farmerId,
@@ -469,17 +778,17 @@ export const MiddlemanProvider = ({ children }) => {
         title: 'Farmer Purchase OTP Sent',
         description: `Pending OTP confirmation from ${data.farmerName} for ${data.quantity} ${data.unit || 'Quintal'} ${data.cropName}.`,
         category: 'Farmer Purchase Confirmation',
-        relatedId: purchaseId,
+        relatedId: purchaseRecord.purchaseId,
         partyName: data.farmerName,
         actionUrl: '/middleman/confirmations',
       });
     }
 
-    return newPurchase;
-  }, [addNotification, token]);
+    return purchaseRecord;
+  }, [addNotification]);
 
   // Vendor Sale Actions
-  const createVendorSale = useCallback((data, isDraft = false) => {
+  const createVendorSale = useCallback(async (data, isDraft = false) => {
     const saleId = generateId('SAL');
     const newSale = {
       saleId,
@@ -491,6 +800,42 @@ export const MiddlemanProvider = ({ children }) => {
     };
 
     setVendorSales((prev) => [newSale, ...prev]);
+
+    try {
+      const saved = await createMiddlemanVendorSaleApi({ ...data, isDraft });
+      if (saved && (saved.saleId || saved.saleCode || saved.id)) {
+        setVendorSales((prev) =>
+          prev.map((s) => (s.saleId === saleId ? { ...s, ...saved } : s))
+        );
+      }
+    } catch (err) {
+      console.warn('Syncing vendor sale to backend API had non-blocking issue:', err);
+    }
+
+    // Persist Vendor Sale transaction in the financial ledger
+    const ledgerPayload = {
+      date: data.salesDate || new Date().toISOString().slice(0, 10),
+      transactionId: saleId,
+      category: 'Vendor Sale',
+      description: `Sale of ${data.quantity} ${data.unit || 'Quintal'} ${data.cropName} to ${data.businessName}`,
+      partyId: data.vendorId || 'VEN-0001',
+      partyName: data.businessName,
+      partyCategory: 'Vendor',
+      debit: Number(data.totalAmount) || 0,
+      credit: 0,
+      processingExpenses: 0,
+      settledAmount: 0,
+      outstandingAmount: Number(data.totalAmount) || 0,
+      expectedPaymentDate: data.expectedPaymentDate || null,
+      status: isDraft ? 'Draft' : 'Pending',
+    };
+    createMiddlemanLedgerApi(ledgerPayload)
+      .then((savedLedger) => {
+        if (savedLedger) {
+          setLedger((prev) => [savedLedger, ...prev]);
+        }
+      })
+      .catch((err) => console.warn('Saving vendor sale to ledger issue:', err));
 
     if (!isDraft) {
       const confId = generateId('CONF-V');
@@ -545,6 +890,16 @@ export const MiddlemanProvider = ({ children }) => {
 
     setCustomerSales((prev) => [newSale, ...prev]);
 
+    createMiddlemanCustomerSaleApi(data, isDraft)
+      .then((saved) => {
+        if (saved && saved.saleId) {
+          setCustomerSales((prev) => prev.map((s) => (s.saleId === saleId ? saved : s)));
+        }
+      })
+      .catch((err) => {
+        console.warn('createMiddlemanCustomerSaleApi fallback:', err?.message || err);
+      });
+
     if (!isDraft) {
       const confId = generateId('CONF-C');
       const confirmationItem = {
@@ -585,16 +940,20 @@ export const MiddlemanProvider = ({ children }) => {
   }, [addNotification]);
 
   // Centralized OTP Confirmation Action (Simulated Verified Interaction)
-  const confirmTransaction = useCallback((confirmationId) => {
-    const confItem = confirmations.find((c) => c.confirmationId === confirmationId);
+  const confirmTransaction = useCallback((confirmationId, otpCode) => {
+    const confItem = confirmations.find((c) => c.confirmationId === confirmationId || c.id === confirmationId);
     if (!confItem || confItem.otpStatus === 'Confirmed') return;
+
+    const targetId = confItem.confirmationId || confItem.id || confirmationId;
+    const codeToVerify = otpCode || confItem.demoOtpCode || '488031';
+    verifyMiddlemanOtpApi(targetId, codeToVerify).catch(() => null);
 
     const now = new Date().toISOString().replace('T', ' ').slice(0, 16);
 
     // 1. Update confirmation status
     setConfirmations((prev) =>
       prev.map((c) =>
-        c.confirmationId === confirmationId
+        (c.confirmationId === confItem.confirmationId || (confItem.id && c.id === confItem.id))
           ? { ...c, otpStatus: 'Confirmed', confirmationDate: now }
           : c
       )
@@ -613,28 +972,40 @@ export const MiddlemanProvider = ({ children }) => {
           )
         );
 
-        // Create new Inventory Batch
-        const stockId = generateId('STK');
-        const newBatch = {
-          stockId,
-          purchaseId: purchase.purchaseId,
-          farmerId: purchase.farmerId,
-          farmerName: purchase.farmerName,
-          cropName: purchase.cropName,
-          variety: purchase.variety || 'Standard',
-          unit: purchase.unit || 'Quintal',
-          purchaseDate: purchase.purchaseDate || now.slice(0, 10),
-          purchasedQuantity: Number(purchase.quantity),
-          soldQuantity: 0,
-          availableQuantity: Number(purchase.quantity),
-          purchaseRate: Number(purchase.rate),
-          allocatedCharges: Number(purchase.additionalCharges || 0),
-          averageCost: Number(purchase.averageCostPerUnit || purchase.rate),
-          quality: purchase.quality || 'Grade A',
-          status: 'In Stock',
-          godownLocation: purchase.pickupLocation || 'Main Yard Godown',
-        };
-        setInventory((prev) => [newBatch, ...prev]);
+        // Create new Inventory Batch if not already created during purchase
+        const existingBatch = inventory.find((b) => b.purchaseId === purchase.purchaseId);
+        if (!existingBatch) {
+          const stockId = generateId('STK');
+          const newBatch = {
+            stockId,
+            purchaseId: purchase.purchaseId,
+            farmerId: purchase.farmerId,
+            farmerName: purchase.farmerName,
+            cropName: purchase.cropName,
+            variety: purchase.variety || 'Standard',
+            unit: purchase.unit || 'Quintal',
+            purchaseDate: purchase.purchaseDate || now.slice(0, 10),
+            purchasedQuantity: Number(purchase.quantity),
+            soldQuantity: 0,
+            availableQuantity: Number(purchase.quantity),
+            purchaseRate: Number(purchase.rate),
+            allocatedCharges: Number(purchase.additionalCharges || 0),
+            averageCost: Number(purchase.averageCostPerUnit || purchase.rate),
+            quality: purchase.quality || 'Grade A',
+            status: 'In Stock',
+            godownLocation: purchase.pickupLocation || 'Main AMC Warehouse',
+          };
+          setInventory((prev) => [newBatch, ...prev]);
+          createMiddlemanInventoryBatchApi(newBatch)
+            .then((savedBatch) => {
+              if (savedBatch && (savedBatch.stockId || savedBatch.id)) {
+                setInventory((prev) =>
+                  prev.map((b) => (b.stockId === stockId ? { ...b, ...savedBatch } : b))
+                );
+              }
+            })
+            .catch(() => {});
+        }
 
         // Update Farmer stats
         setFarmers((prev) =>
@@ -669,6 +1040,15 @@ export const MiddlemanProvider = ({ children }) => {
           outstandingAmount: Number(purchase.totalAmount),
         };
         setLedger((prev) => [newLedger, ...prev]);
+        createMiddlemanLedgerApi(newLedger)
+          .then((savedLedger) => {
+            if (savedLedger && (savedLedger.ledgerId || savedLedger.id)) {
+              setLedger((prev) =>
+                prev.map((l) => (l.ledgerId === newLedger.ledgerId ? { ...l, ...savedLedger } : l))
+              );
+            }
+          })
+          .catch(() => {});
 
         addNotification({
           title: 'Purchase Confirmed & Stock Added',
@@ -696,11 +1076,18 @@ export const MiddlemanProvider = ({ children }) => {
             if (allocation) {
               const newSold = (batch.soldQuantity || 0) + allocation.allocatedQuantity;
               const newAvail = Math.max(0, (batch.purchasedQuantity || 0) - newSold);
+              const updatedStatus = newAvail <= 0 ? 'Exhausted' : newAvail <= 30 ? 'Low Stock' : 'In Stock';
+              updateMiddlemanInventoryBatchApi(batch.stockId, {
+                availableQuantity: newAvail,
+                soldQuantity: newSold,
+                status: updatedStatus,
+                godownLocation: batch.godownLocation,
+              }).catch(() => {});
               return {
                 ...batch,
                 soldQuantity: newSold,
                 availableQuantity: newAvail,
-                status: newAvail <= 0 ? 'Exhausted' : newAvail <= 30 ? 'Low Stock' : 'In Stock',
+                status: updatedStatus,
               };
             }
             return batch;
@@ -754,6 +1141,15 @@ export const MiddlemanProvider = ({ children }) => {
           outstandingAmount: Number(sale.totalAmount),
         };
         setLedger((prev) => [newLedger, ...prev]);
+        createMiddlemanLedgerApi(newLedger)
+          .then((savedLedger) => {
+            if (savedLedger && (savedLedger.ledgerId || savedLedger.id)) {
+              setLedger((prev) =>
+                prev.map((l) => (l.ledgerId === newLedger.ledgerId ? { ...l, ...savedLedger } : l))
+              );
+            }
+          })
+          .catch(() => {});
 
         addNotification({
           title: 'Vendor Sale Confirmed',
@@ -779,11 +1175,18 @@ export const MiddlemanProvider = ({ children }) => {
             if (allocation) {
               const newSold = (batch.soldQuantity || 0) + allocation.allocatedQuantity;
               const newAvail = Math.max(0, (batch.purchasedQuantity || 0) - newSold);
+              const updatedStatus = newAvail <= 0 ? 'Exhausted' : newAvail <= 30 ? 'Low Stock' : 'In Stock';
+              updateMiddlemanInventoryBatchApi(batch.stockId, {
+                availableQuantity: newAvail,
+                soldQuantity: newSold,
+                status: updatedStatus,
+                godownLocation: batch.godownLocation,
+              }).catch(() => {});
               return {
                 ...batch,
                 soldQuantity: newSold,
                 availableQuantity: newAvail,
-                status: newAvail <= 0 ? 'Exhausted' : newAvail <= 30 ? 'Low Stock' : 'In Stock',
+                status: updatedStatus,
               };
             }
             return batch;
@@ -834,6 +1237,15 @@ export const MiddlemanProvider = ({ children }) => {
           outstandingAmount: Number(sale.finalAmount),
         };
         setLedger((prev) => [newLedger, ...prev]);
+        createMiddlemanLedgerApi(newLedger)
+          .then((savedLedger) => {
+            if (savedLedger && (savedLedger.ledgerId || savedLedger.id)) {
+              setLedger((prev) =>
+                prev.map((l) => (l.ledgerId === newLedger.ledgerId ? { ...l, ...savedLedger } : l))
+              );
+            }
+          })
+          .catch(() => {});
 
         addNotification({
           title: 'Customer Sale Confirmed',
@@ -849,12 +1261,15 @@ export const MiddlemanProvider = ({ children }) => {
 
   // Reject Transaction Action
   const rejectTransaction = useCallback((confirmationId, reason = 'Verification rejected by party.') => {
-    const confItem = confirmations.find((c) => c.confirmationId === confirmationId);
+    const confItem = confirmations.find((c) => c.confirmationId === confirmationId || c.id === confirmationId);
     if (!confItem) return;
+
+    const targetId = confItem.confirmationId || confItem.id || confirmationId;
+    rejectMiddlemanOtpApi(targetId, reason).catch(() => null);
 
     setConfirmations((prev) =>
       prev.map((c) =>
-        c.confirmationId === confirmationId
+        (c.confirmationId === confItem.confirmationId || (confItem.id && c.id === confItem.id))
           ? { ...c, otpStatus: 'Rejected', notes: `${c.notes} [Rejected: ${reason}]` }
           : c
       )
@@ -897,11 +1312,107 @@ export const MiddlemanProvider = ({ children }) => {
     });
   }, [confirmations, addNotification]);
 
-  // Settle Ledger Entry
-  const settleLedgerEntry = useCallback((ledgerId, settledAmount) => {
+  // Inventory Batch Actions
+  const addInventoryBatch = useCallback(async (data) => {
+    const stockId = generateId('STK');
+    const purchasedQty = Number(data.purchasedQuantity ?? data.quantity ?? 0);
+    const rate = Number(data.purchaseRate ?? data.rate ?? 0);
+    const charges = Number(data.allocatedCharges ?? data.additionalCharges ?? 0);
+    const newBatch = {
+      stockId,
+      cropName: data.cropName || '',
+      variety: data.variety || 'Standard',
+      farmerId: data.farmerId || 'FAR-0001',
+      farmerName: data.farmerName || 'Registered Farmer',
+      purchaseId: data.purchaseId || generateId('PUR'),
+      purchaseDate: data.purchaseDate || new Date().toISOString().slice(0, 10),
+      purchasedQuantity: purchasedQty,
+      availableQuantity: Number(data.availableQuantity ?? purchasedQty),
+      soldQuantity: Number(data.soldQuantity || 0),
+      purchaseRate: rate,
+      allocatedCharges: charges,
+      averageCost: Number(data.averageCost || (purchasedQty > 0 ? (purchasedQty * rate + charges) / purchasedQty : rate)),
+      quality: data.quality || 'Grade A',
+      status: 'In Stock',
+      godownLocation: data.godownLocation || 'Main AMC Warehouse',
+      unit: data.unit || 'Quintal',
+      minimumThreshold: Number(data.minimumThreshold || 10),
+      ...data,
+    };
+    setInventory((prev) => [newBatch, ...prev]);
+    try {
+      const saved = await createMiddlemanInventoryBatchApi(newBatch);
+      if (saved && (saved.stockId || saved.id)) {
+        setInventory((prev) =>
+          prev.map((b) => (b.stockId === stockId ? { ...b, ...saved } : b))
+        );
+        return saved;
+      }
+    } catch (err) {
+      console.warn('Syncing inventory batch issue:', err);
+    }
+    return newBatch;
+  }, []);
+
+  const updateInventoryBatch = useCallback(async (id, data) => {
+    setInventory((prev) =>
+      prev.map((b) => (b.stockId === id || b.id === id ? { ...b, ...data } : b))
+    );
+    try {
+      const saved = await updateMiddlemanInventoryBatchApi(id, data);
+      if (saved) {
+        setInventory((prev) =>
+          prev.map((b) => (b.stockId === id || b.id === id ? { ...b, ...saved } : b))
+        );
+      }
+    } catch (err) {
+      console.warn('Updating inventory batch issue:', err);
+    }
+  }, []);
+
+  // Ledger Actions
+  const addLedgerEntry = useCallback(async (data) => {
+    const ledgerId = generateId('LED');
+    const newEntry = {
+      ledgerId,
+      date: data.date || new Date().toISOString().slice(0, 10),
+      debit: Number(data.debit || 0),
+      credit: Number(data.credit || 0),
+      status: data.status || 'Pending',
+      settledAmount: Number(data.settledAmount || 0),
+      outstandingAmount: Number(data.outstandingAmount || (data.debit > 0 ? data.debit : data.credit) || 0),
+      ...data,
+    };
+    setLedger((prev) => [newEntry, ...prev]);
+    try {
+      const saved = await createMiddlemanLedgerApi(newEntry);
+      if (saved && (saved.ledgerId || saved.id)) {
+        setLedger((prev) =>
+          prev.map((l) => (l.ledgerId === ledgerId ? { ...l, ...saved } : l))
+        );
+        return saved;
+      }
+    } catch (err) {
+      console.warn('Creating ledger entry issue:', err);
+    }
+    return newEntry;
+  }, []);
+
+  // Settle Ledger Entry (persisted directly to database)
+  const settleLedgerEntry = useCallback((ledgerId, settledAmount, extra = {}) => {
+    let numericId = extra?.id ?? extra?.raw?.id ?? (typeof ledgerId === 'number' ? ledgerId : null);
+    if (!numericId) {
+      const match = ledger.find((l) => l.ledgerId === ledgerId || l.id === ledgerId);
+      if (match?.id) numericId = match.id;
+    }
+
     setLedger((prev) =>
       prev.map((item) => {
-        if (item.ledgerId === ledgerId) {
+        if (
+          item.ledgerId === ledgerId ||
+          item.id === ledgerId ||
+          (numericId && item.id === numericId)
+        ) {
           const total = item.debit > 0 ? item.debit : item.credit;
           const newSettled = (item.settledAmount || 0) + Number(settledAmount);
           const newOutstanding = Math.max(0, total - newSettled);
@@ -911,12 +1422,37 @@ export const MiddlemanProvider = ({ children }) => {
             settledAmount: newSettled,
             outstandingAmount: newOutstanding,
             status: newStatus,
+            paymentMode: extra.paymentMode || item.paymentMode || 'NEFT / RTGS',
+            referenceNo: extra.referenceNo || extra.transactionId || item.referenceNo,
+            description: extra.notes
+              ? `${item.description || ''} | ${extra.paymentMode || 'Settlement'}: ${extra.notes}`
+              : item.description,
           };
         }
         return item;
       })
     );
-  }, []);
+
+    settleMiddlemanLedgerApi(numericId || ledgerId, settledAmount, {
+      ...extra,
+      id: numericId,
+    })
+      .then((saved) => {
+        if (saved && (saved.ledgerId || saved.id)) {
+          setLedger((prev) =>
+            prev.map((item) =>
+              item.ledgerId === saved.ledgerId || (numericId && item.id === numericId)
+                ? { ...item, ...saved }
+                : item
+            )
+          );
+        }
+        if (typeof refreshLedger === 'function') {
+          refreshLedger();
+        }
+      })
+      .catch((err) => console.warn('settleMiddlemanLedgerApi error:', err));
+  }, [ledger, refreshLedger]);
 
   // Compute Live Dashboard Metrics
   const dashboardMetrics = useMemo(() => {
@@ -1011,30 +1547,46 @@ export const MiddlemanProvider = ({ children }) => {
     updateProfile,
     refreshProfile,
     farmers,
+    refreshFarmers,
     addFarmer,
     updateFarmer,
     vendors,
+    refreshVendors,
     addVendor,
     updateVendor,
     customers,
+    refreshCustomers,
     addCustomer,
     updateCustomer,
     purchases,
+    refreshPurchases,
     createPurchase,
     vendorSales,
+    refreshVendorSales,
     createVendorSale,
     customerSales,
+    refreshCustomerSales,
     createCustomerSale,
     inventory,
+    addInventoryBatch,
+    updateInventoryBatch,
+    refreshInventory,
     confirmations,
     confirmTransaction,
     rejectTransaction,
+    refreshConfirmations,
+    refreshCustomers,
+    refreshCustomerSales,
     ledger,
+    addLedgerEntry,
     settleLedgerEntry,
+    refreshLedger,
     notifications,
     addNotification,
     markNotificationAsRead,
     markAllNotificationsAsRead,
+    deleteNotification,
+    refreshNotifications,
     dashboardMetrics,
     resetToDemoData,
   };

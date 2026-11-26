@@ -16,6 +16,7 @@ namespace AgriPurchaseBilling.Application.DTOs.VendorOperations
         public VendorSalesAnalyticsDto SalesAnalytics { get; set; } = new();
         public VendorEstimatedProfitLossDto EstimatedProfitLoss { get; set; } = new();
         public List<VendorDashboardOtpConfirmationDto> PendingOtpConfirmations { get; set; } = new();
+        public List<VendorDashboardTransactionDto> RecentTransactions { get; set; } = new();
     }
 
     public sealed class VendorDashboardKpisDto

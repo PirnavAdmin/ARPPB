@@ -61,7 +61,7 @@ export function CustomerProductDetailsModal({
               type="button"
               disabled={isOutOfStock}
               onClick={() => {
-                onAddToCart?.(product.id, qty);
+                onAddToCart?.(product, qty);
                 onClose();
               }}
               className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-[#0F766E] text-white hover:bg-[#115E59] disabled:opacity-50 cursor-pointer"
@@ -113,6 +113,9 @@ export function CustomerProductDetailsModal({
           <div className="flex flex-wrap items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-md bg-[#CCFBF1] text-[#0F766E] text-xs font-bold">
               {product.category}
+            </span>
+            <span className="px-2.5 py-0.5 rounded-md bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] text-xs font-bold">
+              {product.sellerType || 'Vendor'} • {product.sellerName || 'Verified Seller'}
             </span>
             <span className="px-2.5 py-0.5 rounded-md bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] font-mono text-xs font-semibold">
               {product.batchCode}

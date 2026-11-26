@@ -216,6 +216,7 @@ export function PurchaseForm({
     return {
       supplierCategory,
       supplierId: selectedSupplier.id,
+      supplierRawId: selectedSupplier.rawId || selectedSupplier.id,
       supplierName: isFarmer ? selectedSupplier.farmerName : selectedSupplier.businessName,
       ownerName: isFarmer ? '' : selectedSupplier.ownerName,
       mobileNumber: selectedSupplier.mobileNumber,

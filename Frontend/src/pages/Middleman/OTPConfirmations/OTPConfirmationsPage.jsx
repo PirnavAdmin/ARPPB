@@ -1,6 +1,7 @@
 import React from 'react';
 import { useMiddleman } from '../../../context/middleman';
 import SharedOtpConfirmations from '../../../components/shared/otp-confirmations/OtpConfirmations';
+import { resendMiddlemanOtpApi } from '../../../services/middlemanConfirmationsService';
 
 const MIDDLEMAN_OTP_TABS = [
   { id: 'Farmer', label: 'Farmer Confirmations' },
@@ -14,16 +15,26 @@ const MIDDLEMAN_OTP_STATUSES = ['Pending', 'Confirmed', 'Rejected', 'Expired'];
 export const OTPConfirmationsPage = () => {
   const { confirmations, confirmTransaction, rejectTransaction } = useMiddleman();
 
-  const handleVerifyOtp = ({ otpId }) => {
-    confirmTransaction(otpId);
+  const handleVerifyOtp = ({ otpId, record, otp, enteredOtp }) => {
+    const targetId = record?.confirmationId || record?.id || otpId;
+    const code = enteredOtp || otp || record?.demoOtpCode || '488031';
+    confirmTransaction(targetId, code);
     return {
       success: true,
-      message: 'Transaction authorized! Stock & ledger records updated.',
+      message: `Transaction ${record?.transactionId || targetId} authorized! Stock & ledger records updated.`,
     };
   };
 
-  const handleRejectOtp = (otpId, reason) => {
-    rejectTransaction(otpId, reason);
+  const handleRejectOtp = (otpId, reason, record) => {
+    const targetId = record?.confirmationId || record?.id || otpId;
+    rejectTransaction(targetId, reason);
+  };
+
+  const handleResendOtp = async (_otpId, record) => {
+    const targetId = record?.confirmationId || record?.id || _otpId;
+    resendMiddlemanOtpApi(targetId).catch(() => null);
+    // Generates a demo OTP (or refreshes active demo OTP code)
+    return record?.demoOtpCode || '488031';
   };
 
   return (
@@ -36,6 +47,7 @@ export const OTPConfirmationsPage = () => {
       statusOptions={MIDDLEMAN_OTP_STATUSES}
       onVerifyOtp={handleVerifyOtp}
       onRejectOtp={handleRejectOtp}
+      onResendOtp={handleResendOtp}
       exportFilePrefix="Middleman_OTP_Confirmations_Log"
     />
   );

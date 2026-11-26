@@ -103,6 +103,7 @@ export default function MyLedger({
   const [settleAmount, setSettleAmount] = useState('');
   const [settleMode, setSettleMode] = useState('NEFT / RTGS');
   const [settleNotes, setSettleNotes] = useState('');
+  const [settleRef, setSettleRef] = useState('');
 
   // Normalize entries without mutating source objects
   const normalizedEntries = useMemo(() => {
@@ -136,26 +137,51 @@ export default function MyLedger({
           ? 'Receivable Due'
           : 'Running Bal');
 
+      const debit = Number(item.debit || 0);
+      const credit = Number(item.credit || 0);
+      const totalAmount = debit > 0 ? debit : credit;
+      const settledAmount = Number(item.settledAmount ?? item.paidAmount ?? 0);
+      const outstandingAmount = Number(
+        item.outstandingAmount !== undefined && item.outstandingAmount !== null
+          ? item.outstandingAmount
+          : totalAmount > 0
+          ? Math.max(0, totalAmount - settledAmount)
+          : 0
+      );
+
+      let status = item.status || 'Pending';
+      if (status === 'Partial') status = 'Partially Paid';
+      if (totalAmount > 0) {
+        if (outstandingAmount <= 0) {
+          status = 'Paid';
+        } else if (settledAmount > 0) {
+          status = 'Partially Paid';
+        }
+      }
+
       return {
         raw: item,
         id,
         date: item.date || '—',
-        transactionId: item.transactionId || '—',
+        transactionId: item.transactionId || item.transactionCode || '—',
         category,
-        description: item.description || '—',
-        partyId: item.partyId || '—',
+        description: item.description || item.narration || '—',
+        partyId: item.partyId || item.partyCode || '—',
         partyName: item.partyName || '—',
         partyCategory,
-        debit: Number(item.debit || 0),
-        credit: Number(item.credit || 0),
+        debit,
+        credit,
         processingExpenses: Number(item.processingExpenses || 0),
-        settledAmount: Number(item.settledAmount || 0),
-        outstandingAmount: Number(item.outstandingAmount || 0),
+        settledAmount,
+        outstandingAmount,
+        paymentMode: item.paymentMode || item.paymentMethod || 'NEFT / RTGS',
+        referenceNo: item.referenceNo || item.referenceTransactionId || item.transactionId || '—',
+        relatedEntryId: item.relatedEntryId || null,
         runningBalance,
         balanceLabel,
         subLedgerGroup,
         expectedPaymentDate: item.expectedPaymentDate || item.dueDate || '—',
-        status: item.status || 'Pending',
+        status,
       };
     });
   }, [entries]);
@@ -266,6 +292,93 @@ export default function MyLedger({
     [normalizedEntries, selectedVoucherId]
   );
 
+  const selectedVoucherFinancials = useMemo(() => {
+    if (!selectedVoucher) return null;
+
+    const isPaymentVoucher =
+      selectedVoucher.category?.toLowerCase().includes('payment') ||
+      selectedVoucher.category?.toLowerCase().includes('receipt');
+
+    // Find linked parent entry if this is a payment voucher
+    const linkedParent =
+      isPaymentVoucher && selectedVoucher.transactionId
+        ? normalizedEntries.find(
+            (e) =>
+              e.id !== selectedVoucher.id &&
+              (e.transactionId === selectedVoucher.transactionId ||
+                (selectedVoucher.raw?.relatedEntryId &&
+                  (e.raw?.id === selectedVoucher.raw.relatedEntryId ||
+                    e.id ===
+                      `LDG-${String(selectedVoucher.raw.relatedEntryId).padStart(4, '0')}`)))
+          )
+        : null;
+
+    let originalAmount = 0;
+    let thisVoucherPayment = 0;
+    let totalPaidSoFar = 0;
+    let remainingBalance = 0;
+
+    if (isPaymentVoucher) {
+      thisVoucherPayment = Math.max(
+        selectedVoucher.debit,
+        selectedVoucher.credit
+      );
+      originalAmount = linkedParent
+        ? Math.max(linkedParent.debit, linkedParent.credit)
+        : thisVoucherPayment;
+      totalPaidSoFar = linkedParent
+        ? linkedParent.settledAmount
+        : thisVoucherPayment;
+      remainingBalance = linkedParent
+        ? linkedParent.outstandingAmount
+        : Math.max(0, originalAmount - totalPaidSoFar);
+    } else {
+      originalAmount = Math.max(
+        selectedVoucher.debit,
+        selectedVoucher.credit
+      );
+      totalPaidSoFar = selectedVoucher.settledAmount;
+      thisVoucherPayment = selectedVoucher.settledAmount;
+      remainingBalance =
+        selectedVoucher.outstandingAmount !== undefined &&
+        selectedVoucher.outstandingAmount !== null
+          ? selectedVoucher.outstandingAmount
+          : Math.max(0, originalAmount - totalPaidSoFar);
+    }
+
+    const paymentMethod =
+      selectedVoucher.paymentMode ||
+      selectedVoucher.raw?.paymentMode ||
+      (selectedVoucher.description?.includes('UPI')
+        ? 'UPI / IMPS'
+        : selectedVoucher.description?.includes('Cash')
+        ? 'Cash'
+        : selectedVoucher.description?.includes('Cheque')
+        ? 'Cheque'
+        : 'NEFT / RTGS');
+
+    const referenceId =
+      selectedVoucher.referenceNo ||
+      selectedVoucher.raw?.referenceNo ||
+      selectedVoucher.transactionId ||
+      '—';
+
+    const remarks =
+      selectedVoucher.description ||
+      `Accounting entry for ${selectedVoucher.partyName} (${selectedVoucher.category})`;
+
+    return {
+      isPaymentVoucher,
+      originalAmount,
+      thisVoucherPayment,
+      totalPaidSoFar,
+      remainingBalance,
+      paymentMethod,
+      referenceId,
+      remarks,
+    };
+  }, [selectedVoucher, normalizedEntries]);
+
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
     pagination.goToPage(1);
@@ -287,18 +400,19 @@ export default function MyLedger({
 
   const handleSettleButtonClick = (row) => {
     if (customSettlementModal && onQuickSettleRow) {
-      onQuickSettleRow(row.raw);
+      onQuickSettleRow(row.raw || row);
       return;
     }
     setSettlingEntry(row);
+    const origAmt = Math.max(Number(row.debit || 0), Number(row.credit || 0));
+    const paidAmt = Number(row.settledAmount || 0);
     const defaultAmt =
       row.outstandingAmount > 0
         ? row.outstandingAmount
-        : row.debit > 0
-        ? row.debit
-        : row.credit;
+        : Math.max(0, origAmt - paidAmt);
     setSettleAmount(String(defaultAmt || ''));
     setSettleMode('NEFT / RTGS');
+    setSettleRef(row.transactionId ? `UTR-${row.transactionId}` : '');
     setSettleNotes(`Settlement against ${row.transactionId}`);
   };
 
@@ -306,10 +420,20 @@ export default function MyLedger({
     e.preventDefault();
     if (!settlingEntry || !onQuickSettleRow) return;
     const amount = Number(settleAmount) || 0;
-    if (amount <= 0) return;
-    onQuickSettleRow(settlingEntry.raw, amount, {
+    const origAmt = Math.max(
+      Number(settlingEntry.debit || 0),
+      Number(settlingEntry.credit || 0)
+    );
+    const paidAmt = Number(settlingEntry.settledAmount || 0);
+    const maxAllowed =
+      settlingEntry.outstandingAmount > 0
+        ? settlingEntry.outstandingAmount
+        : Math.max(0, origAmt - paidAmt);
+    if (amount <= 0 || amount > maxAllowed) return;
+    onQuickSettleRow(settlingEntry.raw || settlingEntry, amount, {
       paymentMode: settleMode,
       notes: settleNotes,
+      referenceNo: settleRef || settlingEntry.transactionId,
     });
     setSettlingEntry(null);
   };
@@ -364,6 +488,16 @@ export default function MyLedger({
 
   const handlePrintVoucher = (entry) => {
     if (!entry) return;
+    const fin = selectedVoucherFinancials || {
+      originalAmount: Math.max(entry.debit, entry.credit),
+      thisVoucherPayment: entry.settledAmount,
+      totalPaidSoFar: entry.settledAmount,
+      remainingBalance: entry.outstandingAmount,
+      paymentMethod: entry.paymentMode || 'NEFT / RTGS',
+      referenceId: entry.referenceNo || entry.transactionId,
+      remarks: entry.description,
+    };
+
     printDocumentSummary({
       title: `Accounting Ledger Voucher – ${entry.id}`,
       subtitle: `Reference Transaction: ${entry.transactionId} | Posting Date: ${formatDate(
@@ -374,14 +508,34 @@ export default function MyLedger({
         { label: 'Transaction Reference', value: entry.transactionId },
         { label: 'Ledger Category', value: entry.category },
         { label: 'Party Name', value: entry.partyName },
-        { label: 'Party ID', value: entry.partyId },
-        { label: 'Party Category', value: entry.partyCategory },
+        {
+          label: 'Party ID & Category',
+          value: `${entry.partyId} (${entry.partyCategory})`,
+        },
         { label: 'Posting Date', value: formatDate(entry.date) },
         {
           label: 'Expected Settlement Date',
           value: formatDate(entry.expectedPaymentDate),
         },
         { label: 'Settlement Status', value: entry.status },
+        { label: 'Payment Method', value: fin.paymentMethod },
+        { label: 'Payment Reference / UTR', value: fin.referenceId },
+        {
+          label: 'Original Transaction Amount',
+          value: formatCurrency(fin.originalAmount),
+        },
+        {
+          label: "This Voucher's Payment Amount",
+          value: formatCurrency(fin.thisVoucherPayment),
+        },
+        {
+          label: 'Total Paid So Far',
+          value: formatCurrency(fin.totalPaidSoFar),
+        },
+        {
+          label: 'Remaining Outstanding Balance',
+          value: formatCurrency(fin.remainingBalance),
+        },
         {
           label: 'Running Balance After Entry',
           value: `${formatCurrency(Math.abs(entry.runningBalance || 0))} (${
@@ -394,17 +548,15 @@ export default function MyLedger({
           Particulars: entry.description,
           'Debit (Dr)': formatCurrency(entry.debit || 0),
           'Credit (Cr)': formatCurrency(entry.credit || 0),
+          'Total Paid': formatCurrency(fin.totalPaidSoFar),
+          'Remaining Bal': formatCurrency(fin.remainingBalance),
           ...(showProcessingExpenses
             ? {
                 'Processing Exp': formatCurrency(
                   entry.processingExpenses || 0
                 ),
               }
-            : {
-                'Outstanding Bal': formatCurrency(
-                  entry.outstandingAmount || 0
-                ),
-              }),
+            : {}),
         },
       ],
     });
@@ -865,8 +1017,9 @@ export default function MyLedger({
           )
         }
       >
-        {selectedVoucher && (
+        {selectedVoucher && selectedVoucherFinancials && (
           <div className="space-y-4 text-xs">
+            {/* Header Badge Strip */}
             <div className="p-4 rounded-xl bg-brand-light/40 border border-brand-primary/30 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-brand-muted block">
@@ -882,7 +1035,61 @@ export default function MyLedger({
               </div>
             </div>
 
+            {/* 4 Financial KPI Cards (Original, Paid This Voucher, Total Paid, Remaining Balance) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-xl border border-brand-border bg-brand-background/60 shadow-2xs">
+                <span className="text-[11px] font-semibold text-brand-muted block">
+                  1. Original Amount
+                </span>
+                <span className="text-base font-extrabold text-brand-text block mt-0.5">
+                  {formatCurrency(selectedVoucherFinancials.originalAmount)}
+                </span>
+                <span className="text-[10px] text-brand-muted">
+                  Full transaction value
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-brand-border bg-brand-light/20 shadow-2xs">
+                <span className="text-[11px] font-semibold text-brand-primary block">
+                  2. Voucher Payment
+                </span>
+                <span className="text-base font-extrabold text-brand-primary block mt-0.5">
+                  {formatCurrency(selectedVoucherFinancials.thisVoucherPayment)}
+                </span>
+                <span className="text-[10px] text-brand-muted">
+                  {selectedVoucherFinancials.isPaymentVoucher
+                    ? 'Payment amount on voucher'
+                    : 'Disbursed / paid amount'}
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-brand-border bg-brand-success-light/30 shadow-2xs">
+                <span className="text-[11px] font-semibold text-brand-success block">
+                  3. Total Paid So Far
+                </span>
+                <span className="text-base font-extrabold text-brand-success block mt-0.5">
+                  {formatCurrency(selectedVoucherFinancials.totalPaidSoFar)}
+                </span>
+                <span className="text-[10px] text-brand-muted">
+                  Cumulative settled payments
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-brand-border bg-brand-error-light/20 shadow-2xs">
+                <span className="text-[11px] font-semibold text-brand-error block">
+                  4. Remaining Balance
+                </span>
+                <span className="text-base font-extrabold text-brand-error block mt-0.5">
+                  {formatCurrency(selectedVoucherFinancials.remainingBalance)}
+                </span>
+                <span className="text-[10px] text-brand-muted">
+                  Outstanding balance due
+                </span>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Counterparty Details */}
               <div className="p-4 rounded-xl border border-brand-border bg-brand-background/50 space-y-2">
                 <h4 className="font-bold text-brand-text flex items-center gap-1.5">
                   <UserCheck className="w-4 h-4 text-brand-primary" />
@@ -912,6 +1119,37 @@ export default function MyLedger({
                 </div>
               </div>
 
+              {/* Payment & Settlement Details */}
+              <div className="p-4 rounded-xl border border-brand-border bg-brand-background/50 space-y-2">
+                <h4 className="font-bold text-brand-text flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4 text-brand-primary" />
+                  Payment & Settlement Details
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-brand-muted block">Payment Method</span>
+                    <span className="font-semibold text-brand-text">
+                      {selectedVoucherFinancials.paymentMethod}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-brand-muted block">Payment Reference / UTR</span>
+                    <span className="font-mono font-semibold text-brand-primary">
+                      {selectedVoucherFinancials.referenceId}
+                    </span>
+                  </div>
+                </div>
+                <div className="pt-1">
+                  <span className="text-brand-muted block">Voucher Remarks / Narration</span>
+                  <span className="font-medium text-brand-text">
+                    {selectedVoucherFinancials.remarks}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Dates & Running Balance */}
               <div className="p-4 rounded-xl border border-brand-border bg-brand-background/50 space-y-2">
                 <h4 className="font-bold text-brand-text flex items-center gap-1.5">
                   <Calendar className="w-4 h-4 text-brand-primary" />
@@ -945,43 +1183,38 @@ export default function MyLedger({
                   </span>
                 </div>
               </div>
-            </div>
 
-            <div className="p-4 rounded-xl border border-brand-border bg-brand-surface space-y-3">
-              <h4 className="font-bold text-brand-text flex items-center gap-1.5">
-                <Scale className="w-4 h-4 text-brand-primary" />
-                Double-Entry Posting Breakdown
-              </h4>
-              <p className="text-brand-text bg-brand-background p-3 rounded-lg border border-brand-border">
-                {selectedVoucher.description}
-              </p>
-
-              <div className="grid grid-cols-3 gap-3 pt-1">
-                <div className="p-3 rounded-lg bg-brand-background border border-brand-border">
-                  <span className="text-brand-muted block">Debit (Dr)</span>
-                  <span className="text-sm font-extrabold text-brand-text">
-                    {formatCurrency(selectedVoucher.debit || 0)}
-                  </span>
-                </div>
-                <div className="p-3 rounded-lg bg-brand-background border border-brand-border">
-                  <span className="text-brand-muted block">Credit (Cr)</span>
-                  <span className="text-sm font-extrabold text-brand-primary">
-                    {formatCurrency(selectedVoucher.credit || 0)}
-                  </span>
-                </div>
-                <div className="p-3 rounded-lg bg-brand-background border border-brand-border">
-                  <span className="text-brand-muted block">
-                    {showProcessingExpenses
-                      ? 'Processing Expense'
-                      : 'Outstanding Amount'}
-                  </span>
-                  <span className="text-sm font-extrabold text-brand-warning">
-                    {formatCurrency(
-                      showProcessingExpenses
-                        ? selectedVoucher.processingExpenses || 0
-                        : selectedVoucher.outstandingAmount || 0
-                    )}
-                  </span>
+              {/* Double-Entry Breakdown */}
+              <div className="p-4 rounded-xl border border-brand-border bg-brand-surface space-y-2">
+                <h4 className="font-bold text-brand-text flex items-center gap-1.5">
+                  <Scale className="w-4 h-4 text-brand-primary" />
+                  Double-Entry Posting Breakdown
+                </h4>
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  <div className="p-2.5 rounded-lg bg-brand-background border border-brand-border">
+                    <span className="text-brand-muted block text-[11px]">Debit (Dr)</span>
+                    <span className="text-xs font-extrabold text-brand-text">
+                      {formatCurrency(selectedVoucher.debit || 0)}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-brand-background border border-brand-border">
+                    <span className="text-brand-muted block text-[11px]">Credit (Cr)</span>
+                    <span className="text-xs font-extrabold text-brand-primary">
+                      {formatCurrency(selectedVoucher.credit || 0)}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-brand-background border border-brand-border">
+                    <span className="text-brand-muted block text-[11px]">
+                      {showProcessingExpenses ? 'Processing Exp' : 'Outstanding Bal'}
+                    </span>
+                    <span className="text-xs font-extrabold text-brand-warning">
+                      {formatCurrency(
+                        showProcessingExpenses
+                          ? selectedVoucher.processingExpenses || 0
+                          : selectedVoucherFinancials.remainingBalance
+                      )}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1003,111 +1236,181 @@ export default function MyLedger({
           subtitle="Post supplier payment or buyer receipt directly to the Financial Ledger"
           size="md"
         >
-          {settlingEntry && (
-            <form
-              onSubmit={handleConfirmBuiltInSettle}
-              className="space-y-4 text-xs"
-            >
-              <div className="p-4 rounded-xl bg-brand-light/40 border border-brand-primary/30 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-brand-muted">Counterparty:</span>
-                  <span className="font-bold text-brand-text">
+          {settlingEntry && (() => {
+            const origAmt = Math.max(
+              Number(settlingEntry.debit || 0),
+              Number(settlingEntry.credit || 0)
+            );
+            const prevSettled = Number(settlingEntry.settledAmount || 0);
+            const curOutstanding =
+              settlingEntry.outstandingAmount > 0
+                ? Number(settlingEntry.outstandingAmount)
+                : Math.max(0, origAmt - prevSettled);
+            const numEntered = Number(settleAmount) || 0;
+            const updatedRemaining = Math.max(0, curOutstanding - numEntered);
+            const isOverpaid = numEntered > curOutstanding;
+            const isInvalidAmount = numEntered <= 0 || isOverpaid;
+
+            return (
+              <form
+                onSubmit={handleConfirmBuiltInSettle}
+                className="space-y-4 text-xs"
+              >
+                {/* 3 Summary Cards: Original, Previously Paid, Outstanding */}
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div className="p-3 rounded-xl bg-brand-background border border-brand-border">
+                    <span className="text-[10px] text-brand-muted block">Original Amount</span>
+                    <span className="text-sm font-bold text-brand-text">
+                      {formatCurrency(origAmt)}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-brand-success-light/30 border border-brand-success/20">
+                    <span className="text-[10px] text-brand-success block">Already Settled</span>
+                    <span className="text-sm font-bold text-brand-success">
+                      {formatCurrency(prevSettled)}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-brand-error-light/20 border border-brand-error/20">
+                    <span className="text-[10px] text-brand-error block">Current Outstanding</span>
+                    <span className="text-sm font-bold text-brand-error">
+                      {formatCurrency(curOutstanding)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Counterparty row */}
+                <div className="px-3.5 py-2.5 rounded-lg bg-brand-light/30 border border-brand-primary/20 flex justify-between items-center">
+                  <span className="text-brand-muted font-medium">Counterparty Party:</span>
+                  <span className="font-bold text-brand-primary">
                     {settlingEntry.partyName} ({settlingEntry.partyCategory})
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-brand-muted">Voucher Amount:</span>
-                  <span className="font-semibold text-brand-text">
-                    {formatCurrency(
-                      settlingEntry.debit > 0
-                        ? settlingEntry.debit
-                        : settlingEntry.credit
-                    )}
-                  </span>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-brand-text mb-1">
+                      Settlement Amount (₹) <span className="text-brand-error">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max={curOutstanding}
+                      step="0.01"
+                      required
+                      value={settleAmount}
+                      onChange={(e) => setSettleAmount(e.target.value)}
+                      placeholder="Enter amount to pay"
+                      className={`w-full px-3 py-2 rounded-lg border bg-brand-surface text-brand-text font-bold ${
+                        isOverpaid ? 'border-brand-error ring-1 ring-brand-error' : 'border-brand-border'
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-brand-text mb-1">
+                      Payment Mode
+                    </label>
+                    <select
+                      value={settleMode}
+                      onChange={(e) => setSettleMode(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-brand-border bg-brand-surface text-brand-text"
+                    >
+                      <option value="NEFT / RTGS">NEFT / RTGS</option>
+                      <option value="UPI / IMPS">UPI / IMPS</option>
+                      <option value="Bank Cheque">Bank Cheque</option>
+                      <option value="Cash Settlement">Cash Settlement</option>
+                    </select>
+                  </div>
                 </div>
-                {settlingEntry.settledAmount > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-brand-muted">Already Settled:</span>
-                    <span className="font-semibold text-brand-success">
-                      {formatCurrency(settlingEntry.settledAmount)}
+
+                {/* Dynamic Live Calculation Card */}
+                <div className="p-3.5 rounded-xl border border-brand-primary/30 bg-brand-light/30 space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-brand-muted">Payment to Post:</span>
+                    <span className="font-bold text-brand-primary">
+                      {formatCurrency(numEntered)}
                     </span>
                   </div>
-                )}
-                <div className="flex justify-between pt-1 border-t border-brand-primary/20">
-                  <span className="text-brand-muted font-semibold">
-                    Current Outstanding:
-                  </span>
-                  <span className="font-extrabold text-brand-error">
-                    {formatCurrency(settlingEntry.outstandingAmount || 0)}
-                  </span>
+                  <div className="flex justify-between items-center text-xs pt-1 border-t border-brand-primary/20">
+                    <span className="font-semibold text-brand-text">
+                      Updated Remaining Balance:
+                    </span>
+                    <span
+                      className={`text-sm font-extrabold ${
+                        updatedRemaining === 0 ? 'text-brand-success' : 'text-brand-error'
+                      }`}
+                    >
+                      {formatCurrency(updatedRemaining)}
+                    </span>
+                  </div>
+                  <div className="pt-1">
+                    {isOverpaid ? (
+                      <span className="text-[11px] font-bold text-brand-error block">
+                        ⚠️ Overpayment error: Amount exceeds current outstanding balance of {formatCurrency(curOutstanding)}.
+                      </span>
+                    ) : updatedRemaining === 0 && numEntered > 0 ? (
+                      <span className="text-[11px] font-semibold text-brand-success block">
+                        ✓ Full settlement: Status will be updated to "Paid".
+                      </span>
+                    ) : numEntered > 0 ? (
+                      <span className="text-[11px] font-semibold text-brand-warning block">
+                        ℹ Partial settlement: Status will be updated to "Partially Paid" ({formatCurrency(updatedRemaining)} remaining).
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-brand-text mb-1">
-                    Settlement Amount (₹){' '}
-                    <span className="text-brand-error">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={settlingEntry.outstandingAmount || undefined}
-                    required
-                    value={settleAmount}
-                    onChange={(e) => setSettleAmount(e.target.value)}
-                    placeholder="Enter amount to settle"
-                    className="w-full px-3 py-2 rounded-lg border border-brand-border bg-brand-surface text-brand-text font-bold"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-brand-text mb-1">
+                      Bank UTR / Reference ID
+                    </label>
+                    <input
+                      type="text"
+                      value={settleRef}
+                      onChange={(e) => setSettleRef(e.target.value)}
+                      placeholder="e.g., UTR-2026110501"
+                      className="w-full px-3 py-2 rounded-lg border border-brand-border bg-brand-surface text-brand-text"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-brand-text mb-1">
+                      Settlement Narration / Notes
+                    </label>
+                    <input
+                      type="text"
+                      value={settleNotes}
+                      onChange={(e) => setSettleNotes(e.target.value)}
+                      placeholder="Enter remarks or payment purpose"
+                      className="w-full px-3 py-2 rounded-lg border border-brand-border bg-brand-surface text-brand-text"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block font-bold text-brand-text mb-1">
-                    Payment Mode
-                  </label>
-                  <select
-                    value={settleMode}
-                    onChange={(e) => setSettleMode(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-brand-border bg-brand-surface text-brand-text"
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-brand-border">
+                  <button
+                    type="button"
+                    onClick={() => setSettlingEntry(null)}
+                    className="px-4 py-2 rounded-lg text-xs font-semibold border border-brand-border text-brand-text hover:bg-brand-background cursor-pointer"
                   >
-                    <option value="NEFT / RTGS">NEFT / RTGS</option>
-                    <option value="UPI / IMPS">UPI / IMPS</option>
-                    <option value="Bank Cheque">Bank Cheque</option>
-                    <option value="Cash Settlement">Cash Settlement</option>
-                  </select>
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isInvalidAmount}
+                    className={`px-5 py-2 rounded-lg text-xs font-bold text-white transition-colors cursor-pointer ${
+                      isInvalidAmount
+                        ? 'bg-brand-muted opacity-50 cursor-not-allowed'
+                        : 'bg-brand-primary hover:bg-brand-secondary'
+                    }`}
+                  >
+                    Confirm & Post Settlement
+                  </button>
                 </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-brand-text mb-1">
-                  Settlement Narration / Notes
-                </label>
-                <input
-                  type="text"
-                  value={settleNotes}
-                  onChange={(e) => setSettleNotes(e.target.value)}
-                  placeholder="Enter payment reference or remarks"
-                  className="w-full px-3 py-2 rounded-lg border border-brand-border bg-brand-surface text-brand-text"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-brand-border">
-                <button
-                  type="button"
-                  onClick={() => setSettlingEntry(null)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold border border-brand-border text-brand-text hover:bg-brand-background cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-lg text-xs font-bold bg-brand-primary text-white hover:bg-brand-secondary transition-colors cursor-pointer"
-                >
-                  Confirm & Post Settlement
-                </button>
-              </div>
-            </form>
-          )}
+              </form>
+            );
+          })()}
         </VendorModal>
       )}
     </div>

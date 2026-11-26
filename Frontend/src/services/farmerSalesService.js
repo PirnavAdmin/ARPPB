@@ -142,21 +142,25 @@ export function mapSaleDtoToSale(dto = {}, existing = {}) {
     transactionId: transactionId || id,
     saleId: id,
     date,
+    saleDate: date,
     cropId,
     cropName,
+    crop: cropName,
     buyerName,
     buyerCategory,
     buyerMobile,
     quantity,
+    sellingQuantity: quantity,
     unit,
     rate,
     totalAmount,
     transactionStatus: normalizedStatus,
+    status: normalizedStatus,
     otpStatus: normalizedOtpStatus,
     expectedPaymentDate,
     paymentStatus: dto.paymentStatus || (normalizedStatus === 'Confirmed' ? 'Payment Expected' : 'Awaiting Confirmation'),
-    pickupLocation: dto.pickupLocation || existing.pickupLocation || '',
-    qualityGrade: dto.qualityGrade || existing.qualityGrade || 'Grade A',
+    pickupLocation: dto.pickupLocation || dto.location || existing.pickupLocation || '',
+    qualityGrade: dto.qualityGrade || dto.quality || existing.qualityGrade || 'Grade A',
     notes: dto.notes || existing.notes || '',
     createdAt: dto.createdAt || existing.createdAt || null,
     updatedAt: dto.updatedAt || existing.updatedAt || null,
@@ -170,21 +174,27 @@ export function mapSaleFormToCreateDto(form = {}, profile = {}) {
   const quantity = Number(form.sellingQuantity ?? form.quantity ?? 0);
   const rate = Number(form.rate ?? 0);
   const totalAmount = Number(form.totalAmount ?? (quantity * rate));
+  const cleanMobile = String(form.buyerMobile || '').trim().replace(/\D/g, '').slice(-10);
 
   return {
     cropId: form.cropId || null,
     cropName: String(form.cropName || '').trim(),
     buyerCategory: form.buyerCategory || 'Middleman',
     buyerName: String(form.buyerName || '').trim(),
-    buyerMobile: String(form.buyerMobile || '').replace(/\D/g, '').slice(-10),
+    buyerMobile: cleanMobile,
     quantity,
     sellingQuantity: quantity,
     unit: form.unit || 'Quintals',
     rate,
     totalAmount,
     qualityGrade: form.qualityGrade || 'Grade A',
-    pickupLocation: form.pickupLocation || `${profile?.farmName || ''}, ${profile?.village || ''}`.trim(),
-    expectedPickupDate: form.expectedPickupDate ? new Date(form.expectedPickupDate).toISOString() : new Date().toISOString(),
+    pickupLocation:
+      form.pickupLocation ||
+      [profile?.farmName, profile?.village, profile?.district].filter(Boolean).join(', ') ||
+      'Farm Warehouse',
+    expectedPickupDate: form.expectedPickupDate
+      ? new Date(form.expectedPickupDate).toISOString()
+      : new Date().toISOString(),
     notes: form.notes || '',
   };
 }
@@ -201,13 +211,13 @@ export async function fetchSalesSummaryApi(userId) {
 
   // Try primary endpoint
   try {
-    const res = await api.get(Endpoints.FARMER_MY_SALES.SUMMARY, { params });
+    const res = await api.get(Endpoints?.FARMER_MY_SALES?.SUMMARY || '/api/v1/farmer/my-sales/summary', { params });
     const body = res?.data;
     return body?.data || body;
   } catch (err1) {
     if (err1?.response?.status === 404) {
       try {
-        const res2 = await api.get(Endpoints.FARMER_MY_SALES.SUMMARY_ALT, { params });
+        const res2 = await api.get(Endpoints?.FARMER_MY_SALES?.SUMMARY_ALT || '/api/v1/farmer/sales/summary', { params });
         const body2 = res2?.data;
         return body2?.data || body2;
       } catch {
@@ -217,6 +227,49 @@ export async function fetchSalesSummaryApi(userId) {
     return null;
   }
 }
+
+/**
+ * GET /api/v1/farmer/sell-products/options (fallback: /api/v1/farmer/sales/options)
+ * Fetches dropdown and form options: buyer categories, grades, units, payment methods
+ */
+export async function fetchSellProductsOptionsApi() {
+  try {
+    const res = await api.get(Endpoints?.FARMER_SELL_PRODUCTS?.OPTIONS || '/api/v1/farmer/sell-products/options');
+    const body = res?.data;
+    const data = body?.data || body;
+    if (data && (data.buyerCategories || data.qualityGrades)) {
+      return {
+        buyerCategories: data.buyerCategories || DEFAULT_SALES_OPTIONS.buyerCategories,
+        qualityGrades: data.qualityGrades || DEFAULT_SALES_OPTIONS.qualityGrades,
+        units: data.units || DEFAULT_SALES_OPTIONS.units,
+        paymentMethods: data.paymentMethods || DEFAULT_SALES_OPTIONS.paymentMethods,
+      };
+    }
+    return DEFAULT_SALES_OPTIONS;
+  } catch (err1) {
+    if (err1?.response?.status === 404) {
+      try {
+        const res2 = await api.get(Endpoints?.FARMER_SELL_PRODUCTS?.OPTIONS_ALT || '/api/v1/farmer/sales/options');
+        const body2 = res2?.data;
+        const data2 = body2?.data || body2;
+        if (data2 && (data2.buyerCategories || data2.qualityGrades)) {
+          return {
+            buyerCategories: data2.buyerCategories || DEFAULT_SALES_OPTIONS.buyerCategories,
+            qualityGrades: data2.qualityGrades || DEFAULT_SALES_OPTIONS.qualityGrades,
+            units: data2.units || DEFAULT_SALES_OPTIONS.units,
+            paymentMethods: data2.paymentMethods || DEFAULT_SALES_OPTIONS.paymentMethods,
+          };
+        }
+      } catch {
+        // Ignore fallback error
+      }
+    }
+    return DEFAULT_SALES_OPTIONS;
+  }
+}
+
+// Alias for compatibility
+export const fetchSalesOptionsApi = fetchSellProductsOptionsApi;
 
 /**
  * GET /api/v1/farmer/sales (fallback: /api/v1/farmer/my-sales)
@@ -231,7 +284,7 @@ export async function fetchFarmerSalesApi({ category, cropId, status, search, us
   if (userId) params.userId = userId;
 
   try {
-    const res = await api.get(Endpoints.FARMER_MY_SALES.BASE, { params });
+    const res = await api.get(Endpoints?.FARMER_MY_SALES?.BASE || '/api/v1/farmer/sales', { params });
     const body = res?.data;
     const list = Array.isArray(body?.data?.items)
       ? body.data.items
@@ -244,7 +297,7 @@ export async function fetchFarmerSalesApi({ category, cropId, status, search, us
   } catch (err1) {
     if (err1?.response?.status === 404) {
       try {
-        const res2 = await api.get(Endpoints.FARMER_MY_SALES.BASE_ALT, { params });
+        const res2 = await api.get(Endpoints?.FARMER_MY_SALES?.BASE_ALT || '/api/v1/farmer/my-sales', { params });
         const body2 = res2?.data;
         const list2 = Array.isArray(body2?.data?.items)
           ? body2.data.items
@@ -270,13 +323,19 @@ export async function fetchFarmerSaleByIdApi(id, userId) {
   const params = userId ? { userId } : {};
 
   try {
-    const res = await api.get(Endpoints.FARMER_MY_SALES.BY_ID(id), { params });
+    const endpointUrl = Endpoints?.FARMER_MY_SALES?.BY_ID
+      ? Endpoints.FARMER_MY_SALES.BY_ID(id)
+      : `/api/v1/farmer/my-sales/${id}`;
+    const res = await api.get(endpointUrl, { params });
     const body = res?.data;
     return mapSaleDtoToSale(body?.data || body);
   } catch (err1) {
     if (err1?.response?.status === 404) {
       try {
-        const res2 = await api.get(Endpoints.FARMER_MY_SALES.BY_ID_ALT(id), { params });
+        const endpointUrlAlt = Endpoints?.FARMER_MY_SALES?.BY_ID_ALT
+          ? Endpoints.FARMER_MY_SALES.BY_ID_ALT(id)
+          : `/api/v1/farmer/sales/${id}`;
+        const res2 = await api.get(endpointUrlAlt, { params });
         const body2 = res2?.data;
         return mapSaleDtoToSale(body2?.data || body2);
       } catch {
@@ -284,45 +343,6 @@ export async function fetchFarmerSaleByIdApi(id, userId) {
       }
     }
     throw parseSalesApiError(err1, `Failed to fetch sale details for #${id}.`);
-  }
-}
-
-/**
- * GET /api/v1/farmer/sell-products/options (fallback: /api/v1/farmer/sales/options)
- */
-export async function fetchSellProductsOptionsApi() {
-  try {
-    const res = await api.get(Endpoints.FARMER_SELL_PRODUCTS.OPTIONS);
-    const body = res?.data;
-    const data = body?.data || body;
-    if (data && (data.buyerCategories || data.qualityGrades)) {
-      return {
-        buyerCategories: data.buyerCategories || DEFAULT_SALES_OPTIONS.buyerCategories,
-        qualityGrades: data.qualityGrades || DEFAULT_SALES_OPTIONS.qualityGrades,
-        units: data.units || DEFAULT_SALES_OPTIONS.units,
-        paymentMethods: data.paymentMethods || DEFAULT_SALES_OPTIONS.paymentMethods,
-      };
-    }
-    return DEFAULT_SALES_OPTIONS;
-  } catch (err1) {
-    if (err1?.response?.status === 404) {
-      try {
-        const res2 = await api.get(Endpoints.FARMER_SELL_PRODUCTS.OPTIONS_ALT);
-        const body2 = res2?.data;
-        const data2 = body2?.data || body2;
-        if (data2 && (data2.buyerCategories || data2.qualityGrades)) {
-          return {
-            buyerCategories: data2.buyerCategories || DEFAULT_SALES_OPTIONS.buyerCategories,
-            qualityGrades: data2.qualityGrades || DEFAULT_SALES_OPTIONS.qualityGrades,
-            units: data2.units || DEFAULT_SALES_OPTIONS.units,
-            paymentMethods: data2.paymentMethods || DEFAULT_SALES_OPTIONS.paymentMethods,
-          };
-        }
-      } catch {
-        // Ignore fallback error
-      }
-    }
-    return DEFAULT_SALES_OPTIONS;
   }
 }
 
@@ -335,7 +355,8 @@ export async function createFarmerSaleApi(saleFormData, userId, profile) {
   const params = userId ? { userId } : {};
 
   try {
-    const res = await api.post(Endpoints.FARMER_SELL_PRODUCTS.BASE, payload, { params });
+    const primaryUrl = Endpoints?.FARMER_SELL_PRODUCTS?.BASE || '/api/v1/farmer/sales';
+    const res = await api.post(primaryUrl, payload, { params });
     const body = res?.data;
     const data = body?.data || body;
     const createdId = data?.id ?? data?.saleId ?? data?.transactionId;
@@ -353,7 +374,8 @@ export async function createFarmerSaleApi(saleFormData, userId, profile) {
   } catch (err1) {
     if (err1?.response?.status === 404) {
       try {
-        const res2 = await api.post(Endpoints.FARMER_SELL_PRODUCTS.BASE_ALT, payload, { params });
+        const altUrl = Endpoints?.FARMER_SELL_PRODUCTS?.BASE_ALT || '/api/v1/farmer/sell-products';
+        const res2 = await api.post(altUrl, payload, { params });
         const body2 = res2?.data;
         const data2 = body2?.data || body2;
         const createdId2 = data2?.id ?? data2?.saleId ?? data2?.transactionId;
@@ -389,10 +411,10 @@ export async function verifyFarmerSaleOtpApi(saleId, otpCode, userId) {
   const params = userId ? { userId } : {};
 
   const endpointsToTry = [
-    Endpoints.FARMER_SELL_PRODUCTS.VERIFY_OTP(saleId),
-    Endpoints.FARMER_SELL_PRODUCTS.VERIFY_OTP_ALT1(saleId),
-    Endpoints.FARMER_SELL_PRODUCTS.VERIFY_OTP_ALT2(saleId),
-    Endpoints.FARMER_SELL_PRODUCTS.VERIFY_OTP_ALT3(saleId),
+    Endpoints?.FARMER_SELL_PRODUCTS?.VERIFY_OTP ? Endpoints.FARMER_SELL_PRODUCTS.VERIFY_OTP(saleId) : `/api/v1/farmer/sell-products/${saleId}/verify-otp`,
+    Endpoints?.FARMER_SELL_PRODUCTS?.VERIFY_OTP_ALT1 ? Endpoints.FARMER_SELL_PRODUCTS.VERIFY_OTP_ALT1(saleId) : `/api/v1/farmer/sell-products/${saleId}/verify`,
+    Endpoints?.FARMER_SELL_PRODUCTS?.VERIFY_OTP_ALT2 ? Endpoints.FARMER_SELL_PRODUCTS.VERIFY_OTP_ALT2(saleId) : `/api/v1/farmer/sales/${saleId}/verify-otp`,
+    Endpoints?.FARMER_SELL_PRODUCTS?.VERIFY_OTP_ALT3 ? Endpoints.FARMER_SELL_PRODUCTS.VERIFY_OTP_ALT3(saleId) : `/api/v1/farmer/sales/${saleId}/verify`,
   ];
 
   let lastError = null;
@@ -427,10 +449,10 @@ export async function resendFarmerSaleOtpApi(saleId, userId) {
   const params = userId ? { userId } : {};
 
   const endpointsToTry = [
-    Endpoints.FARMER_SELL_PRODUCTS.RESEND_OTP(saleId),
-    Endpoints.FARMER_SELL_PRODUCTS.RESEND_OTP_ALT1(saleId),
-    Endpoints.FARMER_SELL_PRODUCTS.RESEND_OTP_ALT2(saleId),
-    Endpoints.FARMER_SELL_PRODUCTS.RESEND_OTP_ALT3(saleId),
+    Endpoints?.FARMER_SELL_PRODUCTS?.RESEND_OTP ? Endpoints.FARMER_SELL_PRODUCTS.RESEND_OTP(saleId) : `/api/v1/farmer/sell-products/${saleId}/resend-otp`,
+    Endpoints?.FARMER_SELL_PRODUCTS?.RESEND_OTP_ALT1 ? Endpoints.FARMER_SELL_PRODUCTS.RESEND_OTP_ALT1(saleId) : `/api/v1/farmer/sell-products/${saleId}/resend`,
+    Endpoints?.FARMER_SELL_PRODUCTS?.RESEND_OTP_ALT2 ? Endpoints.FARMER_SELL_PRODUCTS.RESEND_OTP_ALT2(saleId) : `/api/v1/farmer/sales/${saleId}/resend-otp`,
+    Endpoints?.FARMER_SELL_PRODUCTS?.RESEND_OTP_ALT3 ? Endpoints.FARMER_SELL_PRODUCTS.RESEND_OTP_ALT3(saleId) : `/api/v1/farmer/sales/${saleId}/resend`,
   ];
 
   let lastError = null;

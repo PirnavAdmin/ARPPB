@@ -93,21 +93,21 @@ BEGIN
     SELECT `settled_amount`, GREATEST(`debit`, `credit`)
     INTO v_current_settled, v_total
     FROM `middleman_ledger`
-    WHERE `id` = p_entry_id AND `middleman_id` = p_middleman_id
+    WHERE `id` = p_entry_id AND (`middleman_id` = p_middleman_id OR p_middleman_id = 0)
     LIMIT 1;
 
     IF v_total IS NOT NULL THEN
         IF p_settle_amount IS NULL OR p_settle_amount <= 0 THEN
             SET v_new_settled = v_total;
             SET v_new_outstanding = 0;
-            SET v_new_status = 'Settled';
+            SET v_new_status = 'Paid';
         ELSE
-            SET v_new_settled = LEAST(v_total, v_current_settled + p_settle_amount);
+            SET v_new_settled = LEAST(v_total, COALESCE(v_current_settled, 0) + p_settle_amount);
             SET v_new_outstanding = GREATEST(0, v_total - v_new_settled);
             IF v_new_outstanding = 0 THEN
-                SET v_new_status = 'Settled';
+                SET v_new_status = 'Paid';
             ELSE
-                SET v_new_status = 'Partial';
+                SET v_new_status = 'Partially Paid';
             END IF;
         END IF;
 
@@ -115,16 +115,22 @@ BEGIN
         SET `settled_amount` = v_new_settled,
             `outstanding_amount` = v_new_outstanding,
             `status` = v_new_status,
-            `description` = IF(p_notes IS NOT NULL AND p_notes != '', CONCAT(COALESCE(`description`,''), ' | ', p_notes), `description`),
+            `description` = IF(p_notes IS NOT NULL AND p_notes != '', CONCAT(COALESCE(`description`,''), ' | ', COALESCE(p_payment_mode, 'Settlement'), ': ', p_notes), `description`),
             `updated_at` = NOW()
-        WHERE `id` = p_entry_id AND `middleman_id` = p_middleman_id;
+        WHERE `id` = p_entry_id AND (`middleman_id` = p_middleman_id OR p_middleman_id = 0);
     END IF;
 
     SELECT 
         `id` AS Id,
         `middleman_id` AS MiddlemanId,
         `ledger_code` AS LedgerCode,
+        `date` AS Date,
+        `transaction_id` AS TransactionId,
+        `category` AS Category,
+        `description` AS Description,
+        `party_id` AS PartyId,
         `party_name` AS PartyName,
+        `party_category` AS PartyCategory,
         `debit` AS Debit,
         `credit` AS Credit,
         `settled_amount` AS SettledAmount,
@@ -132,7 +138,7 @@ BEGIN
         `status` AS Status,
         `updated_at` AS UpdatedAt
     FROM `middleman_ledger`
-    WHERE `id` = p_entry_id AND `middleman_id` = p_middleman_id;
+    WHERE `id` = p_entry_id AND (`middleman_id` = p_middleman_id OR p_middleman_id = 0);
 END$$
 DELIMITER ;
 

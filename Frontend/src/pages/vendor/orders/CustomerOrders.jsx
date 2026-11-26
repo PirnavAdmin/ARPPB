@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -25,6 +25,7 @@ import VendorPagination from '../VendorPagination';
 import VendorStatusBadge from '../VendorStatusBadge';
 import VendorExportMenu from '../VendorExportMenu';
 import OrderDetails from './OrderDetails';
+import { fetchVendorOrderByIdApi } from '../../../services/vendorApiService';
 
 const TABS = ['All', ...ORDER_STATUSES];
 
@@ -49,6 +50,12 @@ export default function CustomerOrders() {
     () => orders.find((o) => o.id === selectedOrderId) || null,
     [orders, selectedOrderId]
   );
+
+  useEffect(() => {
+    if (selectedOrderId) {
+      fetchVendorOrderByIdApi(selectedOrderId);
+    }
+  }, [selectedOrderId]);
 
   // Counts per tab
   const statusCounts = useMemo(() => {

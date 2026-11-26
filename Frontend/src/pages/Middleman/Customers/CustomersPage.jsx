@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useMiddleman } from '../../../context/middleman';
 import { MiddlemanPageHeader } from '../components/layout/MiddlemanPageHeader';
@@ -11,18 +11,32 @@ import { FilterDropdown } from '../components/common/FilterDropdown';
 import { Pagination } from '../components/common/Pagination';
 import { SectionCard } from '../components/common/SectionCard';
 
-export const CustomersPage = () => {
+export const CustomersPage = ({ initialOpenRegister = false }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { customers, addCustomer, updateCustomer, customerSales } = useMiddleman();
+
+  // Detect whether to open register form immediately
+  const shouldOpenRegister =
+    initialOpenRegister ||
+    location.pathname.endsWith('/register') ||
+    location.pathname.endsWith('/add') ||
+    Boolean(location.state?.openRegister);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [districtFilter, setDistrictFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
 
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(shouldOpenRegister);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewingCustomer, setViewingCustomer] = useState(null);
+
+  useEffect(() => {
+    if (shouldOpenRegister) {
+      setIsFormOpen(true);
+    }
+  }, [shouldOpenRegister]);
 
   const districts = useMemo(() => {
     return Array.from(new Set(customers.map((c) => c.district).filter(Boolean)));
@@ -46,14 +60,21 @@ export const CustomersPage = () => {
   const totalItems = filteredCustomers.length;
   const paginatedCustomers = filteredCustomers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setEditingCustomer(null);
+    if (location.pathname.endsWith('/register') || location.pathname.endsWith('/add')) {
+      navigate('/middleman/customers', { replace: true });
+    }
+  };
+
   const handleSaveCustomer = (formData) => {
     if (editingCustomer) {
       updateCustomer(editingCustomer.customerId, formData);
     } else {
       addCustomer(formData);
     }
-    setIsFormOpen(false);
-    setEditingCustomer(null);
+    handleCloseForm();
   };
 
   return (
@@ -67,6 +88,7 @@ export const CustomersPage = () => {
             onClick={() => {
               setEditingCustomer(null);
               setIsFormOpen(true);
+              navigate('/middleman/customers/register');
             }}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-[#0F766E] text-white hover:bg-[#115E59] shadow-sm cursor-pointer transition-all"
           >
@@ -110,7 +132,11 @@ export const CustomersPage = () => {
             setEditingCustomer(c);
             setIsFormOpen(true);
           }}
-          onViewSales={(c) => navigate('/middleman/sales-history', { state: { partyFilter: c.name } })}
+          onViewSales={(c) =>
+            navigate('/middleman/sales-history', {
+              state: { activeTab: 'customer', partyFilter: c.name },
+            })
+          }
         />
 
         <Pagination
@@ -135,10 +161,7 @@ export const CustomersPage = () => {
               initialData={editingCustomer}
               isEdit={Boolean(editingCustomer)}
               onSave={handleSaveCustomer}
-              onCancel={() => {
-                setIsFormOpen(false);
-                setEditingCustomer(null);
-              }}
+              onCancel={handleCloseForm}
             />
           </div>
         </div>

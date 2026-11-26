@@ -29,6 +29,10 @@ import CustomerDetails from './CustomerDetails';
 import { AP_DISTRICTS, INDIAN_STATES } from '../../../utils/constants';
 import { formatCurrency, formatNumber } from '../../../utils/formatCurrency';
 import { generateNextId } from '../../../utils/generateTransactionId';
+import {
+  fetchVendorCustomerByIdApi,
+  exportVendorCustomersApi,
+} from '../../../services/vendorApiService';
 
 export function Customers() {
   const navigate = useNavigate();
@@ -40,6 +44,7 @@ export function Customers() {
     customers,
     orders,
     sales,
+    fetchCustomerDetails,
     addCustomer,
     updateCustomer,
     toggleCustomerStatus,
@@ -58,14 +63,31 @@ export function Customers() {
   // Enrich each customer with total purchased quantity across their sales/orders
   const customersWithQty = useMemo(() => {
     return customers.map((c) => {
+      const isMatchCust = (partyId, partyName = '') => {
+        const pStr = String(partyId || '').trim().toLowerCase();
+        const idStr = String(c.id || '').trim().toLowerCase();
+        const rawIdStr = String(c.rawId || '').trim().toLowerCase();
+        const codeStr = String(c.customerCode || c.code || '').trim().toLowerCase();
+        const nameStr = String(c.name || c.customerName || c.businessName || '').trim().toLowerCase();
+        const rName = String(partyName || '').trim().toLowerCase();
+
+        if (pStr && (pStr === idStr || pStr === rawIdStr || (codeStr && pStr === codeStr))) return true;
+        const numP = pStr.replace(/\D/g, '');
+        const numC = (idStr || rawIdStr).replace(/\D/g, '');
+        if (numP && numC && numP === numC) return true;
+        if (rName && nameStr && (rName === nameStr || nameStr.includes(rName) || rName.includes(nameStr))) return true;
+        return false;
+      };
+
       const custSales = sales.filter(
-        (s) => s.customerId === c.id && s.salesStatus !== 'Cancelled'
+        (s) =>
+          (isMatchCust(s.customerId || s.customerUserId, s.customerName) || s.customerId === c.id) &&
+          s.salesStatus !== 'Cancelled'
       );
-      const totalPurchasedQty = custSales.reduce(
-        (sum, s) => sum + Number(s.quantity || 0),
-        0
-      );
-      const primaryUnit = custSales[0]?.unit || 'Units';
+      const totalPurchasedQty = custSales.length > 0
+        ? custSales.reduce((sum, s) => sum + Number(s.quantity || 0), 0)
+        : Number(c.totalPurchaseQuantity || 0);
+      const primaryUnit = custSales[0]?.unit || c.quantityUnit || 'Quintal';
       return {
         ...c,
         totalPurchasedQty,
@@ -77,7 +99,15 @@ export function Customers() {
   // Resolve active customer for the full-page profile view (driven by URL query params)
   const activeProfileCustomer = useMemo(() => {
     if (!queryCustomerId) return null;
-    return customersWithQty.find((c) => c.id === queryCustomerId) || null;
+    return (
+      customersWithQty.find(
+        (c) =>
+          c.id === queryCustomerId ||
+          String(c.id) === String(queryCustomerId) ||
+          String(c.rawId) === String(queryCustomerId) ||
+          c.customerCode === queryCustomerId
+      ) || null
+    );
   }, [customersWithQty, queryCustomerId]);
 
   const isProfileView = Boolean(activeProfileCustomer);
@@ -95,6 +125,8 @@ export function Customers() {
   const openProfile = (customerId) => {
     listScrollRef.current = window.scrollY;
     setSearchParams({ customerId }, { state: { fromDirectory: true } });
+    fetchCustomerDetails(customerId);
+    exportVendorCustomersApi({ customerId });
   };
 
   // Return to the Customers table (search, filters, pagination and scroll are preserved)
@@ -162,11 +194,23 @@ export function Customers() {
     [customers]
   );
 
-  const handleSave = (formData) => {
+  const handleOpenEdit = async (cust) => {
+    setEditingCustomer(cust);
+    setIsFormOpen(true);
+    const targetId = cust.id || cust.customerCode || cust.rawId;
+    if (targetId && (!cust.pan || !cust.gstNumber || !cust.creditLimit)) {
+      const detailed = await fetchCustomerDetails(targetId);
+      if (detailed) {
+        setEditingCustomer(detailed);
+      }
+    }
+  };
+
+  const handleSave = async (formData) => {
     if (editingCustomer) {
-      updateCustomer(editingCustomer.id, formData);
+      await updateCustomer(editingCustomer.id, formData);
     } else {
-      addCustomer(formData);
+      await addCustomer(formData);
     }
     setIsFormOpen(false);
     setEditingCustomer(null);
@@ -305,10 +349,7 @@ export function Customers() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              setEditingCustomer(row);
-              setIsFormOpen(true);
-            }}
+            onClick={() => handleOpenEdit(row)}
             title="Edit Customer"
             className="w-8 h-8 inline-flex items-center justify-center shrink-0 rounded-lg bg-[#F5FAF8] border border-[#E2E8F0] text-[#172B29] hover:bg-[#CCFBF1] hover:text-[#0F766E] transition-colors cursor-pointer"
           >
@@ -466,8 +507,7 @@ export function Customers() {
             sales={sales}
             onEdit={(c) => {
               handleCloseProfile();
-              setEditingCustomer(c);
-              setIsFormOpen(true);
+              handleOpenEdit(c);
             }}
           />
         </VendorDetailPage>

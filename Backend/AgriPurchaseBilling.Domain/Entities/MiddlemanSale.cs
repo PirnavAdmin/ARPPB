@@ -42,6 +42,10 @@ namespace AgriPurchaseBilling.Domain.Entities
         [MaxLength(100)]
         public string Variety { get; set; } = "Standard";
 
+        [Column("quality_grade")]
+        [MaxLength(50)]
+        public string QualityGrade { get; set; } = "Grade A";
+
         [Column("stock_batch_id")]
         [MaxLength(100)]
         public string? StockBatchId { get; set; }
@@ -68,6 +72,10 @@ namespace AgriPurchaseBilling.Domain.Entities
         [Column("delivery_charges")]
         public decimal DeliveryCharges { get; set; }
 
+        [Column("delivery_address")]
+        [MaxLength(255)]
+        public string? DeliveryAddress { get; set; }
+
         [Column("total_amount")]
         public decimal TotalAmount { get; set; }
 
@@ -82,6 +90,9 @@ namespace AgriPurchaseBilling.Domain.Entities
 
         [Column("expected_payment_date")]
         public DateTime? ExpectedPaymentDate { get; set; }
+
+        [Column("expected_delivery_date")]
+        public DateTime? ExpectedDeliveryDate { get; set; }
 
         [Column("status")]
         [MaxLength(50)]

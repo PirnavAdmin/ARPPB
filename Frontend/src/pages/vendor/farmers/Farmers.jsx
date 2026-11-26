@@ -30,6 +30,13 @@ import PurchaseForm from '../purchases/PurchaseForm';
 import { CROP_OPTIONS, AP_DISTRICTS, INDIAN_STATES } from '../../../utils/constants';
 import { formatCurrency, formatNumber } from '../../../utils/formatCurrency';
 import { generateNextId } from '../../../utils/generateTransactionId';
+import {
+  fetchVendorFarmerByIdApi,
+  fetchVendorFarmerTransactionsApi,
+  fetchVendorFarmerPaymentsApi,
+  fetchVendorFarmerOtpConfirmationsApi,
+  exportVendorFarmersApi,
+} from '../../../services/vendorApiService';
 
 export function Farmers() {
   const location = useLocation();
@@ -43,6 +50,7 @@ export function Farmers() {
     farmers,
     purchases,
     ledger,
+    fetchFarmerDetails,
     addFarmer,
     updateFarmer,
     toggleFarmerStatus,
@@ -63,14 +71,32 @@ export function Farmers() {
   // Resolve active farmer for the full-page profile view (driven by URL query params)
   const activeProfileFarmer = useMemo(() => {
     if (queryFarmerId) {
-      return farmers.find((f) => f.id === queryFarmerId) || null;
+      return (
+        farmers.find(
+          (f) =>
+            f.id === queryFarmerId ||
+            String(f.id) === String(queryFarmerId) ||
+            String(f.rawId) === String(queryFarmerId) ||
+            f.farmerCode === queryFarmerId
+        ) || null
+      );
     }
     if (queryPurchaseId) {
       const matchedPurchase = purchases.find(
-        (p) => p.id === queryPurchaseId && p.supplierCategory === 'Farmer'
+        (p) =>
+          p.id === queryPurchaseId &&
+          (p.supplierCategory === 'Farmer' || !p.supplierCategory)
       );
       if (matchedPurchase) {
-        return farmers.find((f) => f.id === matchedPurchase.supplierId) || null;
+        return (
+          farmers.find(
+            (f) =>
+              f.id === matchedPurchase.supplierId ||
+              String(f.id) === String(matchedPurchase.supplierId) ||
+              String(f.rawId) === String(matchedPurchase.supplierId) ||
+              f.farmerCode === matchedPurchase.supplierId
+          ) || null
+        );
       }
     }
     return null;
@@ -93,6 +119,11 @@ export function Farmers() {
     const params = { farmerId };
     if (tab && tab !== 'overview') params.tab = tab;
     setSearchParams(params, { state: { fromDirectory: true } });
+    fetchFarmerDetails(farmerId);
+    fetchVendorFarmerTransactionsApi(farmerId);
+    fetchVendorFarmerPaymentsApi(farmerId);
+    fetchVendorFarmerOtpConfirmationsApi(farmerId);
+    exportVendorFarmersApi({ farmerId });
   };
 
   // Return to the Farmers table (search, filters, pagination and scroll are preserved)
@@ -168,11 +199,23 @@ export function Farmers() {
     [farmers]
   );
 
-  const handleSaveFarmer = (formData) => {
+  const handleOpenEdit = async (farmer) => {
+    setEditingFarmer(farmer);
+    setIsFormOpen(true);
+    const targetId = farmer.id || farmer.farmerCode || farmer.rawId;
+    if (targetId && (!farmer.bankName || !farmer.accountNumber || !farmer.aadhaarId)) {
+      const detailed = await fetchFarmerDetails(targetId);
+      if (detailed) {
+        setEditingFarmer(detailed);
+      }
+    }
+  };
+
+  const handleSaveFarmer = async (formData) => {
     if (editingFarmer) {
-      updateFarmer(editingFarmer.id, formData);
+      await updateFarmer(editingFarmer.id, formData);
     } else {
-      addFarmer(formData);
+      await addFarmer(formData);
     }
     setIsFormOpen(false);
     setEditingFarmer(null);
@@ -309,10 +352,7 @@ export function Farmers() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              setEditingFarmer(row);
-              setIsFormOpen(true);
-            }}
+            onClick={() => handleOpenEdit(row)}
             title="Edit Farmer"
             className="w-8 h-8 inline-flex items-center justify-center shrink-0 rounded-lg bg-[#F5FAF8] border border-[#E2E8F0] text-[#172B29] hover:bg-[#CCFBF1] hover:text-[#0F766E] transition-colors cursor-pointer"
           >
@@ -477,8 +517,7 @@ export function Farmers() {
             initialPurchaseId={queryPurchaseId}
             onEdit={(f) => {
               handleCloseProfile();
-              setEditingFarmer(f);
-              setIsFormOpen(true);
+              handleOpenEdit(f);
             }}
           />
         </VendorDetailPage>

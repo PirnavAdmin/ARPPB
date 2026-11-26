@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShoppingBag,
@@ -26,6 +26,11 @@ import VendorPagination from '../VendorPagination';
 import VendorStatusBadge from '../VendorStatusBadge';
 import VendorExportMenu from '../VendorExportMenu';
 import SalesDetails from './SalesDetails';
+import {
+  fetchVendorSaleByIdApi,
+  fetchVendorSalesCustomerByIdApi,
+  fetchVendorSalesBatchByIdApi,
+} from '../../../services/vendorApiService';
 
 export default function SalesHistory() {
   const navigate = useNavigate();
@@ -50,11 +55,32 @@ export default function SalesHistory() {
     [sales, selectedSaleId]
   );
 
+  useEffect(() => {
+    if (selectedSaleId) {
+      fetchVendorSaleByIdApi(selectedSaleId);
+      if (selectedSale?.customerId) {
+        fetchVendorSalesCustomerByIdApi(selectedSale.customerId);
+      }
+      if (selectedSale?.batchId) {
+        fetchVendorSalesBatchByIdApi(selectedSale.batchId);
+      }
+    }
+  }, [selectedSaleId, selectedSale]);
+
   // 6 Summary Cards
   const summaryStats = useMemo(() => {
     const validSales = sales.filter((s) => s.salesStatus !== 'Cancelled');
-    const confirmedSales = validSales.filter((s) => s.confirmationStatus === 'Verified');
-    const completedSalesCount = sales.filter((s) => s.salesStatus === 'Completed').length;
+    const confirmedSales = validSales.filter(
+      (s) =>
+        s.confirmationStatus === 'Verified' ||
+        s.orderStatus === 'Confirmed' ||
+        s.salesStatus === 'Confirmed' ||
+        s.paymentStatus === 'Paid' ||
+        Number(s.receivedAmount || s.amountReceived || 0) > 0
+    );
+    const completedSalesCount = sales.filter(
+      (s) => s.salesStatus === 'Completed' || s.paymentStatus === 'Paid'
+    ).length;
     const pendingOrdersCount = orders.filter(
       (o) => o.orderStatus !== 'Completed' && o.orderStatus !== 'Cancelled'
     ).length;
@@ -64,7 +90,7 @@ export default function SalesHistory() {
       0
     );
     const totalReceived = confirmedSales.reduce(
-      (sum, s) => sum + Number(s.receivedAmount || 0),
+      (sum, s) => sum + Number(s.receivedAmount ?? s.amountReceived ?? 0),
       0
     );
     const outstandingReceivables = Math.max(0, totalRevenue - totalReceived);

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   CreditCard,
   ArrowUpRight,
@@ -15,6 +15,7 @@ import { formatCurrency } from '../../../utils/formatCurrency';
 import { LEDGER_CATEGORIES } from '../../../utils/constants';
 import VendorModal from '../VendorModal';
 import SharedMyLedger from '../../../components/shared/ledger/MyLedger';
+import { fetchVendorLedgerByIdApi } from '../../../services/vendorApiService';
 
 const SUB_LEDGER_TABS = [
   {
@@ -49,6 +50,13 @@ export default function VendorLedger() {
 
   // Settlement Modal State
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
+  const [isSubmittingSettlement, setIsSubmittingSettlement] = useState(false);
+
+  useEffect(() => {
+    if (isSettlementModalOpen && ledger[0]?.id) {
+      fetchVendorLedgerByIdApi(ledger[0].id);
+    }
+  }, [isSettlementModalOpen, ledger]);
   const [settlementForm, setSettlementForm] = useState({
     settlementType: 'Supplier Payment',
     partyCategory: 'Farmer',
@@ -58,7 +66,10 @@ export default function VendorLedger() {
     amount: '',
     paymentMode: 'NEFT / RTGS',
     notes: '',
-    date: '2026-11-05',
+    date: new Date().toISOString().slice(0, 10),
+    originalAmount: 0,
+    previouslyPaid: 0,
+    remainingBalance: 0,
   });
 
   // Compute accurate, domain-separated Running Balances chronologically
@@ -215,22 +226,38 @@ export default function VendorLedger() {
   const handleOpenQuickSettle = (entry) => {
     const isSupplier =
       entry.partyCategory === 'Farmer' || entry.partyCategory === 'Middleman';
-    const defaultAmount = isSupplier ? entry.credit : entry.debit;
+    const originalAmount = isSupplier
+      ? Number(entry.credit || 0)
+      : Number(entry.debit || 0);
+    const previouslyPaid = Number(entry.settledAmount || 0);
+    const remainingBalance = Number(
+      entry.outstandingAmount !== undefined &&
+        entry.outstandingAmount !== null &&
+        entry.outstandingAmount > 0
+        ? entry.outstandingAmount
+        : Math.max(0, originalAmount - previouslyPaid)
+    );
+
     setSettlementForm({
       settlementType: isSupplier ? 'Supplier Payment' : 'Customer Payment',
       partyCategory: entry.partyCategory,
-      partyId: entry.partyId,
+      partyId: entry.partyId || entry.partyCode,
       partyName: entry.partyName,
-      referenceTransactionId: entry.transactionId,
-      amount: String(defaultAmount || ''),
+      referenceTransactionId: entry.transactionId || entry.id,
+      ledgerEntryId: entry.id,
+      amount: String(remainingBalance > 0 ? remainingBalance : ''),
       paymentMode: 'NEFT / RTGS',
-      notes: `Settlement against ${entry.transactionId}`,
-      date: '2026-11-05',
+      notes: `Settlement against ${entry.transactionId || entry.id}`,
+      date: new Date().toISOString().slice(0, 10),
+      originalAmount,
+      previouslyPaid,
+      remainingBalance,
     });
     setIsSettlementModalOpen(true);
   };
 
   const handleOpenNewSettlementModal = (type = 'Supplier Payment') => {
+    const today = new Date().toISOString().slice(0, 10);
     if (type === 'Supplier Payment') {
       const f = farmers[0];
       setSettlementForm({
@@ -242,7 +269,10 @@ export default function VendorLedger() {
         amount: '25000',
         paymentMode: 'NEFT / RTGS',
         notes: 'Part settlement of raw material procurement dues',
-        date: '2026-11-05',
+        date: today,
+        originalAmount: 25000,
+        previouslyPaid: 0,
+        remainingBalance: 25000,
       });
     } else {
       const c = customers[0];
@@ -255,17 +285,34 @@ export default function VendorLedger() {
         amount: '50000',
         paymentMode: 'NEFT / RTGS',
         notes: 'Customer invoice collection receipt',
-        date: '2026-11-05',
+        date: today,
+        originalAmount: 50000,
+        previouslyPaid: 0,
+        remainingBalance: 50000,
       });
     }
     setIsSettlementModalOpen(true);
   };
 
-  const handleSubmitSettlement = (e) => {
+  const handleSubmitSettlement = async (e) => {
     e.preventDefault();
-    const res = recordFinancialSettlement(settlementForm);
-    if (res?.success) {
-      setIsSettlementModalOpen(false);
+    const numAmount = Number(settlementForm.amount) || 0;
+    if (numAmount <= 0) return;
+    if (
+      settlementForm.remainingBalance > 0 &&
+      numAmount > settlementForm.remainingBalance
+    ) {
+      return;
+    }
+
+    setIsSubmittingSettlement(true);
+    try {
+      const res = await recordFinancialSettlement(settlementForm);
+      if (res?.success) {
+        setIsSettlementModalOpen(false);
+      }
+    } finally {
+      setIsSubmittingSettlement(false);
     }
   };
 
@@ -332,6 +379,30 @@ export default function VendorLedger() {
           size="md"
         >
           <form onSubmit={handleSubmitSettlement} className="space-y-4 text-xs">
+            {/* Financial Overview Cards when linked transaction or balance exists */}
+            {settlementForm.originalAmount > 0 && (
+              <div className="grid grid-cols-3 gap-2.5">
+                <div className="p-2.5 rounded-xl bg-brand-background border border-brand-border">
+                  <span className="text-[10px] text-brand-muted block">Original Amount</span>
+                  <span className="text-xs font-bold text-brand-text">
+                    {formatCurrency(settlementForm.originalAmount)}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-brand-success-light/30 border border-brand-success/20">
+                  <span className="text-[10px] text-brand-success block">Already Paid</span>
+                  <span className="text-xs font-bold text-brand-success">
+                    {formatCurrency(settlementForm.previouslyPaid)}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-brand-error-light/20 border border-brand-error/20">
+                  <span className="text-[10px] text-brand-error block">Remaining Balance</span>
+                  <span className="text-xs font-bold text-brand-error">
+                    {formatCurrency(settlementForm.remainingBalance)}
+                  </span>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold text-brand-text mb-1">
@@ -456,12 +527,19 @@ export default function VendorLedger() {
                 <input
                   type="number"
                   min="1"
+                  max={settlementForm.remainingBalance > 0 ? settlementForm.remainingBalance : undefined}
+                  step="0.01"
                   required
                   value={settlementForm.amount}
                   onChange={(e) =>
                     setSettlementForm((p) => ({ ...p, amount: e.target.value }))
                   }
-                  className="w-full px-3 py-2 rounded-lg border border-brand-border bg-brand-surface text-brand-text font-bold"
+                  className={`w-full px-3 py-2 rounded-lg border bg-brand-surface text-brand-text font-bold ${
+                    settlementForm.remainingBalance > 0 &&
+                    Number(settlementForm.amount) > settlementForm.remainingBalance
+                      ? 'border-brand-error ring-1 ring-brand-error'
+                      : 'border-brand-border'
+                  }`}
                 />
               </div>
 
@@ -501,6 +579,61 @@ export default function VendorLedger() {
               </div>
             </div>
 
+            {/* Dynamic Live Calculation Card */}
+            {settlementForm.remainingBalance > 0 && (
+              <div className="p-3 rounded-xl border border-brand-primary/30 bg-brand-light/30 space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-brand-muted">Payment Amount:</span>
+                  <span className="font-bold text-brand-primary">
+                    {formatCurrency(Number(settlementForm.amount) || 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-xs pt-1 border-t border-brand-primary/20">
+                  <span className="font-semibold text-brand-text">
+                    Updated Remaining Balance:
+                  </span>
+                  <span
+                    className={`font-extrabold ${
+                      Math.max(
+                        0,
+                        settlementForm.remainingBalance -
+                          (Number(settlementForm.amount) || 0)
+                      ) === 0
+                        ? 'text-brand-success'
+                        : 'text-brand-error'
+                    }`}
+                  >
+                    {formatCurrency(
+                      Math.max(
+                        0,
+                        settlementForm.remainingBalance -
+                          (Number(settlementForm.amount) || 0)
+                      )
+                    )}
+                  </span>
+                </div>
+                <div>
+                  {Number(settlementForm.amount) >
+                  settlementForm.remainingBalance ? (
+                    <span className="text-[11px] font-bold text-brand-error block">
+                      ⚠️ Overpayment error: Amount exceeds remaining balance of{' '}
+                      {formatCurrency(settlementForm.remainingBalance)}.
+                    </span>
+                  ) : Number(settlementForm.amount) >=
+                      settlementForm.remainingBalance &&
+                    Number(settlementForm.amount) > 0 ? (
+                    <span className="text-[11px] font-semibold text-brand-success block">
+                      ✓ Full settlement: Entry status will become "Paid".
+                    </span>
+                  ) : Number(settlementForm.amount) > 0 ? (
+                    <span className="text-[11px] font-semibold text-brand-warning block">
+                      ℹ Partial payment: Entry status will become "Partially Paid".
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block font-bold text-brand-text mb-1">
                 Bank UTR / Voucher Narration
@@ -526,10 +659,25 @@ export default function VendorLedger() {
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-primary text-white font-bold hover:bg-brand-secondary transition-colors cursor-pointer"
+                disabled={
+                  isSubmittingSettlement ||
+                  Number(settlementForm.amount) <= 0 ||
+                  (settlementForm.remainingBalance > 0 &&
+                    Number(settlementForm.amount) >
+                      settlementForm.remainingBalance)
+                }
+                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold text-white transition-colors cursor-pointer ${
+                  isSubmittingSettlement ||
+                  Number(settlementForm.amount) <= 0 ||
+                  (settlementForm.remainingBalance > 0 &&
+                    Number(settlementForm.amount) >
+                      settlementForm.remainingBalance)
+                    ? 'bg-brand-muted opacity-50 cursor-not-allowed'
+                    : 'bg-brand-primary hover:bg-brand-secondary'
+                }`}
               >
                 <CreditCard className="w-4 h-4" />
-                Post Voucher to Ledger
+                {isSubmittingSettlement ? 'Posting Voucher...' : 'Post Voucher to Ledger'}
               </button>
             </div>
           </form>

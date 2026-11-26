@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Building2, Store, Plus, X } from 'lucide-react';
 import { useMiddleman } from '../../../context/middleman';
@@ -35,14 +35,23 @@ export const SalesHistoryPage = () => {
   const [selectedPurchase, setSelectedPurchase] = useState(null);
   const [selectedSale, setSelectedSale] = useState(null);
 
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
+    }
+    if (location.state?.partyFilter) {
+      setSearchTerm(location.state.partyFilter);
+    }
+  }, [location.state]);
+
   // 1. Filter Farmer Purchases
   const filteredPurchases = useMemo(() => {
     return purchases.filter((p) => {
       const matchSearch =
         !searchTerm ||
-        p.purchaseId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.farmerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.cropName.toLowerCase().includes(searchTerm.toLowerCase());
+        (p.purchaseId && p.purchaseId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.farmerName && p.farmerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.cropName && p.cropName.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchCrop = cropFilter === 'ALL' || p.cropName === cropFilter;
       const matchOtp = otpFilter === 'ALL' || p.otpStatus === otpFilter;
@@ -56,10 +65,10 @@ export const SalesHistoryPage = () => {
     return vendorSales.filter((s) => {
       const matchSearch =
         !searchTerm ||
-        s.saleId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.saleId && s.saleId.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (s.businessName && s.businessName.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (s.vendorName && s.vendorName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        s.cropName.toLowerCase().includes(searchTerm.toLowerCase());
+        (s.cropName && s.cropName.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchCrop = cropFilter === 'ALL' || s.cropName === cropFilter;
       const matchOtp = otpFilter === 'ALL' || s.otpStatus === otpFilter;
@@ -73,9 +82,9 @@ export const SalesHistoryPage = () => {
     return customerSales.filter((s) => {
       const matchSearch =
         !searchTerm ||
-        s.saleId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.saleId && s.saleId.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (s.customerName && s.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        s.cropName.toLowerCase().includes(searchTerm.toLowerCase());
+        (s.cropName && s.cropName.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchCrop = cropFilter === 'ALL' || s.cropName === cropFilter;
       const matchOtp = otpFilter === 'ALL' || s.otpStatus === otpFilter;
@@ -296,24 +305,40 @@ export const SalesHistoryPage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className="p-3 bg-slate-50 rounded-xl space-y-1.5">
                 <span className="font-bold text-[#64748B] uppercase tracking-wider block text-[10px]">Farmer Supplier</span>
-                <div className="font-bold text-[#1F2937]">{selectedPurchase.farmerName}</div>
-                <div className="text-[#64748B]">+91 {selectedPurchase.farmerMobile}</div>
-                <div className="text-[#64748B]">{selectedPurchase.farmerLocation}</div>
+                <div className="font-bold text-[#1F2937]">{selectedPurchase.farmerName || 'Farmer'}</div>
+                {selectedPurchase.farmerMobile && (
+                  <div className="text-[#64748B]">
+                    {selectedPurchase.farmerMobile.startsWith('+')
+                      ? selectedPurchase.farmerMobile
+                      : `+91 ${selectedPurchase.farmerMobile}`}
+                  </div>
+                )}
+                {selectedPurchase.farmerLocation && (
+                  <div className="text-[#64748B]">{selectedPurchase.farmerLocation}</div>
+                )}
               </div>
 
               <div className="p-3 bg-slate-50 rounded-xl space-y-1.5">
                 <span className="font-bold text-[#64748B] uppercase tracking-wider block text-[10px]">Produce Specs</span>
                 <div>
                   <span className="text-[#64748B]">Crop: </span>
-                  <span className="font-bold text-[#1F2937]">{selectedPurchase.cropName} ({selectedPurchase.variety || 'Standard'})</span>
+                  <span className="font-bold text-[#1F2937]">
+                    {selectedPurchase.variety && selectedPurchase.variety !== 'Standard' && !selectedPurchase.cropName?.includes(selectedPurchase.variety)
+                      ? `${selectedPurchase.cropName || 'Produce'} (${selectedPurchase.variety})`
+                      : (selectedPurchase.cropName || selectedPurchase.variety || 'Produce')}
+                  </span>
                 </div>
                 <div>
                   <span className="text-[#64748B]">Quantity: </span>
-                  <span className="font-semibold text-[#1F2937]">{formatQuantity(selectedPurchase.quantity, selectedPurchase.unit)}</span>
+                  <span className="font-bold text-[#1F2937]">
+                    {formatQuantity(selectedPurchase.quantity, selectedPurchase.unit || 'Quintal')}
+                  </span>
                 </div>
                 <div>
                   <span className="text-[#64748B]">Purchase Rate: </span>
-                  <span className="font-semibold text-[#1F2937]">{formatINR(selectedPurchase.rate)} / {selectedPurchase.unit}</span>
+                  <span className="font-bold text-[#1F2937]">
+                    {formatINR(selectedPurchase.rate)} / {selectedPurchase.unit || 'Quintal'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -323,15 +348,32 @@ export const SalesHistoryPage = () => {
               <span className="font-bold text-[#64748B] uppercase tracking-wider block text-[10px]">Cost Composition</span>
               <div className="flex justify-between text-[#64748B]">
                 <span>Crop Subtotal:</span>
-                <span className="font-semibold text-[#1F2937]">{formatINR(selectedPurchase.subtotal)}</span>
+                <span className="font-semibold text-[#1F2937]">
+                  {formatINR(selectedPurchase.subtotal ?? (Number(selectedPurchase.quantity) * Number(selectedPurchase.rate)))}
+                </span>
               </div>
               <div className="flex justify-between text-[#64748B]">
                 <span>Transport / Loading / Other Surcharges:</span>
-                <span className="font-semibold text-[#1F2937]">{formatINR(selectedPurchase.additionalCharges || 0)}</span>
+                <span className="font-semibold text-[#1F2937]">
+                  {formatINR(
+                    selectedPurchase.additionalCharges ??
+                    ((Number(selectedPurchase.transportation) || 0) +
+                     (Number(selectedPurchase.loading) || 0) +
+                     (Number(selectedPurchase.otherCharges) || 0))
+                  )}
+                </span>
               </div>
               <div className="flex justify-between text-[#0F766E] font-medium pt-1 border-t border-slate-200">
-                <span>Calculated Landed Cost per {selectedPurchase.unit}:</span>
-                <span className="font-bold">{formatINR(selectedPurchase.averageCostPerUnit, true)}</span>
+                <span>Calculated Landed Cost per {selectedPurchase.unit || 'Quintal'}:</span>
+                <span className="font-bold">
+                  {formatINR(
+                    selectedPurchase.averageCostPerUnit ??
+                    (Number(selectedPurchase.quantity) > 0
+                      ? Number((Number(selectedPurchase.totalAmount) / Number(selectedPurchase.quantity)).toFixed(2))
+                      : Number(selectedPurchase.rate) || 0),
+                    true
+                  )}
+                </span>
               </div>
             </div>
 
@@ -347,7 +389,7 @@ export const SalesHistoryPage = () => {
               <button
                 type="button"
                 onClick={() => setSelectedPurchase(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-[#1F2937] cursor-pointer"
+                className="px-5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-[#1F2937] cursor-pointer"
               >
                 Close
               </button>
@@ -364,7 +406,7 @@ export const SalesHistoryPage = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-base font-bold text-[#1F2937]">
-                    Order #{selectedSale.saleId}
+                    Order #{String(selectedSale.saleId || '').replace(/^#/, '')}
                   </h3>
                   <StatusBadge status={selectedSale.otpStatus} size="sm" />
                 </div>
@@ -384,7 +426,7 @@ export const SalesHistoryPage = () => {
               <div>
                 <span className="text-xs text-[#64748B] block">Total Order Value</span>
                 <span className="text-xl font-black text-[#0F766E]">
-                  {formatINR(selectedSale.totalAmount || selectedSale.finalAmount)}
+                  {formatINR(selectedSale.totalAmount ?? selectedSale.finalAmount ?? 0)}
                 </span>
               </div>
               <div className="text-right">
@@ -399,17 +441,22 @@ export const SalesHistoryPage = () => {
               <div className="p-2.5 bg-slate-50 rounded-xl">
                 <span className="text-[#64748B] block">Buyer</span>
                 <span className="font-bold text-[#1F2937]">
-                  {selectedSale.businessName || selectedSale.customerName}
+                  {selectedSale.businessName || selectedSale.customerName || selectedSale.vendorName || 'Direct Customer'}
                 </span>
-                <span className="text-[#64748B] block mt-0.5">{selectedSale.mobile}</span>
+                {selectedSale.mobile && (
+                  <span className="text-[#64748B] block mt-0.5">{selectedSale.mobile}</span>
+                )}
               </div>
 
               <div className="p-2.5 bg-slate-50 rounded-xl">
                 <span className="text-[#64748B] block">Produce</span>
                 <span className="font-bold text-[#1F2937]">
-                  {formatQuantity(selectedSale.quantity, selectedSale.unit)} {selectedSale.cropName}
+                  {formatQuantity(selectedSale.quantity || 0, selectedSale.unit || 'Quintal')}
+                  {selectedSale.cropName ? ` ${selectedSale.cropName}` : ''}
                 </span>
-                <span className="text-[#64748B] block mt-0.5">Rate: {formatINR(selectedSale.rate || selectedSale.price)}</span>
+                <span className="text-[#64748B] block mt-0.5">
+                  Rate: {formatINR(selectedSale.rate ?? selectedSale.price ?? 0)}
+                </span>
               </div>
             </div>
 
@@ -417,7 +464,7 @@ export const SalesHistoryPage = () => {
               <button
                 type="button"
                 onClick={() => setSelectedSale(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-[#1F2937] cursor-pointer"
+                className="px-5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-[#1F2937] cursor-pointer"
               >
                 Close
               </button>

@@ -30,6 +30,13 @@ import PurchaseForm from '../purchases/PurchaseForm';
 import { AP_DISTRICTS, INDIAN_STATES } from '../../../utils/constants';
 import { formatCurrency, formatNumber } from '../../../utils/formatCurrency';
 import { generateNextId } from '../../../utils/generateTransactionId';
+import {
+  fetchVendorMiddlemanByIdApi,
+  fetchVendorMiddlemanTransactionsApi,
+  fetchVendorMiddlemanPaymentsApi,
+  fetchVendorMiddlemanOtpConfirmationsApi,
+  exportVendorMiddlemenApi,
+} from '../../../services/vendorApiService';
 
 export function Middlemen() {
   const location = useLocation();
@@ -43,6 +50,7 @@ export function Middlemen() {
     middlemen,
     purchases,
     ledger,
+    fetchMiddlemanDetails,
     addMiddleman,
     updateMiddleman,
     toggleMiddlemanStatus,
@@ -62,14 +70,32 @@ export function Middlemen() {
   // Resolve active middleman for the full-page profile view (driven by URL query params)
   const activeProfileMiddleman = useMemo(() => {
     if (queryMiddlemanId) {
-      return middlemen.find((m) => m.id === queryMiddlemanId) || null;
+      return (
+        middlemen.find(
+          (m) =>
+            m.id === queryMiddlemanId ||
+            String(m.id) === String(queryMiddlemanId) ||
+            String(m.rawId) === String(queryMiddlemanId) ||
+            m.middlemanCode === queryMiddlemanId
+        ) || null
+      );
     }
     if (queryPurchaseId) {
       const matchedPurchase = purchases.find(
-        (p) => p.id === queryPurchaseId && p.supplierCategory === 'Middleman'
+        (p) =>
+          p.id === queryPurchaseId &&
+          (p.supplierCategory === 'Middleman' || !p.supplierCategory)
       );
       if (matchedPurchase) {
-        return middlemen.find((m) => m.id === matchedPurchase.supplierId) || null;
+        return (
+          middlemen.find(
+            (m) =>
+              m.id === matchedPurchase.supplierId ||
+              String(m.id) === String(matchedPurchase.supplierId) ||
+              String(m.rawId) === String(matchedPurchase.supplierId) ||
+              m.middlemanCode === matchedPurchase.supplierId
+          ) || null
+        );
       }
     }
     return null;
@@ -92,6 +118,11 @@ export function Middlemen() {
     const params = { middlemanId };
     if (tab && tab !== 'overview') params.tab = tab;
     setSearchParams(params, { state: { fromDirectory: true } });
+    fetchMiddlemanDetails(middlemanId);
+    fetchVendorMiddlemanTransactionsApi(middlemanId);
+    fetchVendorMiddlemanPaymentsApi(middlemanId);
+    fetchVendorMiddlemanOtpConfirmationsApi(middlemanId);
+    exportVendorMiddlemenApi({ middlemanId });
   };
 
   // Return to the Middlemen table (search, filters, pagination and scroll are preserved)
@@ -159,11 +190,23 @@ export function Middlemen() {
     [middlemen]
   );
 
-  const handleSave = (formData) => {
+  const handleOpenEdit = async (mid) => {
+    setEditingMid(mid);
+    setIsFormOpen(true);
+    const targetId = mid.id || mid.middlemanCode || mid.rawId;
+    if (targetId && (!mid.pan || !mid.bankName || !mid.accountNumber)) {
+      const detailed = await fetchMiddlemanDetails(targetId);
+      if (detailed) {
+        setEditingMid(detailed);
+      }
+    }
+  };
+
+  const handleSave = async (formData) => {
     if (editingMid) {
-      updateMiddleman(editingMid.id, formData);
+      await updateMiddleman(editingMid.id, formData);
     } else {
-      addMiddleman(formData);
+      await addMiddleman(formData);
     }
     setIsFormOpen(false);
     setEditingMid(null);
@@ -305,10 +348,7 @@ export function Middlemen() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              setEditingMid(row);
-              setIsFormOpen(true);
-            }}
+            onClick={() => handleOpenEdit(row)}
             title="Edit Middleman"
             className="w-8 h-8 inline-flex items-center justify-center shrink-0 rounded-lg bg-[#F5FAF8] border border-[#E2E8F0] text-[#172B29] hover:bg-[#CCFBF1] hover:text-[#0F766E] transition-colors cursor-pointer"
           >
@@ -468,8 +508,7 @@ export function Middlemen() {
             initialPurchaseId={queryPurchaseId}
             onEdit={(m) => {
               handleCloseProfile();
-              setEditingMid(m);
-              setIsFormOpen(true);
+              handleOpenEdit(m);
             }}
           />
         </VendorDetailPage>

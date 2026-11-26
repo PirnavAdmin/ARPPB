@@ -2,6 +2,7 @@ using AgriPurchaseBilling.Api;
 using AgriPurchaseBilling.Api.Controllers.VendorPortal;
 using AgriPurchaseBilling.Infrastructure.Configuration;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 [assembly: HostingStartup(typeof(VendorPortalHostingStartup))]
 
@@ -18,7 +19,7 @@ namespace AgriPurchaseBilling.Api
             builder.ConfigureServices(services =>
             {
                 services.AddVendorPortalModule();
-                services.AddScoped<VendorPortalExceptionFilter>();
+                services.TryAddScoped<VendorPortalExceptionFilter>();
             });
         }
     }

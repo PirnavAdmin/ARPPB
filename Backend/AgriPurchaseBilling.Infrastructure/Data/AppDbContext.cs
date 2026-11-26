@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using AgriPurchaseBilling.Domain.Entities;
 
 namespace AgriPurchaseBilling.Infrastructure.Data
@@ -25,15 +25,29 @@ namespace AgriPurchaseBilling.Infrastructure.Data
         public DbSet<MiddlemanProfile> MiddlemanProfiles => Set<MiddlemanProfile>();
         public DbSet<VendorProfile> VendorProfiles => Set<VendorProfile>();
         public DbSet<VendorBankAccount> VendorBankAccounts => Set<VendorBankAccount>();
+        public DbSet<VendorFinishedProduct> VendorFinishedProducts => Set<VendorFinishedProduct>();
+        public DbSet<VpSale> VpSales => Set<VpSale>();
+        public DbSet<VpSaleItem> VpSaleItems => Set<VpSaleItem>();
+        public DbSet<CustomerNotification> CustomerNotifications => Set<CustomerNotification>();
+        public DbSet<CustomerCartItem> CustomerCartItems => Set<CustomerCartItem>();
+        public DbSet<VpOtpConfirmation> VpOtpConfirmations => Set<VpOtpConfirmation>();
         public DbSet<MiddlemanLedger> MiddlemanLedgers => Set<MiddlemanLedger>();
         public DbSet<MiddlemanInventory> MiddlemanInventories => Set<MiddlemanInventory>();
         public DbSet<MiddlemanFarmer> MiddlemanFarmers => Set<MiddlemanFarmer>();
+        public DbSet<MiddlemanVendor> MiddlemanVendors => Set<MiddlemanVendor>();
+        public DbSet<MiddlemanCustomer> MiddlemanCustomers => Set<MiddlemanCustomer>();
+        public DbSet<MiddlemanVendorSale> MiddlemanVendorSales => Set<MiddlemanVendorSale>();
         public DbSet<MiddlemanConfirmation> MiddlemanConfirmations => Set<MiddlemanConfirmation>();
         public DbSet<MiddlemanPurchase> MiddlemanPurchases => Set<MiddlemanPurchase>();
         public DbSet<MiddlemanSale> MiddlemanSales => Set<MiddlemanSale>();
         public DbSet<MiddlemanNotification> MiddlemanNotifications => Set<MiddlemanNotification>();
         public DbSet<FarmerCrop> FarmerCrops => Set<FarmerCrop>();
         public DbSet<FarmerCropYieldLog> FarmerCropYieldLogs => Set<FarmerCropYieldLog>();
+        public DbSet<FarmerSale> FarmerSales => Set<FarmerSale>();
+        public DbSet<FarmerSellProduct> FarmerSellProducts => Set<FarmerSellProduct>();
+        public DbSet<FarmerMySale> FarmerMySales => Set<FarmerMySale>();
+        public DbSet<FarmerNotification> FarmerNotifications => Set<FarmerNotification>();
+        public DbSet<DailyMandiMarketPrice> DailyMandiMarketPrices => Set<DailyMandiMarketPrice>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -534,6 +548,196 @@ namespace AgriPurchaseBilling.Infrastructure.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // VendorFinishedProducts (read-only catalogue mapping to existing shared table)
+            modelBuilder.Entity<VendorFinishedProduct>(entity =>
+            {
+                entity.ToTable("vendor_finished_products");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("Id").ValueGeneratedOnAdd();
+                entity.Property(e => e.VendorId).HasColumnName("VendorId").IsRequired();
+                entity.Property(e => e.ProductCode).HasColumnName("ProductCode").IsRequired().HasMaxLength(50);
+                entity.Property(e => e.ProductName).HasColumnName("ProductName").IsRequired().HasMaxLength(150);
+                entity.Property(e => e.Category).HasColumnName("Category").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.SourceRawMaterial).HasColumnName("SourceRawMaterial").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.BrandName).HasColumnName("BrandName").IsRequired().HasMaxLength(150);
+                entity.Property(e => e.Packaging).HasColumnName("Packaging").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.AvailableQuantity).HasColumnName("AvailableQuantity").HasPrecision(12, 2);
+                entity.Property(e => e.SoldQuantity).HasColumnName("SoldQuantity").HasPrecision(12, 2);
+                entity.Property(e => e.Unit).HasColumnName("Unit").IsRequired().HasMaxLength(20);
+                entity.Property(e => e.MfgDate).HasColumnName("MfgDate");
+                entity.Property(e => e.ExpiryDate).HasColumnName("ExpiryDate");
+                entity.Property(e => e.ProductionCost).HasColumnName("ProductionCost").HasPrecision(14, 2);
+                entity.Property(e => e.SellingPrice).HasColumnName("SellingPrice").HasPrecision(14, 2);
+                entity.Property(e => e.ProfitMarginPercentage).HasColumnName("ProfitMarginPercentage").HasPrecision(6, 2);
+                entity.Property(e => e.MinThresholdQuantity).HasColumnName("MinThresholdQuantity").HasPrecision(12, 2);
+                entity.Property(e => e.Status).HasColumnName("Status").IsRequired().HasMaxLength(20);
+                entity.Property(e => e.ImageUrl).HasColumnName("ImageUrl").HasMaxLength(500);
+                entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt");
+                entity.Property(e => e.UpdatedAt).HasColumnName("UpdatedAt");
+            });
+
+            // VpSales (read-only mapping to existing shared `vp_sales` table for Customer Purchase History)
+            modelBuilder.Entity<VpSale>(entity =>
+            {
+                entity.ToTable("vp_sales");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.VendorId).HasColumnName("vendor_id").IsRequired();
+                entity.Property(e => e.SaleCode).HasColumnName("sale_code").IsRequired().HasMaxLength(40);
+                entity.Property(e => e.OrderCode).HasColumnName("order_code").IsRequired().HasMaxLength(40);
+                entity.Property(e => e.CustomerUserId).HasColumnName("customer_user_id").IsRequired();
+                entity.Property(e => e.CustomerCode).HasColumnName("customer_code").HasMaxLength(30);
+                entity.Property(e => e.CustomerName).HasColumnName("customer_name").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.BusinessName).HasColumnName("business_name").HasMaxLength(200);
+                entity.Property(e => e.CustomerMobile).HasColumnName("customer_mobile").HasMaxLength(15);
+                entity.Property(e => e.CustomerEmail).HasColumnName("customer_email").HasMaxLength(150);
+                entity.Property(e => e.CustomerDistrict).HasColumnName("customer_district").HasMaxLength(100);
+                entity.Property(e => e.CustomerState).HasColumnName("customer_state").HasMaxLength(100);
+                entity.Property(e => e.DeliveryAddress).HasColumnName("delivery_address").HasMaxLength(500);
+                entity.Property(e => e.ItemsSubtotal).HasColumnName("items_subtotal").HasPrecision(18, 2);
+                entity.Property(e => e.DiscountAmount).HasColumnName("discount_amount").HasPrecision(18, 2);
+                entity.Property(e => e.TaxAmount).HasColumnName("tax_amount").HasPrecision(18, 2);
+                entity.Property(e => e.DeliveryCharges).HasColumnName("delivery_charges").HasPrecision(18, 2);
+                entity.Property(e => e.OtherCharges).HasColumnName("other_charges").HasPrecision(18, 2);
+                entity.Property(e => e.TotalAmount).HasColumnName("total_amount").HasPrecision(18, 2);
+                entity.Property(e => e.AmountReceived).HasColumnName("amount_received").HasPrecision(18, 2);
+                entity.Property(e => e.SaleDate).HasColumnName("sale_date");
+                entity.Property(e => e.ExpectedDeliveryDate).HasColumnName("expected_delivery_date");
+                entity.Property(e => e.ExpectedPaymentDate).HasColumnName("expected_payment_date");
+                entity.Property(e => e.PaymentTerms).HasColumnName("payment_terms").HasMaxLength(50);
+                entity.Property(e => e.Notes).HasColumnName("notes").HasMaxLength(1000);
+                entity.Property(e => e.OtpStatus).HasColumnName("otp_status").IsRequired().HasMaxLength(20);
+                entity.Property(e => e.PaymentStatus).HasColumnName("payment_status").IsRequired().HasMaxLength(20);
+                entity.Property(e => e.OrderStatus).HasColumnName("order_status").IsRequired().HasMaxLength(20);
+                entity.Property(e => e.CancelReason).HasColumnName("cancel_reason").HasMaxLength(500);
+                entity.Property(e => e.DeliveredAt).HasColumnName("delivered_at");
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+            });
+
+            // VpSaleItems (read-only mapping to existing shared `vp_sale_items` table; excludes `cost_per_unit`)
+            modelBuilder.Entity<VpSaleItem>(entity =>
+            {
+                entity.ToTable("vp_sale_items");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.SaleId).HasColumnName("sale_id").IsRequired();
+                entity.Property(e => e.FinishedBatchId).HasColumnName("finished_batch_id").IsRequired();
+                entity.Property(e => e.ProductName).HasColumnName("product_name").IsRequired().HasMaxLength(150);
+                entity.Property(e => e.BatchCode).HasColumnName("batch_code").IsRequired().HasMaxLength(40);
+                entity.Property(e => e.ProcessingBatchRef).HasColumnName("processing_batch_ref").HasMaxLength(50);
+                entity.Property(e => e.Quantity).HasColumnName("quantity").HasPrecision(18, 3);
+                entity.Property(e => e.Unit).HasColumnName("unit").IsRequired().HasMaxLength(20);
+                entity.Property(e => e.PricePerUnit).HasColumnName("price_per_unit").HasPrecision(18, 2);
+                entity.Property(e => e.CostPerUnit).HasColumnName("cost_per_unit").HasPrecision(18, 2);
+                entity.Property(e => e.LineTotal).HasColumnName("line_total").HasPrecision(18, 2);
+                entity.HasOne(e => e.Sale)
+                    .WithMany(s => s.Items)
+                    .HasForeignKey(e => e.SaleId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // CustomerNotifications (dedicated `customer_notifications` table scoped to Customer Users.Id)
+            modelBuilder.Entity<CustomerNotification>(entity =>
+            {
+                entity.ToTable("customer_notifications");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.CustomerUserId).HasColumnName("customer_user_id").IsRequired();
+                entity.Property(e => e.Title).HasColumnName("title").IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Message).HasColumnName("message").IsRequired().HasMaxLength(1000);
+                entity.Property(e => e.Type).HasColumnName("type").IsRequired().HasMaxLength(80);
+                entity.Property(e => e.Priority).HasColumnName("priority").IsRequired().HasMaxLength(20).HasDefaultValue("Medium");
+                entity.Property(e => e.OrderCode).HasColumnName("order_code").HasMaxLength(50);
+                entity.Property(e => e.TransactionCode).HasColumnName("transaction_code").HasMaxLength(50);
+                entity.Property(e => e.IsRead).HasColumnName("is_read").IsRequired().HasDefaultValue(false);
+                entity.Property(e => e.ReadAt).HasColumnName("read_at");
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                entity.HasIndex(e => e.CustomerUserId)
+                    .HasDatabaseName("IX_customer_notifications_user_id");
+                entity.HasIndex(e => new { e.CustomerUserId, e.IsRead })
+                    .HasDatabaseName("IX_customer_notifications_user_read");
+                entity.HasIndex(e => new { e.CustomerUserId, e.CreatedAt })
+                    .HasDatabaseName("IX_customer_notifications_user_created");
+                entity.HasIndex(e => new { e.CustomerUserId, e.Priority, e.IsRead })
+                    .HasDatabaseName("IX_customer_notifications_user_priority_read");
+                entity.HasIndex(e => new { e.CustomerUserId, e.Type })
+                    .HasDatabaseName("IX_customer_notifications_user_type");
+
+                entity.HasOne(e => e.CustomerUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.CustomerUserId)
+                    .HasConstraintName("FK_customer_notifications_users")
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // CustomerCartItems (dedicated `customer_cart_items` table scoped to Customer Users.Id)
+            modelBuilder.Entity<CustomerCartItem>(entity =>
+            {
+                entity.ToTable("customer_cart_items");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.CustomerUserId).HasColumnName("customer_user_id").IsRequired();
+                entity.Property(e => e.ProductId).HasColumnName("product_id").IsRequired();
+                entity.Property(e => e.Quantity).HasColumnName("quantity").HasPrecision(12, 2).HasDefaultValue(1.00m);
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+
+                entity.HasIndex(e => new { e.CustomerUserId, e.ProductId })
+                    .IsUnique()
+                    .HasDatabaseName("UQ_customer_cart_user_product");
+                entity.HasIndex(e => e.CustomerUserId)
+                    .HasDatabaseName("IX_customer_cart_customer_user_id");
+                entity.HasIndex(e => e.ProductId)
+                    .HasDatabaseName("IX_customer_cart_product_id");
+
+                entity.HasOne(e => e.CustomerUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.CustomerUserId)
+                    .HasConstraintName("FK_customer_cart_user")
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Product)
+                    .WithMany()
+                    .HasForeignKey(e => e.ProductId)
+                    .HasConstraintName("FK_customer_cart_product")
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // VpOtpConfirmations (mapping to existing shared MariaDB table `vp_otp_confirmations`)
+            modelBuilder.Entity<VpOtpConfirmation>(entity =>
+            {
+                entity.ToTable("vp_otp_confirmations");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.VendorId).HasColumnName("vendor_id").IsRequired();
+                entity.Property(e => e.ConfirmationCode).HasColumnName("confirmation_code").HasMaxLength(30);
+                entity.Property(e => e.TransactionCode).HasColumnName("transaction_code").IsRequired().HasMaxLength(40);
+                entity.Property(e => e.PartyCategory).HasColumnName("party_category").IsRequired().HasMaxLength(20);
+                entity.Property(e => e.PartyName).HasColumnName("party_name").IsRequired().HasMaxLength(150);
+                entity.Property(e => e.PartyCode).HasColumnName("party_code").HasMaxLength(40);
+                entity.Property(e => e.Mobile).HasColumnName("mobile").HasMaxLength(15);
+                entity.Property(e => e.TransactionType).HasColumnName("transaction_type").IsRequired().HasMaxLength(40);
+                entity.Property(e => e.Product).HasColumnName("product").HasMaxLength(250);
+                entity.Property(e => e.Quantity).HasColumnName("quantity").HasPrecision(18, 3);
+                entity.Property(e => e.Unit).HasColumnName("unit").HasMaxLength(20);
+                entity.Property(e => e.Amount).HasColumnName("amount").HasPrecision(18, 2);
+                entity.Property(e => e.OtpHash).HasColumnName("otp_hash").HasMaxLength(255);
+                entity.Property(e => e.OtpStatus).HasColumnName("otp_status").IsRequired().HasMaxLength(20);
+                entity.Property(e => e.Attempts).HasColumnName("attempts");
+                entity.Property(e => e.SentAt).HasColumnName("sent_at");
+                entity.Property(e => e.ExpiresAt).HasColumnName("expires_at");
+                entity.Property(e => e.ConfirmedAt).HasColumnName("confirmed_at");
+                entity.Property(e => e.SaleId).HasColumnName("sale_id");
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasOne(e => e.Sale)
+                    .WithMany()
+                    .HasForeignKey(e => e.SaleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
             // FarmerCrops
             modelBuilder.Entity<FarmerCrop>(entity =>
             {
@@ -586,6 +790,191 @@ namespace AgriPurchaseBilling.Infrastructure.Data
                     .WithMany()
                     .HasForeignKey(e => e.FarmerCropId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // FarmerSales
+            modelBuilder.Entity<FarmerSale>(entity =>
+            {
+                entity.ToTable("farmer_sales");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.SaleCode).HasColumnName("sale_code").IsRequired().HasMaxLength(50);
+                entity.HasIndex(e => e.SaleCode).IsUnique().HasDatabaseName("uk_sale_code");
+                entity.Property(e => e.FarmerId).HasColumnName("farmer_id").IsRequired();
+                entity.HasIndex(e => e.FarmerId).HasDatabaseName("idx_sales_farmer_id");
+                entity.Property(e => e.CropId).HasColumnName("crop_id").IsRequired();
+                entity.HasIndex(e => e.CropId).HasDatabaseName("idx_sales_crop_id");
+                entity.Property(e => e.BuyerCategory).HasColumnName("buyer_category").IsRequired().HasMaxLength(50);
+                entity.Property(e => e.BuyerName).HasColumnName("buyer_name").IsRequired().HasMaxLength(150);
+                entity.Property(e => e.BuyerMobile).HasColumnName("buyer_mobile").IsRequired().HasMaxLength(15);
+                entity.HasIndex(e => e.BuyerMobile).HasDatabaseName("idx_sales_buyer_mobile");
+                entity.Property(e => e.CropName).HasColumnName("crop_name").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CropVariety).HasColumnName("crop_variety").IsRequired().HasMaxLength(150);
+                entity.Property(e => e.QualityGrade).HasColumnName("quality_grade").HasMaxLength(100);
+                entity.Property(e => e.SellingQuantity).HasColumnName("selling_quantity").HasPrecision(12, 2);
+                entity.Property(e => e.Unit).HasColumnName("unit").HasMaxLength(30).HasDefaultValue("Quintals");
+                entity.Property(e => e.PricePerUnit).HasColumnName("price_per_unit").HasPrecision(12, 2);
+                entity.Property(e => e.TotalAmount).HasColumnName("total_amount").HasPrecision(14, 2);
+                entity.Property(e => e.PickupLocation).HasColumnName("pickup_location").IsRequired().HasMaxLength(255);
+                entity.Property(e => e.ExpectedPickupDate).HasColumnName("expected_pickup_date");
+                entity.Property(e => e.Notes).HasColumnName("notes");
+                entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Pending OTP Confirmation");
+                entity.HasIndex(e => e.Status).HasDatabaseName("idx_sales_status");
+                entity.Property(e => e.OtpCode).HasColumnName("otp_code").HasMaxLength(10);
+                entity.Property(e => e.OtpStatus).HasColumnName("otp_status").HasMaxLength(20).HasDefaultValue("Pending");
+                entity.Property(e => e.OtpExpiresAt).HasColumnName("otp_expires_at");
+                entity.Property(e => e.ConfirmedAt).HasColumnName("confirmed_at");
+                entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+
+                entity.HasOne(e => e.Farmer)
+                    .WithMany()
+                    .HasForeignKey(e => e.FarmerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.FarmerCrop)
+                    .WithMany()
+                    .HasForeignKey(e => e.CropId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // FarmerSellProducts (Table: farmer_sell_products)
+            modelBuilder.Entity<FarmerSellProduct>(entity =>
+            {
+                entity.ToTable("farmer_sell_products");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.SaleCode).HasColumnName("sale_code").IsRequired().HasMaxLength(50);
+                entity.HasIndex(e => e.SaleCode).IsUnique().HasDatabaseName("ux_farmer_sell_products_code");
+                entity.Property(e => e.FarmerId).HasColumnName("farmer_id").IsRequired();
+                entity.HasIndex(e => e.FarmerId).HasDatabaseName("ix_farmer_sell_products_farmer");
+                entity.Property(e => e.CropId).HasColumnName("crop_id").IsRequired();
+                entity.HasIndex(e => e.CropId).HasDatabaseName("ix_farmer_sell_products_crop");
+                entity.Property(e => e.BuyerCategory).HasColumnName("buyer_category").IsRequired().HasMaxLength(50);
+                entity.Property(e => e.BuyerName).HasColumnName("buyer_name").IsRequired().HasMaxLength(150);
+                entity.Property(e => e.BuyerMobile).HasColumnName("buyer_mobile").IsRequired().HasMaxLength(20);
+                entity.Property(e => e.CropName).HasColumnName("crop_name").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CropVariety).HasColumnName("crop_variety").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.QualityGrade).HasColumnName("quality_grade").HasMaxLength(100);
+                entity.Property(e => e.SellingQuantity).HasColumnName("selling_quantity").HasPrecision(12, 2);
+                entity.Property(e => e.Unit).HasColumnName("unit").HasMaxLength(50).HasDefaultValue("Quintals");
+                entity.Property(e => e.PricePerUnit).HasColumnName("price_per_unit").HasPrecision(12, 2);
+                entity.Property(e => e.TotalAmount).HasColumnName("total_amount").HasPrecision(14, 2);
+                entity.Property(e => e.PickupLocation).HasColumnName("pickup_location").IsRequired().HasMaxLength(255);
+                entity.Property(e => e.ExpectedPickupDate).HasColumnName("expected_pickup_date");
+                entity.Property(e => e.Notes).HasColumnName("notes");
+                entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Pending OTP Confirmation");
+                entity.Property(e => e.OtpCode).HasColumnName("otp_code").HasMaxLength(10);
+                entity.Property(e => e.OtpStatus).HasColumnName("otp_status").HasMaxLength(50).HasDefaultValue("Pending");
+                entity.Property(e => e.OtpExpiresAt).HasColumnName("otp_expires_at");
+                entity.Property(e => e.ConfirmedAt).HasColumnName("confirmed_at");
+                entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+
+                entity.HasOne(e => e.Farmer)
+                    .WithMany()
+                    .HasForeignKey(e => e.FarmerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.FarmerCrop)
+                    .WithMany()
+                    .HasForeignKey(e => e.CropId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // FarmerMySales (Table: farmer_my_sales)
+            modelBuilder.Entity<FarmerMySale>(entity =>
+            {
+                entity.ToTable("farmer_my_sales");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.SellProductId).HasColumnName("sell_product_id");
+                entity.Property(e => e.SaleCode).HasColumnName("sale_code").IsRequired().HasMaxLength(50);
+                entity.HasIndex(e => e.SaleCode).IsUnique().HasDatabaseName("ux_farmer_my_sales_code");
+                entity.Property(e => e.FarmerId).HasColumnName("farmer_id").IsRequired();
+                entity.HasIndex(e => e.FarmerId).HasDatabaseName("ix_farmer_my_sales_farmer");
+                entity.Property(e => e.CropId).HasColumnName("crop_id").IsRequired();
+                entity.HasIndex(e => e.CropId).HasDatabaseName("ix_farmer_my_sales_crop");
+                entity.Property(e => e.CropName).HasColumnName("crop_name").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CropVariety).HasColumnName("crop_variety").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.QualityGrade).HasColumnName("quality_grade").HasMaxLength(100);
+                entity.Property(e => e.BuyerCategory).HasColumnName("buyer_category").IsRequired().HasMaxLength(50);
+                entity.Property(e => e.BuyerName).HasColumnName("buyer_name").IsRequired().HasMaxLength(150);
+                entity.Property(e => e.BuyerMobile).HasColumnName("buyer_mobile").IsRequired().HasMaxLength(20);
+                entity.Property(e => e.QuantityDispatched).HasColumnName("quantity_dispatched").HasPrecision(12, 2);
+                entity.Property(e => e.Unit).HasColumnName("unit").HasMaxLength(50).HasDefaultValue("Quintals");
+                entity.Property(e => e.SellingRate).HasColumnName("selling_rate").HasPrecision(12, 2);
+                entity.Property(e => e.TotalRevenue).HasColumnName("total_revenue").HasPrecision(14, 2);
+                entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Confirmed");
+                entity.Property(e => e.PaymentStatus).HasColumnName("payment_status").HasMaxLength(50).HasDefaultValue("Pending");
+                entity.Property(e => e.DeliveryStatus).HasColumnName("delivery_status").HasMaxLength(50).HasDefaultValue("Scheduled");
+                entity.Property(e => e.PickupLocation).HasColumnName("pickup_location").IsRequired().HasMaxLength(255);
+                entity.Property(e => e.ExpectedPaymentDate).HasColumnName("expected_payment_date");
+                entity.Property(e => e.ConfirmedAt).HasColumnName("confirmed_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.Notes).HasColumnName("notes");
+                entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+
+                entity.HasOne(e => e.Farmer)
+                    .WithMany()
+                    .HasForeignKey(e => e.FarmerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.FarmerCrop)
+                    .WithMany()
+                    .HasForeignKey(e => e.CropId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // 17. Farmer Notifications
+            modelBuilder.Entity<FarmerNotification>(entity =>
+            {
+                entity.ToTable("farmer_notifications");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.NotificationCode).HasColumnName("notification_code").HasMaxLength(50).IsRequired();
+                entity.Property(e => e.FarmerId).HasColumnName("farmer_id").IsRequired();
+                entity.Property(e => e.Title).HasColumnName("title").HasMaxLength(200).IsRequired();
+                entity.Property(e => e.Detail).HasColumnName("detail").IsRequired();
+                entity.Property(e => e.Category).HasColumnName("category").HasMaxLength(50).HasDefaultValue("general");
+                entity.Property(e => e.Type).HasColumnName("type").HasMaxLength(50).HasDefaultValue("info");
+                entity.Property(e => e.TargetPage).HasColumnName("target_page").HasMaxLength(50);
+                entity.Property(e => e.TargetId).HasColumnName("target_id").HasMaxLength(100);
+                entity.Property(e => e.IsRead).HasColumnName("is_read").HasDefaultValue(false);
+                entity.Property(e => e.ReadAt).HasColumnName("read_at");
+                entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+            });
+
+            // 18. Daily Mandi Market Prices
+            modelBuilder.Entity<DailyMandiMarketPrice>(entity =>
+            {
+                entity.ToTable("daily_mandi_market_prices");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.PriceCode).HasColumnName("price_code").HasMaxLength(50).IsRequired();
+                entity.Property(e => e.Crop).HasColumnName("crop").HasMaxLength(100).IsRequired();
+                entity.Property(e => e.Category).HasColumnName("category").HasMaxLength(50).HasDefaultValue("Cereal");
+                entity.Property(e => e.Market).HasColumnName("market").HasMaxLength(150).IsRequired();
+                entity.Property(e => e.State).HasColumnName("state").HasMaxLength(50).HasDefaultValue("AP");
+                entity.Property(e => e.Location).HasColumnName("location").HasMaxLength(200);
+                entity.Property(e => e.TodayPrice).HasColumnName("today_price").HasPrecision(12, 2);
+                entity.Property(e => e.PrevPrice).HasColumnName("prev_price").HasPrecision(12, 2);
+                entity.Property(e => e.DailyChange).HasColumnName("daily_change").HasMaxLength(20);
+                entity.Property(e => e.Trend).HasColumnName("trend").HasMaxLength(20).HasDefaultValue("up");
+                entity.Property(e => e.MinPrice).HasColumnName("min_price").HasPrecision(12, 2);
+                entity.Property(e => e.MaxPrice).HasColumnName("max_price").HasPrecision(12, 2);
+                entity.Property(e => e.AvgPrice).HasColumnName("avg_price").HasPrecision(12, 2);
+                entity.Property(e => e.Unit).HasColumnName("unit").HasMaxLength(50).HasDefaultValue("qtl");
+                entity.Property(e => e.PriceHistory).HasColumnName("price_history");
+                entity.Property(e => e.UpdatedLabel).HasColumnName("updated_label").HasMaxLength(100);
+                entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
             });
         }
     }

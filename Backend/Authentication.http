@@ -1,0 +1,26 @@
+@baseUrl = http://localhost:5034
+
+### Sign in and receive access and refresh tokens
+POST {{baseUrl}}/api/v1/Auth/login
+Content-Type: application/json
+
+{
+  "identifier": "9876500001",
+  "password": "replace-with-a-test-password"
+}
+
+### Exchange a valid refresh token (replace the sample value with one from login)
+POST {{baseUrl}}/api/v1/Auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "replace-with-refresh-token"
+}
+
+### Revoke a refresh token (replace the sample value with one from login)
+POST {{baseUrl}}/api/v1/Auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "replace-with-refresh-token"
+}

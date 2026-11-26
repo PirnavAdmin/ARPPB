@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import VendorSidebar from './VendorSidebar';
 import VendorNavbar from './VendorNavbar';
+import VendorErrorBoundary from './VendorErrorBoundary';
 
 export function VendorLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -27,7 +28,9 @@ export function VendorLayout() {
         />
 
         <main className="flex-1 p-4 sm:p-6 max-w-[1600px] w-full mx-auto">
-          <Outlet />
+          <VendorErrorBoundary fallbackTitle="Unable to load this Vendor page">
+            <Outlet />
+          </VendorErrorBoundary>
         </main>
 
         <footer className="px-6 py-3 border-t border-brand-border bg-brand-surface text-xs text-brand-muted flex flex-col sm:flex-row items-center justify-between gap-2">

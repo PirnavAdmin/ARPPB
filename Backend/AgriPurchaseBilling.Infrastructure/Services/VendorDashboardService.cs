@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
+using System.Data;
+using System.Data.Common;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using AgriPurchaseBilling.Application.DTOs.VendorOperations;
@@ -16,10 +16,20 @@ namespace AgriPurchaseBilling.Infrastructure.Services
     {
         private readonly VendorOperationsDbContext _context;
 
-        private sealed record PurchaseMetric(string Code, string Crop, decimal Quantity, string Unit, decimal TotalAmount, decimal DueAmount, string Status, DateTime PurchaseDate, string PartyName);
-        private sealed record OrderMetric(string Code, string ProductName, decimal Quantity, string Unit, decimal TotalAmount, decimal DueAmount, string Status, DateTime OrderDate, string PartyName);
+        public VendorDashboardService(VendorOperationsDbContext context)
+        {
+            _context = context;
+        }
 
-        public VendorDashboardService(VendorOperationsDbContext context) => _context = context;
+        private async Task<DbConnection> GetOpenConnectionAsync(CancellationToken cancellationToken)
+        {
+            var conn = _context.Database.GetDbConnection();
+            if (conn.State != ConnectionState.Open)
+            {
+                await conn.OpenAsync(cancellationToken);
+            }
+            return conn;
+        }
 
         public async Task<VendorDashboardDto> GetDashboardAsync(
             long vendorId,
@@ -30,135 +40,192 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             var (start, endExclusive) = NormalizeRange(fromDate, toDate);
 
-            var farmers = await _context.Farmers.AsNoTracking()
-                .Where(x => x.VendorId == vendorId)
-                .Select(x => new { x.Status })
-                .ToListAsync(cancellationToken);
-            var middlemen = await _context.Middlemen.AsNoTracking()
-                .Where(x => x.VendorId == vendorId)
-                .Select(x => new { x.Status })
-                .ToListAsync(cancellationToken);
-            var customers = await _context.Customers.AsNoTracking()
-                .Where(x => x.VendorId == vendorId)
-                .CountAsync(cancellationToken);
+            var kpis = new VendorDashboardKpisDto();
+            var overview = new VendorPurchaseOverviewDto();
+            var purchaseTrend = new List<VendorPurchaseTrendDto>();
+            var cropInventory = new List<VendorCropInventoryDto>();
+            var finishedProducts = new List<VendorDashboardFinishedProductDto>();
+            var salesAnalytics = new VendorSalesAnalyticsDto();
+            var profitLoss = new VendorEstimatedProfitLossDto();
 
-            var farmerPurchases = await _context.FarmerPurchases.AsNoTracking()
-                .Where(x => x.Farmer != null && x.Farmer.VendorId == vendorId
-                    && (!start.HasValue || x.PurchaseDate >= start.Value)
-                    && (!endExclusive.HasValue || x.PurchaseDate < endExclusive.Value))
-                .Select(x => new PurchaseMetric(x.PurchaseCode, x.CropName, x.Quantity, x.Unit, x.TotalAmount, x.DueAmount, x.PaymentStatus, x.PurchaseDate, x.Farmer!.FullName))
-                .ToListAsync(cancellationToken);
-            var middlemanPurchases = await _context.MiddlemanPurchases.AsNoTracking()
-                .Where(x => x.Middleman != null && x.Middleman.VendorId == vendorId
-                    && (!start.HasValue || x.PurchaseDate >= start.Value)
-                    && (!endExclusive.HasValue || x.PurchaseDate < endExclusive.Value))
-                .Select(x => new PurchaseMetric(x.PurchaseCode, x.CropName, x.Quantity, x.Unit, x.TotalAmount, x.DueAmount, x.PaymentStatus, x.PurchaseDate, x.Middleman!.BusinessName))
-                .ToListAsync(cancellationToken);
-            var orders = await _context.CustomerOrders.AsNoTracking()
-                .Where(x => x.Customer != null && x.Customer.VendorId == vendorId
-                    && (!start.HasValue || x.OrderDate >= start.Value)
-                    && (!endExclusive.HasValue || x.OrderDate < endExclusive.Value))
-                .Select(x => new OrderMetric(x.OrderCode, x.ProductName, x.Quantity, x.Unit, x.TotalAmount, x.DueAmount, x.OrderStatus, x.OrderDate, x.Customer!.CustomerName))
-                .ToListAsync(cancellationToken);
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = "CALL sp_VendorDashboard_GetSummary(@p_vendor_id, @p_from_date, @p_to_date);";
+                AddParam(cmd, "@p_vendor_id", vendorId, DbType.Int64);
+                AddParam(cmd, "@p_from_date", start, DbType.DateTime);
+                AddParam(cmd, "@p_to_date", endExclusive, DbType.DateTime);
 
-            var inRangeFarmerPurchases = farmerPurchases.Where(x => InRange(x.PurchaseDate, start, endExclusive)).ToList();
-            var inRangeMiddlemanPurchases = middlemanPurchases.Where(x => InRange(x.PurchaseDate, start, endExclusive)).ToList();
-            var inRangeOrders = orders.Where(x => InRange(x.OrderDate, start, endExclusive)).ToList();
+                await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
-            var stocks = await _context.RawMaterialStocks.AsNoTracking()
-                .Where(x => x.VendorId == vendorId)
-                .Select(x => new { x.CropName, x.AvailableQuantity, x.Unit })
-                .ToListAsync(cancellationToken);
-
-            var finishedProducts = await _context.FinishedProducts.AsNoTracking()
-                .Where(x => x.VendorId == vendorId)
-                .OrderBy(x => x.ProductName)
-                .Select(x => new VendorDashboardFinishedProductDto
+                // Result Set 1: KPIs & Financial Summary
+                if (await reader.ReadAsync(cancellationToken))
                 {
-                    ProductId = x.ProductCode,
-                    ProductName = x.ProductName,
-                    BrandName = x.BrandName,
-                    AvailableQuantity = x.AvailableQuantity,
-                    SoldQuantity = x.SoldQuantity,
-                    Unit = x.Unit,
-                    SellingPrice = x.SellingPrice,
-                    MinThresholdQuantity = x.MinThresholdQuantity,
-                    IsLowStock = x.AvailableQuantity <= x.MinThresholdQuantity
-                })
-                .ToListAsync(cancellationToken);
+                    var totalFarmers = SafeInt(reader["TotalFarmers"]);
+                    var activeFarmers = SafeInt(reader["ActiveFarmers"]);
+                    var totalMiddlemen = SafeInt(reader["TotalMiddlemen"]);
+                    var activeMiddlemen = SafeInt(reader["ActiveMiddlemen"]);
+                    var totalCustomers = SafeInt(reader["TotalCustomers"]);
 
-            var processing = await _context.ProcessingBatches.AsNoTracking()
-                .Where(x => x.VendorId == vendorId
-                    && (!start.HasValue || x.ProcessingDate >= start.Value)
-                    && (!endExclusive.HasValue || x.ProcessingDate < endExclusive.Value))
-                .Select(x => new { x.ProcessingDate, x.ProcessingExpenses })
-                .ToListAsync(cancellationToken);
-            var rangedProcessing = processing.Where(x => InRange(x.ProcessingDate, start, endExclusive)).ToList();
+                    var farmerCount = SafeInt(reader["FarmerPurchaseCount"]);
+                    var farmerQty = SafeDecimal(reader["FarmerPurchaseQuantity"]);
+                    var farmerAmount = SafeDecimal(reader["FarmerPurchaseAmount"]);
 
-            var productCosts = await _context.FinishedProducts.AsNoTracking()
-                .Where(x => x.VendorId == vendorId)
-                .Select(x => new { x.ProductName, x.ProductionCost })
-                .ToListAsync(cancellationToken);
-            var costLookup = productCosts
-                .GroupBy(x => x.ProductName, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(group => group.Key, group => group.First().ProductionCost, StringComparer.OrdinalIgnoreCase);
-            var estimatedCostOfGoods = inRangeOrders.Sum(order =>
-                costLookup.TryGetValue(order.ProductName, out var unitCost) ? order.Quantity * unitCost : 0m);
+                    var middlemanCount = SafeInt(reader["MiddlemanPurchaseCount"]);
+                    var middlemanQty = SafeDecimal(reader["MiddlemanPurchaseQuantity"]);
+                    var middlemanAmount = SafeDecimal(reader["MiddlemanPurchaseAmount"]);
 
-            var pendingOtps = await LoadPendingOtpConfirmationsAsync(vendorId, start, endExclusive, includeSandboxOtps, cancellationToken);
-            var purchaseAmountFarmers = inRangeFarmerPurchases.Sum(x => x.TotalAmount);
-            var purchaseAmountMiddlemen = inRangeMiddlemanPurchases.Sum(x => x.TotalAmount);
-            var revenue = inRangeOrders.Sum(x => x.TotalAmount);
-            var processingExpenses = rangedProcessing.Sum(x => x.ProcessingExpenses);
+                    var totalOrders = SafeInt(reader["TotalOrders"]);
+                    var salesVolume = SafeDecimal(reader["SalesVolume"]);
+                    var totalSales = SafeDecimal(reader["TotalSales"]);
+                    var processingExpenses = SafeDecimal(reader["ProcessingExpenses"]);
+                    var rawMaterialCost = SafeDecimal(reader["RawMaterialCost"]);
+
+                    kpis = new VendorDashboardKpisDto
+                    {
+                        TotalFarmers = totalFarmers,
+                        ActiveFarmers = activeFarmers,
+                        TotalMiddlemen = totalMiddlemen,
+                        ActiveMiddlemen = activeMiddlemen,
+                        TotalPurchases = farmerCount + middlemanCount,
+                        TotalPurchaseAmount = farmerAmount + middlemanAmount,
+                        TotalCustomers = totalCustomers,
+                        TotalSales = totalSales,
+                        TotalOrders = totalOrders
+                    };
+
+                    overview = new VendorPurchaseOverviewDto
+                    {
+                        FarmerPurchaseAmount = farmerAmount,
+                        FarmerPurchaseQuantity = farmerQty,
+                        FarmerPurchaseCount = farmerCount,
+                        MiddlemanPurchaseAmount = middlemanAmount,
+                        MiddlemanPurchaseQuantity = middlemanQty,
+                        MiddlemanPurchaseCount = middlemanCount,
+                        QuantityUnit = "Quintal"
+                    };
+
+                    salesAnalytics.TotalRevenue = totalSales;
+                    salesAnalytics.NumberOfOrders = totalOrders;
+                    salesAnalytics.SalesVolume = salesVolume;
+                    salesAnalytics.AverageOrderValue = totalOrders == 0 ? 0 : totalSales / totalOrders;
+
+                    profitLoss = new VendorEstimatedProfitLossDto
+                    {
+                        IsEstimate = true,
+                        RawMaterialCost = rawMaterialCost,
+                        ProcessingExpenses = processingExpenses,
+                        SalesRevenue = totalSales,
+                        EstimatedProfit = totalSales - rawMaterialCost - processingExpenses,
+                        CalculationNote = "Estimated using matched finished-product production cost multiplied by sold quantity, plus processing expenses. Orders without a matching finished product are excluded from cost of goods."
+                    };
+                }
+
+                // Result Set 2: Purchase Trend
+                if (await reader.NextResultAsync(cancellationToken))
+                {
+                    while (await reader.ReadAsync(cancellationToken))
+                    {
+                        purchaseTrend.Add(new VendorPurchaseTrendDto
+                        {
+                            PeriodStart = SafeDateTime(reader["PeriodStart"]),
+                            FarmerPurchaseAmount = SafeDecimal(reader["FarmerPurchaseAmount"]),
+                            FarmerPurchaseQuantity = SafeDecimal(reader["FarmerPurchaseQuantity"]),
+                            MiddlemanPurchaseAmount = SafeDecimal(reader["MiddlemanPurchaseAmount"]),
+                            MiddlemanPurchaseQuantity = SafeDecimal(reader["MiddlemanPurchaseQuantity"])
+                        });
+                    }
+                }
+
+                // Result Set 3: Crop Inventory
+                if (await reader.NextResultAsync(cancellationToken))
+                {
+                    while (await reader.ReadAsync(cancellationToken))
+                    {
+                        cropInventory.Add(new VendorCropInventoryDto
+                        {
+                            CropName = SafeString(reader["CropName"]),
+                            Unit = SafeString(reader["Unit"]),
+                            AvailableQuantity = SafeDecimal(reader["AvailableQuantity"])
+                        });
+                    }
+                }
+
+                // Result Set 4: Finished Products
+                if (await reader.NextResultAsync(cancellationToken))
+                {
+                    while (await reader.ReadAsync(cancellationToken))
+                    {
+                        finishedProducts.Add(new VendorDashboardFinishedProductDto
+                        {
+                            ProductId = SafeString(reader["ProductId"]),
+                            ProductName = SafeString(reader["ProductName"]),
+                            BrandName = SafeString(reader["BrandName"]),
+                            AvailableQuantity = SafeDecimal(reader["AvailableQuantity"]),
+                            SoldQuantity = SafeDecimal(reader["SoldQuantity"]),
+                            Unit = SafeString(reader["Unit"]),
+                            SellingPrice = SafeDecimal(reader["SellingPrice"]),
+                            MinThresholdQuantity = SafeDecimal(reader["MinThresholdQuantity"]),
+                            IsLowStock = SafeBool(reader["IsLowStock"])
+                        });
+                    }
+                }
+
+                // Result Set 5: Sales Revenue Trend
+                if (await reader.NextResultAsync(cancellationToken))
+                {
+                    while (await reader.ReadAsync(cancellationToken))
+                    {
+                        salesAnalytics.RevenueTrend.Add(new VendorRevenueTrendDto
+                        {
+                            PeriodStart = SafeDateTime(reader["PeriodStart"]),
+                            Revenue = SafeDecimal(reader["Revenue"])
+                        });
+                    }
+                }
+
+                // Result Set 6: Product Revenue Breakdown
+                if (await reader.NextResultAsync(cancellationToken))
+                {
+                    while (await reader.ReadAsync(cancellationToken))
+                    {
+                        salesAnalytics.ProductRevenue.Add(new VendorProductRevenueDto
+                        {
+                            ProductName = SafeString(reader["ProductName"]),
+                            Revenue = SafeDecimal(reader["Revenue"])
+                        });
+                    }
+                }
+            }
+
+            var pendingOtps = await GetPendingOtpConfirmationsAsync(
+                vendorId, fromDate, toDate, includeSandboxOtps, cancellationToken);
+
+            var recentTxnsPage = await GetTransactionsAsync(
+                vendorId,
+                new VendorDashboardTransactionQueryDto
+                {
+                    FromDate = fromDate,
+                    ToDate = toDate,
+                    Page = 1,
+                    PageSize = 20
+                },
+                cancellationToken);
 
             return new VendorDashboardDto
             {
                 GeneratedAtUtc = DateTime.UtcNow,
                 FromDate = start,
                 ToDate = endExclusive?.AddTicks(-1),
-                Kpis = new VendorDashboardKpisDto
-                {
-                    TotalFarmers = farmers.Count,
-                    ActiveFarmers = farmers.Count(x => IsActive(x.Status)),
-                    TotalMiddlemen = middlemen.Count,
-                    ActiveMiddlemen = middlemen.Count(x => IsActive(x.Status)),
-                    TotalPurchases = inRangeFarmerPurchases.Count + inRangeMiddlemanPurchases.Count,
-                    TotalPurchaseAmount = purchaseAmountFarmers + purchaseAmountMiddlemen,
-                    TotalCustomers = customers,
-                    TotalSales = revenue,
-                    TotalOrders = inRangeOrders.Count
-                },
-                PurchaseOverview = new VendorPurchaseOverviewDto
-                {
-                    FarmerPurchaseAmount = purchaseAmountFarmers,
-                    FarmerPurchaseQuantity = inRangeFarmerPurchases.Sum(x => x.Quantity),
-                    FarmerPurchaseCount = inRangeFarmerPurchases.Count,
-                    MiddlemanPurchaseAmount = purchaseAmountMiddlemen,
-                    MiddlemanPurchaseQuantity = inRangeMiddlemanPurchases.Sum(x => x.Quantity),
-                    MiddlemanPurchaseCount = inRangeMiddlemanPurchases.Count
-                },
-                PurchaseTrend = BuildPurchaseTrend(inRangeFarmerPurchases, inRangeMiddlemanPurchases),
-                RawMaterialInventoryByCrop = stocks
-                    .GroupBy(x => new { x.CropName, x.Unit })
-                    .Select(group => new VendorCropInventoryDto
-                    {
-                        CropName = group.Key.CropName,
-                        Unit = group.Key.Unit,
-                        AvailableQuantity = group.Sum(x => x.AvailableQuantity)
-                    })
-                    .OrderByDescending(x => x.AvailableQuantity)
-                    .ToList(),
+                Kpis = kpis,
+                PurchaseOverview = overview,
+                PurchaseTrend = purchaseTrend,
+                RawMaterialInventoryByCrop = cropInventory,
                 FinishedProducts = finishedProducts,
-                SalesAnalytics = BuildSalesAnalytics(inRangeOrders),
-                EstimatedProfitLoss = new VendorEstimatedProfitLossDto
-                {
-                    RawMaterialCost = estimatedCostOfGoods,
-                    ProcessingExpenses = processingExpenses,
-                    SalesRevenue = revenue,
-                    EstimatedProfit = revenue - estimatedCostOfGoods - processingExpenses,
-                    CalculationNote = "Estimated using matched finished-product production cost multiplied by sold quantity, plus processing expenses. Orders without a matching finished product are excluded from cost of goods."
-                },
-                PendingOtpConfirmations = pendingOtps
+                SalesAnalytics = salesAnalytics,
+                EstimatedProfitLoss = profitLoss,
+                PendingOtpConfirmations = pendingOtps,
+                RecentTransactions = recentTxnsPage.Items
             };
         }
 
@@ -168,283 +235,171 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             CancellationToken cancellationToken = default)
         {
             var (start, endExclusive) = NormalizeRange(query.FromDate, query.ToDate);
-            var transactions = await LoadTransactionsAsync(vendorId, start, endExclusive, cancellationToken);
-
-            if (!string.IsNullOrWhiteSpace(query.Type))
-                transactions = transactions.Where(x => EqualsIgnoreCase(x.Type, query.Type)).ToList();
-            if (!string.IsNullOrWhiteSpace(query.Status))
-                transactions = transactions.Where(x => EqualsIgnoreCase(x.Status, query.Status)).ToList();
-            if (!string.IsNullOrWhiteSpace(query.Search))
-            {
-                var term = query.Search.Trim();
-                transactions = transactions.Where(x => ContainsIgnoreCase(x.TransactionId, term)
-                    || ContainsIgnoreCase(x.PartyName, term)
-                    || ContainsIgnoreCase(x.Product, term)).ToList();
-            }
-
             var page = Math.Max(1, query.Page);
             var pageSize = Math.Clamp(query.PageSize, 1, 100);
-            var total = transactions.Count;
+            var offset = (page - 1) * pageSize;
+
+            var items = new List<VendorDashboardTransactionDto>();
+            var totalRecords = 0;
+
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = "CALL sp_VendorDashboard_GetTransactions(@p_vendor_id, @p_from_date, @p_to_date, @p_type, @p_status, @p_search, @p_offset, @p_limit);";
+                AddParam(cmd, "@p_vendor_id", vendorId, DbType.Int64);
+                AddParam(cmd, "@p_from_date", start, DbType.DateTime);
+                AddParam(cmd, "@p_to_date", endExclusive, DbType.DateTime);
+                AddParam(cmd, "@p_type", string.IsNullOrWhiteSpace(query.Type) ? null : query.Type.Trim(), DbType.String);
+                AddParam(cmd, "@p_status", string.IsNullOrWhiteSpace(query.Status) ? null : query.Status.Trim(), DbType.String);
+                AddParam(cmd, "@p_search", string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim(), DbType.String);
+                AddParam(cmd, "@p_offset", offset, DbType.Int32);
+                AddParam(cmd, "@p_limit", pageSize, DbType.Int32);
+
+                await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+
+                // Result Set 1: Transaction rows
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    items.Add(new VendorDashboardTransactionDto
+                    {
+                        TransactionId = SafeString(reader["TransactionId"]),
+                        Date = SafeDateTime(reader["Date"]),
+                        PartyName = SafeString(reader["PartyName"]),
+                        Type = SafeString(reader["Type"]),
+                        Product = SafeString(reader["Product"]),
+                        Quantity = SafeDecimal(reader["Quantity"]),
+                        Unit = SafeString(reader["Unit"]),
+                        Amount = SafeDecimal(reader["Amount"]),
+                        DueAmount = SafeNullableDecimal(reader["DueAmount"]),
+                        Status = SafeString(reader["Status"]),
+                        OtpStatus = SafeString(reader["OtpStatus"]),
+                        ExpectedPaymentDate = SafeNullableDateTime(reader["ExpectedPaymentDate"])
+                    });
+                }
+
+                // Result Set 2: Total count
+                if (await reader.NextResultAsync(cancellationToken) && await reader.ReadAsync(cancellationToken))
+                {
+                    totalRecords = SafeInt(reader["TotalRecords"]);
+                }
+            }
+
             return new VendorDashboardTransactionPageDto
             {
                 Page = page,
                 PageSize = pageSize,
-                TotalRecords = total,
-                TotalPages = total == 0 ? 0 : (int)Math.Ceiling(total / (double)pageSize),
-                Items = transactions.Skip((page - 1) * pageSize).Take(pageSize).ToList()
+                TotalRecords = totalRecords,
+                TotalPages = totalRecords == 0 ? 0 : (int)Math.Ceiling(totalRecords / (double)pageSize),
+                Items = items
             };
         }
 
-        public async Task<VendorDashboardOtpVerificationDto?> VerifyOtpAsync(
-            long vendorId, string partnerType, long confirmationId, string otp, CancellationToken cancellationToken = default)
-        {
-            var suppliedOtp = Encoding.UTF8.GetBytes(otp.Trim());
-            if (partnerType.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
-            {
-                var log = await _context.FarmerOtpLogs
-                    .FirstOrDefaultAsync(x => x.Id == confirmationId && x.Farmer != null && x.Farmer.VendorId == vendorId, cancellationToken);
-                if (log == null || !IsPending(log.Status) || !OtpMatches(log.OtpCode, suppliedOtp)) return null;
-                log.Status = "Verified";
-                log.VerifiedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync(cancellationToken);
-                return new VendorDashboardOtpVerificationDto { Verified = true, PartnerType = "Farmer", ConfirmationId = log.Id, VerifiedAt = log.VerifiedAt };
-            }
-
-            if (partnerType.Equals("Middleman", StringComparison.OrdinalIgnoreCase))
-            {
-                var log = await _context.MiddlemanOtpLogs
-                    .FirstOrDefaultAsync(x => x.Id == confirmationId && x.Middleman != null && x.Middleman.VendorId == vendorId, cancellationToken);
-                if (log == null || !IsPending(log.Status) || !OtpMatches(log.OtpCode, suppliedOtp)) return null;
-                log.Status = "Verified";
-                log.VerifiedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync(cancellationToken);
-                return new VendorDashboardOtpVerificationDto { Verified = true, PartnerType = "Middleman", ConfirmationId = log.Id, VerifiedAt = log.VerifiedAt };
-            }
-
-            return null;
-        }
-
-        public Task<List<VendorDashboardOtpConfirmationDto>> GetPendingOtpConfirmationsAsync(
-            long vendorId, DateTime? fromDate, DateTime? toDate, bool includeSandboxOtps, CancellationToken cancellationToken = default)
-        {
-            var (start, endExclusive) = NormalizeRange(fromDate, toDate);
-            return LoadPendingOtpConfirmationsAsync(vendorId, start, endExclusive, includeSandboxOtps, cancellationToken);
-        }
-
         public async Task<List<VendorDashboardSearchResultDto>> SearchAsync(
-            long vendorId, string search, int take = 20, CancellationToken cancellationToken = default)
+            long vendorId,
+            string search,
+            int take = 20,
+            CancellationToken cancellationToken = default)
         {
             var term = search.Trim();
             var limit = Math.Clamp(take, 1, 50);
             var results = new List<VendorDashboardSearchResultDto>();
 
-            results.AddRange(await _context.Farmers.AsNoTracking()
-                .Where(x => x.VendorId == vendorId && (x.FarmerCode.Contains(term) || x.FullName.Contains(term) || x.MobileNumber.Contains(term)))
-                .OrderBy(x => x.FarmerCode).Take(limit)
-                .Select(x => new VendorDashboardSearchResultDto { EntityType = "Farmer", EntityId = x.FarmerCode, Title = x.FullName, Subtitle = x.MobileNumber, NavigationPath = $"/vendor/farmers/{x.FarmerCode}" })
-                .ToListAsync(cancellationToken));
-            results.AddRange(await _context.Middlemen.AsNoTracking()
-                .Where(x => x.VendorId == vendorId && (x.MiddlemanCode.Contains(term) || x.FullName.Contains(term) || x.BusinessName.Contains(term) || x.MobileNumber.Contains(term)))
-                .OrderBy(x => x.MiddlemanCode).Take(limit)
-                .Select(x => new VendorDashboardSearchResultDto { EntityType = "Middleman", EntityId = x.MiddlemanCode, Title = x.BusinessName, Subtitle = x.FullName, NavigationPath = $"/vendor/middlemen/{x.MiddlemanCode}" })
-                .ToListAsync(cancellationToken));
-            results.AddRange(await _context.Customers.AsNoTracking()
-                .Where(x => x.VendorId == vendorId && (x.CustomerCode.Contains(term) || x.CustomerName.Contains(term) || x.BusinessName.Contains(term) || x.MobileNumber.Contains(term)))
-                .OrderBy(x => x.CustomerCode).Take(limit)
-                .Select(x => new VendorDashboardSearchResultDto { EntityType = "Customer", EntityId = x.CustomerCode, Title = x.CustomerName, Subtitle = x.BusinessName, NavigationPath = $"/vendor/customers/{x.CustomerCode}" })
-                .ToListAsync(cancellationToken));
-            results.AddRange(await _context.RawMaterialStocks.AsNoTracking()
-                .Where(x => x.VendorId == vendorId && (x.StockCode.Contains(term) || x.CropName.Contains(term) || x.BatchNumber.Contains(term)))
-                .OrderBy(x => x.StockCode).Take(limit)
-                .Select(x => new VendorDashboardSearchResultDto { EntityType = "RawMaterial", EntityId = x.StockCode, Title = x.CropName, Subtitle = x.BatchNumber, NavigationPath = $"/vendor/raw-material-inventory/{x.StockCode}" })
-                .ToListAsync(cancellationToken));
-            results.AddRange(await _context.ProcessingBatches.AsNoTracking()
-                .Where(x => x.VendorId == vendorId && (x.ProcessingCode.Contains(term) || x.BatchNumber.Contains(term) || x.RawMaterialName.Contains(term)))
-                .OrderBy(x => x.ProcessingDate).Take(limit)
-                .Select(x => new VendorDashboardSearchResultDto { EntityType = "ProcessingBatch", EntityId = x.ProcessingCode, Title = x.RawMaterialName, Subtitle = x.BatchNumber, NavigationPath = $"/vendor/processing/batches/{x.ProcessingCode}" })
-                .ToListAsync(cancellationToken));
-            results.AddRange(await _context.FinishedProducts.AsNoTracking()
-                .Where(x => x.VendorId == vendorId && (x.ProductCode.Contains(term) || x.ProductName.Contains(term) || x.BrandName.Contains(term)))
-                .OrderBy(x => x.ProductName).Take(limit)
-                .Select(x => new VendorDashboardSearchResultDto { EntityType = "FinishedProduct", EntityId = x.ProductCode, Title = x.ProductName, Subtitle = x.BrandName, NavigationPath = $"/vendor/finished-products/{x.ProductCode}" })
-                .ToListAsync(cancellationToken));
-
-            var byType = results.GroupBy(x => x.EntityType).Select(group => group.ToList()).ToList();
-            var balanced = new List<VendorDashboardSearchResultDto>(limit);
-            for (var index = 0; balanced.Count < limit && byType.Any(group => index < group.Count); index++)
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using (var cmd = conn.CreateCommand())
             {
-                foreach (var group in byType)
+                cmd.CommandText = "CALL sp_VendorDashboard_Search(@p_vendor_id, @p_search, @p_limit);";
+                AddParam(cmd, "@p_vendor_id", vendorId, DbType.Int64);
+                AddParam(cmd, "@p_search", term, DbType.String);
+                AddParam(cmd, "@p_limit", limit, DbType.Int32);
+
+                await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+                while (await reader.ReadAsync(cancellationToken))
                 {
-                    if (index < group.Count) balanced.Add(group[index]);
-                    if (balanced.Count == limit) break;
+                    results.Add(new VendorDashboardSearchResultDto
+                    {
+                        EntityType = SafeString(reader["EntityType"]),
+                        EntityId = SafeString(reader["EntityId"]),
+                        Title = SafeString(reader["Title"]),
+                        Subtitle = SafeString(reader["Subtitle"]),
+                        NavigationPath = SafeString(reader["NavigationPath"])
+                    });
                 }
             }
-            return balanced;
+
+            return results;
         }
 
-        private async Task<List<VendorDashboardTransactionDto>> LoadTransactionsAsync(
-            long vendorId, DateTime? start, DateTime? endExclusive, CancellationToken ct)
+        public async Task<List<VendorDashboardOtpConfirmationDto>> GetPendingOtpConfirmationsAsync(
+            long vendorId,
+            DateTime? fromDate,
+            DateTime? toDate,
+            bool includeSandboxOtps,
+            CancellationToken cancellationToken = default)
         {
-            var farmer = await _context.FarmerPurchases.AsNoTracking()
-                .Where(x => x.Farmer != null && x.Farmer.VendorId == vendorId)
-                .Select(x => new VendorDashboardTransactionDto
-                {
-                    TransactionId = x.PurchaseCode,
-                    Date = x.PurchaseDate,
-                    PartyName = x.Farmer!.FullName,
-                    Type = "Farmer Purchase",
-                    Product = x.CropName,
-                    Quantity = x.Quantity,
-                    Unit = x.Unit,
-                    Amount = x.TotalAmount,
-                    DueAmount = x.DueAmount,
-                    Status = x.PaymentStatus
-                })
-                .ToListAsync(ct);
-            var middlemen = await _context.MiddlemanPurchases.AsNoTracking()
-                .Where(x => x.Middleman != null && x.Middleman.VendorId == vendorId)
-                .Select(x => new VendorDashboardTransactionDto
-                {
-                    TransactionId = x.PurchaseCode,
-                    Date = x.PurchaseDate,
-                    PartyName = x.Middleman!.BusinessName,
-                    Type = "Middleman Purchase",
-                    Product = x.CropName,
-                    Quantity = x.Quantity,
-                    Unit = x.Unit,
-                    Amount = x.TotalAmount,
-                    DueAmount = x.DueAmount,
-                    Status = x.PaymentStatus
-                })
-                .ToListAsync(ct);
-            var customerOrders = await _context.CustomerOrders.AsNoTracking()
-                .Where(x => x.Customer != null && x.Customer.VendorId == vendorId)
-                .Select(x => new VendorDashboardTransactionDto
-                {
-                    TransactionId = x.OrderCode,
-                    Date = x.OrderDate,
-                    PartyName = x.Customer!.CustomerName,
-                    Type = "Customer Sale",
-                    Product = x.ProductName,
-                    Quantity = x.Quantity,
-                    Unit = x.Unit,
-                    Amount = x.TotalAmount,
-                    DueAmount = x.DueAmount,
-                    Status = x.OrderStatus
-                })
-                .ToListAsync(ct);
-            var batches = await _context.ProcessingBatches.AsNoTracking()
-                .Where(x => x.VendorId == vendorId)
-                .Select(x => new VendorDashboardTransactionDto
-                {
-                    TransactionId = x.ProcessingCode,
-                    Date = x.ProcessingDate,
-                    PartyName = "Vendor Processing",
-                    Type = "Processing",
-                    Product = x.RawMaterialName,
-                    Quantity = x.InputQuantity,
-                    Unit = x.Unit,
-                    Amount = x.TotalBatchCost,
-                    Status = x.Status
-                })
-                .ToListAsync(ct);
+            var (start, endExclusive) = NormalizeRange(fromDate, toDate);
+            var list = new List<VendorDashboardOtpConfirmationDto>();
 
-            return farmer.Concat(middlemen).Concat(customerOrders).Concat(batches)
-                .Where(x => InRange(x.Date, start, endExclusive))
-                .OrderByDescending(x => x.Date)
-                .ToList();
-        }
-
-        private async Task<List<VendorDashboardOtpConfirmationDto>> LoadPendingOtpConfirmationsAsync(
-            long vendorId, DateTime? start, DateTime? endExclusive, bool includeSandboxOtps, CancellationToken ct)
-        {
-            var farmerLogs = await _context.FarmerOtpLogs.AsNoTracking()
-                .Where(x => x.Farmer != null && x.Farmer.VendorId == vendorId
-                    && (x.Status.ToLower() == "pending" || x.Status.ToLower() == "sent"))
-                .Select(x => new VendorDashboardOtpConfirmationDto
-                {
-                    Id = x.Id,
-                    PartnerType = "Farmer",
-                    PartnerName = x.Farmer!.FullName,
-                    PartnerCode = x.Farmer.FarmerCode,
-                    Purpose = x.Purpose,
-                    ActionDetails = x.ActionDetails,
-                    Status = x.Status,
-                    CreatedAt = x.CreatedAt,
-                    SandboxOtp = includeSandboxOtps ? x.OtpCode : null
-                })
-                .ToListAsync(ct);
-            var middlemanLogs = await _context.MiddlemanOtpLogs.AsNoTracking()
-                .Where(x => x.Middleman != null && x.Middleman.VendorId == vendorId
-                    && (x.Status.ToLower() == "pending" || x.Status.ToLower() == "sent"))
-                .Select(x => new VendorDashboardOtpConfirmationDto
-                {
-                    Id = x.Id,
-                    PartnerType = "Middleman",
-                    PartnerName = x.Middleman!.BusinessName,
-                    PartnerCode = x.Middleman.MiddlemanCode,
-                    Purpose = x.Purpose,
-                    ActionDetails = x.ActionDetails,
-                    Status = x.Status,
-                    CreatedAt = x.CreatedAt,
-                    SandboxOtp = includeSandboxOtps ? x.OtpCode : null
-                })
-                .ToListAsync(ct);
-
-            return farmerLogs.Concat(middlemanLogs)
-                .Where(x => InRange(x.CreatedAt, start, endExclusive))
-                .OrderByDescending(x => x.CreatedAt)
-                .ToList();
-        }
-
-        private static List<VendorPurchaseTrendDto> BuildPurchaseTrend(
-            List<PurchaseMetric> farmerPurchases, List<PurchaseMetric> middlemanPurchases)
-        {
-            var map = new SortedDictionary<DateTime, VendorPurchaseTrendDto>();
-            foreach (var row in farmerPurchases)
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using (var cmd = conn.CreateCommand())
             {
-                var key = row.PurchaseDate.Date;
-                if (!map.TryGetValue(key, out var point)) map[key] = point = new VendorPurchaseTrendDto { PeriodStart = key };
-                point.FarmerPurchaseAmount += row.TotalAmount;
-                point.FarmerPurchaseQuantity += row.Quantity;
+                cmd.CommandText = "CALL sp_VendorDashboard_GetPendingOtpConfirmations(@p_vendor_id, @p_from_date, @p_to_date);";
+                AddParam(cmd, "@p_vendor_id", vendorId, DbType.Int64);
+                AddParam(cmd, "@p_from_date", start, DbType.DateTime);
+                AddParam(cmd, "@p_to_date", endExclusive, DbType.DateTime);
+
+                await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    list.Add(new VendorDashboardOtpConfirmationDto
+                    {
+                        Id = SafeLong(reader["Id"]),
+                        PartnerType = SafeString(reader["PartnerType"]),
+                        PartnerName = SafeString(reader["PartnerName"]),
+                        PartnerCode = SafeString(reader["PartnerCode"]),
+                        Purpose = SafeString(reader["Purpose"]),
+                        ActionDetails = SafeString(reader["ActionDetails"]),
+                        Status = SafeString(reader["Status"]),
+                        CreatedAt = SafeDateTime(reader["CreatedAt"]),
+                        SandboxOtp = includeSandboxOtps ? SafeString(reader["SandboxOtp"]) : null
+                    });
+                }
             }
-            foreach (var row in middlemanPurchases)
-            {
-                var key = row.PurchaseDate.Date;
-                if (!map.TryGetValue(key, out var point)) map[key] = point = new VendorPurchaseTrendDto { PeriodStart = key };
-                point.MiddlemanPurchaseAmount += row.TotalAmount;
-                point.MiddlemanPurchaseQuantity += row.Quantity;
-            }
-            return map.Values.ToList();
+
+            return list;
         }
 
-        private static VendorSalesAnalyticsDto BuildSalesAnalytics(List<OrderMetric> orders)
+        public async Task<VendorDashboardOtpVerificationDto?> VerifyOtpAsync(
+            long vendorId,
+            string partnerType,
+            long confirmationId,
+            string otp,
+            CancellationToken cancellationToken = default)
         {
-            var revenueTrend = orders.GroupBy(x => x.OrderDate.Date)
-                .OrderBy(x => x.Key)
-                .Select(group => new VendorRevenueTrendDto
-                {
-                    PeriodStart = group.Key,
-                    Revenue = group.Sum(x => x.TotalAmount)
-                }).ToList();
-            var productRevenue = orders.GroupBy(x => x.ProductName, StringComparer.OrdinalIgnoreCase)
-                .Select(group => new VendorProductRevenueDto
-                {
-                    ProductName = group.Key,
-                    Revenue = group.Sum(x => x.TotalAmount)
-                })
-                .OrderByDescending(x => x.Revenue)
-                .ToList();
-            var totalRevenue = orders.Sum(x => x.TotalAmount);
-            return new VendorSalesAnalyticsDto
+            var conn = await GetOpenConnectionAsync(cancellationToken);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "CALL sp_VendorDashboard_VerifyOtp(@p_vendor_id, @p_partner_type, @p_confirmation_id, @p_otp);";
+            AddParam(cmd, "@p_vendor_id", vendorId, DbType.Int64);
+            AddParam(cmd, "@p_partner_type", partnerType.Trim(), DbType.String);
+            AddParam(cmd, "@p_confirmation_id", confirmationId, DbType.Int64);
+            AddParam(cmd, "@p_otp", otp.Trim(), DbType.String);
+
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
             {
-                TotalRevenue = totalRevenue,
-                NumberOfOrders = orders.Count,
-                SalesVolume = orders.Sum(x => x.Quantity),
-                AverageOrderValue = orders.Count == 0 ? 0 : totalRevenue / orders.Count,
-                RevenueTrend = revenueTrend,
-                ProductRevenue = productRevenue
-            };
+                var isVerified = SafeBool(reader["Verified"]);
+                if (isVerified)
+                {
+                    return new VendorDashboardOtpVerificationDto
+                    {
+                        Verified = true,
+                        PartnerType = SafeString(reader["PartnerType"]),
+                        ConfirmationId = SafeLong(reader["ConfirmationId"]),
+                        VerifiedAt = SafeNullableDateTime(reader["VerifiedAt"])
+                    };
+                }
+            }
+
+            return null;
         }
 
         private static (DateTime? Start, DateTime? EndExclusive) NormalizeRange(DateTime? from, DateTime? to)
@@ -454,17 +409,22 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             return (start, endExclusive);
         }
 
-        private static bool InRange(DateTime value, DateTime? start, DateTime? endExclusive) =>
-            (!start.HasValue || value >= start.Value) && (!endExclusive.HasValue || value < endExclusive.Value);
-
-        private static bool IsActive(string status) => EqualsIgnoreCase(status, "Active");
-        private static bool IsPending(string? status) => EqualsIgnoreCase(status, "Pending") || EqualsIgnoreCase(status, "Sent");
-        private static bool OtpMatches(string expectedOtp, byte[] suppliedOtp)
+        private static void AddParam(DbCommand cmd, string name, object? value, DbType? dbType = null)
         {
-            var expected = Encoding.UTF8.GetBytes(expectedOtp.Trim());
-            return expected.Length == suppliedOtp.Length && CryptographicOperations.FixedTimeEquals(expected, suppliedOtp);
+            var p = cmd.CreateParameter();
+            p.ParameterName = name;
+            p.Value = value ?? DBNull.Value;
+            if (dbType.HasValue) p.DbType = dbType.Value;
+            cmd.Parameters.Add(p);
         }
-        private static bool EqualsIgnoreCase(string? a, string? b) => string.Equals(a?.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
-        private static bool ContainsIgnoreCase(string? value, string term) => value?.Contains(term, StringComparison.OrdinalIgnoreCase) == true;
+
+        private static string SafeString(object? val) => val == null || val is DBNull ? string.Empty : val.ToString() ?? string.Empty;
+        private static decimal SafeDecimal(object? val) => val == null || val is DBNull ? 0m : Convert.ToDecimal(val, CultureInfo.InvariantCulture);
+        private static int SafeInt(object? val) => val == null || val is DBNull ? 0 : Convert.ToInt32(val, CultureInfo.InvariantCulture);
+        private static long SafeLong(object? val) => val == null || val is DBNull ? 0L : Convert.ToInt64(val, CultureInfo.InvariantCulture);
+        private static DateTime SafeDateTime(object? val) => val == null || val is DBNull ? DateTime.MinValue : Convert.ToDateTime(val, CultureInfo.InvariantCulture);
+        private static DateTime? SafeNullableDateTime(object? val) => val == null || val is DBNull ? null : Convert.ToDateTime(val, CultureInfo.InvariantCulture);
+        private static decimal? SafeNullableDecimal(object? val) => val == null || val is DBNull ? null : Convert.ToDecimal(val, CultureInfo.InvariantCulture);
+        private static bool SafeBool(object? val) => val != null && !(val is DBNull) && (val is bool b ? b : Convert.ToInt32(val) != 0);
     }
 }

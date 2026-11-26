@@ -520,7 +520,7 @@ export default function OtpConfirmations({
                   className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-primary text-white hover:bg-brand-secondary transition-colors cursor-pointer"
                   title="Enter & Verify OTP"
                 >
-                  <KeyRound className="w-3.5 h-3.5" />
+
                   Verify
                 </button>
                 {onResendOtp && (
@@ -702,7 +702,7 @@ export default function OtpConfirmations({
                 setSearchQuery(val);
                 pagination.goToPage(1);
               }}
-              placeholder="Search by Transaction ID, Party Name, Mobile, or Product..."
+              placeholder="Search by Transaction ID, Party Name, Mobile..."
             />
           </div>
           <div className="text-xs text-brand-muted">
@@ -880,6 +880,7 @@ export default function OtpConfirmations({
                           type="submit"
                           className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg bg-brand-primary text-white hover:bg-brand-secondary transition-colors cursor-pointer"
                         >
+        
                           <KeyRound className="w-3.5 h-3.5" />
                           Verify & Confirm Transaction
                         </button>

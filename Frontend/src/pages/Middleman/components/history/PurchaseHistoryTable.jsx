@@ -31,11 +31,18 @@ export const PurchaseHistoryTable = ({
         <tbody className="divide-y divide-[#E2E8F0] text-xs text-[#1F2937]">
           {purchases.map((p) => (
             <tr key={p.purchaseId} className="hover:bg-slate-50/60 transition-colors">
-              <td className="py-3 px-3.5 font-mono font-bold text-[#0F766E]">{p.purchaseId}</td>
-              <td className="py-3 px-3.5 font-bold text-[#1F2937]">{p.farmerName}</td>
+              <td
+                onClick={() => onViewDetails && onViewDetails(p)}
+                className="py-3 px-3.5 font-mono font-bold text-[#0F766E] cursor-pointer hover:underline"
+              >
+                {p.purchaseId}
+              </td>
+              <td className="py-3 px-3.5 font-bold text-[#1F2937]">{p.farmerName || '—'}</td>
               <td className="py-3 px-3.5">
-                <span className="font-semibold text-[#1F2937]">{p.cropName}</span>
-                <span className="block text-[10px] text-[#64748B]">{p.variety || 'Standard'}</span>
+                <span className="font-semibold text-[#1F2937]">{p.cropName || p.variety || 'Standard'}</span>
+                {p.variety && p.variety !== p.cropName && p.cropName && (
+                  <span className="block text-[10px] text-[#64748B]">{p.variety}</span>
+                )}
               </td>
               <td className="py-3 px-3.5 text-right font-medium">{formatQuantity(p.quantity, p.unit)}</td>
               <td className="py-3 px-3.5 text-right text-[#64748B]">{formatINR(p.rate)}</td>
@@ -52,7 +59,7 @@ export const PurchaseHistoryTable = ({
                 <div className="flex items-center justify-center gap-1">
                   <button
                     type="button"
-                    onClick={() => onViewDetails(p)}
+                    onClick={() => onViewDetails && onViewDetails(p)}
                     className="p-1 rounded-lg hover:bg-slate-100 text-[#0F766E] cursor-pointer"
                     title="View Full Details"
                   >

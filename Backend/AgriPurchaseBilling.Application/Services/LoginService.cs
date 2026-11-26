@@ -17,19 +17,22 @@ namespace AgriPurchaseBilling.Application.Services
         private readonly IEmailService _emailService;
         private readonly ILogger<LoginService> _logger;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
+        private readonly IRefreshTokenService _refreshTokenService;
 
         public LoginService(
             IUserRepository userRepository,
             IPasswordHasher passwordHasher,
             IEmailService emailService,
             ILogger<LoginService> logger,
-            IJwtTokenGenerator jwtTokenGenerator)
+            IJwtTokenGenerator jwtTokenGenerator,
+            IRefreshTokenService refreshTokenService)
         {
             _userRepository = userRepository;
             _passwordHasher = passwordHasher;
             _emailService = emailService;
             _logger = logger;
             _jwtTokenGenerator = jwtTokenGenerator;
+            _refreshTokenService = refreshTokenService;
         }
 
         public async Task<ApiResponse<LoginResponseDto>> LoginAsync(
@@ -133,6 +136,8 @@ namespace AgriPurchaseBilling.Application.Services
 
             // Generate JWT after successful password verification.
             var (accessToken, expiresAt) = _jwtTokenGenerator.GenerateToken(user);
+            var (refreshToken, refreshTokenExpiresAt) =
+                await _refreshTokenService.CreateAsync(user.Id, cancellationToken);
 
             // Prepare login response.
             var response = new LoginResponseDto
@@ -143,7 +148,9 @@ namespace AgriPurchaseBilling.Application.Services
                 Mobile = user.Mobile,
                 Role = user.Role.ToString(),
                 AccessToken = accessToken,
-                ExpiresAt = expiresAt
+                ExpiresAt = expiresAt,
+                RefreshToken = refreshToken,
+                RefreshTokenExpiresAt = refreshTokenExpiresAt
             };
 
             // Send login notification only if email is available.

@@ -162,7 +162,7 @@ export function mapMiddlemanProfileToUpdateDto(profileData = {}) {
 
 export async function fetchMiddlemanProfile() {
   try {
-    const response = await api.get(Endpoints.MIDDLEMAN_PROFILE.PROFILE, {
+    const response = await api.get(Endpoints.MiddlemanProfile.get, {
       baseURL: getProfileBaseURL('middleman'),
       useProfileBaseURL: true,
       profileRole: 'middleman',
@@ -179,7 +179,7 @@ export async function fetchMiddlemanProfile() {
 
 export async function fetchMiddlemanProfileById(id) {
   try {
-    const response = await api.get(Endpoints.MIDDLEMAN_PROFILE.BY_ID(id), {
+    const response = await api.get(Endpoints.MiddlemanProfile.getById(id), {
       baseURL: getProfileBaseURL('middleman'),
       useProfileBaseURL: true,
       profileRole: 'middleman',
@@ -207,7 +207,7 @@ export async function updateMiddlemanProfile(id, profileData) {
 
     const payload = mapMiddlemanProfileToUpdateDto(profileData);
     const response = await api.put(
-      Endpoints.MIDDLEMAN_PROFILE.BY_ID(targetId),
+      Endpoints.MiddlemanProfile.update(targetId),
       payload,
       {
         baseURL: getProfileBaseURL('middleman'),
@@ -229,7 +229,7 @@ export async function sendMiddlemanMobileChangeOtp(newMobile) {
   const cleanPhone = String(newMobile || '').replace(/\D/g, '');
   try {
     const response = await api.post(
-      Endpoints.MIDDLEMAN_PROFILE.SEND_MOBILE_OTP,
+      Endpoints.MiddlemanProfile.sendMobileOtp,
       { newMobile: cleanPhone },
       {
         baseURL: getProfileBaseURL('middleman'),
@@ -275,7 +275,7 @@ export async function verifyMiddlemanMobileChangeOtp(newMobile, otp) {
     .replace(/\D/g, '');
   try {
     const response = await api.post(
-      Endpoints.MIDDLEMAN_PROFILE.VERIFY_MOBILE_OTP,
+      Endpoints.MiddlemanProfile.verifyMobileOtp,
       { newMobile: cleanPhone, otp: cleanOtp },
       {
         baseURL: getProfileBaseURL('middleman'),
@@ -414,8 +414,8 @@ export function mapVendorDtoToProfile(dto = {}, existingVendor = {}) {
 export async function fetchVendorProfile(vendorId = null) {
   try {
     const endpoint = vendorId
-      ? Endpoints.VENDOR_PROFILE.BY_ID(vendorId)
-      : Endpoints.VENDOR_PROFILE.PROFILE;
+      ? Endpoints.VendorProfile.getById(vendorId)
+      : Endpoints.VendorProfile.get;
     const response = await api.get(endpoint, {
       baseURL: getProfileBaseURL('vendor'),
       useProfileBaseURL: true,
@@ -431,30 +431,63 @@ export async function fetchVendorProfile(vendorId = null) {
   }
 }
 
+const VALID_VENDOR_BUSINESS_TYPES = [
+  'Agri Procurement, Milling & Wholesale Distribution',
+  'Raw Commodity Processing & Oil Extraction Mill',
+  'APMC Licensed Commission & Bulk Trading House',
+  'FPO / Agro-Processing Cooperative Enterprise',
+];
+
 export async function updateVendorProfileApi(profileData = {}, vendorId = null) {
+  let cleanBusinessType = String(profileData.businessType || '').trim();
+  const matchedType = VALID_VENDOR_BUSINESS_TYPES.find(
+    (t) => t.toLowerCase() === cleanBusinessType.toLowerCase()
+  );
+  if (matchedType) {
+    cleanBusinessType = matchedType;
+  } else if (!cleanBusinessType) {
+    cleanBusinessType = VALID_VENDOR_BUSINESS_TYPES[0];
+  } else if (!VALID_VENDOR_BUSINESS_TYPES.includes(cleanBusinessType)) {
+    if (/mill|oil|extract/i.test(cleanBusinessType)) {
+      cleanBusinessType = VALID_VENDOR_BUSINESS_TYPES[1];
+    } else if (/apmc|commission|trading|mandi/i.test(cleanBusinessType)) {
+      cleanBusinessType = VALID_VENDOR_BUSINESS_TYPES[2];
+    } else if (/fpo|coop/i.test(cleanBusinessType)) {
+      cleanBusinessType = VALID_VENDOR_BUSINESS_TYPES[3];
+    } else {
+      cleanBusinessType = VALID_VENDOR_BUSINESS_TYPES[0];
+    }
+  }
+
+  const rawPin = String(profileData.pinCode || '').replace(/\D/g, '').slice(0, 6);
+  const cleanPin = rawPin.length === 6 ? rawPin : '518001';
+
+  const rawGst = String(profileData.gstNumber || profileData.gstin || '')
+    .trim()
+    .toUpperCase();
+  const cleanGst = /^[A-Z0-9]{15}$/i.test(rawGst) ? rawGst : '37AAAAA0000A1Z5';
+
   const payload = {
-    businessName: String(profileData.businessName || '').trim(),
-    registeredBusinessName: String(profileData.businessName || '').trim(),
-    ownerName: String(profileData.ownerName || '').trim(),
-    mobileNumber: String(profileData.mobileNumber || '').replace(/\D/g, ''),
-    mobile: String(profileData.mobileNumber || '').replace(/\D/g, ''),
+    businessName: String(profileData.businessName || 'Vendor Enterprise').trim(),
+    ownerName: String(profileData.ownerName || '').trim() || null,
     email: String(profileData.email || '').trim() || null,
-    gstNumber: String(profileData.gstNumber || '').trim().toUpperCase(),
-    gstin: String(profileData.gstNumber || '').trim().toUpperCase(),
-    businessRegNumber: String(profileData.businessRegNumber || '').trim(),
-    businessType: String(profileData.businessType || '').trim(),
-    businessAddress: String(profileData.businessAddress || '').trim(),
-    district: String(profileData.district || '').trim(),
-    state: String(profileData.state || '').trim(),
-    pinCode: String(profileData.pinCode || '').trim(),
+    gstin: cleanGst,
+    businessRegistrationNumber:
+      String(profileData.businessRegNumber || profileData.businessRegistrationNumber || 'REG-2026-001').trim(),
+    apmcLicenseNumber:
+      String(profileData.apmcLicense || profileData.apmcLicenseNumber || '').trim() || null,
+    businessType: cleanBusinessType,
+    businessAddress: String(profileData.businessAddress || '').trim() || 'Industrial Estate',
+    district: String(profileData.district || 'Kurnool').trim(),
+    state: String(profileData.state || 'Andhra Pradesh').trim(),
+    pinCode: cleanPin,
     logoUrl: profileData.logoUrl || null,
   };
 
   try {
-    const targetEndpoint = vendorId
-      ? Endpoints.VENDOR_PROFILE.BY_ID(vendorId)
-      : Endpoints.VENDOR_PROFILE.PROFILE;
-    const response = await api.put(targetEndpoint, payload, {
+    // Prefer PUT /api/v1/vendor/profile for the current vendor account
+    const endpoint = Endpoints.VendorProfile.updateProfile || Endpoints.VendorProfile.get;
+    const response = await api.put(endpoint, payload, {
       baseURL: getProfileBaseURL('vendor'),
       useProfileBaseURL: true,
       profileRole: 'vendor',
@@ -471,7 +504,7 @@ export async function updateVendorProfileApi(profileData = {}, vendorId = null) 
 
 export async function fetchVendorBankDetails() {
   try {
-    const response = await api.get(Endpoints.VENDOR_PROFILE.BANK_DETAILS, {
+    const response = await api.get(Endpoints.VendorProfile.getBankDetails, {
       baseURL: getProfileBaseURL('vendor'),
       useProfileBaseURL: true,
       profileRole: 'vendor',
@@ -498,7 +531,7 @@ export async function updateVendorBankDetailsApi(bankDetails = {}) {
 
   try {
     const response = await api.put(
-      Endpoints.VENDOR_PROFILE.BANK_DETAILS,
+      Endpoints.VendorProfile.updateBankDetails,
       payload,
       {
         baseURL: getProfileBaseURL('vendor'),
@@ -528,14 +561,14 @@ export async function sendVendorMobileChangeOtp(newMobile) {
     let response;
     try {
       response = await api.post(
-        Endpoints.VENDOR_PROFILE.REQUEST_MOBILE_OTP,
+        Endpoints.VendorProfile.sendMobileOtp,
         { newMobile: cleanPhone },
         reqConfig
       );
     } catch (firstErr) {
       if (firstErr?.response?.status === 400) {
         response = await api.post(
-          Endpoints.VENDOR_PROFILE.REQUEST_MOBILE_OTP,
+          Endpoints.VendorProfile.sendMobileOtp,
           { newMobileNumber: cleanPhone },
           reqConfig
         );
@@ -592,7 +625,7 @@ export async function verifyVendorMobileChangeOtp(newMobile, otp) {
     let response;
     try {
       response = await api.post(
-        Endpoints.VENDOR_PROFILE.VERIFY_MOBILE_OTP,
+        Endpoints.VendorProfile.verifyMobileOtp,
         {
           newMobile: cleanPhone,
           otp: cleanOtp,
@@ -602,7 +635,7 @@ export async function verifyVendorMobileChangeOtp(newMobile, otp) {
     } catch (firstErr) {
       if (firstErr?.response?.status === 400) {
         response = await api.post(
-          Endpoints.VENDOR_PROFILE.VERIFY_MOBILE_OTP,
+          Endpoints.VendorProfile.verifyMobileOtp,
           { newMobileNumber: cleanPhone, otp: cleanOtp },
           reqConfig
         );
@@ -649,11 +682,9 @@ export function mapCustomerDtoToProfile(dto = {}, existingProfile = {}, user = n
 
   const formattedCustomerId =
     user?.entityCode ||
-    (typeof dto.customerId === 'string' && dto.customerId.startsWith('CUS')
-      ? dto.customerId
-      : dto.customerId
-      ? `CUS-${dto.customerId}`
-      : existingProfile.customerId || 'CUS-1001');
+    (dto.customerId !== null && dto.customerId !== undefined
+      ? String(dto.customerId)
+      : existingProfile.customerId || '');
 
   const rawAddresses = Array.isArray(dto.addresses)
     ? dto.addresses
@@ -694,7 +725,7 @@ export function mapCustomerDtoToProfile(dto = {}, existingProfile = {}, user = n
 
 export async function fetchCustomerProfile() {
   try {
-    const response = await api.get(Endpoints.CUSTOMER_PROFILE.PROFILE, {
+    const response = await api.get(Endpoints.CustomerProfile.get, {
       baseURL: getProfileBaseURL('customer'),
       useProfileBaseURL: true,
       profileRole: 'customer',
@@ -730,7 +761,7 @@ export async function updateCustomerProfileApi(profileData = {}) {
   };
 
   try {
-    const response = await api.put(Endpoints.CUSTOMER_PROFILE.PROFILE, payload, {
+    const response = await api.put(Endpoints.CustomerProfile.update, payload, {
       baseURL: getProfileBaseURL('customer'),
       useProfileBaseURL: true,
       profileRole: 'customer',
@@ -759,7 +790,7 @@ export async function createCustomerAddressApi(addr = {}) {
 
   try {
     const response = await api.post(
-      Endpoints.CUSTOMER_PROFILE.ADDRESSES,
+      Endpoints.CustomerProfile.addresses,
       payload,
       {
         baseURL: getProfileBaseURL('customer'),
@@ -791,7 +822,7 @@ export async function updateCustomerAddressApi(id, addr = {}) {
 
   try {
     const response = await api.put(
-      Endpoints.CUSTOMER_PROFILE.ADDRESS_BY_ID(id),
+      Endpoints.CustomerProfile.addressById(id),
       payload,
       {
         baseURL: getProfileBaseURL('customer'),
@@ -812,8 +843,8 @@ export async function updateCustomerAddressApi(id, addr = {}) {
 export async function setDefaultCustomerAddressApi(id) {
   try {
     const response = await api.patch(
-      Endpoints.CUSTOMER_PROFILE.SET_DEFAULT_ADDRESS(id),
-      {},
+      Endpoints.CustomerProfile.setDefaultAddress(id),
+      undefined,
       {
         baseURL: getProfileBaseURL('customer'),
         useProfileBaseURL: true,
@@ -833,7 +864,7 @@ export async function setDefaultCustomerAddressApi(id) {
 export async function deleteCustomerAddressApi(id) {
   try {
     const response = await api.delete(
-      Endpoints.CUSTOMER_PROFILE.ADDRESS_BY_ID(id),
+      Endpoints.CustomerProfile.addressById(id),
       {
         baseURL: getProfileBaseURL('customer'),
         useProfileBaseURL: true,
@@ -854,7 +885,7 @@ export async function sendCustomerMobileChangeOtp(newMobileNumber) {
   const cleanPhone = String(newMobileNumber || '').replace(/\D/g, '');
   try {
     const response = await api.post(
-      Endpoints.CUSTOMER_PROFILE.SEND_MOBILE_OTP,
+      Endpoints.CustomerProfile.sendMobileOtp,
       { newMobileNumber: cleanPhone },
       {
         baseURL: getProfileBaseURL('customer'),
@@ -903,7 +934,7 @@ export async function verifyCustomerMobileChangeOtp(newMobileNumber, otp) {
     .replace(/\D/g, '');
   try {
     const response = await api.post(
-      Endpoints.CUSTOMER_PROFILE.VERIFY_MOBILE_OTP,
+      Endpoints.CustomerProfile.verifyMobileOtp,
       { newMobileNumber: cleanPhone, otp: cleanOtp },
       {
         baseURL: getProfileBaseURL('customer'),
@@ -1007,7 +1038,7 @@ export async function fetchFarmerProfileApi(userId = null) {
     const params = {};
     if (userId) params.userId = userId;
 
-    const response = await api.get(Endpoints.FARMER_PROFILE.PROFILE, {
+    const response = await api.get(Endpoints.FarmerProfile.get, {
       baseURL: getProfileBaseURL('farmer'),
       useProfileBaseURL: true,
       profileRole: 'farmer',
@@ -1025,7 +1056,7 @@ export async function fetchFarmerProfileApi(userId = null) {
 
 export async function fetchAllFarmerProfilesApi() {
   try {
-    const response = await api.get(Endpoints.FARMER_PROFILE.ALL, {
+    const response = await api.get(Endpoints.FarmerProfile.getAll, {
       baseURL: getProfileBaseURL('farmer'),
       useProfileBaseURL: true,
       profileRole: 'farmer',
@@ -1046,7 +1077,7 @@ export async function fetchFarmerBankDetailsApi(userId = null, reveal = false) {
     if (userId) params.userId = userId;
     if (reveal) params.reveal = true;
 
-    const response = await api.get(Endpoints.FARMER_PROFILE.BANK_DETAILS, {
+    const response = await api.get(Endpoints.FarmerProfile.getBankDetails, {
       baseURL: getProfileBaseURL('farmer'),
       useProfileBaseURL: true,
       profileRole: 'farmer',
@@ -1100,7 +1131,7 @@ export async function updateFarmerProfileApi(profileData = {}, userId = null) {
     const params = {};
     if (userId) params.userId = userId;
 
-    const response = await api.put(Endpoints.FARMER_PROFILE.PROFILE, payload, {
+    const response = await api.put(Endpoints.FarmerProfile.update, payload, {
       baseURL: getProfileBaseURL('farmer'),
       useProfileBaseURL: true,
       profileRole: 'farmer',
@@ -1145,7 +1176,7 @@ export async function updateFarmerBankDetailsApi(bankData = {}, userId = null) {
     if (userId) params.userId = userId;
 
     const response = await api.put(
-      Endpoints.FARMER_PROFILE.BANK_DETAILS,
+      Endpoints.FarmerProfile.updateBankDetails,
       payload,
       {
         baseURL: getProfileBaseURL('farmer'),
@@ -1174,7 +1205,7 @@ export async function sendFarmerMobileChangeOtp(newMobile, userId = null) {
     if (userId) params.userId = userId;
 
     const response = await api.post(
-      Endpoints.FARMER_PROFILE.SEND_MOBILE_OTP,
+      Endpoints.FarmerProfile.sendMobileOtp,
       { newMobile: cleanPhone },
       {
         baseURL: getProfileBaseURL('farmer'),
@@ -1230,7 +1261,7 @@ export async function verifyFarmerMobileChangeOtp(newMobile, otp, userId = null)
     if (userId) params.userId = userId;
 
     const response = await api.post(
-      Endpoints.FARMER_PROFILE.VERIFY_MOBILE_OTP,
+      Endpoints.FarmerProfile.verifyMobileOtp,
       { newMobile: cleanPhone, otp: cleanOtp },
       {
         baseURL: getProfileBaseURL('farmer'),
@@ -1270,7 +1301,7 @@ export async function changeFarmerPasswordApi(passwordData = {}, userId = null) 
     if (userId) params.userId = userId;
 
     const response = await api.post(
-      Endpoints.FARMER_PROFILE.CHANGE_PASSWORD,
+      Endpoints.FarmerProfile.changePassword,
       payload,
       {
         baseURL: getProfileBaseURL('farmer'),

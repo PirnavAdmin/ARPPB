@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Phone,
   Mail,
@@ -43,7 +43,15 @@ export function MiddlemanDetails({
     verifyTransactionOtp,
     resendTransactionOtp,
     recordFinancialSettlement,
+    fetchMiddlemanDetails,
   } = useVendor();
+
+  useEffect(() => {
+    const id = middleman?.id || middleman?.middlemanCode || middleman?.rawId;
+    if (id && (!middleman.pan || !middleman.bankName || !middleman.accountNumber)) {
+      fetchMiddlemanDetails?.(id);
+    }
+  }, [middleman, fetchMiddlemanDetails]);
 
   const [activeTab, setActiveTab] = useState(
     initialPurchaseId ? 'transactions' : initialTab
@@ -55,30 +63,62 @@ export function MiddlemanDetails({
   const [settlementAmount, setSettlementAmount] = useState('');
   const [paymentMode, setPaymentMode] = useState('NEFT / RTGS');
 
+  const isMatchMiddleman = useCallback((recordPartyId, recordPartyName = '') => {
+    if (!middleman) return false;
+    const pStr = String(recordPartyId || '').trim().toLowerCase();
+    const idStr = String(middleman.id || '').trim().toLowerCase();
+    const rawIdStr = String(middleman.rawId || '').trim().toLowerCase();
+    const codeStr = String(middleman.middlemanCode || middleman.code || '').trim().toLowerCase();
+    const nameStr = String(middleman.name || middleman.fullName || middleman.businessName || '').trim().toLowerCase();
+    const rName = String(recordPartyName || '').trim().toLowerCase();
+
+    if (pStr && (pStr === idStr || pStr === rawIdStr || (codeStr && pStr === codeStr))) return true;
+    const numP = pStr.replace(/\D/g, '');
+    const numM = (idStr || rawIdStr).replace(/\D/g, '');
+    if (numP && numM && numP === numM) return true;
+    if (rName && nameStr && rName === nameStr) return true;
+    return false;
+  }, [middleman]);
+
   const midPurchases = useMemo(() => {
     if (!middleman) return [];
     return purchases.filter(
-      (p) => p.supplierCategory === 'Middleman' && p.supplierId === middleman.id
+      (p) =>
+        (p.supplierCategory === 'Middleman' || !p.supplierCategory) &&
+        (isMatchMiddleman(p.supplierId, p.supplierName) || p.supplierId === middleman.id)
     );
-  }, [purchases, middleman]);
+  }, [purchases, middleman, isMatchMiddleman]);
 
   const confirmedPurchases = useMemo(
-    () => midPurchases.filter((p) => p.status === 'Confirmed'),
+    () =>
+      midPurchases.filter(
+        (p) =>
+          p.status === 'Confirmed' ||
+          p.paymentStatus === 'Paid' ||
+          p.paymentStatus === 'Partial' ||
+          p.paymentStatus === 'Pending' ||
+          (p.paymentStatus !== 'Cancelled' && p.status !== 'Cancelled')
+      ),
     [midPurchases]
   );
 
   const midLedger = useMemo(() => {
     if (!middleman) return [];
-    return ledger.filter((l) => l.partyId === middleman.id);
-  }, [ledger, middleman]);
+    return ledger.filter(
+      (l) => isMatchMiddleman(l.partyId, l.partyName) || l.partyId === middleman.id
+    );
+  }, [ledger, middleman, isMatchMiddleman]);
 
   const midConfirmations = useMemo(() => {
     if (!middleman) return [];
     const purchaseIds = new Set(midPurchases.map((p) => p.id));
     return confirmations.filter(
-      (c) => c.partyId === middleman.id || purchaseIds.has(c.transactionId)
+      (c) =>
+        isMatchMiddleman(c.partyId, c.partyName) ||
+        c.partyId === middleman.id ||
+        purchaseIds.has(c.transactionId)
     );
-  }, [confirmations, middleman, midPurchases]);
+  }, [confirmations, middleman, midPurchases, isMatchMiddleman]);
 
   const selectedPurchase = useMemo(
     () =>
@@ -94,14 +134,23 @@ export function MiddlemanDetails({
     (sum, p) => sum + Number(p.quantity || 0),
     0
   );
-  const totalPurchaseAmount = confirmedPurchases.reduce(
-    (sum, p) => sum + Number(p.totalAmount || 0),
-    0
-  );
-  const totalPaidAmount = confirmedPurchases.reduce(
-    (sum, p) => sum + Number(p.paidAmount || 0),
-    0
-  );
+  const totalPurchaseAmount = confirmedPurchases.length > 0
+    ? confirmedPurchases.reduce((sum, p) => sum + Number(p.totalAmount || 0), 0)
+    : Number(middleman.totalPurchaseAmount ?? middleman.purchaseValue ?? 0);
+  const totalPaidAmount = confirmedPurchases.length > 0
+    ? confirmedPurchases.reduce(
+        (sum, p) =>
+          sum +
+          Number(
+            p.paidAmount ?? (Number(p.totalAmount || 0) - Number(p.dueAmount || 0)) ?? 0
+          ),
+        0
+      )
+    : Number(
+        middleman.totalPaid ??
+          (Number(middleman.totalPurchaseAmount || 0) - Number(middleman.dueAmount || 0)) ??
+          0
+      );
   const openingBal = Number(middleman.openingBalance || 0);
   const outstandingPayables = Math.max(
     0,

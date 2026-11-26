@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   MapPin,
   Phone,
@@ -43,7 +43,15 @@ export function FarmerDetails({
     verifyTransactionOtp,
     resendTransactionOtp,
     recordFinancialSettlement,
+    fetchFarmerDetails,
   } = useVendor();
+
+  useEffect(() => {
+    const id = farmer?.id || farmer?.farmerCode || farmer?.rawId;
+    if (id && (!farmer.bankName || !farmer.accountNumber || !farmer.aadhaarId)) {
+      fetchFarmerDetails?.(id);
+    }
+  }, [farmer, fetchFarmerDetails]);
 
   const [activeTab, setActiveTab] = useState(
     initialPurchaseId ? 'transactions' : initialTab
@@ -53,30 +61,62 @@ export function FarmerDetails({
   const [settlementAmount, setSettlementAmount] = useState('');
   const [paymentMode, setPaymentMode] = useState('NEFT / RTGS');
 
+  const isMatchFarmer = useCallback((recordPartyId, recordPartyName = '') => {
+    if (!farmer) return false;
+    const pStr = String(recordPartyId || '').trim().toLowerCase();
+    const idStr = String(farmer.id || '').trim().toLowerCase();
+    const rawIdStr = String(farmer.rawId || '').trim().toLowerCase();
+    const codeStr = String(farmer.farmerCode || farmer.code || '').trim().toLowerCase();
+    const nameStr = String(farmer.name || farmer.fullName || '').trim().toLowerCase();
+    const rName = String(recordPartyName || '').trim().toLowerCase();
+
+    if (pStr && (pStr === idStr || pStr === rawIdStr || (codeStr && pStr === codeStr))) return true;
+    const numP = pStr.replace(/\D/g, '');
+    const numF = (idStr || rawIdStr).replace(/\D/g, '');
+    if (numP && numF && numP === numF) return true;
+    if (rName && nameStr && rName === nameStr) return true;
+    return false;
+  }, [farmer]);
+
   const farmerPurchases = useMemo(() => {
     if (!farmer) return [];
     return purchases.filter(
-      (p) => p.supplierCategory === 'Farmer' && p.supplierId === farmer.id
+      (p) =>
+        (p.supplierCategory === 'Farmer' || !p.supplierCategory) &&
+        (isMatchFarmer(p.supplierId, p.supplierName) || p.supplierId === farmer.id)
     );
-  }, [purchases, farmer]);
+  }, [purchases, farmer, isMatchFarmer]);
 
   const confirmedPurchases = useMemo(
-    () => farmerPurchases.filter((p) => p.status === 'Confirmed'),
+    () =>
+      farmerPurchases.filter(
+        (p) =>
+          p.status === 'Confirmed' ||
+          p.paymentStatus === 'Paid' ||
+          p.paymentStatus === 'Partial' ||
+          p.paymentStatus === 'Pending' ||
+          (p.paymentStatus !== 'Cancelled' && p.status !== 'Cancelled')
+      ),
     [farmerPurchases]
   );
 
   const farmerLedger = useMemo(() => {
     if (!farmer) return [];
-    return ledger.filter((l) => l.partyId === farmer.id);
-  }, [ledger, farmer]);
+    return ledger.filter(
+      (l) => isMatchFarmer(l.partyId, l.partyName) || l.partyId === farmer.id
+    );
+  }, [ledger, farmer, isMatchFarmer]);
 
   const farmerConfirmations = useMemo(() => {
     if (!farmer) return [];
     const purchaseIds = new Set(farmerPurchases.map((p) => p.id));
     return confirmations.filter(
-      (c) => c.partyId === farmer.id || purchaseIds.has(c.transactionId)
+      (c) =>
+        isMatchFarmer(c.partyId, c.partyName) ||
+        c.partyId === farmer.id ||
+        purchaseIds.has(c.transactionId)
     );
-  }, [confirmations, farmer, farmerPurchases]);
+  }, [confirmations, farmer, farmerPurchases, isMatchFarmer]);
 
   const selectedPurchase = useMemo(
     () =>
@@ -92,14 +132,23 @@ export function FarmerDetails({
     (sum, p) => sum + Number(p.quantity || 0),
     0
   );
-  const totalPurchaseAmount = confirmedPurchases.reduce(
-    (sum, p) => sum + Number(p.totalAmount || 0),
-    0
-  );
-  const totalPaidAmount = confirmedPurchases.reduce(
-    (sum, p) => sum + Number(p.paidAmount || 0),
-    0
-  );
+  const totalPurchaseAmount = confirmedPurchases.length > 0
+    ? confirmedPurchases.reduce((sum, p) => sum + Number(p.totalAmount || 0), 0)
+    : Number(farmer.totalPurchaseAmount ?? farmer.totalPurchaseValue ?? 0);
+  const totalPaidAmount = confirmedPurchases.length > 0
+    ? confirmedPurchases.reduce(
+        (sum, p) =>
+          sum +
+          Number(
+            p.paidAmount ?? (Number(p.totalAmount || 0) - Number(p.dueAmount || 0)) ?? 0
+          ),
+        0
+      )
+    : Number(
+        farmer.totalPaid ??
+          (Number(farmer.totalPurchaseAmount || 0) - Number(farmer.dueAmount || 0)) ??
+          0
+      );
   const pendingPayableAmount = Math.max(0, totalPurchaseAmount - totalPaidAmount);
 
   const transactionColumns = [

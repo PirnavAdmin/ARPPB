@@ -62,6 +62,12 @@ namespace AgriPurchaseBilling.Application.DTOs
 
         [JsonPropertyName("status")]
         public string Status { get; set; } = "Pending";
+
+        [JsonPropertyName("paymentMode")]
+        public string? PaymentMode { get; set; }
+
+        [JsonPropertyName("referenceNo")]
+        public string? ReferenceNo { get; set; }
     }
 
     public class MiddlemanLedgerSummaryDto
@@ -206,5 +212,11 @@ namespace AgriPurchaseBilling.Application.DTOs
 
         [JsonPropertyName("notes")]
         public string? Notes { get; set; }
+
+        [JsonPropertyName("referenceNo")]
+        public string? ReferenceNo { get; set; }
+
+        [JsonPropertyName("referenceId")]
+        public string? ReferenceId { get; set; }
     }
 }

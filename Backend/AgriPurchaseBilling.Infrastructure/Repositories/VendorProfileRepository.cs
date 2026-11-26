@@ -16,9 +16,17 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<VendorProfile?> GetOrCreateProfileByUserIdAsync(
+        // The context uses a retrying execution strategy, which refuses a manual transaction unless the whole unit
+        // of work runs through the strategy (otherwise every call fails with "does not support user-initiated transactions").
+        public Task<VendorProfile?> GetOrCreateProfileByUserIdAsync(
             long userId,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default) =>
+            _context.Database.CreateExecutionStrategy().ExecuteAsync(
+                () => GetOrCreateProfileCoreAsync(userId, cancellationToken));
+
+        private async Task<VendorProfile?> GetOrCreateProfileCoreAsync(
+            long userId,
+            CancellationToken cancellationToken)
         {
             await using var transaction = await _context.Database
                 .BeginTransactionAsync(cancellationToken);
@@ -128,26 +136,60 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
             UpdateVendorProfileRequest request,
             CancellationToken cancellationToken = default)
         {
-            var profile = await _context.VendorProfiles.FirstOrDefaultAsync(
-                x => x.Id == id,
-                cancellationToken);
+            var profile = await _context.VendorProfiles
+                .Include(x => x.Vendor)
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
             if (profile == null)
             {
                 return null;
             }
 
-            profile.BusinessName = request.BusinessName.Trim();
-            profile.Gstin = request.Gstin.Trim().ToUpperInvariant();
-            profile.BusinessRegNumber = request.BusinessRegistrationNumber.Trim();
-            profile.ApmcLicenseNumber = string.IsNullOrWhiteSpace(request.ApmcLicenseNumber)
+            var now = DateTime.UtcNow;
+            var gstin = request.Gstin.Trim().ToUpperInvariant();
+            if (gstin.Length > 0 &&
+                await _context.VendorProfiles.AnyAsync(x => x.Id != id && x.Gstin == gstin, cancellationToken))
+            {
+                throw new VendorProfileConflictException("This GSTIN is already registered to another vendor.");
+            }
+
+            // Owner name and email live on the user account (the vendor's login identity).
+            var user = profile.Vendor == null
                 ? null
-                : request.ApmcLicenseNumber.Trim();
+                : await _context.Users.FirstOrDefaultAsync(x => x.Id == profile.Vendor.UserId, cancellationToken);
+            if (user != null)
+            {
+                var email = request.Email?.Trim();
+                if (!string.IsNullOrEmpty(email) && !string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (await _context.Users.AnyAsync(x => x.Id != user.Id && x.Email == email, cancellationToken))
+                    {
+                        throw new VendorProfileConflictException("This email address is already registered to another account.");
+                    }
+                    user.Email = email;
+                    profile.Email = email;
+                    user.UpdatedAt = now;
+                }
+
+                var owner = request.OwnerName?.Trim();
+                if (!string.IsNullOrEmpty(owner) && user.FullName != owner)
+                {
+                    user.FullName = owner;
+                    profile.OwnerName = owner;
+                    user.UpdatedAt = now;
+                }
+            }
+
+            profile.BusinessName = request.BusinessName.Trim();
+            profile.Gstin = gstin.Length == 0 ? null : gstin;
+            profile.ApmcLicenseNumber = string.IsNullOrWhiteSpace(request.ApmcLicenseNumber) ? null : request.ApmcLicenseNumber.Trim();
+            profile.BusinessRegNumber = request.BusinessRegistrationNumber.Trim();
             profile.BusinessType = request.BusinessType.Trim();
             profile.BusinessAddress = request.BusinessAddress.Trim();
             profile.District = request.District.Trim();
             profile.State = request.State.Trim();
             profile.PinCode = request.PinCode.Trim();
-            profile.UpdatedAt = DateTime.UtcNow;
+            profile.UpdatedAt = now;
+            profile.ComplianceUpdatedAt = now;
 
             await _context.SaveChangesAsync(cancellationToken);
             return profile;

@@ -115,10 +115,10 @@ export const LedgerPage = () => {
     ];
   }, [dashboardMetrics]);
 
-  const handleQuickSettle = (entry, amount) => {
-    const id = entry.ledgerId || entry.id;
+  const handleQuickSettle = (entry, amount, extra = {}) => {
+    const id = entry.id ?? entry.raw?.id ?? entry.ledgerId;
     if (!id || !amount || amount <= 0) return;
-    settleLedgerEntry(id, amount);
+    settleLedgerEntry(id, amount, { ...extra, id: entry.id ?? entry.raw?.id });
   };
 
   return (

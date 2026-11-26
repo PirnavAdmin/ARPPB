@@ -38,8 +38,10 @@ const CATEGORIES = [
 export default function Notifications() {
   const {
     notifications,
+    notificationStats,
     markNotificationAsRead,
     markAllNotificationsAsRead,
+    deleteNotification,
     searchQuery,
     navigateTo,
     setSelectedTransaction,
@@ -48,19 +50,15 @@ export default function Notifications() {
 
   const [activeCategory, setActiveCategory] = useState('All');
   const [internalSearch, setInternalSearch] = useState('');
-  const [dismissedIds, setDismissedIds] = useState([]);
 
   const effectiveSearch = (searchQuery || internalSearch).trim().toLowerCase();
 
-  // Filter out locally dismissed notifications
-  const activeNotifications = useMemo(() => {
-    return (notifications || []).filter((n) => !dismissedIds.includes(n.id));
-  }, [notifications, dismissedIds]);
+  const activeNotifications = notifications || [];
 
   // Metrics
-  const totalCount = activeNotifications.length;
-  const unreadCount = activeNotifications.filter((n) => !n.read).length;
-  const otpAlertsCount = activeNotifications.filter((n) => n.category === 'otp').length;
+  const totalCount = notificationStats?.totalCount ?? notificationStats?.total ?? activeNotifications.length;
+  const unreadCount = notificationStats?.unreadCount ?? notificationStats?.unread ?? activeNotifications.filter((n) => !n.read).length;
+  const otpAlertsCount = notificationStats?.otpAlertsCount ?? notificationStats?.otpCount ?? activeNotifications.filter((n) => n.category === 'otp').length;
   const actionRequiredCount = activeNotifications.filter(
     (n) => !n.read && (n.type === 'warning' || n.category === 'otp')
   ).length;
@@ -100,7 +98,7 @@ export default function Notifications() {
 
   const handleDeleteNotification = (id, e) => {
     e.stopPropagation();
-    setDismissedIds((prev) => [...prev, id]);
+    deleteNotification(id);
     toast.success('Notification dismissed.');
   };
 

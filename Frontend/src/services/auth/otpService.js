@@ -132,7 +132,7 @@ export const sendPhoneOTP = async (phone) => {
   }
 
   try {
-    const response = await api.post(Endpoints.REGISTRATION.SEND_MOBILE_OTP, {
+    const response = await api.post(Endpoints.Registration.sendMobileOtp, {
       mobile: cleanPhone,
     });
 
@@ -200,7 +200,7 @@ export const verifyPhoneOTP = async (phone, otp) => {
   }
 
   try {
-    const response = await api.post(Endpoints.REGISTRATION.VERIFY_MOBILE_OTP, {
+    const response = await api.post(Endpoints.Registration.verifyMobileOtp, {
       mobile: cleanPhone,
       otp: cleanOtp,
     });

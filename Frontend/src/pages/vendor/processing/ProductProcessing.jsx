@@ -23,6 +23,10 @@ import ProcessingHistory from './ProcessingHistory';
 import ProcessingDetails from './ProcessingDetails';
 import { CROP_OPTIONS } from '../../../utils/constants';
 import { formatCurrency, formatNumber } from '../../../utils/formatCurrency';
+import {
+  fetchVendorProcessingBatchByIdApi,
+  exportVendorProcessingApi,
+} from '../../../services/vendorApiService';
 
 export function ProductProcessing() {
   const [searchParams] = useSearchParams();
@@ -46,6 +50,13 @@ export function ProductProcessing() {
       setActiveView('form');
     }
   }, [preselectedStockId]);
+
+  useEffect(() => {
+    if (viewingRecord?.id) {
+      fetchVendorProcessingBatchByIdApi(viewingRecord.id);
+      exportVendorProcessingApi({ processingId: viewingRecord.id });
+    }
+  }, [viewingRecord]);
 
   // 7 Required Processing Dashboard KPIs
   const stats = useMemo(() => {
