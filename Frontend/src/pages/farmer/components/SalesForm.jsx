@@ -20,168 +20,15 @@ import {
   buyerCategoryStyles,
 } from '../utils/farmerHelpers';
 import { DEFAULT_SALES_OPTIONS } from '../../../services/farmerSalesService';
-
-// Directory of frequent buyers / traders for instant autocomplete & recall
-const DEFAULT_SAVED_BUYERS = [
-  {
-    id: 'B001',
-    name: 'Bhanu Prasad',
-    mobile: '9848012345',
-    category: 'Middleman',
-    cropName: 'Paddy',
-    sellingQuantity: '50',
-    rate: '910.01',
-    qualityGrade: 'Grade A',
-    pickupLocation: 'Kurnool APMC Market Yard, Shop #12',
-    lastOrder: '15 Nov 2026',
-    totalPurchases: '₹4,55,000',
-  },
-  {
-    id: 'B002',
-    name: 'Bhanu Traders',
-    mobile: '9876543210',
-    category: 'Vendor',
-    cropName: 'Turmeric',
-    sellingQuantity: '25',
-    rate: '8400',
-    qualityGrade: 'Grade A',
-    pickupLocation: 'Duggirala Turmeric Terminal, Guntur',
-    lastOrder: '10 Nov 2026',
-    totalPurchases: '₹2,10,000',
-  },
-  {
-    id: 'B003',
-    name: 'Bhanumathi Agro Agencies',
-    mobile: '9949123456',
-    category: 'Middleman',
-    cropName: 'Groundnut',
-    sellingQuantity: '40',
-    rate: '6100',
-    qualityGrade: 'Grade B',
-    pickupLocation: 'Adoni Mandi Shed #4',
-    lastOrder: '28 Oct 2026',
-    totalPurchases: '₹2,44,000',
-  },
-  {
-    id: 'B004',
-    name: 'Srinivasa Traders',
-    mobile: '9849011223',
-    category: 'Middleman',
-    cropName: 'Paddy',
-    sellingQuantity: '60',
-    rate: '910.01',
-    qualityGrade: 'Grade A',
-    pickupLocation: 'Kurnool APMC Yard, Gate 2',
-    lastOrder: '18 Nov 2026',
-    totalPurchases: '₹5,46,000',
-  },
-  {
-    id: 'B005',
-    name: 'ITC Agri Business Hub',
-    mobile: '9440188990',
-    category: 'Vendor',
-    cropName: 'Turmeric',
-    sellingQuantity: '30',
-    rate: '8400',
-    qualityGrade: 'Grade A',
-    pickupLocation: 'ITC Procurement Centre, Guntur',
-    lastOrder: '04 Nov 2026',
-    totalPurchases: '₹2,52,000',
-  },
-  {
-    id: 'B006',
-    name: 'Rajesh Kumar',
-    mobile: '9123456789',
-    category: 'Customer',
-    cropName: 'Groundnut',
-    sellingQuantity: '10',
-    rate: '6100',
-    qualityGrade: 'Grade A',
-    pickupLocation: 'Farmer Warehouse, Tanuku',
-    lastOrder: '02 Nov 2026',
-    totalPurchases: '₹61,000',
-  },
-  {
-    id: 'B007',
-    name: 'Sri Balaji Traders',
-    mobile: '9848223344',
-    category: 'Middleman',
-    cropName: 'Maize',
-    sellingQuantity: '55',
-    rate: '2250',
-    qualityGrade: 'Grade A',
-    pickupLocation: 'Nandyal Mandi, Platform #3',
-    lastOrder: '24 Oct 2026',
-    totalPurchases: '₹1,23,750',
-  },
-  {
-    id: 'B008',
-    name: 'Lakshmi Agro Exports',
-    mobile: '9866123456',
-    category: 'Vendor',
-    cropName: 'Paddy',
-    sellingQuantity: '80',
-    rate: '920',
-    qualityGrade: 'Grade A',
-    pickupLocation: 'Kakinada Port Terminal',
-    lastOrder: '20 Oct 2026',
-    totalPurchases: '₹7,36,000',
-  },
-];
-
-const getSavedBuyersDirectory = (pastSales) => {
-  let stored = [];
-  try {
-    const raw = localStorage.getItem('farmer_saved_buyers');
-    if (raw) stored = JSON.parse(raw);
-  } catch (e) {
-    console.warn('Could not read saved buyers from storage:', e);
-  }
-
-  const map = new Map();
-
-  // 1. Initial defaults
-  DEFAULT_SAVED_BUYERS.forEach((b) => {
-    map.set(b.name.toLowerCase().trim(), b);
-  });
-
-  // 2. Past sales from FarmerContext
-  (pastSales || []).forEach((s) => {
-    if (s.buyerName) {
-      const key = s.buyerName.toLowerCase().trim();
-      if (!map.has(key)) {
-        map.set(key, {
-          id: `SALE-${s.id}`,
-          name: s.buyerName,
-          mobile: s.buyerMobile || '',
-          category: s.buyerCategory || 'Middleman',
-          cropName: s.cropName || '',
-          sellingQuantity: String(s.quantity || ''),
-          rate: String(s.rate || ''),
-          qualityGrade: s.qualityGrade || 'Grade A',
-          pickupLocation: s.pickupLocation || '',
-          lastOrder: s.date || 'Previous Sale',
-          totalPurchases: s.totalAmount ? formatCurrency(s.totalAmount) : '',
-        });
-      }
-    }
-  });
-
-  // 3. User saved modifications in localStorage
-  if (Array.isArray(stored)) {
-    stored.forEach((b) => {
-      if (b && b.name) {
-        const key = b.name.toLowerCase().trim();
-        map.set(key, { ...(map.get(key) || {}), ...b });
-      }
-    });
-  }
-
-  return Array.from(map.values());
-};
+import {
+  fetchFarmerContactsApi,
+  fetchFarmerContactByIdApi,
+  saveContactToStorage,
+  DEFAULT_FARMER_CONTACTS,
+} from '../../../services/farmerContactService';
 
 function SalesForm({ onSaleCreated }) {
-  const { crops, profile, createSale, sales, salesOptions, setActiveOtpRequest } = useFarmer();
+  const { crops, profile, createSale, salesOptions, setActiveOtpRequest } = useFarmer();
 
   const options = salesOptions || DEFAULT_SALES_OPTIONS;
   const buyerCategories = options.buyerCategories?.length ? options.buyerCategories : DEFAULT_SALES_OPTIONS.buyerCategories;
@@ -206,39 +53,54 @@ function SalesForm({ onSaleCreated }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
-  // Predictive Auto-Complete States
+  // Predictive Contact Auto-Complete States (with 300ms debounce & Farmer Contacts API)
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [matchingContacts, setMatchingContacts] = useState([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [isLoadingContactDetails, setIsLoadingContactDetails] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeDropdownIndex, setActiveDropdownIndex] = useState(0);
   const [autoFillNotice, setAutoFillNotice] = useState(null);
   const dropdownRef = useRef(null);
   const nameInputRef = useRef(null);
 
-  // Directory of all saved buyers merged from defaults, previous sales, and localStorage
-  const savedBuyers = useMemo(() => getSavedBuyersDirectory(sales), [sales]);
+  // 300ms Debounce on Buyer Name Input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(formData.buyerName.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [formData.buyerName]);
 
-  // Filtered buyers matching the typed query
-  const matchingBuyers = useMemo(() => {
-    const q = formData.buyerName.trim().toLowerCase();
-    if (!q) {
-      return savedBuyers.slice(0, 6);
-    }
+  // Fetch Farmer Contacts via API when debounced search or buyer category changes
+  useEffect(() => {
+    let isCurrent = true;
+    const loadContacts = async () => {
+      setIsLoadingContacts(true);
+      try {
+        const contacts = await fetchFarmerContactsApi({
+          category: formData.buyerCategory,
+          search: debouncedSearch,
+          userId: profile?.id,
+        });
+        if (isCurrent) {
+          setMatchingContacts(contacts);
+        }
+      } catch (err) {
+        console.warn('Failed to load contacts for autocomplete:', err);
+      } finally {
+        if (isCurrent) {
+          setIsLoadingContacts(false);
+        }
+      }
+    };
 
-    return savedBuyers
-      .filter((b) => {
-        const n = b.name.toLowerCase();
-        const m = b.mobile || '';
-        return n.includes(q) || m.includes(q);
-      })
-      .sort((a, b) => {
-        const aName = a.name.toLowerCase();
-        const bName = b.name.toLowerCase();
-        const aStarts = aName.startsWith(q);
-        const bStarts = bName.startsWith(q);
-        if (aStarts && !bStarts) return -1;
-        if (!aStarts && bStarts) return 1;
-        return aName.localeCompare(bName);
-      });
-  }, [savedBuyers, formData.buyerName]);
+    loadContacts();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [debouncedSearch, formData.buyerCategory, profile?.id]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -327,27 +189,44 @@ function SalesForm({ onSaleCreated }) {
     if (submitError) setSubmitError(null);
   };
 
-  const handleSelectBuyer = (buyer) => {
-    // Find matching crop in farmer crops if buyer has a past/preferred crop
+  const handleSelectContact = async (contact) => {
+    setIsLoadingContactDetails(true);
+    let fullDetails = contact;
+
+    // Contact Details API Integration: GET /api/v1/farmer/contacts/{id} (or fallback /api/contacts/{id})
+    try {
+      if (contact.id) {
+        const fetched = await fetchFarmerContactByIdApi(contact.id, profile?.id);
+        if (fetched) {
+          fullDetails = { ...contact, ...fetched };
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch single contact by ID, using contact item:', err);
+    } finally {
+      setIsLoadingContactDetails(false);
+    }
+
+    // Find matching crop in farmer crops if contact has a preferred/last crop
     const matchingCrop = (crops || []).find(
-      (c) => c.name.toLowerCase() === (buyer.cropName || '').toLowerCase()
+      (c) => c.name.toLowerCase() === (fullDetails.cropName || '').toLowerCase()
     ) || selectedCrop;
 
-    const newQty = buyer.sellingQuantity && matchingCrop
-      ? Math.min(Number(buyer.sellingQuantity) || 10, Number(matchingCrop.availableQuantity) || 10)
+    const newQty = fullDetails.sellingQuantity && matchingCrop
+      ? Math.min(Number(fullDetails.sellingQuantity) || 10, Number(matchingCrop.availableQuantity) || 10)
       : formData.sellingQuantity;
 
     setFormData((prev) => ({
       ...prev,
-      buyerName: buyer.name,
-      buyerMobile: buyer.mobile,
-      buyerCategory: buyer.category || prev.buyerCategory,
+      buyerName: fullDetails.name,
+      buyerMobile: fullDetails.mobile,
+      buyerCategory: fullDetails.category || prev.buyerCategory,
       cropId: matchingCrop ? matchingCrop.id : prev.cropId,
       cropName: matchingCrop ? matchingCrop.name : prev.cropName,
       sellingQuantity: newQty ? String(newQty) : prev.sellingQuantity,
-      rate: buyer.rate || matchingCrop?.expectedSellingPrice || prev.rate,
-      qualityGrade: buyer.qualityGrade || matchingCrop?.qualityGrade || prev.qualityGrade,
-      pickupLocation: buyer.pickupLocation || prev.pickupLocation,
+      rate: fullDetails.rate || matchingCrop?.expectedSellingPrice || prev.rate,
+      qualityGrade: fullDetails.qualityGrade || matchingCrop?.qualityGrade || prev.qualityGrade,
+      pickupLocation: fullDetails.pickupLocation || prev.pickupLocation,
     }));
 
     setErrors((prev) => ({
@@ -357,30 +236,34 @@ function SalesForm({ onSaleCreated }) {
     }));
 
     setAutoFillNotice({
-      name: buyer.name,
-      mobile: buyer.mobile,
-      category: buyer.category,
-      crop: buyer.cropName || (matchingCrop ? matchingCrop.name : ''),
+      name: fullDetails.name,
+      mobile: fullDetails.mobile,
+      category: fullDetails.category,
+      crop: fullDetails.cropName || (matchingCrop ? matchingCrop.name : ''),
       qty: newQty,
-      rate: buyer.rate,
+      rate: fullDetails.rate,
+      location: fullDetails.pickupLocation,
     });
 
+    saveContactToStorage(fullDetails);
     setIsDropdownOpen(false);
   };
 
+  const handleSelectBuyer = handleSelectContact;
+
   const handleKeyDown = (e) => {
-    if (!isDropdownOpen || matchingBuyers.length === 0) return;
+    if (!isDropdownOpen || matchingContacts.length === 0) return;
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveDropdownIndex((prev) => (prev + 1) % matchingBuyers.length);
+      setActiveDropdownIndex((prev) => (prev + 1) % matchingContacts.length);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setActiveDropdownIndex((prev) => (prev - 1 + matchingBuyers.length) % matchingBuyers.length);
+      setActiveDropdownIndex((prev) => (prev - 1 + matchingContacts.length) % matchingContacts.length);
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (matchingBuyers[activeDropdownIndex]) {
-        handleSelectBuyer(matchingBuyers[activeDropdownIndex]);
+      if (matchingContacts[activeDropdownIndex]) {
+        handleSelectContact(matchingContacts[activeDropdownIndex]);
       }
     } else if (e.key === 'Escape') {
       setIsDropdownOpen(false);
@@ -761,8 +644,8 @@ function SalesForm({ onSaleCreated }) {
                   </small>
                 )}
 
-                {/* Floating Predictive Dropdown */}
-                {isDropdownOpen && matchingBuyers.length > 0 && (
+                {/* Floating Predictive Dropdown with 300ms Debounce & Contacts API */}
+                {isDropdownOpen && (
                   <div
                     style={{
                       position: 'absolute',
@@ -774,7 +657,7 @@ function SalesForm({ onSaleCreated }) {
                       boxShadow: '0 12px 30px -4px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(15, 23, 42, 0.08)',
                       border: '1px solid #E2E8F0',
                       zIndex: 60,
-                      maxHeight: '280px',
+                      maxHeight: '300px',
                       overflowY: 'auto',
                     }}
                   >
@@ -793,122 +676,151 @@ function SalesForm({ onSaleCreated }) {
                         justifyContent: 'space-between',
                       }}
                     >
-                      <span>
-                        {formData.buyerName.trim()
-                          ? `Matching Saved Buyers (${matchingBuyers.length})`
-                          : 'Frequent Buyers / Saved Contacts'}
+                      <span className="flex items-center gap-1.5">
+                        <User className="w-3.5 h-3.5 text-[#0F766E]" />
+                        <span>
+                          {formData.buyerCategory} Contacts ({matchingContacts.length})
+                        </span>
                       </span>
                       <span style={{ fontSize: '10px', color: '#0F766E' }}>
-                        Click to auto-fill
+                        {isLoadingContacts ? '300ms Debounce...' : 'Click to auto-fill'}
                       </span>
                     </div>
 
-                    <div style={{ padding: '4px' }}>
-                      {matchingBuyers.map((buyer, idx) => {
-                        const style = buyerCategoryStyles[buyer.category] || {
-                          bg: '#F1F5F9',
-                          color: '#475569',
-                        };
-                        const isSelected = idx === activeDropdownIndex;
+                    {/* Loading State Spinner */}
+                    {isLoadingContacts && (
+                      <div className="p-4 text-center flex items-center justify-center gap-2 text-xs font-semibold text-slate-500">
+                        <div className="w-4 h-4 border-2 border-[#0F766E] border-t-transparent rounded-full animate-spin" />
+                        <span>Searching {formData.buyerCategory} contacts...</span>
+                      </div>
+                    )}
 
-                        // Match highlighting
-                        const query = formData.buyerName.trim().toLowerCase();
-                        const nameLower = buyer.name.toLowerCase();
-                        const matchIndex = nameLower.indexOf(query);
+                    {/* Contact Suggestions List */}
+                    {!isLoadingContacts && matchingContacts.length > 0 && (
+                      <div style={{ padding: '4px' }}>
+                        {matchingContacts.map((contact, idx) => {
+                          const style = buyerCategoryStyles[contact.category] || {
+                            bg: '#F1F5F9',
+                            color: '#475569',
+                          };
+                          const isSelected = idx === activeDropdownIndex;
 
-                        return (
-                          <div
-                            key={buyer.id || buyer.name + idx}
-                            onClick={() => handleSelectBuyer(buyer)}
-                            onMouseEnter={() => setActiveDropdownIndex(idx)}
-                            style={{
-                              padding: '10px 12px',
-                              borderRadius: 10,
-                              cursor: 'pointer',
-                              backgroundColor: isSelected ? '#CCFBF1' : 'transparent',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              gap: 10,
-                              transition: 'background-color 0.15s ease',
-                              borderBottom: idx === matchingBuyers.length - 1 ? 'none' : '1px solid #F1F5F9',
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                              <div
-                                style={{
-                                  width: 34,
-                                  height: 34,
-                                  borderRadius: 10,
-                                  backgroundColor: isSelected ? '#0F766E' : '#E0F2FE',
-                                  color: isSelected ? '#FFFFFF' : '#0369A1',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontWeight: 800,
-                                  fontSize: '0.78rem',
-                                  flexShrink: 0,
-                                  transition: 'all 0.15s',
-                                }}
-                              >
-                                {buyer.name.slice(0, 2).toUpperCase()}
-                              </div>
+                          // Match highlighting
+                          const query = formData.buyerName.trim().toLowerCase();
+                          const nameLower = contact.name.toLowerCase();
+                          const matchIndex = nameLower.indexOf(query);
 
-                              <div style={{ minWidth: 0 }}>
-                                <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0F172A' }}>
-                                  {query && matchIndex >= 0 ? (
-                                    <>
-                                      {buyer.name.slice(0, matchIndex)}
-                                      <span style={{ color: '#0F766E', textDecoration: 'underline' }}>
-                                        {buyer.name.slice(matchIndex, matchIndex + query.length)}
-                                      </span>
-                                      {buyer.name.slice(matchIndex + query.length)}
-                                    </>
-                                  ) : (
-                                    buyer.name
-                                  )}
-                                </div>
+                          return (
+                            <div
+                              key={contact.id || contact.name + idx}
+                              onClick={() => handleSelectContact(contact)}
+                              onMouseEnter={() => setActiveDropdownIndex(idx)}
+                              style={{
+                                padding: '10px 12px',
+                                borderRadius: 10,
+                                cursor: 'pointer',
+                                backgroundColor: isSelected ? '#CCFBF1' : 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: 10,
+                                transition: 'background-color 0.15s ease',
+                                borderBottom: idx === matchingContacts.length - 1 ? 'none' : '1px solid #F1F5F9',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                                 <div
                                   style={{
-                                    fontSize: '0.75rem',
-                                    color: '#64748B',
+                                    width: 34,
+                                    height: 34,
+                                    borderRadius: 10,
+                                    backgroundColor: isSelected ? '#0F766E' : '#E0F2FE',
+                                    color: isSelected ? '#FFFFFF' : '#0369A1',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: 8,
-                                    marginTop: 2,
+                                    justifyContent: 'center',
+                                    fontWeight: 800,
+                                    fontSize: '0.78rem',
+                                    flexShrink: 0,
+                                    transition: 'all 0.15s',
                                   }}
                                 >
-                                  <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'monospace' }}>
-                                    <Phone className="w-2.5 h-2.5 text-[#0F766E]" /> {buyer.mobile}
-                                  </span>
-                                  {buyer.cropName && (
-                                    <span>
-                                      • Last: {buyer.cropName} ({buyer.sellingQuantity || 50} qtl)
+                                  {contact.name.slice(0, 2).toUpperCase()}
+                                </div>
+
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0F172A' }}>
+                                    {query && matchIndex >= 0 ? (
+                                      <>
+                                        {contact.name.slice(0, matchIndex)}
+                                        <span style={{ color: '#0F766E', textDecoration: 'underline' }}>
+                                          {contact.name.slice(matchIndex, matchIndex + query.length)}
+                                        </span>
+                                        {contact.name.slice(matchIndex + query.length)}
+                                      </>
+                                    ) : (
+                                      contact.name
+                                    )}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: '0.75rem',
+                                      color: '#64748B',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 8,
+                                      marginTop: 2,
+                                    }}
+                                  >
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'monospace' }}>
+                                      <Phone className="w-2.5 h-2.5 text-[#0F766E]" /> {contact.mobile}
                                     </span>
-                                  )}
+                                    {contact.pickupLocation && (
+                                      <span className="truncate max-w-[140px]">
+                                        • {contact.pickupLocation.split(',')[0]}
+                                      </span>
+                                    )}
+                                    {contact.cropName && (
+                                      <span>
+                                        • Pref: {contact.cropName} ({contact.sellingQuantity || 50} qtl)
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                              <span
-                                style={{
-                                  padding: '2px 8px',
-                                  borderRadius: 6,
-                                  fontSize: '0.7rem',
-                                  fontWeight: 700,
-                                  backgroundColor: style.bg,
-                                  color: style.color,
-                                }}
-                              >
-                                {buyer.category}
-                              </span>
-                              <ArrowRight className="w-3.5 h-3.5 text-[#64748B]" />
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                <span
+                                  style={{
+                                    padding: '2px 8px',
+                                    borderRadius: 6,
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    backgroundColor: style.bg,
+                                    color: style.color,
+                                  }}
+                                >
+                                  {contact.category}
+                                </span>
+                                <ArrowRight className="w-3.5 h-3.5 text-[#64748B]" />
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Empty State */}
+                    {!isLoadingContacts && matchingContacts.length === 0 && (
+                      <div style={{ padding: '16px', textAlign: 'center' }}>
+                        <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#475569' }}>
+                          No {formData.buyerCategory} contacts found matching &quot;{formData.buyerName}&quot;
+                        </p>
+                        <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#94A3B8' }}>
+                          Manual entry enabled — continue typing buyer name &amp; mobile number.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

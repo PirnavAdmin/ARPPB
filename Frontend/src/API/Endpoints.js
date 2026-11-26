@@ -76,6 +76,13 @@ export const FARMER_OTP_CONFIRMATIONS = {
   REJECT_ALT: (id) => `/api/v1/farmer/otp-confirmations/${id}/decline`,
 };
 
+export const FARMER_CONTACTS = {
+  BASE: "/api/v1/farmer/contacts",
+  BASE_ALT: "/api/contacts",
+  BY_ID: (id) => `/api/v1/farmer/contacts/${id}`,
+  BY_ID_ALT: (id) => `/api/contacts/${id}`,
+};
+
 export const CUSTOMER_MARKETPLACE = {
   CATEGORIES: "/api/v1/customer/marketplace/categories",
   PRODUCTS: "/api/v1/customer/marketplace/products",
@@ -716,6 +723,7 @@ const API_ENDPOINTS = {
   FARMER_MY_SALES,
   FARMER_SELL_PRODUCTS,
   FARMER_OTP_CONFIRMATIONS,
+  FARMER_CONTACTS,
 };
 
 export default API_ENDPOINTS;
