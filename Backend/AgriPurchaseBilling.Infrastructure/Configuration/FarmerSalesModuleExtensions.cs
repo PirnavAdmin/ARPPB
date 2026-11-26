@@ -21,6 +21,10 @@ namespace AgriPurchaseBilling.Infrastructure.Configuration
             services.AddScoped<IFarmerOtpConfirmationRepository, FarmerOtpConfirmationRepository>();
             services.AddScoped<IFarmerOtpConfirmationService, FarmerOtpConfirmationService>();
 
+            // Farmer Contact Search & Autocomplete Module
+            services.AddScoped<IContactRepository, ContactRepository>();
+            services.AddScoped<IContactService, ContactService>();
+
             return services;
         }
 
