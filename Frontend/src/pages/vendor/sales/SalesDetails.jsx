@@ -29,7 +29,7 @@ export default function SalesDetails({ sale, isOpen, onClose }) {
 
   const balanceDue = Math.max(
     0,
-    (sale.totalAmount || 0) - (sale.receivedAmount || 0)
+    (sale.totalAmount || 0) - (sale.receivedAmount ?? sale.amountReceived ?? 0)
   );
   const linkedOtp = confirmations.find(
     (c) => c.id === sale.otpId || c.transactionId === sale.id
@@ -401,9 +401,11 @@ export default function SalesDetails({ sale, isOpen, onClose }) {
           </div>
 
           {/* Record Customer Receipt Box */}
-          {sale.confirmationStatus === 'Verified' &&
-          sale.salesStatus !== 'Cancelled' &&
-          balanceDue > 0 ? (
+          {((sale.confirmationStatus === 'Verified' ||
+            sale.otpStatus === 'Verified' ||
+            sale.orderStatus === 'Confirmed') &&
+            sale.salesStatus !== 'Cancelled' &&
+            balanceDue > 0) ? (
             <form
               onSubmit={handleRecordReceipt}
               className="p-4 rounded-xl border border-brand-primary/30 bg-brand-light/25 space-y-3 text-xs"

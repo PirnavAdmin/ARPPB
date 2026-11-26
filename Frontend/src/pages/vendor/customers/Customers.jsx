@@ -63,14 +63,31 @@ export function Customers() {
   // Enrich each customer with total purchased quantity across their sales/orders
   const customersWithQty = useMemo(() => {
     return customers.map((c) => {
+      const isMatchCust = (partyId, partyName = '') => {
+        const pStr = String(partyId || '').trim().toLowerCase();
+        const idStr = String(c.id || '').trim().toLowerCase();
+        const rawIdStr = String(c.rawId || '').trim().toLowerCase();
+        const codeStr = String(c.customerCode || c.code || '').trim().toLowerCase();
+        const nameStr = String(c.name || c.customerName || c.businessName || '').trim().toLowerCase();
+        const rName = String(partyName || '').trim().toLowerCase();
+
+        if (pStr && (pStr === idStr || pStr === rawIdStr || (codeStr && pStr === codeStr))) return true;
+        const numP = pStr.replace(/\D/g, '');
+        const numC = (idStr || rawIdStr).replace(/\D/g, '');
+        if (numP && numC && numP === numC) return true;
+        if (rName && nameStr && (rName === nameStr || nameStr.includes(rName) || rName.includes(nameStr))) return true;
+        return false;
+      };
+
       const custSales = sales.filter(
-        (s) => s.customerId === c.id && s.salesStatus !== 'Cancelled'
+        (s) =>
+          (isMatchCust(s.customerId || s.customerUserId, s.customerName) || s.customerId === c.id) &&
+          s.salesStatus !== 'Cancelled'
       );
-      const totalPurchasedQty = custSales.reduce(
-        (sum, s) => sum + Number(s.quantity || 0),
-        0
-      );
-      const primaryUnit = custSales[0]?.unit || 'Units';
+      const totalPurchasedQty = custSales.length > 0
+        ? custSales.reduce((sum, s) => sum + Number(s.quantity || 0), 0)
+        : Number(c.totalPurchaseQuantity || 0);
+      const primaryUnit = custSales[0]?.unit || c.quantityUnit || 'Quintal';
       return {
         ...c,
         totalPurchasedQty,

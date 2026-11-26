@@ -705,6 +705,13 @@ BEGIN
           AND (CAST(p.`Id` AS CHAR) = p_purchase_id OR p.`PurchaseCode` = p_purchase_id);
     END IF;
 
+    -- Synchronize vp_ledger_entries
+    UPDATE `vp_ledger_entries`
+       SET settled_amount = IF(p_due_amount IS NOT NULL, credit - p_due_amount, settled_amount),
+           status = IF(p_due_amount = 0, 'Paid', IF(p_due_amount > 0 AND p_due_amount < credit, 'Partial', status)),
+           updated_at = UTC_TIMESTAMP(6)
+     WHERE vendor_id = p_vendor_id AND (transaction_code = p_purchase_id OR CAST(id AS CHAR) = p_purchase_id);
+
     -- Return updated purchase
     CALL `sp_Vendor_GetPurchaseById`(p_vendor_id, p_purchase_id, p_supplier_category);
 END$$

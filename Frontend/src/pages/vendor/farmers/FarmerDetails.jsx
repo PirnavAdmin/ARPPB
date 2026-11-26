@@ -88,7 +88,15 @@ export function FarmerDetails({
   }, [purchases, farmer, isMatchFarmer]);
 
   const confirmedPurchases = useMemo(
-    () => farmerPurchases.filter((p) => p.status === 'Confirmed'),
+    () =>
+      farmerPurchases.filter(
+        (p) =>
+          p.status === 'Confirmed' ||
+          p.paymentStatus === 'Paid' ||
+          p.paymentStatus === 'Partial' ||
+          p.paymentStatus === 'Pending' ||
+          (p.paymentStatus !== 'Cancelled' && p.status !== 'Cancelled')
+      ),
     [farmerPurchases]
   );
 
@@ -124,14 +132,23 @@ export function FarmerDetails({
     (sum, p) => sum + Number(p.quantity || 0),
     0
   );
-  const totalPurchaseAmount = confirmedPurchases.reduce(
-    (sum, p) => sum + Number(p.totalAmount || 0),
-    0
-  );
-  const totalPaidAmount = confirmedPurchases.reduce(
-    (sum, p) => sum + Number(p.paidAmount || 0),
-    0
-  );
+  const totalPurchaseAmount = confirmedPurchases.length > 0
+    ? confirmedPurchases.reduce((sum, p) => sum + Number(p.totalAmount || 0), 0)
+    : Number(farmer.totalPurchaseAmount ?? farmer.totalPurchaseValue ?? 0);
+  const totalPaidAmount = confirmedPurchases.length > 0
+    ? confirmedPurchases.reduce(
+        (sum, p) =>
+          sum +
+          Number(
+            p.paidAmount ?? (Number(p.totalAmount || 0) - Number(p.dueAmount || 0)) ?? 0
+          ),
+        0
+      )
+    : Number(
+        farmer.totalPaid ??
+          (Number(farmer.totalPurchaseAmount || 0) - Number(farmer.dueAmount || 0)) ??
+          0
+      );
   const pendingPayableAmount = Math.max(0, totalPurchaseAmount - totalPaidAmount);
 
   const transactionColumns = [

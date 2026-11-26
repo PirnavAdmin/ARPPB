@@ -174,6 +174,8 @@ BEGIN
   DECLARE v_party_name VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
   DECLARE v_txn VARCHAR(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
   DECLARE v_msg VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  DECLARE v_p_code VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  DECLARE v_p_party_cat VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
   IF p_entry IS NOT NULL THEN
     SET v_cat = NULL;
@@ -233,6 +235,49 @@ BEGIN
       SET v_new = LAST_INSERT_ID();
       UPDATE vp_ledger_entries SET voucher_code = CONCAT('VCH-', LPAD(v_new, 4, '0')) WHERE id = v_new;
       INSERT INTO tmp_posted (id) VALUES (v_new);
+
+      -- Synchronize supplier purchases and payments
+      SET v_p_code = NULL;
+      SET v_p_party_cat = NULL;
+      SELECT transaction_code, party_category INTO v_p_code, v_p_party_cat FROM vp_ledger_entries WHERE id = v_id LIMIT 1;
+
+      IF v_p_code IS NOT NULL THEN
+        UPDATE vendor_farmer_purchases
+           SET DueAmount = GREATEST(0, DueAmount - v_piece),
+               PaymentStatus = IF(DueAmount - v_piece <= 0, 'Paid', IF(DueAmount - v_piece < TotalAmount, 'Partial', 'Pending'))
+         WHERE PurchaseCode = v_p_code;
+
+        UPDATE vendor_middleman_purchases
+           SET DueAmount = GREATEST(0, DueAmount - v_piece),
+               PaymentStatus = IF(DueAmount - v_piece <= 0, 'Paid', IF(DueAmount - v_piece < TotalAmount, 'Partial', 'Pending'))
+         WHERE PurchaseCode = v_p_code;
+
+        IF v_p_party_cat = 'Farmer' OR v_p_code LIKE 'PUR-FAR-%' OR v_p_code LIKE 'PUR-F-%' THEN
+          INSERT INTO vendor_farmer_payments
+            (FarmerId, PaymentCode, VoucherNumber, Amount, PaymentMethod, PaymentDate, ReferenceNumber, Status, Notes, CreatedAt)
+          SELECT f.Id, CONCAT('PAY-F-', LPAD(v_new, 4, '0')), CONCAT('VCH-', LPAD(v_new, 4, '0')), v_piece,
+                 COALESCE(NULLIF(TRIM(p_mode), ''), 'Bank Transfer'), UTC_TIMESTAMP(6), NULLIF(TRIM(p_ref), ''), 'Completed',
+                 CONCAT('Settlement against ', v_p_code), UTC_TIMESTAMP(6)
+            FROM vendor_farmers f
+           WHERE f.VendorId = p_vendor
+             AND (f.FarmerCode = (SELECT party_code FROM vp_ledger_entries WHERE id = v_id LIMIT 1)
+                  OR f.FullName = (SELECT party_name FROM vp_ledger_entries WHERE id = v_id LIMIT 1))
+           LIMIT 1;
+        ELSEIF v_p_party_cat = 'Middleman' OR v_p_code LIKE 'PUR-MID-%' OR v_p_code LIKE 'PUR-M-%' THEN
+          INSERT INTO vendor_middleman_payments
+            (MiddlemanId, PaymentCode, VoucherNumber, Amount, PaymentMethod, PaymentDate, ReferenceNumber, Status, Notes, CreatedAt)
+          SELECT m.Id, CONCAT('PAY-M-', LPAD(v_new, 4, '0')), CONCAT('VCH-', LPAD(v_new, 4, '0')), v_piece,
+                 COALESCE(NULLIF(TRIM(p_mode), ''), 'Bank Transfer'), UTC_TIMESTAMP(6), NULLIF(TRIM(p_ref), ''), 'Completed',
+                 CONCAT('Settlement against ', v_p_code), UTC_TIMESTAMP(6)
+            FROM vendor_middlemen m
+           WHERE m.VendorId = p_vendor
+             AND (m.MiddlemanCode = (SELECT party_code FROM vp_ledger_entries WHERE id = v_id LIMIT 1)
+                  OR m.FullName = (SELECT party_name FROM vp_ledger_entries WHERE id = v_id LIMIT 1)
+                  OR m.BusinessName = (SELECT party_name FROM vp_ledger_entries WHERE id = v_id LIMIT 1))
+           LIMIT 1;
+        END IF;
+      END IF;
+
       SET v_left = v_left - v_piece;
     END LOOP;
     CLOSE cur;
@@ -440,6 +485,14 @@ BEGIN
       SET v_new = LAST_INSERT_ID();
       UPDATE vp_ledger_entries SET voucher_code = CONCAT('VCH-', LPAD(v_new, 4, '0')) WHERE id = v_new;
       INSERT INTO tmp_posted (id) VALUES (v_new);
+
+      -- Synchronize vendor_customer_orders
+      UPDATE vendor_customer_orders
+         SET DueAmount = GREATEST(0, DueAmount - v_piece),
+             OrderStatus = IF(DueAmount - v_piece <= 0 AND OrderStatus = 'New', 'Confirmed', OrderStatus)
+       WHERE OrderCode = (SELECT order_code FROM vp_sales WHERE id = v_sid LIMIT 1)
+          OR OrderCode = (SELECT sale_code FROM vp_sales WHERE id = v_sid LIMIT 1);
+
       SET v_left = v_left - v_piece;
     END LOOP;
     CLOSE cur;

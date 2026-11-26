@@ -402,19 +402,49 @@ export function VendorProvider({ children }) {
   // =========================================================================
   const enrichedFarmers = useMemo(() => {
     return farmers.map((f) => {
-      const farmerPurchases = purchases.filter(
-        (p) => p.supplierCategory === 'Farmer' && p.supplierId === f.id && p.status === 'Confirmed'
-      );
-      const totalPurchases = farmerPurchases.length;
-      const totalQuantity = round2(
-        farmerPurchases.reduce((sum, p) => sum + safeNumber(p.quantity, 0), 0)
-      );
-      const totalPurchaseValue = round2(
-        farmerPurchases.reduce((sum, p) => sum + safeNumber(p.totalAmount, 0), 0)
-      );
-      const totalPaid = round2(
-        farmerPurchases.reduce((sum, p) => sum + safeNumber(p.paidAmount, 0), 0)
-      );
+      const isMatch = (p) => {
+        if (p.supplierCategory && p.supplierCategory !== 'Farmer') return false;
+        if (p.paymentStatus === 'Cancelled' || p.status === 'Cancelled') return false;
+        const pSuppId = String(p.supplierId || p.supplierRawId || '').trim().toLowerCase();
+        const fId = String(f.id || '').trim().toLowerCase();
+        const fRawId = String(f.rawId || '').trim().toLowerCase();
+        const fCode = String(f.farmerCode || '').trim().toLowerCase();
+        const fName = String(f.farmerName || f.fullName || f.name || '').trim().toLowerCase();
+        const pSuppName = String(p.supplierName || '').trim().toLowerCase();
+        if (pSuppId && (pSuppId === fId || pSuppId === fRawId || pSuppId === fCode)) return true;
+        const numP = pSuppId.replace(/\D/g, '');
+        const numF = (fId || fRawId).replace(/\D/g, '');
+        if (numP && numF && numP === numF) return true;
+        if (pSuppName && fName && (pSuppName === fName || fName.includes(pSuppName) || pSuppName.includes(fName))) return true;
+        return false;
+      };
+
+      const farmerPurchases = purchases.filter(isMatch);
+      const totalPurchases = farmerPurchases.length > 0 ? farmerPurchases.length : safeNumber(f.totalPurchases, 0);
+      const totalQuantity = farmerPurchases.length > 0
+        ? round2(farmerPurchases.reduce((sum, p) => sum + safeNumber(p.quantity, 0), 0))
+        : round2(safeNumber(f.totalPurchaseQuantity ?? f.totalQuantity, 0));
+      const totalPurchaseValue = farmerPurchases.length > 0
+        ? round2(farmerPurchases.reduce((sum, p) => sum + safeNumber(p.totalAmount, 0), 0))
+        : round2(safeNumber(f.totalPurchaseAmount ?? f.totalPurchaseValue, 0));
+      const totalPaid = farmerPurchases.length > 0
+        ? round2(
+            farmerPurchases.reduce(
+              (sum, p) =>
+                sum +
+                safeNumber(
+                  p.paidAmount ?? (safeNumber(p.totalAmount, 0) - safeNumber(p.dueAmount, 0)),
+                  0
+                ),
+              0
+            )
+          )
+        : round2(
+            safeNumber(
+              f.totalPaid ?? (safeNumber(f.totalPurchaseAmount, 0) - safeNumber(f.dueAmount, 0)),
+              0
+            )
+          );
       const pendingPayables = Math.max(0, round2(totalPurchaseValue - totalPaid));
       return {
         ...f,
@@ -563,19 +593,49 @@ export function VendorProvider({ children }) {
   // =========================================================================
   const enrichedMiddlemen = useMemo(() => {
     return middlemen.map((m) => {
-      const midPurchases = purchases.filter(
-        (p) => p.supplierCategory === 'Middleman' && p.supplierId === m.id && p.status === 'Confirmed'
-      );
-      const totalPurchases = midPurchases.length;
-      const totalQuantity = round2(
-        midPurchases.reduce((sum, p) => sum + safeNumber(p.quantity, 0), 0)
-      );
-      const purchaseValue = round2(
-        midPurchases.reduce((sum, p) => sum + safeNumber(p.totalAmount, 0), 0)
-      );
-      const totalPaid = round2(
-        midPurchases.reduce((sum, p) => sum + safeNumber(p.paidAmount, 0), 0)
-      );
+      const isMatch = (p) => {
+        if (p.supplierCategory && p.supplierCategory !== 'Middleman') return false;
+        if (p.paymentStatus === 'Cancelled' || p.status === 'Cancelled') return false;
+        const pSuppId = String(p.supplierId || p.supplierRawId || '').trim().toLowerCase();
+        const mId = String(m.id || '').trim().toLowerCase();
+        const mRawId = String(m.rawId || '').trim().toLowerCase();
+        const mCode = String(m.middlemanCode || m.code || '').trim().toLowerCase();
+        const mName = String(m.middlemanName || m.businessName || m.fullName || m.name || '').trim().toLowerCase();
+        const pSuppName = String(p.supplierName || '').trim().toLowerCase();
+        if (pSuppId && (pSuppId === mId || pSuppId === mRawId || pSuppId === mCode)) return true;
+        const numP = pSuppId.replace(/\D/g, '');
+        const numM = (mId || mRawId).replace(/\D/g, '');
+        if (numP && numM && numP === numM) return true;
+        if (pSuppName && mName && (pSuppName === mName || mName.includes(pSuppName) || pSuppName.includes(mName))) return true;
+        return false;
+      };
+
+      const midPurchases = purchases.filter(isMatch);
+      const totalPurchases = midPurchases.length > 0 ? midPurchases.length : safeNumber(m.totalPurchases, 0);
+      const totalQuantity = midPurchases.length > 0
+        ? round2(midPurchases.reduce((sum, p) => sum + safeNumber(p.quantity, 0), 0))
+        : round2(safeNumber(m.totalQuantityProcured ?? m.totalQuantity, 0));
+      const purchaseValue = midPurchases.length > 0
+        ? round2(midPurchases.reduce((sum, p) => sum + safeNumber(p.totalAmount, 0), 0))
+        : round2(safeNumber(m.totalPurchaseAmount ?? m.purchaseValue, 0));
+      const totalPaid = midPurchases.length > 0
+        ? round2(
+            midPurchases.reduce(
+              (sum, p) =>
+                sum +
+                safeNumber(
+                  p.paidAmount ?? (safeNumber(p.totalAmount, 0) - safeNumber(p.dueAmount, 0)),
+                  0
+                ),
+              0
+            )
+          )
+        : round2(
+            safeNumber(
+              m.totalPaid ?? (safeNumber(m.totalPurchaseAmount, 0) - safeNumber(m.dueAmount, 0)),
+              0
+            )
+          );
       const outstandingPayables = Math.max(
         0,
         round2(safeNumber(m.openingBalance, 0) + purchaseValue - totalPaid)
@@ -728,28 +788,60 @@ export function VendorProvider({ children }) {
   // =========================================================================
   const enrichedCustomers = useMemo(() => {
     return customers.map((c) => {
-      const custOrders = orders.filter((o) => o.customerId === c.id);
+      const isMatchCust = (partyId, partyName = '') => {
+        const pStr = String(partyId || '').trim().toLowerCase();
+        const idStr = String(c.id || '').trim().toLowerCase();
+        const rawIdStr = String(c.rawId || '').trim().toLowerCase();
+        const codeStr = String(c.customerCode || c.code || '').trim().toLowerCase();
+        const nameStr = String(c.name || c.customerName || c.businessName || '').trim().toLowerCase();
+        const rName = String(partyName || '').trim().toLowerCase();
+
+        if (pStr && (pStr === idStr || pStr === rawIdStr || (codeStr && pStr === codeStr))) return true;
+        const numP = pStr.replace(/\D/g, '');
+        const numC = (idStr || rawIdStr).replace(/\D/g, '');
+        if (numP && numC && numP === numC) return true;
+        if (rName && nameStr && (rName === nameStr || nameStr.includes(rName) || rName.includes(nameStr))) return true;
+        return false;
+      };
+
+      const custOrders = orders.filter((o) => isMatchCust(o.customerId, o.customerName) || o.customerId === c.id);
       const custSales = sales.filter(
         (s) =>
-          s.customerId === c.id &&
-          s.confirmationStatus === 'Verified' &&
-          s.salesStatus !== 'Cancelled'
+          (isMatchCust(s.customerId || s.customerUserId, s.customerName) || s.customerId === c.id) &&
+          s.salesStatus !== 'Cancelled' &&
+          s.orderStatus !== 'Cancelled'
       );
-      const totalOrders = custOrders.filter((o) => o.orderStatus !== 'Cancelled').length;
-      const completedOrders = custOrders.filter((o) => o.orderStatus === 'Completed').length;
+      const totalOrders = custOrders.filter((o) => o.orderStatus !== 'Cancelled').length || safeNumber(c.totalOrders, 0);
+      const completedOrders = custOrders.filter((o) => o.orderStatus === 'Completed' || o.orderStatus === 'Confirmed').length;
       const pendingOrders = custOrders.filter(
         (o) => o.orderStatus !== 'Completed' && o.orderStatus !== 'Cancelled'
       ).length;
-      const totalPurchaseValue = round2(
-        custSales.reduce((sum, s) => sum + safeNumber(s.totalAmount, 0), 0)
-      );
-      const totalAmountReceived = round2(
-        custSales.reduce((sum, s) => sum + safeNumber(s.receivedAmount, 0), 0)
-      );
-      const outstandingReceivables = Math.max(
-        0,
-        round2(safeNumber(c.openingBalance, 0) + totalPurchaseValue - totalAmountReceived)
-      );
+      const totalPurchaseValue = custSales.length > 0
+        ? round2(custSales.reduce((sum, s) => sum + safeNumber(s.totalAmount, 0), 0))
+        : round2(safeNumber(c.totalSalesAmount ?? c.totalPurchaseValue, 0));
+      const totalAmountReceived = custSales.length > 0
+        ? round2(
+            custSales.reduce(
+              (sum, s) => sum + safeNumber(s.receivedAmount ?? s.amountReceived, 0),
+              0
+            )
+          )
+        : round2(
+            safeNumber(
+              c.totalAmountReceived ??
+                (safeNumber(c.totalSalesAmount, 0) - safeNumber(c.receivableAmount, 0)),
+              0
+            )
+          );
+      const outstandingReceivables = custSales.length > 0
+        ? Math.max(
+            0,
+            round2(safeNumber(c.openingBalance, 0) + totalPurchaseValue - totalAmountReceived)
+          )
+        : Math.max(
+            0,
+            round2(safeNumber(c.receivableAmount ?? c.outstandingReceivables, 0))
+          );
       return {
         ...c,
         totalOrders,
@@ -2730,30 +2822,68 @@ export function VendorProvider({ children }) {
               await recordVendorCustomerReceiptApi(settlementPayload);
             }
           }
-          // Refresh ledger from backend to keep MariaDB in sync
-          const fresh = await fetchVendorLedgerApi();
-          if (Array.isArray(fresh) && fresh.length > 0) {
-            updateStateAndStorage(setLedger, STORAGE_KEYS.LEDGER, fresh);
+          // Refresh all affected entities in parallel from MariaDB
+          const [freshLedger, freshSales, freshOrders, freshCustomers, freshPurchases, freshFarmers, freshMiddlemen] = await Promise.all([
+            fetchVendorLedgerApi().catch(() => null),
+            fetchVendorSalesApi().catch(() => null),
+            fetchVendorOrdersApi().catch(() => null),
+            fetchVendorCustomersApi().catch(() => null),
+            fetchVendorPurchasesApi().catch(() => null),
+            fetchVendorFarmersApi().catch(() => null),
+            fetchVendorMiddlemenApi().catch(() => null),
+          ]);
+          if (Array.isArray(freshLedger) && freshLedger.length > 0) {
+            updateStateAndStorage(setLedger, STORAGE_KEYS.LEDGER, freshLedger);
+          }
+          if (Array.isArray(freshSales) && freshSales.length > 0) {
+            updateStateAndStorage(setSales, STORAGE_KEYS.SALES, freshSales);
+          }
+          if (Array.isArray(freshOrders) && freshOrders.length > 0) {
+            updateStateAndStorage(setOrders, STORAGE_KEYS.ORDERS, freshOrders);
+          }
+          if (Array.isArray(freshCustomers) && freshCustomers.length > 0) {
+            updateStateAndStorage(setCustomers, STORAGE_KEYS.CUSTOMERS, freshCustomers);
+          }
+          if (Array.isArray(freshPurchases) && freshPurchases.length > 0) {
+            updateStateAndStorage(setPurchases, STORAGE_KEYS.PURCHASES, freshPurchases);
+          }
+          if (Array.isArray(freshFarmers) && freshFarmers.length > 0) {
+            updateStateAndStorage(setFarmers, STORAGE_KEYS.FARMERS, freshFarmers);
+          }
+          if (Array.isArray(freshMiddlemen) && freshMiddlemen.length > 0) {
+            updateStateAndStorage(setMiddlemen, STORAGE_KEYS.MIDDLEMEN, freshMiddlemen);
           }
         } catch (err) {
           console.warn('Backend settlement synchronization error:', err);
         }
       })();
 
-      // Update linked purchase or sale paid/received amount
-      if (isSupplier && referenceTransactionId.startsWith('PUR-')) {
+      // Update linked purchase or sale paid/received amount optimistically
+      const refIdStr = String(referenceTransactionId || '').trim().toLowerCase();
+      if (isSupplier) {
         updateStateAndStorage(setPurchases, STORAGE_KEYS.PURCHASES, (prev) =>
           prev.map((p) => {
-            if (p.id !== referenceTransactionId) return p;
+            const isMatchPurch =
+              refIdStr &&
+              (String(p.id).toLowerCase() === refIdStr ||
+                String(p.purchaseCode || '').toLowerCase() === refIdStr ||
+                String(p.rawId || '').toLowerCase() === refIdStr);
+            if (!isMatchPurch) return p;
             const nextPaid = Math.min(p.totalAmount, round2(safeNumber(p.paidAmount, 0) + numAmount));
             const nextStatus = nextPaid >= p.totalAmount ? 'Paid' : 'Partially Paid';
             return { ...p, paidAmount: nextPaid, paymentStatus: nextStatus };
           })
         );
-      } else if (!isSupplier && referenceTransactionId.startsWith('SALE-')) {
+      } else {
         updateStateAndStorage(setSales, STORAGE_KEYS.SALES, (prev) =>
           prev.map((s) => {
-            if (s.id !== referenceTransactionId) return s;
+            const isMatchSale =
+              refIdStr &&
+              (String(s.id).toLowerCase() === refIdStr ||
+                String(s.saleCode || '').toLowerCase() === refIdStr ||
+                String(s.orderCode || '').toLowerCase() === refIdStr ||
+                String(s.rawId || '').toLowerCase() === refIdStr);
+            if (!isMatchSale) return s;
             const nextRec = Math.min(
               s.totalAmount,
               round2(safeNumber(s.receivedAmount, 0) + numAmount)
@@ -2764,13 +2894,23 @@ export function VendorProvider({ children }) {
         );
         updateStateAndStorage(setOrders, STORAGE_KEYS.ORDERS, (prev) =>
           prev.map((o) => {
-            if (o.salesId !== referenceTransactionId) return o;
-            const sale = sales.find((s) => s.id === referenceTransactionId);
+            const isMatchOrd =
+              refIdStr &&
+              (String(o.salesId || '').toLowerCase() === refIdStr ||
+                String(o.orderCode || '').toLowerCase() === refIdStr ||
+                String(o.id || '').toLowerCase() === refIdStr ||
+                String(o.saleCode || '').toLowerCase() === refIdStr);
+            if (!isMatchOrd) return o;
             const nextRec = Math.min(
               o.totalAmount,
-              round2(safeNumber(sale?.receivedAmount, 0) + numAmount)
+              round2(safeNumber(o.receivedAmount || 0) + numAmount)
             );
-            return { ...o, paymentStatus: nextRec >= o.totalAmount ? 'Paid' : 'Partially Paid' };
+            return {
+              ...o,
+              receivedAmount: nextRec,
+              dueAmount: Math.max(0, round2(o.totalAmount - nextRec)),
+              paymentStatus: nextRec >= o.totalAmount ? 'Paid' : 'Partially Paid',
+            };
           })
         );
       }
