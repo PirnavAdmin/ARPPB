@@ -3,12 +3,76 @@
   "WorkspaceRootPath": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{095DB741-15B3-6F55-D22E-D74E06DA2633}|AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.domain\\entities\\middlemannotification.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{095DB741-15B3-6F55-D22E-D74E06DA2633}|AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj|solutionrelative:agripurchasebilling.domain\\entities\\middlemannotification.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\dtos\\authdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\dtos\\authdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|solutionrelative:agripurchasebilling.api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.api\\controllers\\roleaccesscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|solutionrelative:agripurchasebilling.api\\controllers\\roleaccesscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.infrastructure\\services\\jwttokengenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|solutionrelative:agripurchasebilling.infrastructure\\services\\jwttokengenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.infrastructure\\repositories\\refreshtokenrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|solutionrelative:agripurchasebilling.infrastructure\\repositories\\refreshtokenrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.infrastructure\\repositories\\userrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|solutionrelative:agripurchasebilling.infrastructure\\repositories\\userrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\services\\refreshtokenservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\services\\refreshtokenservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\services\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\services\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\security\\otpsecurityhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\security\\otpsecurityhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\interfaces\\iregistrationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\interfaces\\iregistrationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\interfaces\\ipasswordhasher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\interfaces\\ipasswordhasher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\interfaces\\iotpservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\interfaces\\iotpservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\interfaces\\iloginservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\interfaces\\iloginservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\interfaces\\ijwttokengenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\interfaces\\ijwttokengenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\interfaces\\iauthservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\interfaces\\iauthservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{095DB741-15B3-6F55-D22E-D74E06DA2633}|AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.domain\\entities\\middlemannotification.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{095DB741-15B3-6F55-D22E-D74E06DA2633}|AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj|solutionrelative:agripurchasebilling.domain\\entities\\middlemannotification.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.api\\controllers\\middlemanprofilecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -47,14 +111,6 @@
       "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\dtos\\middlemannotificationdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.infrastructure\\repositories\\userrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|solutionrelative:agripurchasebilling.infrastructure\\repositories\\userrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.infrastructure\\repositories\\otprepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|solutionrelative:agripurchasebilling.infrastructure\\repositories\\otprepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -67,20 +123,12 @@
       "RelativeMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|solutionrelative:agripurchasebilling.api\\controllers\\vendorprofilecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.api\\controllers\\roleaccesscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|solutionrelative:agripurchasebilling.api\\controllers\\roleaccesscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.api\\controllers\\farmerprofilecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|solutionrelative:agripurchasebilling.api\\controllers\\farmerprofilecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.api\\controllers\\customerprofilecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|solutionrelative:agripurchasebilling.api\\controllers\\customerprofilecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|solutionrelative:agripurchasebilling.api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.infrastructure\\services\\smtpemailservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -93,10 +141,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.infrastructure\\services\\middlemanprofileservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|solutionrelative:agripurchasebilling.infrastructure\\services\\middlemanprofileservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.infrastructure\\services\\jwttokengenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|solutionrelative:agripurchasebilling.infrastructure\\services\\jwttokengenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.infrastructure\\repositories\\vendorprofilerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -207,15 +251,7 @@
       "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\services\\customerprofileservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\services\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\services\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\ADMIN\\AppData\\Local\\Temp\\CopilotBaseline\\Deleted\\-1877409672\\MiddlemanProfileService.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\security\\otpsecurityhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\security\\otpsecurityhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\interfaces\\ivendorprofileservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -232,26 +268,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\interfaces\\iuserrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\interfaces\\iuserrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\interfaces\\iregistrationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\interfaces\\iregistrationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\interfaces\\ipasswordhasher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\interfaces\\ipasswordhasher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\interfaces\\iotpservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\interfaces\\iotpservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\interfaces\\iloginservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\interfaces\\iloginservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\interfaces\\ijwttokengenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\interfaces\\ijwttokengenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\interfaces\\iforgotpasswordservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -278,10 +294,6 @@
       "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\interfaces\\icustomerprofilerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\interfaces\\iauthservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\interfaces\\iauthservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\dtos\\vendorprofiledtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\dtos\\vendorprofiledtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -306,10 +318,6 @@
       "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\dtos\\customerprofiledtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\dtos\\authdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\dtos\\authdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\common\\apiresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\common\\apiresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -326,6 +334,10 @@
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\ADMIN\\Downloads\\ARPPB_Profiles\\Backend\\AgriPurchaseBilling.Infrastructure\\Data\\CustomerDbContext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.infrastructure\\configuration\\farmersalesmoduleextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{997DDEEE-A7EF-28A9-32F9-30A41A6B3FC0}|AgriPurchaseBilling.Infrastructure\\AgriPurchaseBilling.Infrastructure.csproj|solutionrelative:agripurchasebilling.infrastructure\\configuration\\farmersalesmoduleextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -335,34 +347,263 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 6,
           "Children": [
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
             },
             {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "JwtTokenGenerator.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Services\\JwtTokenGenerator.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Services\\JwtTokenGenerator.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Services\\JwtTokenGenerator.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Infrastructure\\Services\\JwtTokenGenerator.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-12T05:39:10.064Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
               "$type": "Document",
               "DocumentIndex": 3,
-              "Title": "MiddlemanNotificationsController.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\MiddlemanNotificationsController.cs",
-              "RelativeDocumentMoniker": "AgriPurchaseBilling.Api\\Controllers\\MiddlemanNotificationsController.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\MiddlemanNotificationsController.cs",
-              "RelativeToolTip": "AgriPurchaseBilling.Api\\Controllers\\MiddlemanNotificationsController.cs",
-              "ViewState": "AgIAAAwAAAAAAAAAAAAAAAUAAAAdAAAAAAAAAA==",
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\appsettings.json",
+              "RelativeDocumentMoniker": "appsettings.json",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\appsettings.json",
+              "RelativeToolTip": "appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-11-23T04:53:35.43Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "AuthController.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\AuthController.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Api\\Controllers\\AuthController.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\AuthController.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Api\\Controllers\\AuthController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFEAAAAMAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-18T10:27:30.604Z",
+              "WhenOpened": "2026-11-14T16:33:37.872Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "RoleAccessController.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\RoleAccessController.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Api\\Controllers\\RoleAccessController.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\RoleAccessController.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Api\\Controllers\\RoleAccessController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-12T06:17:18.439Z",
+              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "AuthDtos.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\DTOs\\AuthDtos.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\DTOs\\AuthDtos.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\DTOs\\AuthDtos.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Application\\DTOs\\AuthDtos.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAIkAAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-12T05:42:26.884Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "RefreshTokenRepository.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Repositories\\RefreshTokenRepository.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Repositories\\RefreshTokenRepository.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Repositories\\RefreshTokenRepository.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Infrastructure\\Repositories\\RefreshTokenRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAALAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-26T07:55:21.38Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "UserRepository.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Repositories\\UserRepository.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Repositories\\UserRepository.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Repositories\\UserRepository.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Infrastructure\\Repositories\\UserRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAuAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-12T06:06:30.04Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "RefreshTokenService.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Services\\RefreshTokenService.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Services\\RefreshTokenService.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Services\\RefreshTokenService.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Application\\Services\\RefreshTokenService.cs",
+              "ViewState": "AgIAAFIAAAAAAAAAAAAswAgAAAALAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-26T07:53:46.76Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAAFoAAAAAAAAAAAAAAA4AAAAlAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-11T11:24:31.878Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "AuthService.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Services\\AuthService.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Services\\AuthService.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Services\\AuthService.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Application\\Services\\AuthService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-14T16:24:40.454Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "OtpSecurityHelper.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Security\\OtpSecurityHelper.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Security\\OtpSecurityHelper.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Security\\OtpSecurityHelper.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Application\\Security\\OtpSecurityHelper.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAjAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-14T19:36:40.76Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "IRegistrationService.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IRegistrationService.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IRegistrationService.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IRegistrationService.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Application\\Interfaces\\IRegistrationService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-14T16:23:51.373Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "IPasswordHasher.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IPasswordHasher.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IPasswordHasher.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IPasswordHasher.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Application\\Interfaces\\IPasswordHasher.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-14T16:23:35.553Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "IOtpService.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IOtpService.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IOtpService.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IOtpService.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Application\\Interfaces\\IOtpService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-13T07:29:28.667Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "ILoginService.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\ILoginService.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\ILoginService.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\ILoginService.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Application\\Interfaces\\ILoginService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-14T16:22:52.869Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "IJwtTokenGenerator.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IJwtTokenGenerator.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IJwtTokenGenerator.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IJwtTokenGenerator.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Application\\Interfaces\\IJwtTokenGenerator.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-12T05:38:20.209Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "IAuthService.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IAuthService.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IAuthService.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IAuthService.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Application\\Interfaces\\IAuthService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-14T16:19:07.188Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
               "Title": "MiddlemanNotification.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Entities\\MiddlemanNotification.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Domain\\Entities\\MiddlemanNotification.cs",
               "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Entities\\MiddlemanNotification.cs",
               "RelativeToolTip": "AgriPurchaseBilling.Domain\\Entities\\MiddlemanNotification.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-18T10:21:03.213Z",
               "EditorCaption": "",
@@ -370,33 +611,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "appsettings.json",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\appsettings.json",
-              "RelativeDocumentMoniker": "appsettings.json",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\appsettings.json",
-              "RelativeToolTip": "appsettings.json",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAC2AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-11-10T04:11:29.165Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "MiddlemanProfileController.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\MiddlemanProfileController.cs",
-              "RelativeDocumentMoniker": "AgriPurchaseBilling.Api\\Controllers\\MiddlemanProfileController.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\MiddlemanProfileController.cs",
-              "RelativeToolTip": "AgriPurchaseBilling.Api\\Controllers\\MiddlemanProfileController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAxAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-12T13:19:49.192Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 20,
               "Title": "MiddlemanNotificationRepository.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Repositories\\MiddlemanNotificationRepository.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Repositories\\MiddlemanNotificationRepository.cs",
@@ -409,7 +624,33 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 19,
+              "Title": "MiddlemanNotificationsController.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\MiddlemanNotificationsController.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Api\\Controllers\\MiddlemanNotificationsController.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\MiddlemanNotificationsController.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Api\\Controllers\\MiddlemanNotificationsController.cs",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAAAAUAAAAdAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-18T10:27:30.604Z",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "MiddlemanProfileController.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\MiddlemanProfileController.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Api\\Controllers\\MiddlemanProfileController.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\MiddlemanProfileController.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Api\\Controllers\\MiddlemanProfileController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAxAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-12T13:19:49.192Z",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
               "Title": "MiddlemanNotificationService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Services\\MiddlemanNotificationService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Services\\MiddlemanNotificationService.cs",
@@ -422,7 +663,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 22,
               "Title": "IMiddlemanProfileService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IMiddlemanProfileService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IMiddlemanProfileService.cs",
@@ -435,7 +676,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 23,
               "Title": "IOtpRepository.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IOtpRepository.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IOtpRepository.cs",
@@ -448,7 +689,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 24,
               "Title": "IMiddlemanNotificationService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IMiddlemanNotificationService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IMiddlemanNotificationService.cs",
@@ -461,7 +702,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 25,
               "Title": "IMiddlemanNotificationRepository.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IMiddlemanNotificationRepository.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IMiddlemanNotificationRepository.cs",
@@ -474,7 +715,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 26,
               "Title": "MiddlemanNotificationDtos.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\DTOs\\MiddlemanNotificationDtos.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\DTOs\\MiddlemanNotificationDtos.cs",
@@ -487,33 +728,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\Program.cs",
-              "RelativeDocumentMoniker": "Program.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\Program.cs",
-              "RelativeToolTip": "Program.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAKMAAAArAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-11T11:24:31.878Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 12,
-              "Title": "UserRepository.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Repositories\\UserRepository.cs",
-              "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Repositories\\UserRepository.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Repositories\\UserRepository.cs",
-              "RelativeToolTip": "AgriPurchaseBilling.Infrastructure\\Repositories\\UserRepository.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAuAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-12T06:06:30.04Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 27,
               "Title": "OtpRepository.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Repositories\\OtpRepository.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Repositories\\OtpRepository.cs",
@@ -526,20 +741,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
-              "Title": "RoleAccessController.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\RoleAccessController.cs",
-              "RelativeDocumentMoniker": "AgriPurchaseBilling.Api\\Controllers\\RoleAccessController.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\RoleAccessController.cs",
-              "RelativeToolTip": "AgriPurchaseBilling.Api\\Controllers\\RoleAccessController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAANAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-12T06:17:18.439Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 28,
               "Title": "RegistrationController.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\RegistrationController.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Api\\Controllers\\RegistrationController.cs",
@@ -552,7 +754,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 29,
               "Title": "VendorProfileController.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\VendorProfileController.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Api\\Controllers\\VendorProfileController.cs",
@@ -565,20 +767,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 69,
-              "Title": "IAuthService.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IAuthService.cs",
-              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IAuthService.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IAuthService.cs",
-              "RelativeToolTip": "AgriPurchaseBilling.Application\\Interfaces\\IAuthService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-14T16:19:07.188Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 70,
+              "DocumentIndex": 73,
               "Title": "VendorProfileDtos.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\DTOs\\VendorProfileDtos.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\DTOs\\VendorProfileDtos.cs",
@@ -591,7 +780,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 71,
+              "DocumentIndex": 74,
               "Title": "VendorMobileChangeDtos.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\DTOs\\VendorMobileChangeDtos.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\DTOs\\VendorMobileChangeDtos.cs",
@@ -604,7 +793,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 72,
+              "DocumentIndex": 75,
               "Title": "OtpDtos.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\DTOs\\OtpDtos.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\DTOs\\OtpDtos.cs",
@@ -617,7 +806,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 73,
+              "DocumentIndex": 76,
               "Title": "MiddlemanProfileDtos.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\DTOs\\MiddlemanProfileDtos.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\DTOs\\MiddlemanProfileDtos.cs",
@@ -630,7 +819,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 74,
+              "DocumentIndex": 77,
               "Title": "FarmerProfileDtos.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\DTOs\\FarmerProfileDtos.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\DTOs\\FarmerProfileDtos.cs",
@@ -643,7 +832,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 75,
+              "DocumentIndex": 78,
               "Title": "CustomerProfileDtos.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\DTOs\\CustomerProfileDtos.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\DTOs\\CustomerProfileDtos.cs",
@@ -656,20 +845,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 76,
-              "Title": "AuthDtos.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\DTOs\\AuthDtos.cs",
-              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\DTOs\\AuthDtos.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\DTOs\\AuthDtos.cs",
-              "RelativeToolTip": "AgriPurchaseBilling.Application\\DTOs\\AuthDtos.cs",
-              "ViewState": "AgIAAD4AAAAAAAAAAAAnwAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-12T05:42:26.884Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 77,
+              "DocumentIndex": 79,
               "Title": "ApiResponse.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Common\\ApiResponse.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Common\\ApiResponse.cs",
@@ -682,7 +858,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 78,
+              "DocumentIndex": 80,
               "Title": "CustomerProfileSetup.sql ",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\DatabaseScripts\\CustomerProfileSetup.sql",
               "RelativeDocumentMoniker": "DatabaseScripts\\CustomerProfileSetup.sql",
@@ -694,7 +870,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 79,
+              "DocumentIndex": 81,
               "Title": "AgriPurchaseBilling.Application",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj",
@@ -707,7 +883,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 30,
               "Title": "FarmerProfileController.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\FarmerProfileController.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Api\\Controllers\\FarmerProfileController.cs",
@@ -720,7 +896,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 31,
               "Title": "CustomerProfileController.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\CustomerProfileController.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Api\\Controllers\\CustomerProfileController.cs",
@@ -733,20 +909,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
-              "Title": "AuthController.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\AuthController.cs",
-              "RelativeDocumentMoniker": "AgriPurchaseBilling.Api\\Controllers\\AuthController.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\AuthController.cs",
-              "RelativeToolTip": "AgriPurchaseBilling.Api\\Controllers\\AuthController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAE4AAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-14T16:33:37.872Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 32,
               "Title": "SmtpEmailService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Services\\SmtpEmailService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Services\\SmtpEmailService.cs",
@@ -759,7 +922,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 33,
               "Title": "PasswordHasher.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Services\\PasswordHasher.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Services\\PasswordHasher.cs",
@@ -772,7 +935,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 34,
               "Title": "MiddlemanProfileService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Services\\MiddlemanProfileService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Services\\MiddlemanProfileService.cs",
@@ -785,20 +948,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
-              "Title": "JwtTokenGenerator.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Services\\JwtTokenGenerator.cs",
-              "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Services\\JwtTokenGenerator.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Services\\JwtTokenGenerator.cs",
-              "RelativeToolTip": "AgriPurchaseBilling.Infrastructure\\Services\\JwtTokenGenerator.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-12T05:39:10.064Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 24,
+              "DocumentIndex": 35,
               "Title": "VendorProfileRepository.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Repositories\\VendorProfileRepository.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Repositories\\VendorProfileRepository.cs",
@@ -811,7 +961,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 25,
+              "DocumentIndex": 36,
               "Title": "FarmerProfileRepository.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Repositories\\FarmerProfileRepository.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Repositories\\FarmerProfileRepository.cs",
@@ -824,7 +974,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 26,
+              "DocumentIndex": 37,
               "Title": "CustomerProfileRepository.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Repositories\\CustomerProfileRepository.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Repositories\\CustomerProfileRepository.cs",
@@ -837,7 +987,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 80,
+              "DocumentIndex": 82,
               "Title": "CustomerUser.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Downloads\\ARPPB_Profiles\\Backend\\AgriPurchaseBilling.Infrastructure\\Data\\CustomerUser.cs",
               "RelativeDocumentMoniker": "..\\..\\..\\Downloads\\ARPPB_Profiles\\Backend\\AgriPurchaseBilling.Infrastructure\\Data\\CustomerUser.cs",
@@ -850,7 +1000,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 81,
+              "DocumentIndex": 83,
               "Title": "CustomerDbContext.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Downloads\\ARPPB_Profiles\\Backend\\AgriPurchaseBilling.Infrastructure\\Data\\CustomerDbContext.cs",
               "RelativeDocumentMoniker": "..\\..\\..\\Downloads\\ARPPB_Profiles\\Backend\\AgriPurchaseBilling.Infrastructure\\Data\\CustomerDbContext.cs",
@@ -863,7 +1013,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 27,
+              "DocumentIndex": 38,
               "Title": "AppDbContext.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Data\\AppDbContext.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Data\\AppDbContext.cs",
@@ -876,7 +1026,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 28,
+              "DocumentIndex": 39,
               "Title": "CustomerProfileModuleExtensions.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Configuration\\CustomerProfileModuleExtensions.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Configuration\\CustomerProfileModuleExtensions.cs",
@@ -889,7 +1039,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 29,
+              "DocumentIndex": 40,
               "Title": "UserRole.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Enums\\UserRole.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Domain\\Enums\\UserRole.cs",
@@ -902,7 +1052,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 30,
+              "DocumentIndex": 41,
               "Title": "VendorProfile.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Entities\\VendorProfile.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Domain\\Entities\\VendorProfile.cs",
@@ -915,7 +1065,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 31,
+              "DocumentIndex": 42,
               "Title": "VendorBankAccount.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Entities\\VendorBankAccount.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Domain\\Entities\\VendorBankAccount.cs",
@@ -928,7 +1078,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 32,
+              "DocumentIndex": 43,
               "Title": "Vendor.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Entities\\Vendor.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Domain\\Entities\\Vendor.cs",
@@ -941,7 +1091,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 33,
+              "DocumentIndex": 44,
               "Title": "UserOtp.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Entities\\UserOtp.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Domain\\Entities\\UserOtp.cs",
@@ -954,7 +1104,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 34,
+              "DocumentIndex": 45,
               "Title": "UserMobileHistory.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Entities\\UserMobileHistory.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Domain\\Entities\\UserMobileHistory.cs",
@@ -967,7 +1117,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 35,
+              "DocumentIndex": 46,
               "Title": "User.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Entities\\User.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Domain\\Entities\\User.cs",
@@ -980,7 +1130,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 36,
+              "DocumentIndex": 47,
               "Title": "MiddlemanProfile.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Entities\\MiddlemanProfile.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Domain\\Entities\\MiddlemanProfile.cs",
@@ -993,7 +1143,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 37,
+              "DocumentIndex": 48,
               "Title": "Middleman.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Entities\\Middleman.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Domain\\Entities\\Middleman.cs",
@@ -1006,7 +1156,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 38,
+              "DocumentIndex": 49,
               "Title": "FarmerMobileHistory.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Entities\\FarmerMobileHistory.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Domain\\Entities\\FarmerMobileHistory.cs",
@@ -1019,7 +1169,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 39,
+              "DocumentIndex": 50,
               "Title": "FarmerBankAccount.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Entities\\FarmerBankAccount.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Domain\\Entities\\FarmerBankAccount.cs",
@@ -1032,7 +1182,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 40,
+              "DocumentIndex": 51,
               "Title": "Farmer.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Entities\\Farmer.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Domain\\Entities\\Farmer.cs",
@@ -1045,7 +1195,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 41,
+              "DocumentIndex": 52,
               "Title": "CustomerProfileEntities.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Entities\\CustomerProfileEntities.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Domain\\Entities\\CustomerProfileEntities.cs",
@@ -1058,7 +1208,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 42,
+              "DocumentIndex": 53,
               "Title": "Customer.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Domain\\Entities\\Customer.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Domain\\Entities\\Customer.cs",
@@ -1071,7 +1221,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 43,
+              "DocumentIndex": 54,
               "Title": "AuthValidators.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Validators\\AuthValidators.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Validators\\AuthValidators.cs",
@@ -1084,7 +1234,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 44,
+              "DocumentIndex": 55,
               "Title": "VendorProfileService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Services\\VendorProfileService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Services\\VendorProfileService.cs",
@@ -1097,7 +1247,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 45,
+              "DocumentIndex": 56,
               "Title": "VendorMobileChangeService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Services\\VendorMobileChangeService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Services\\VendorMobileChangeService.cs",
@@ -1110,7 +1260,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 46,
+              "DocumentIndex": 57,
               "Title": "OtpService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Services\\OtpService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Services\\OtpService.cs",
@@ -1123,7 +1273,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 47,
+              "DocumentIndex": 58,
               "Title": "LoginService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Services\\LoginService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Services\\LoginService.cs",
@@ -1136,7 +1286,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 48,
+              "DocumentIndex": 59,
               "Title": "ForgotPasswordService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Services\\ForgotPasswordService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Services\\ForgotPasswordService.cs",
@@ -1149,7 +1299,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 49,
+              "DocumentIndex": 60,
               "Title": "FarmerProfileService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Services\\FarmerProfileService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Services\\FarmerProfileService.cs",
@@ -1162,7 +1312,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 50,
+              "DocumentIndex": 61,
               "Title": "CustomerProfileService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Services\\CustomerProfileService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Services\\CustomerProfileService.cs",
@@ -1175,20 +1325,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 51,
-              "Title": "AuthService.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Services\\AuthService.cs",
-              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Services\\AuthService.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Services\\AuthService.cs",
-              "RelativeToolTip": "AgriPurchaseBilling.Application\\Services\\AuthService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-14T16:24:40.454Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 52,
+              "DocumentIndex": 62,
               "Title": "MiddlemanProfileService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\AppData\\Local\\Temp\\CopilotBaseline\\Deleted\\-1877409672\\MiddlemanProfileService.cs",
               "RelativeDocumentMoniker": "..\\..\\..\\AppData\\Local\\Temp\\CopilotBaseline\\Deleted\\-1877409672\\MiddlemanProfileService.cs",
@@ -1201,20 +1338,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 53,
-              "Title": "OtpSecurityHelper.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Security\\OtpSecurityHelper.cs",
-              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Security\\OtpSecurityHelper.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Security\\OtpSecurityHelper.cs",
-              "RelativeToolTip": "AgriPurchaseBilling.Application\\Security\\OtpSecurityHelper.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAjAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-14T19:36:40.76Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 54,
+              "DocumentIndex": 63,
               "Title": "IVendorProfileService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IVendorProfileService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IVendorProfileService.cs",
@@ -1227,7 +1351,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 55,
+              "DocumentIndex": 64,
               "Title": "IVendorProfileRepository.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IVendorProfileRepository.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IVendorProfileRepository.cs",
@@ -1240,7 +1364,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 56,
+              "DocumentIndex": 65,
               "Title": "IVendorMobileChangeService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IVendorMobileChangeService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IVendorMobileChangeService.cs",
@@ -1253,7 +1377,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 57,
+              "DocumentIndex": 66,
               "Title": "IUserRepository.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IUserRepository.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IUserRepository.cs",
@@ -1266,72 +1390,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 58,
-              "Title": "IRegistrationService.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IRegistrationService.cs",
-              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IRegistrationService.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IRegistrationService.cs",
-              "RelativeToolTip": "AgriPurchaseBilling.Application\\Interfaces\\IRegistrationService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-14T16:23:51.373Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 59,
-              "Title": "IPasswordHasher.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IPasswordHasher.cs",
-              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IPasswordHasher.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IPasswordHasher.cs",
-              "RelativeToolTip": "AgriPurchaseBilling.Application\\Interfaces\\IPasswordHasher.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-14T16:23:35.553Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 60,
-              "Title": "IOtpService.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IOtpService.cs",
-              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IOtpService.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IOtpService.cs",
-              "RelativeToolTip": "AgriPurchaseBilling.Application\\Interfaces\\IOtpService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-13T07:29:28.667Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 61,
-              "Title": "ILoginService.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\ILoginService.cs",
-              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\ILoginService.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\ILoginService.cs",
-              "RelativeToolTip": "AgriPurchaseBilling.Application\\Interfaces\\ILoginService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-14T16:22:52.869Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 62,
-              "Title": "IJwtTokenGenerator.cs",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IJwtTokenGenerator.cs",
-              "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IJwtTokenGenerator.cs",
-              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IJwtTokenGenerator.cs",
-              "RelativeToolTip": "AgriPurchaseBilling.Application\\Interfaces\\IJwtTokenGenerator.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-12T05:38:20.209Z",
-              "OwnerCaption": "%2"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 63,
+              "DocumentIndex": 67,
               "Title": "IForgotPasswordService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IForgotPasswordService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IForgotPasswordService.cs",
@@ -1344,7 +1403,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 64,
+              "DocumentIndex": 68,
               "Title": "IFarmerProfileService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IFarmerProfileService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IFarmerProfileService.cs",
@@ -1357,7 +1416,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 65,
+              "DocumentIndex": 69,
               "Title": "IFarmerProfileRepository.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IFarmerProfileRepository.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IFarmerProfileRepository.cs",
@@ -1370,7 +1429,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 66,
+              "DocumentIndex": 70,
               "Title": "IEmailService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\IEmailService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\IEmailService.cs",
@@ -1383,7 +1442,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 67,
+              "DocumentIndex": 71,
               "Title": "ICustomerProfileService.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\ICustomerProfileService.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\ICustomerProfileService.cs",
@@ -1396,7 +1455,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 68,
+              "DocumentIndex": 72,
               "Title": "ICustomerProfileRepository.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\Interfaces\\ICustomerProfileRepository.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\Interfaces\\ICustomerProfileRepository.cs",
@@ -1406,6 +1465,29 @@
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-14T19:31:00.704Z",
               "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 84,
+              "Title": "FarmerSalesModuleExtensions.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Configuration\\FarmerSalesModuleExtensions.cs",
+              "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Configuration\\FarmerSalesModuleExtensions.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Configuration\\FarmerSalesModuleExtensions.cs",
+              "RelativeToolTip": "AgriPurchaseBilling.Infrastructure\\Configuration\\FarmerSalesModuleExtensions.cs",
+              "ViewState": "AgIAAGcAAAAAAAAAACBjwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-23T04:55:36.288Z",
+              "OwnerCaption": "%2"
+            }
+          ]
+        },
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{40ea2e6b-2121-4bb8-a43e-c83c04b51041}"
             }
           ]
         }

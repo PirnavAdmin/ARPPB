@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AgriPurchaseBilling.Infrastructure.Repositories
 {
-    public sealed class RefreshTokenRepository(AppDbContext context)
+    public class RefreshTokenRepository(AppDbContext context)
         : IRefreshTokenRepository
     {
         private async Task<DbConnection> OpenAsync(CancellationToken cancellationToken)

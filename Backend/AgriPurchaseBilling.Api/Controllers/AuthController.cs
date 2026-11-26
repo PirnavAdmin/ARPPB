@@ -50,7 +50,9 @@ namespace AgriPurchaseBilling.Api.Controllers
             return Ok(result);
         }
 
-        /// <summary>Rotate a refresh token and issue a new access token.</summary>
+        /// <summary>
+        /// Rotate a refresh token and issue a new access token.
+        /// </summary>
         [AllowAnonymous]
         [HttpPost("refresh")]
         [ProducesResponseType(typeof(ApiResponse<RefreshTokenResponseDto>), StatusCodes.Status200OK)]
@@ -75,7 +77,9 @@ namespace AgriPurchaseBilling.Api.Controllers
                 "Tokens refreshed successfully."));
         }
 
-        /// <summary>Revoke the refresh token for the current session.</summary>
+        /// <summary>
+        /// Revoke the refresh token for the current session.
+        /// </summary>
         [AllowAnonymous]
         [HttpPost("logout")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]

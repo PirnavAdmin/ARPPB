@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace AgriPurchaseBilling.Application.Services
 {
-    public sealed class RefreshTokenService : IRefreshTokenService
+    public class RefreshTokenService : IRefreshTokenService
     {
         private readonly IRefreshTokenRepository _repository;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
