@@ -1,4 +1,3 @@
-import React, { useMemo } from 'react';
 import React, { useMemo, useEffect } from 'react';
 import {
   ShoppingCart,
@@ -31,7 +30,6 @@ const MIDDLEMAN_SUB_LEDGER_TABS = [
 ];
 
 export const LedgerPage = () => {
-  const { ledger, settleLedgerEntry, dashboardMetrics } = useMiddleman();
   const { ledger, settleLedgerEntry, refreshLedger, dashboardMetrics } = useMiddleman();
 
   useEffect(() => {
