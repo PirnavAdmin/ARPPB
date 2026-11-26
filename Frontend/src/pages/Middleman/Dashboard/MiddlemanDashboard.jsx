@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   Building2,
@@ -24,7 +24,20 @@ import { SectionCard } from '../components/common/SectionCard';
 
 export const MiddlemanDashboard = () => {
   const navigate = useNavigate();
-  const { profile, dashboardMetrics, purchases, vendorSales, customerSales, confirmations } = useMiddleman();
+  const {
+    profile,
+    dashboardData,
+    refreshDashboard,
+    dashboardMetrics,
+    purchases,
+    vendorSales,
+    customerSales,
+    confirmations,
+  } = useMiddleman();
+
+  useEffect(() => {
+    refreshDashboard?.();
+  }, [refreshDashboard]);
 
   // 0 = First Group (Primary Metrics 1/2), 1 = Second Group (Additional Metrics 2/2)
   const [activeKpiGroup, setActiveKpiGroup] = useState(0);
@@ -172,9 +185,8 @@ export const MiddlemanDashboard = () => {
           {/* Horizontal Sliding Viewport */}
           <div className="flex-1 min-w-0 overflow-hidden py-1 -my-1 px-0.5 -mx-0.5">
             <div
-              className={`flex w-[200%] transition-transform duration-500 ease-in-out ${
-                activeKpiGroup === 0 ? 'translate-x-0' : '-translate-x-1/2'
-              }`}
+              className={`flex w-[200%] transition-transform duration-500 ease-in-out ${activeKpiGroup === 0 ? 'translate-x-0' : '-translate-x-1/2'
+                }`}
             >
               {/* Slide 1: First Group – 5 Primary KPI Cards in Landscape Row */}
               <div
@@ -229,22 +241,20 @@ export const MiddlemanDashboard = () => {
               onClick={() => setActiveKpiGroup(0)}
               aria-label="Show Primary Metrics (1/2)"
               title="Primary Metrics – 1/2"
-              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                activeKpiGroup === 0
+              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${activeKpiGroup === 0
                   ? 'w-5 bg-[#0F766E]'
                   : 'w-2 bg-[#CBD5E1] hover:bg-[#14B8A6]'
-              }`}
+                }`}
             />
             <button
               type="button"
               onClick={() => setActiveKpiGroup(1)}
               aria-label="Show Additional Metrics (2/2)"
               title="Additional Metrics – 2/2"
-              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                activeKpiGroup === 1
+              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${activeKpiGroup === 1
                   ? 'w-5 bg-[#0F766E]'
                   : 'w-2 bg-[#CBD5E1] hover:bg-[#14B8A6]'
-              }`}
+                }`}
             />
           </div>
         </div>
@@ -281,7 +291,7 @@ export const MiddlemanDashboard = () => {
             className="w-full h-[420px] flex flex-col"
             bodyClassName="p-5 sm:p-6 flex-1 min-h-0 flex flex-col"
           >
-            <PurchaseSalesChart />
+            <PurchaseSalesChart apiSeries={dashboardData?.purchaseVsSalesComparison} />
           </SectionCard>
         </div>
       </div>

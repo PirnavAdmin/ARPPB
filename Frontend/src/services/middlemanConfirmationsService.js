@@ -3,9 +3,21 @@ import Endpoints from '../API/Endpoints';
 
 export async function fetchMiddlemanConfirmationsSummaryApi() {
   try {
-    const res = await api.get(Endpoints.MiddlemanConfirmations.summary);
+    const res = await api.get(Endpoints.MiddlemanConfirmations.getAll, {
+      params: { page: 1, pageSize: 1 },
+    });
+    if (res?.data?.summary) {
+      return res.data.summary;
+    }
     if (res?.data?.success) {
-      return res.data.data;
+      return {
+        pendingCount: res.data.totalPending ?? 0,
+        verifiedCount: res.data.totalVerified ?? 0,
+        failedOrExpiredCount: res.data.totalExpired ?? 0,
+        farmerCount: res.data.farmerPending ?? 0,
+        vendorCount: res.data.vendorPending ?? 0,
+        customerCount: res.data.customerPending ?? 0,
+      };
     }
     return res?.data || null;
   } catch (err) {
@@ -17,15 +29,15 @@ export async function fetchMiddlemanConfirmationsSummaryApi() {
 export async function fetchMiddlemanConfirmationsApi(query = {}) {
   try {
     const effectivePageSize = query.pageSize || 1000;
-    const params = new URLSearchParams();
-    if (query.category && query.category !== 'All') params.append('category', query.category);
-    if (query.otpStatus && query.otpStatus !== 'All') params.append('otpStatus', query.otpStatus);
-    if (query.search) params.append('search', query.search);
-    if (query.page) params.append('page', query.page);
-    params.append('pageSize', effectivePageSize);
+    const params = {};
+    if (query.category && query.category !== 'All') params.category = query.category;
+    if (query.otpStatus && query.otpStatus !== 'All') params.otpStatus = query.otpStatus;
+    if (query.search) params.search = query.search;
+    if (query.partyFilter) params.partyFilter = query.partyFilter;
+    if (query.page) params.page = query.page;
+    params.pageSize = effectivePageSize;
 
-    const url = `${Endpoints.MiddlemanConfirmations.getAll}?${params.toString()}`;
-    const res = await api.get(url);
+    const res = await api.get(Endpoints.MiddlemanConfirmations.getAll, { params });
     if (res?.data?.success) {
       return res.data.data?.items || res.data.data || [];
     }
@@ -37,8 +49,11 @@ export async function fetchMiddlemanConfirmationsApi(query = {}) {
 }
 
 export async function fetchMiddlemanConfirmationByIdApi(id) {
+  if (!id) return null;
   try {
-    const res = await api.get(Endpoints.MiddlemanConfirmations.getById(id));
+    const res = await api.get(Endpoints.MiddlemanConfirmations.getAll, {
+      params: { id },
+    });
     if (res?.data?.success) {
       return res.data.data;
     }

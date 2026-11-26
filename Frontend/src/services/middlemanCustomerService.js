@@ -144,6 +144,18 @@ export async function fetchMiddlemanCustomerSalesApi(params = {}) {
   }
 }
 
+export async function fetchMiddlemanCustomerSaleByIdApi(id) {
+  if (!id) return null;
+  try {
+    const res = await api.get(Endpoints.MiddlemanCustomerSales.getById(id));
+    const data = res.data?.data ?? res.data;
+    return data ? mapMiddlemanCustomerSaleDto(data) : null;
+  } catch (err) {
+    console.warn('fetchMiddlemanCustomerSaleByIdApi fallback:', err?.message || err);
+    return null;
+  }
+}
+
 export async function createMiddlemanCustomerSaleApi(saleData, isDraft = false) {
   try {
     const res = await api.post(Endpoints.MiddlemanCustomerSales.create, {

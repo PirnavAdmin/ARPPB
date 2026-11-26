@@ -11,6 +11,7 @@ import { FilterDropdown } from '../components/common/FilterDropdown';
 import { Pagination } from '../components/common/Pagination';
 import { SectionCard } from '../components/common/SectionCard';
 import { VENDOR_BUSINESS_TYPES } from '../../../data/mock/middleman/vendorData';
+import { fetchMiddlemanVendorByIdApi } from '../../../services/middlemanVendorService';
 
 export const VendorsPage = ({ initialOpenRegister = false }) => {
   const navigate = useNavigate();
@@ -32,6 +33,17 @@ export const VendorsPage = ({ initialOpenRegister = false }) => {
   const [isFormOpen, setIsFormOpen] = useState(shouldOpenRegister);
   const [editingVendor, setEditingVendor] = useState(null);
   const [viewingVendor, setViewingVendor] = useState(null);
+
+  const handleViewVendor = async (v) => {
+    setViewingVendor(v);
+    const id = v?.vendorId || v?.id;
+    if (id) {
+      const detail = await fetchMiddlemanVendorByIdApi(id);
+      if (detail) {
+        setViewingVendor((prev) => (prev ? { ...prev, ...detail } : prev));
+      }
+    }
+  };
 
   useEffect(() => {
     if (shouldOpenRegister) {
@@ -141,6 +153,7 @@ export const VendorsPage = ({ initialOpenRegister = false }) => {
         <VendorTable
           vendors={paginatedVendors}
           onView={(v) => setViewingVendor(v)}
+          onView={handleViewVendor}
           onEdit={(v) => {
             setEditingVendor(v);
             setIsFormOpen(true);

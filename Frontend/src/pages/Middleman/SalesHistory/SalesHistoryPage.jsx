@@ -13,11 +13,22 @@ import { SectionCard } from '../components/common/SectionCard';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { CROP_LIST } from '../../../utils/middleman/transactionHelpers';
 import { formatINR, formatDate, formatQuantity } from '../../../utils/middleman/formatters';
+import { fetchMiddlemanTransactionHistoryApi } from '../../../services/middleman';
+import { fetchMiddlemanPurchaseByIdApi } from '../../../services/middlemanPurchaseService';
+import { fetchMiddlemanVendorSaleByIdApi } from '../../../services/middlemanVendorService';
+import { fetchMiddlemanCustomerSaleByIdApi } from '../../../services/middlemanCustomerService';
 
 export const SalesHistoryPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { purchases, vendorSales, customerSales } = useMiddleman();
+  const {
+    purchases,
+    vendorSales,
+    customerSales,
+    refreshPurchases,
+    refreshVendorSales,
+    refreshCustomerSales,
+  } = useMiddleman();
 
   // Active tab: 'farmer' (1st), 'vendor' (2nd), or 'customer' (3rd)
   const [activeTab, setActiveTab] = useState(() => {
@@ -34,6 +45,46 @@ export const SalesHistoryPage = () => {
 
   const [selectedPurchase, setSelectedPurchase] = useState(null);
   const [selectedSale, setSelectedSale] = useState(null);
+
+  useEffect(() => {
+    fetchMiddlemanTransactionHistoryApi({ tab: activeTab, page: 1, pageSize: 100 }).catch(() => null);
+    if (activeTab === 'farmer') refreshPurchases?.();
+    else if (activeTab === 'vendor') refreshVendorSales?.();
+    else refreshCustomerSales?.();
+  }, [activeTab, refreshPurchases, refreshVendorSales, refreshCustomerSales]);
+
+  const handleViewPurchaseDetails = async (p) => {
+    setSelectedPurchase(p);
+    const id = p?.purchaseId || p?.id;
+    if (id) {
+      const detail = await fetchMiddlemanPurchaseByIdApi(id);
+      if (detail) {
+        setSelectedPurchase((prev) => (prev ? { ...prev, ...detail } : prev));
+      }
+    }
+  };
+
+  const handleViewVendorSaleDetails = async (s) => {
+    setSelectedSale({ ...s, isCustomer: false });
+    const id = s?.saleId || s?.id;
+    if (id) {
+      const detail = await fetchMiddlemanVendorSaleByIdApi(id);
+      if (detail) {
+        setSelectedSale((prev) => (prev ? { ...prev, ...detail, isCustomer: false } : prev));
+      }
+    }
+  };
+
+  const handleViewCustomerSaleDetails = async (s) => {
+    setSelectedSale({ ...s, isCustomer: true });
+    const id = s?.saleId || s?.id;
+    if (id) {
+      const detail = await fetchMiddlemanCustomerSaleByIdApi(id);
+      if (detail) {
+        setSelectedSale((prev) => (prev ? { ...prev, ...detail, isCustomer: true } : prev));
+      }
+    }
+  };
 
   useEffect(() => {
     if (location.state?.activeTab) {
@@ -97,8 +148,8 @@ export const SalesHistoryPage = () => {
     activeTab === 'farmer'
       ? filteredPurchases
       : activeTab === 'vendor'
-      ? filteredVendorSales
-      : filteredCustomerSales;
+        ? filteredVendorSales
+        : filteredCustomerSales;
   const totalItems = currentDataset.length;
   const paginatedData = currentDataset.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
@@ -145,11 +196,10 @@ export const SalesHistoryPage = () => {
             setActiveTab('farmer');
             setCurrentPage(1);
           }}
-          className={`flex items-center gap-2 pb-3 px-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${
-            activeTab === 'farmer'
+          className={`flex items-center gap-2 pb-3 px-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'farmer'
               ? 'border-[#0F766E] text-[#0F766E]'
               : 'border-transparent text-[#64748B] hover:text-[#1F2937]'
-          }`}
+            }`}
         >
           <ShoppingCart className="w-4 h-4" />
           <span>Farmer Purchase History</span>
@@ -164,11 +214,10 @@ export const SalesHistoryPage = () => {
             setActiveTab('vendor');
             setCurrentPage(1);
           }}
-          className={`flex items-center gap-2 pb-3 px-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${
-            activeTab === 'vendor'
+          className={`flex items-center gap-2 pb-3 px-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'vendor'
               ? 'border-[#0F766E] text-[#0F766E]'
               : 'border-transparent text-[#64748B] hover:text-[#1F2937]'
-          }`}
+            }`}
         >
           <Building2 className="w-4 h-4" />
           <span>Sales to Vendors</span>
@@ -183,11 +232,10 @@ export const SalesHistoryPage = () => {
             setActiveTab('customer');
             setCurrentPage(1);
           }}
-          className={`flex items-center gap-2 pb-3 px-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${
-            activeTab === 'customer'
+          className={`flex items-center gap-2 pb-3 px-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'customer'
               ? 'border-[#0F766E] text-[#0F766E]'
               : 'border-transparent text-[#64748B] hover:text-[#1F2937]'
-          }`}
+            }`}
         >
           <Store className="w-4 h-4" />
           <span>Sales to Customers</span>
@@ -209,8 +257,8 @@ export const SalesHistoryPage = () => {
             activeTab === 'farmer'
               ? 'Search by Purchase ID, Farmer Name, Crop...'
               : activeTab === 'vendor'
-              ? 'Search by Vendor, Order ID, Crop...'
-              : 'Search by Customer, Order ID, Crop...'
+                ? 'Search by Vendor, Order ID, Crop...'
+                : 'Search by Customer, Order ID, Crop...'
           }
           className="w-full sm:max-w-xs"
         />
@@ -243,17 +291,17 @@ export const SalesHistoryPage = () => {
         {activeTab === 'farmer' ? (
           <PurchaseHistoryTable
             purchases={paginatedData}
-            onViewDetails={(p) => setSelectedPurchase(p)}
+            onViewDetails={handleViewPurchaseDetails}
           />
         ) : activeTab === 'vendor' ? (
           <VendorSalesTable
             sales={paginatedData}
-            onViewDetails={(s) => setSelectedSale({ ...s, isCustomer: false })}
+            onViewDetails={handleViewVendorSaleDetails}
           />
         ) : (
           <CustomerSalesTable
             sales={paginatedData}
-            onViewDetails={(s) => setSelectedSale({ ...s, isCustomer: true })}
+            onViewDetails={handleViewCustomerSaleDetails}
           />
         )}
 
@@ -358,8 +406,8 @@ export const SalesHistoryPage = () => {
                   {formatINR(
                     selectedPurchase.additionalCharges ??
                     ((Number(selectedPurchase.transportation) || 0) +
-                     (Number(selectedPurchase.loading) || 0) +
-                     (Number(selectedPurchase.otherCharges) || 0))
+                      (Number(selectedPurchase.loading) || 0) +
+                      (Number(selectedPurchase.otherCharges) || 0))
                   )}
                 </span>
               </div>

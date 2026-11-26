@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useMiddleman } from '../../../context/middleman';
 import SharedOtpConfirmations from '../../../components/shared/otp-confirmations/OtpConfirmations';
 import { resendMiddlemanOtpApi } from '../../../services/middlemanConfirmationsService';
@@ -13,7 +13,11 @@ const MIDDLEMAN_OTP_TABS = [
 const MIDDLEMAN_OTP_STATUSES = ['Pending', 'Confirmed', 'Rejected', 'Expired'];
 
 export const OTPConfirmationsPage = () => {
-  const { confirmations, confirmTransaction, rejectTransaction } = useMiddleman();
+  const { confirmations, confirmTransaction, rejectTransaction, refreshConfirmations } = useMiddleman();
+
+  useEffect(() => {
+    refreshConfirmations?.();
+  }, [refreshConfirmations]);
 
   const handleVerifyOtp = ({ otpId, record, otp, enteredOtp }) => {
     const targetId = record?.confirmationId || record?.id || otpId;
@@ -32,9 +36,9 @@ export const OTPConfirmationsPage = () => {
 
   const handleResendOtp = async (_otpId, record) => {
     const targetId = record?.confirmationId || record?.id || _otpId;
-    resendMiddlemanOtpApi(targetId).catch(() => null);
-    // Generates a demo OTP (or refreshes active demo OTP code)
-    return record?.demoOtpCode || '488031';
+    const res = await resendMiddlemanOtpApi(targetId).catch(() => null);
+    refreshConfirmations?.();
+    return res?.data?.demoOtpCode || res?.data?.otpCode || record?.demoOtpCode || '488031';
   };
 
   return (

@@ -16,6 +16,7 @@ import {
   Printer,
   UserCheck,
   Scale,
+  Receipt,
   Home,
   ChevronRight,
 } from 'lucide-react';
@@ -377,6 +378,35 @@ export default function MyLedger({
       referenceId,
       remarks,
     };
+  }, [selectedVoucher, normalizedEntries]);
+
+  const linkedPayments = useMemo(() => {
+    if (!selectedVoucher) return [];
+    const parentId = selectedVoucher.raw?.id || selectedVoucher.id;
+    const parentTxId = selectedVoucher.transactionId;
+    const targetParentId = selectedVoucher.raw?.relatedEntryId || parentId;
+    const targetTxId = selectedVoucher.transactionId;
+
+    return normalizedEntries.filter((e) => {
+      const isPayOrRcpt =
+        e.category?.toLowerCase().includes('payment') ||
+        e.category?.toLowerCase().includes('receipt');
+      if (!isPayOrRcpt) return false;
+
+      const matchesTxId =
+        targetTxId &&
+        targetTxId !== '—' &&
+        (e.transactionId === targetTxId ||
+          e.referenceNo === targetTxId ||
+          e.description?.includes(targetTxId));
+      const matchesRelatedId =
+        targetParentId &&
+        ((e.raw?.relatedEntryId && String(e.raw.relatedEntryId) === String(targetParentId)) ||
+          e.id === `LDG-${String(targetParentId).padStart(4, '0')}` ||
+          (e.raw?.id && String(e.raw.id) === String(targetParentId)));
+
+      return matchesTxId || matchesRelatedId;
+    });
   }, [selectedVoucher, normalizedEntries]);
 
   const handleFilterChange = (key, value) => {
@@ -759,14 +789,21 @@ export default function MyLedger({
       align: 'right',
       render: (row) => {
         const allowSettle = canSettleRow
-          ? canSettleRow(row.raw)
+          ? canSettleRow(row.raw) || canSettleRow(row)
           : row.status !== 'Paid' &&
+            row.status !== 'Fully Paid' &&
+            row.status !== 'Settled' &&
             (row.outstandingAmount > 0 ||
               row.status === 'Unpaid' ||
               row.status === 'Partial' ||
               row.status === 'Partially Paid' ||
               row.status === 'Pending' ||
               row.status === 'Overdue');
+
+        const isPartiallyPaid =
+          row.status === 'Partially Paid' ||
+          row.status === 'Partial' ||
+          Number(row.settledAmount) > 0;
 
         return (
           <div className="flex items-center justify-end gap-1.5">
@@ -775,10 +812,10 @@ export default function MyLedger({
                 type="button"
                 onClick={() => handleSettleButtonClick(row)}
                 className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-primary text-white hover:bg-brand-secondary transition-colors cursor-pointer"
-                title="Record Settlement Payment"
+                title={isPartiallyPaid ? 'Settle Remaining Balance' : 'Record Settlement Payment'}
               >
                 <CreditCard className="w-3.5 h-3.5" />
-                Settle
+                {isPartiallyPaid ? 'Settle Remaining Amount' : 'Settle / Pay'}
               </button>
             )}
             <button
@@ -1217,6 +1254,79 @@ export default function MyLedger({
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Linked Payments & Partial Settlement History */}
+            <div className="p-4 rounded-xl border border-brand-border bg-brand-background/40 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-brand-text flex items-center gap-1.5">
+                  <Receipt className="w-4 h-4 text-brand-primary" />
+                  Payment & Settlement History
+                </h4>
+                <span className="text-[11px] font-semibold text-brand-muted">
+                  {linkedPayments.length} Settlement Record{linkedPayments.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              {linkedPayments.length > 0 ? (
+                <div className="overflow-x-auto rounded-lg border border-brand-border bg-brand-surface">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-brand-background/80 text-[11px] font-bold text-brand-muted uppercase border-b border-brand-border">
+                      <tr>
+                        <th className="px-3 py-2">Voucher ID</th>
+                        <th className="px-3 py-2">Date</th>
+                        <th className="px-3 py-2">Payment Mode</th>
+                        <th className="px-3 py-2">Reference / UTR</th>
+                        <th className="px-3 py-2 text-right">Amount Paid</th>
+                        <th className="px-3 py-2 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-brand-border">
+                      {linkedPayments.map((p, idx) => {
+                        const amt = Math.max(Number(p.debit || 0), Number(p.credit || 0));
+                        return (
+                          <tr key={p.id || idx} className="hover:bg-brand-background/40">
+                            <td className="px-3 py-2 font-mono font-semibold text-brand-primary">
+                              {p.id}
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap">
+                              {formatDate(p.date)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {p.paymentMode || 'NEFT / RTGS'}
+                            </td>
+                            <td className="px-3 py-2 font-mono text-[11px] text-brand-muted">
+                              {p.referenceNo || p.transactionId || '—'}
+                            </td>
+                            <td className="px-3 py-2 text-right font-extrabold text-brand-success">
+                              {formatCurrency(amt)}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-success-light/30 text-brand-success border border-brand-success/30">
+                                Settled
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : selectedVoucherFinancials.totalPaidSoFar > 0 ? (
+                <div className="p-3 rounded-lg border border-brand-border bg-brand-surface flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-semibold text-brand-text">Payment Recorded with Transaction</span>
+                    <span className="text-[11px] text-brand-muted block">Direct settlement accounted in ledger</span>
+                  </div>
+                  <span className="font-extrabold text-brand-success text-sm">
+                    {formatCurrency(selectedVoucherFinancials.totalPaidSoFar)}
+                  </span>
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg border border-brand-border bg-brand-surface text-center text-xs text-brand-muted">
+                  No settlement payments recorded yet for this transaction.
+                </div>
+              )}
             </div>
           </div>
         )}

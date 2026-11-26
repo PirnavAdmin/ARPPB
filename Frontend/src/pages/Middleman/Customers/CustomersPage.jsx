@@ -10,6 +10,7 @@ import { SearchInput } from '../components/common/SearchInput';
 import { FilterDropdown } from '../components/common/FilterDropdown';
 import { Pagination } from '../components/common/Pagination';
 import { SectionCard } from '../components/common/SectionCard';
+import { fetchMiddlemanCustomerByIdApi } from '../../../services/middlemanCustomerService';
 
 export const CustomersPage = ({ initialOpenRegister = false }) => {
   const navigate = useNavigate();
@@ -31,6 +32,17 @@ export const CustomersPage = ({ initialOpenRegister = false }) => {
   const [isFormOpen, setIsFormOpen] = useState(shouldOpenRegister);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewingCustomer, setViewingCustomer] = useState(null);
+
+  const handleViewCustomer = async (c) => {
+    setViewingCustomer(c);
+    const id = c?.customerId || c?.id;
+    if (id) {
+      const detail = await fetchMiddlemanCustomerByIdApi(id);
+      if (detail) {
+        setViewingCustomer((prev) => (prev ? { ...prev, ...detail } : prev));
+      }
+    }
+  };
 
   useEffect(() => {
     if (shouldOpenRegister) {
@@ -68,120 +80,120 @@ export const CustomersPage = ({ initialOpenRegister = false }) => {
     }
   };
 
-  const handleSaveCustomer = (formData) => {
-    if (editingCustomer) {
-      updateCustomer(editingCustomer.customerId, formData);
-    } else {
-      addCustomer(formData);
-    }
-    handleCloseForm();
-  };
+    const handleSaveCustomer = async (formData) => {
+      if (editingCustomer) {
+        await updateCustomer(editingCustomer.customerId, formData);
+      } else {
+        await addCustomer(formData);
+      }
+      handleCloseForm();
+    };
 
-  return (
-    <div className="space-y-6">
-      <MiddlemanPageHeader
-        title="Direct Customers & Retail Buyers"
-        subtitle={`Total: ${customers.length} registered consumer and retail buyers`}
-        actions={
-          <button
-            type="button"
-            onClick={() => {
-              setEditingCustomer(null);
-              setIsFormOpen(true);
-              navigate('/middleman/customers/register');
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-[#0F766E] text-white hover:bg-[#115E59] shadow-sm cursor-pointer transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Customer</span>
-          </button>
-        }
-      />
-
-      {/* Search & Filter */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-[#E2E8F0]">
-        <SearchInput
-          value={searchTerm}
-          onChange={(val) => {
-            setSearchTerm(val);
-            setCurrentPage(1);
-          }}
-          placeholder="Search by name, ID, mobile, address..."
-          className="w-full sm:max-w-xs"
-        />
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <FilterDropdown
-            label="District"
-            value={districtFilter}
-            onChange={(val) => {
-              setDistrictFilter(val);
-              setCurrentPage(1);
-            }}
-            options={districts}
-          />
-        </div>
-      </div>
-
-      {/* Table */}
-      <SectionCard bodyClassName="p-0">
-        <CustomerTable
-          customers={paginatedCustomers}
-          onView={(c) => setViewingCustomer(c)}
-          onEdit={(c) => {
-            setEditingCustomer(c);
-            setIsFormOpen(true);
-          }}
-          onViewSales={(c) =>
-            navigate('/middleman/sales-history', {
-              state: { activeTab: 'customer', partyFilter: c.name },
-            })
+    return (
+      <div className="space-y-6">
+        <MiddlemanPageHeader
+          title="Direct Customers & Retail Buyers"
+          subtitle={`Total: ${customers.length} registered consumer and retail buyers`}
+          actions={
+            <button
+              type="button"
+              onClick={() => {
+                setEditingCustomer(null);
+                setIsFormOpen(true);
+                navigate('/middleman/customers/register');
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-[#0F766E] text-white hover:bg-[#115E59] shadow-sm cursor-pointer transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Customer</span>
+            </button>
           }
         />
 
-        <Pagination
-          currentPage={currentPage}
-          totalItems={totalItems}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-        />
-      </SectionCard>
+        {/* Search & Filter */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-[#E2E8F0]">
+          <SearchInput
+            value={searchTerm}
+            onChange={(val) => {
+              setSearchTerm(val);
+              setCurrentPage(1);
+            }}
+            placeholder="Search by name, ID, mobile, address..."
+            className="w-full sm:max-w-xs"
+          />
 
-      {/* Add / Edit Modal */}
-      {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-[#E2E8F0] p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-base sm:text-lg font-bold text-[#1F2937] mb-1">
-              {editingCustomer ? 'Edit Customer Details' : 'Register New Customer'}
-            </h3>
-            <p className="text-xs text-[#64748B] mb-5">
-              Enter customer / retail shop contact and delivery address.
-            </p>
-            <CustomerForm
-              initialData={editingCustomer}
-              isEdit={Boolean(editingCustomer)}
-              onSave={handleSaveCustomer}
-              onCancel={handleCloseForm}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <FilterDropdown
+              label="District"
+              value={districtFilter}
+              onChange={(val) => {
+                setDistrictFilter(val);
+                setCurrentPage(1);
+              }}
+              options={districts}
             />
           </div>
         </div>
-      )}
 
-      {/* View Details Modal */}
-      {viewingCustomer && (
-        <CustomerDetails
-          customer={viewingCustomer}
-          sales={customerSales.filter((s) => s.customerId === viewingCustomer.customerId)}
-          onClose={() => setViewingCustomer(null)}
-          onEdit={(c) => {
-            setViewingCustomer(null);
-            setEditingCustomer(c);
-            setIsFormOpen(true);
-          }}
-        />
-      )}
-    </div>
-  );
-};
+        {/* Table */}
+        <SectionCard bodyClassName="p-0">
+          <CustomerTable
+            customers={paginatedCustomers}
+            onView={handleViewCustomer}
+            onEdit={(c) => {
+              setEditingCustomer(c);
+              setIsFormOpen(true);
+            }}
+            onViewSales={(c) =>
+              navigate('/middleman/sales-history', {
+                state: { activeTab: 'customer', partyFilter: c.name },
+              })
+            }
+          />
 
-export default CustomersPage;
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+          />
+        </SectionCard>
+
+        {/* Add / Edit Modal */}
+        {isFormOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fadeIn">
+            <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-[#E2E8F0] p-6 max-h-[90vh] overflow-y-auto">
+              <h3 className="text-base sm:text-lg font-bold text-[#1F2937] mb-1">
+                {editingCustomer ? 'Edit Customer Details' : 'Register New Customer'}
+              </h3>
+              <p className="text-xs text-[#64748B] mb-5">
+                Enter customer / retail shop contact and delivery address.
+              </p>
+              <CustomerForm
+                initialData={editingCustomer}
+                isEdit={Boolean(editingCustomer)}
+                onSave={handleSaveCustomer}
+                onCancel={handleCloseForm}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* View Details Modal */}
+        {viewingCustomer && (
+          <CustomerDetails
+            customer={viewingCustomer}
+            sales={customerSales.filter((s) => s.customerId === viewingCustomer.customerId)}
+            onClose={() => setViewingCustomer(null)}
+            onEdit={(c) => {
+              setViewingCustomer(null);
+              setEditingCustomer(c);
+              setIsFormOpen(true);
+            }}
+          />
+        )}
+      </div>
+    );
+  };
+
+  export default CustomersPage;

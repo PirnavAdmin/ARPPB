@@ -134,11 +134,42 @@ export default function LedgerTable({
       label: 'Actions',
       align: 'right',
       render: (row) => {
+        const debit = Number(row.debit || 0);
+        const credit = Number(row.credit || 0);
+        const total = debit > 0 ? debit : credit;
+        const settled = Number(row.settledAmount ?? row.paidAmount ?? 0);
+        const outstanding = Number(
+          row.outstandingAmount !== undefined && row.outstandingAmount !== null
+            ? row.outstandingAmount
+            : Math.max(0, total - settled)
+        );
+        const statusNorm = String(row.status || '').trim().toLowerCase();
+        const isNotFinal =
+          statusNorm !== 'paid' &&
+          statusNorm !== 'fully paid' &&
+          statusNorm !== 'settled' &&
+          statusNorm !== 'cancelled';
+
+        const cat = String(row.category || '').toLowerCase();
+        const pCat = String(row.partyCategory || '').toLowerCase();
+        const isSettleableCategory =
+          cat.includes('purchase') ||
+          cat.includes('sale') ||
+          pCat === 'farmer' ||
+          pCat === 'middleman' ||
+          pCat === 'customer';
+        const isNonPaymentCategory = !cat.includes('payment') && !cat.includes('receipt');
+
         const canSettle =
-          (row.status === 'Unpaid' || row.status === 'Partial') &&
-          (row.category === 'Farmer Purchase' ||
-            row.category === 'Middleman Purchase' ||
-            row.category === 'Customer Sale');
+          outstanding > 0 &&
+          isNotFinal &&
+          isSettleableCategory &&
+          isNonPaymentCategory;
+
+        const isPartiallyPaid =
+          row.status === 'Partially Paid' ||
+          row.status === 'Partial' ||
+          settled > 0;
 
         return (
           <div className="flex items-center justify-end gap-1.5">
@@ -150,7 +181,7 @@ export default function LedgerTable({
                 title="Record Settlement Payment"
               >
                 <CreditCard className="w-3.5 h-3.5" />
-                Settle
+                {isPartiallyPaid ? 'Settle Remaining Amount' : 'Settle'}
               </button>
             )}
             <button

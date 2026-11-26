@@ -163,14 +163,6 @@ export const RoleAccess = {
 // --------------------------------------------------
 export const MiddlemanDashboard = {
   get: endpoint("GET", "/api/v1/middleman/dashboard"),
-  getKpis: endpoint("GET", "/api/v1/middleman/dashboard"),
-  purchaseVsSales: endpoint("GET", "/api/v1/middleman/dashboard"),
-  cropwiseInventory: endpoint("GET", "/api/v1/middleman/dashboard"),
-  pendingConfirmations: endpoint("GET", "/api/v1/middleman/dashboard"),
-  recentTransactions: endpoint("GET", "/api/v1/middleman/dashboard"),
-  purchases: endpoint("GET", "/api/v1/middleman/dashboard"),
-  salesVendors: endpoint("GET", "/api/v1/middleman/dashboard"),
-  salesCustomers: endpoint("GET", "/api/v1/middleman/dashboard"),
 };
 
 // --------------------------------------------------
@@ -209,10 +201,7 @@ export const MiddlemanCustomerSales = {
 export const MiddlemanInventory = {
   get: endpoint("GET", "/api/v1/middleman/inventory"),
   getAll: endpoint("GET", "/api/v1/middleman/inventory"),
-  summary: endpoint("GET", "/api/v1/middleman/inventory/summary"),
-  batches: endpoint("GET", "/api/v1/middleman/inventory/batches"),
   createBatch: endpoint("POST", "/api/v1/middleman/inventory/batches"),
-  batchById: endpoint("GET", "/api/v1/middleman/inventory/batches/{id}"),
   updateBatch: endpoint("PUT", "/api/v1/middleman/inventory/batches/{id}"),
 };
 
@@ -221,7 +210,6 @@ export const MiddlemanInventory = {
 // --------------------------------------------------
 export const MiddlemanLedger = {
   getAll: endpoint("GET", "/api/v1/middleman/ledger"),
-  getById: endpoint("GET", "/api/v1/middleman/ledger/{id}"),
   create: endpoint("POST", "/api/v1/middleman/ledger"),
   update: endpoint("PUT", "/api/v1/middleman/ledger/{id}"),
   settle: endpoint("POST", "/api/v1/middleman/ledger/{id}/settle"),
@@ -235,8 +223,6 @@ export const MiddlemanLedger = {
 export const MiddlemanNotifications = {
   getAll: endpoint("GET", "/api/v1/middleman/notifications"),
   create: endpoint("POST", "/api/v1/middleman/notifications"),
-  getStatus: endpoint("GET", "/api/v1/notifications/status"),
-  getLatest: endpoint("GET", "/api/v1/notifications/latest"),
   markRead: endpoint("PATCH", "/api/v1/middleman/notifications/{id}/read"),
   markReadPatch: endpoint("PATCH", "/api/v1/middleman/notifications/{id}/read"),
   markReadPut: endpoint("PUT", "/api/v1/middleman/notifications/{id}/read"),
@@ -252,9 +238,7 @@ export const MiddlemanNotifications = {
 // MIDDLEMAN - OTP CONFIRMATIONS
 // --------------------------------------------------
 export const MiddlemanOtpConfirmations = {
-  summary: endpoint("GET", "/api/v1/middleman/confirmations/summary"),
   getAll: endpoint("GET", "/api/v1/middleman/confirmations"),
-  getById: endpoint("GET", "/api/v1/middleman/confirmations/{id}"),
   verify: endpoint("POST", "/api/v1/middleman/confirmations/{id}/verify"),
   resend: endpoint("POST", "/api/v1/middleman/confirmations/{id}/resend"),
   reject: endpoint("POST", "/api/v1/middleman/confirmations/{id}/reject"),
