@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import {
   ShoppingCart,
   TrendingUp,
@@ -31,6 +32,11 @@ const MIDDLEMAN_SUB_LEDGER_TABS = [
 
 export const LedgerPage = () => {
   const { ledger, settleLedgerEntry, dashboardMetrics } = useMiddleman();
+  const { ledger, settleLedgerEntry, refreshLedger, dashboardMetrics } = useMiddleman();
+
+  useEffect(() => {
+    refreshLedger?.();
+  }, [refreshLedger]);
 
   // Recompute running balances dynamically using existing Middleman ledger helper
   const balancedLedger = useMemo(() => {
@@ -41,8 +47,8 @@ export const LedgerPage = () => {
         item.partyCategory === 'Farmer'
           ? 'Farmer Purchase'
           : item.partyCategory === 'Vendor'
-          ? 'Vendor Sale'
-          : 'Customer Sale',
+            ? 'Vendor Sale'
+            : 'Customer Sale',
       subLedgerGroup:
         item.partyCategory === 'Farmer' ? 'Payables' : 'Receivables',
       balanceLabel:
