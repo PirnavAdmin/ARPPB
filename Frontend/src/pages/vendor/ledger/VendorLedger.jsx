@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { toast } from 'sonner';
 import {
   CreditCard,
   ArrowUpRight,
@@ -226,10 +227,10 @@ export default function VendorLedger() {
   const handleOpenQuickSettle = (entry) => {
     const isSupplier =
       entry.partyCategory === 'Farmer' || entry.partyCategory === 'Middleman';
-    const originalAmount = isSupplier
-      ? Number(entry.credit || 0)
-      : Number(entry.debit || 0);
-    const previouslyPaid = Number(entry.settledAmount || 0);
+    const debit = Number(entry.debit || 0);
+    const credit = Number(entry.credit || 0);
+    const originalAmount = Math.max(debit, credit);
+    const previouslyPaid = Number(entry.settledAmount ?? entry.paidAmount ?? 0);
     const remainingBalance = Number(
       entry.outstandingAmount !== undefined &&
         entry.outstandingAmount !== null &&
@@ -297,11 +298,17 @@ export default function VendorLedger() {
   const handleSubmitSettlement = async (e) => {
     e.preventDefault();
     const numAmount = Number(settlementForm.amount) || 0;
-    if (numAmount <= 0) return;
+    if (numAmount <= 0) {
+      toast.error('Payment amount must be greater than 0.');
+      return;
+    }
     if (
       settlementForm.remainingBalance > 0 &&
       numAmount > settlementForm.remainingBalance
     ) {
+      toast.error(
+        `Payment amount (₹${numAmount.toLocaleString('en-IN')}) cannot exceed remaining balance of ₹${settlementForm.remainingBalance.toLocaleString('en-IN')}`
+      );
       return;
     }
 
@@ -327,11 +334,46 @@ export default function VendorLedger() {
     return customers.map((c) => ({ id: c.id, name: c.customerName }));
   }, [settlementForm.partyCategory, farmers, middlemen, customers]);
 
-  const canSettleVendorRow = (row) =>
-    (row.status === 'Unpaid' || row.status === 'Partial') &&
-    (row.category === 'Farmer Purchase' ||
-      row.category === 'Middleman Purchase' ||
-      row.category === 'Customer Sale');
+  const canSettleVendorRow = (row) => {
+    if (!row) return false;
+    const debit = Number(row.debit || 0);
+    const credit = Number(row.credit || 0);
+    const total = debit > 0 ? debit : credit;
+    const settled = Number(row.settledAmount ?? row.paidAmount ?? 0);
+    const outstanding = Number(
+      row.outstandingAmount !== undefined && row.outstandingAmount !== null
+        ? row.outstandingAmount
+        : Math.max(0, total - settled)
+    );
+    if (outstanding <= 0) return false;
+
+    const statusNorm = String(row.status || '').trim().toLowerCase();
+    if (
+      statusNorm === 'paid' ||
+      statusNorm === 'fully paid' ||
+      statusNorm === 'settled' ||
+      statusNorm === 'cancelled'
+    ) {
+      return false;
+    }
+
+    const cat = String(row.category || '').toLowerCase();
+    const pCat = String(row.partyCategory || '').toLowerCase();
+
+    // Settleable entries: purchases and sales (not receipt/payment settlement records)
+    const isSettleableCategory =
+      cat.includes('purchase') ||
+      cat.includes('sale') ||
+      pCat === 'farmer' ||
+      pCat === 'middleman' ||
+      pCat === 'customer' ||
+      cat === 'purchase' ||
+      cat === 'sale';
+
+    const isNonPaymentCategory = !cat.includes('payment') && !cat.includes('receipt');
+
+    return isSettleableCategory && isNonPaymentCategory;
+  };
 
   return (
     <SharedMyLedger
