@@ -672,6 +672,28 @@ export function mapVendorLedgerDto(dto = {}, existing = {}) {
       ? `LDG-${String(rawId).padStart(4, '0')}`
       : existing.id || 'LDG-0001');
 
+  const debit = Number(dto.debit ?? existing.debit ?? 0);
+  const credit = Number(dto.credit ?? existing.credit ?? 0);
+  const totalAmount = debit > 0 ? debit : credit;
+  const settledAmount = Number(
+    dto.settledAmount ?? dto.paidAmount ?? existing.settledAmount ?? 0
+  );
+  const outstandingAmount = Number(
+    dto.outstandingAmount ??
+      (totalAmount > 0
+        ? Math.max(0, totalAmount - settledAmount)
+        : existing.outstandingAmount ?? 0)
+  );
+
+  const status =
+    dto.status ||
+    existing.status ||
+    (outstandingAmount <= 0 && totalAmount > 0
+      ? 'Paid'
+      : settledAmount > 0
+      ? 'Partially Paid'
+      : 'Unpaid');
+
   return {
     ...existing,
     rawId,
@@ -679,21 +701,38 @@ export function mapVendorLedgerDto(dto = {}, existing = {}) {
     date: dto.date
       ? String(dto.date).slice(0, 10)
       : existing.date || new Date().toISOString().slice(0, 10),
-    transactionId: dto.transactionId || dto.referenceId || existing.transactionId || '',
-    category: dto.category || existing.category || 'Farmer Purchase',
+    transactionId:
+      dto.transactionId ||
+      dto.transactionCode ||
+      dto.referenceId ||
+      existing.transactionId ||
+      '',
+    category:
+      dto.category ||
+      dto.ledgerCategory ||
+      existing.category ||
+      'Farmer Purchase',
     description: dto.description || dto.narration || existing.description || '',
-    partyId: dto.partyId || existing.partyId || '',
+    partyId: dto.partyId || dto.partyCode || existing.partyId || '',
     partyName: dto.partyName || existing.partyName || '',
     partyCategory: dto.partyCategory || existing.partyCategory || 'Farmer',
-    debit: Number(dto.debit ?? existing.debit ?? 0),
-    credit: Number(dto.credit ?? existing.credit ?? 0),
+    debit,
+    credit,
     processingExpenses: Number(
       dto.processingExpenses ?? existing.processingExpenses ?? 0
     ),
+    runningBalance: Number(dto.runningBalance ?? existing.runningBalance ?? 0),
+    balanceLabel: dto.balanceLabel || existing.balanceLabel || '',
+    settledAmount,
+    outstandingAmount,
+    paymentMode: dto.paymentMode || existing.paymentMode || '',
+    referenceNo:
+      dto.referenceNo || dto.referenceId || existing.referenceNo || '',
+    relatedEntryId: dto.relatedEntryId || existing.relatedEntryId || null,
     expectedPaymentDate: dto.expectedPaymentDate
       ? String(dto.expectedPaymentDate).slice(0, 10)
       : existing.expectedPaymentDate || '',
-    status: dto.status || existing.status || 'Unpaid',
+    status,
   };
 }
 

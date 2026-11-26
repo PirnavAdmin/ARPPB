@@ -1422,6 +1422,11 @@ export const MiddlemanProvider = ({ children }) => {
             settledAmount: newSettled,
             outstandingAmount: newOutstanding,
             status: newStatus,
+            paymentMode: extra.paymentMode || item.paymentMode || 'NEFT / RTGS',
+            referenceNo: extra.referenceNo || extra.transactionId || item.referenceNo,
+            description: extra.notes
+              ? `${item.description || ''} | ${extra.paymentMode || 'Settlement'}: ${extra.notes}`
+              : item.description,
           };
         }
         return item;
@@ -1442,9 +1447,12 @@ export const MiddlemanProvider = ({ children }) => {
             )
           );
         }
+        if (typeof refreshLedger === 'function') {
+          refreshLedger();
+        }
       })
       .catch((err) => console.warn('settleMiddlemanLedgerApi error:', err));
-  }, [ledger]);
+  }, [ledger, refreshLedger]);
 
   // Compute Live Dashboard Metrics
   const dashboardMetrics = useMemo(() => {

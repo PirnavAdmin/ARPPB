@@ -2648,11 +2648,38 @@ export function VendorProvider({ children }) {
           partyCategory,
           debit: isSupplier ? numAmount : 0,
           credit: isSupplier ? 0 : numAmount,
+          settledAmount: numAmount,
+          outstandingAmount: 0,
           processingExpenses: 0,
           expectedPaymentDate: date,
           status: 'Paid',
+          paymentMode,
+          referenceNo: referenceTransactionId || settlementTxnId,
         };
-        return [entry, ...prevLedger];
+
+        // Also update the linked parent purchase or sale entry's settled and outstanding amounts
+        const updatedLedger = prevLedger.map((item) => {
+          if (
+            referenceTransactionId &&
+            (item.transactionId === referenceTransactionId || item.id === referenceTransactionId)
+          ) {
+            const total = item.debit > 0 ? item.debit : item.credit;
+            const newSettled = round2(safeNumber(item.settledAmount, 0) + numAmount);
+            const newOutstanding = Math.max(0, round2(total - newSettled));
+            const newStatus = newOutstanding <= 0 ? 'Paid' : 'Partially Paid';
+            return {
+              ...item,
+              settledAmount: newSettled,
+              outstandingAmount: newOutstanding,
+              status: newStatus,
+              paymentMode: paymentMode || item.paymentMode,
+              referenceNo: referenceTransactionId,
+            };
+          }
+          return item;
+        });
+
+        return [entry, ...updatedLedger];
       });
 
       const settlementPayload = {
@@ -2666,17 +2693,29 @@ export function VendorProvider({ children }) {
         notes,
         date,
       };
-      if (isSupplier) {
-        payVendorSupplierApi(settlementPayload);
-      } else {
-        recordVendorCustomerReceiptApi(settlementPayload);
-      }
-      const linkedLedger = ledger.find(
-        (l) => l.transactionId === referenceTransactionId || l.id === referenceTransactionId
-      );
-      if (linkedLedger) {
-        settleVendorLedgerEntryApi(linkedLedger.id, settlementPayload);
-      }
+
+      (async () => {
+        try {
+          if (isSupplier) {
+            await payVendorSupplierApi(settlementPayload);
+          } else {
+            await recordVendorCustomerReceiptApi(settlementPayload);
+          }
+          const linkedLedger = ledger.find(
+            (l) => l.transactionId === referenceTransactionId || l.id === referenceTransactionId
+          );
+          if (linkedLedger) {
+            await settleVendorLedgerEntryApi(linkedLedger.id, settlementPayload);
+          }
+          // Refresh ledger from backend to keep MariaDB in sync
+          const fresh = await fetchVendorLedgerApi();
+          if (Array.isArray(fresh) && fresh.length > 0) {
+            updateStateAndStorage(setLedger, STORAGE_KEYS.LEDGER, fresh);
+          }
+        } catch (err) {
+          console.warn('Backend settlement synchronization error:', err);
+        }
+      })();
 
       // Update linked purchase or sale paid/received amount
       if (isSupplier && referenceTransactionId.startsWith('PUR-')) {
@@ -2684,7 +2723,7 @@ export function VendorProvider({ children }) {
           prev.map((p) => {
             if (p.id !== referenceTransactionId) return p;
             const nextPaid = Math.min(p.totalAmount, round2(safeNumber(p.paidAmount, 0) + numAmount));
-            const nextStatus = nextPaid >= p.totalAmount ? 'Paid' : 'Partial';
+            const nextStatus = nextPaid >= p.totalAmount ? 'Paid' : 'Partially Paid';
             return { ...p, paidAmount: nextPaid, paymentStatus: nextStatus };
           })
         );
@@ -2696,7 +2735,7 @@ export function VendorProvider({ children }) {
               s.totalAmount,
               round2(safeNumber(s.receivedAmount, 0) + numAmount)
             );
-            const nextStatus = nextRec >= s.totalAmount ? 'Paid' : 'Partial';
+            const nextStatus = nextRec >= s.totalAmount ? 'Paid' : 'Partially Paid';
             return { ...s, receivedAmount: nextRec, paymentStatus: nextStatus };
           })
         );
@@ -2708,7 +2747,7 @@ export function VendorProvider({ children }) {
               o.totalAmount,
               round2(safeNumber(sale?.receivedAmount, 0) + numAmount)
             );
-            return { ...o, paymentStatus: nextRec >= o.totalAmount ? 'Paid' : 'Partial' };
+            return { ...o, paymentStatus: nextRec >= o.totalAmount ? 'Paid' : 'Partially Paid' };
           })
         );
       }

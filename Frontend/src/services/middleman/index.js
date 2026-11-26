@@ -130,6 +130,11 @@ export function mapMiddlemanLedgerDto(dto = {}, existing = {}) {
         : settledAmount > 0
         ? 'Partially Paid'
         : 'Pending'),
+    category: dto.category || existing.category || '',
+    subLedgerGroup: dto.subLedgerGroup || existing.subLedgerGroup || '',
+    balanceLabel: dto.balanceLabel || existing.balanceLabel || '',
+    paymentMode: dto.paymentMode || existing.paymentMode || '',
+    referenceNo: dto.referenceNo || dto.referenceId || dto.transactionId || existing.referenceNo || '',
     settledAmount,
     outstandingAmount,
   };
