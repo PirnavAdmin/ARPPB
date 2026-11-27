@@ -121,16 +121,22 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
-        /// Retrieves cross-portal Customer Orders placed on the platform.
+        /// Retrieves purchases made from the Middleman by Customers and Vendors.
+        /// Strictly includes transactions conducted through the Middleman (Middleman as seller).
+        /// Supports search, status, buyer type filter (Source: 'Customer', 'Vendor', or 'ALL'), and pagination.
         /// GET /api/v1/middleman/central/customer-orders
+        /// GET /api/v1/middleman/central/buyer-orders
+        /// GET /api/v1/middleman/central/sales-orders
         /// </summary>
         [HttpGet("customer-orders")]
-        [ProducesResponseType(typeof(ApiResponse<UnifiedPagedResultDto<CustomerOrderListDto>>), StatusCodes.Status200OK)]
+        [HttpGet("buyer-orders")]
+        [HttpGet("sales-orders")]
+        [ProducesResponseType(typeof(ApiResponse<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetCustomerOrders([FromQuery] UnifiedPortalQueryDto query, CancellationToken ct)
         {
             var userId = GetUserId();
             var result = await _centralService.GetCustomerOrdersAsync(userId, query, ct);
-            return Ok(ApiResponse<UnifiedPagedResultDto<CustomerOrderListDto>>.Ok(result, "Customer orders retrieved successfully."));
+            return Ok(ApiResponse<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>>.Ok(result, "Middleman buyer purchases and sales orders retrieved successfully."));
         }
     }
 }

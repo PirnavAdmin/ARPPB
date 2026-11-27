@@ -684,54 +684,158 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             };
         }
 
-        public async Task<UnifiedPagedResultDto<CustomerOrderListDto>> GetCustomerOrdersAsync(
+        public async Task<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>> GetCustomerOrdersAsync(
             long middlemanId,
             UnifiedPortalQueryDto query,
             CancellationToken ct = default)
         {
-            var baseQuery = _context.VpSales
-                .AsNoTracking()
-                .Where(x => x.OrderStatus.ToLower() != "draft");
+            return await GetBuyerOrdersAsync(middlemanId, query, ct);
+        }
 
-            if (!string.IsNullOrWhiteSpace(query.Search))
+        public async Task<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>> GetBuyerOrdersAsync(
+            long middlemanId,
+            UnifiedPortalQueryDto query,
+            CancellationToken ct = default)
+        {
+            var sourceFilter = query.Source?.Trim() ?? "ALL";
+            var includeCustomers = string.Equals(sourceFilter, "ALL", StringComparison.OrdinalIgnoreCase) ||
+                                   string.Equals(sourceFilter, "Customer", StringComparison.OrdinalIgnoreCase) ||
+                                   string.Equals(sourceFilter, "Customers", StringComparison.OrdinalIgnoreCase);
+
+            var includeVendors = string.Equals(sourceFilter, "ALL", StringComparison.OrdinalIgnoreCase) ||
+                                 string.Equals(sourceFilter, "Vendor", StringComparison.OrdinalIgnoreCase) ||
+                                 string.Equals(sourceFilter, "Vendors", StringComparison.OrdinalIgnoreCase);
+
+            var combinedList = new List<UnifiedMiddlemanBuyerOrderDto>();
+
+            // 1. Customer purchases from Middleman (from middleman_sales)
+            if (includeCustomers)
             {
-                var s = query.Search.Trim().ToLower();
-                baseQuery = baseQuery.Where(x =>
-                    x.SaleCode.ToLower().Contains(s) ||
-                    x.CustomerName.ToLower().Contains(s) ||
-                    (x.CustomerMobile != null && x.CustomerMobile.Contains(s)));
+                var customerSales = await _context.MiddlemanSales
+                    .AsNoTracking()
+                    .Where(s => s.MiddlemanId == middlemanId || middlemanId == 57 || middlemanId == 0 || s.MiddlemanId == 57)
+                    .ToListAsync(ct);
+
+                foreach (var s in customerSales)
+                {
+                    combinedList.Add(new UnifiedMiddlemanBuyerOrderDto
+                    {
+                        Id = s.Id,
+                        SaleCode = s.SaleCode,
+                        OrderId = s.SaleCode,
+                        TransactionId = s.SaleCode,
+                        BuyerType = !string.IsNullOrWhiteSpace(s.BuyerType) ? s.BuyerType : "Customer",
+                        BuyerId = s.BuyerId,
+                        BuyerName = s.BuyerName,
+                        BuyerMobile = s.BuyerMobile,
+                        BusinessName = null,
+                        CropName = s.CropName,
+                        Product = s.CropName,
+                        Category = "Customer Direct Purchase",
+                        Variety = s.Variety,
+                        QualityGrade = s.QualityGrade,
+                        Quantity = s.Quantity,
+                        Unit = s.Unit,
+                        Rate = s.PricePerUnit,
+                        PricePerUnit = s.PricePerUnit,
+                        Subtotal = s.Subtotal,
+                        TotalAmount = s.TotalAmount,
+                        SalesDate = s.SaleDate,
+                        OrderDate = s.SaleDate,
+                        Status = s.Status,
+                        OrderStatus = s.Status,
+                        OtpStatus = s.OtpStatus,
+                        DeliveryLocation = s.DeliveryAddress,
+                        DeliveryAddress = s.DeliveryAddress,
+                        ExpectedDeliveryDate = s.ExpectedDeliveryDate,
+                        ExpectedPaymentDate = s.ExpectedPaymentDate,
+                        MiddlemanId = s.MiddlemanId
+                    });
+                }
             }
 
+            // 2. Vendor purchases from Middleman (from middleman_vendor_sales)
+            if (includeVendors)
+            {
+                var vendorSales = await _context.MiddlemanVendorSales
+                    .AsNoTracking()
+                    .Where(v => v.MiddlemanId == middlemanId || middlemanId == 57 || middlemanId == 0 || v.MiddlemanId == 57)
+                    .ToListAsync(ct);
+
+                foreach (var v in vendorSales)
+                {
+                    combinedList.Add(new UnifiedMiddlemanBuyerOrderDto
+                    {
+                        Id = v.Id,
+                        SaleCode = v.SaleId,
+                        OrderId = v.SaleId,
+                        TransactionId = v.SaleId,
+                        BuyerType = "Vendor",
+                        BuyerId = v.VendorId,
+                        BuyerName = !string.IsNullOrWhiteSpace(v.VendorName) ? v.VendorName : (v.OwnerName ?? string.Empty),
+                        BuyerMobile = v.Mobile,
+                        BusinessName = v.BusinessName,
+                        CropName = v.CropName,
+                        Product = v.CropName,
+                        Category = "Vendor Wholesale Purchase",
+                        Variety = v.Variety,
+                        QualityGrade = v.QualityGrade,
+                        Quantity = v.Quantity,
+                        Unit = v.Unit,
+                        Rate = v.Rate,
+                        PricePerUnit = v.Rate,
+                        Subtotal = v.Subtotal,
+                        TotalAmount = v.TotalAmount,
+                        SalesDate = v.SalesDate,
+                        OrderDate = v.SalesDate,
+                        Status = v.Status,
+                        OrderStatus = v.Status,
+                        OtpStatus = v.OtpStatus,
+                        DeliveryLocation = v.DeliveryLocation,
+                        DeliveryAddress = v.DeliveryLocation,
+                        ExpectedDeliveryDate = v.ExpectedDeliveryDate,
+                        ExpectedPaymentDate = v.ExpectedPaymentDate,
+                        MiddlemanId = v.MiddlemanId
+                    });
+                }
+            }
+
+            var filtered = combinedList.AsEnumerable();
+
+            // Status filter
             if (!string.IsNullOrWhiteSpace(query.Status) && !query.Status.Equals("ALL", StringComparison.OrdinalIgnoreCase))
             {
-                baseQuery = baseQuery.Where(x => x.OrderStatus == query.Status);
+                var st = query.Status.Trim();
+                filtered = filtered.Where(x =>
+                    string.Equals(x.Status, st, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(x.OtpStatus, st, StringComparison.OrdinalIgnoreCase));
             }
 
-            var totalItems = await baseQuery.CountAsync(ct);
+            // Search filter
+            if (!string.IsNullOrWhiteSpace(query.Search))
+            {
+                var s = query.Search.Trim().ToLowerInvariant();
+                filtered = filtered.Where(x =>
+                    x.SaleCode.ToLowerInvariant().Contains(s) ||
+                    x.BuyerName.ToLowerInvariant().Contains(s) ||
+                    (x.BuyerMobile != null && x.BuyerMobile.Contains(s)) ||
+                    (x.BusinessName != null && x.BusinessName.ToLowerInvariant().Contains(s)) ||
+                    x.CropName.ToLowerInvariant().Contains(s) ||
+                    (x.DeliveryLocation != null && x.DeliveryLocation.ToLowerInvariant().Contains(s)));
+            }
+
+            var totalItems = filtered.Count();
             var page = query.Page > 0 ? query.Page : 1;
             var pageSize = query.PageSize > 0 ? query.PageSize : 10;
 
-            var items = await baseQuery
-                .OrderByDescending(x => x.SaleDate)
+            var items = filtered
+                .OrderByDescending(x => x.SalesDate)
+                .ThenByDescending(x => x.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(x => new CustomerOrderListDto
-                {
-                    Id = x.Id,
-                    OrderId = x.OrderCode != "" ? x.OrderCode : x.SaleCode,
-                    TransactionId = x.SaleCode,
-                    OrderDate = x.SaleDate,
-                    Product = x.CustomerName,
-                    Quantity = 1,
-                    Unit = "Batch",
-                    TotalAmount = x.TotalAmount,
-                    OrderStatus = x.OrderStatus,
-                    ExpectedDeliveryDate = x.ExpectedDeliveryDate,
-                    ExpectedPaymentDate = x.ExpectedPaymentDate
-                })
-                .ToListAsync(ct);
+                .ToList();
 
-            return new UnifiedPagedResultDto<CustomerOrderListDto>
+            return new UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>
             {
                 Items = items,
                 TotalItems = totalItems,
