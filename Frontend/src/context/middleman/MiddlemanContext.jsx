@@ -12,6 +12,7 @@ import { INITIAL_LEDGER_ENTRIES } from '../../data/mock/middleman/ledgerData';
 import { INITIAL_NOTIFICATIONS } from '../../data/mock/middleman/notificationData';
 import { generateId } from '../../utils/middleman/transactionHelpers';
 import { allocateInventoryFIFO, calculateGrossProfit, calculateOutstandingPosition } from '../../utils/middleman/calculations';
+import { calculatePaymentStatus } from '../../utils/middleman/paymentStatusHelpers';
 import { useAuth } from '../../hooks/useAuth';
 import {
   fetchMiddlemanProfile,
@@ -1457,6 +1458,9 @@ export const MiddlemanProvider = ({ children }) => {
           }
         }
 
+        const nowIso = new Date().toISOString().replace('T', ' ').slice(0, 16);
+        const refCode = extra.referenceNo || extra.transactionId || `REF-${Date.now().toString().slice(-6)}`;
+
         setLedger((prev) =>
           prev.map((item) => {
             if (
@@ -1467,7 +1471,26 @@ export const MiddlemanProvider = ({ children }) => {
               const total = item.originalAmount ?? (item.debit > 0 ? item.debit : item.credit);
               const newSettled = (Number(item.settledAmount) || 0) + amountNum;
               const newOutstanding = Math.max(0, total - newSettled);
-              const newStatus = newOutstanding <= 0 ? 'Paid' : 'Partially Paid';
+              const newStatus = calculatePaymentStatus(total, newSettled, newOutstanding, item.status);
+              const installment = {
+                id: generateId('PMT'),
+                paymentCode: `PAY-MM-${Date.now().toString().slice(-4)}`,
+                ledgerId: item.id || item.ledgerId,
+                transactionId: item.transactionId,
+                partyCategory: item.partyCategory,
+                partyId: item.partyId,
+                partyName: item.partyName,
+                paymentDirection: item.partyCategory === 'Farmer' ? 'Paid' : 'Received',
+                originalAmount: total,
+                paymentAmount: amountNum,
+                totalPaidAfter: newSettled,
+                balanceAfter: newOutstanding,
+                paymentMode: extra.paymentMode || item.paymentMode || 'NEFT / RTGS',
+                referenceNo: refCode,
+                status: 'Successful',
+                notes: extra.notes || '',
+                paymentDate: nowIso,
+              };
               return {
                 ...item,
                 settledAmount: newSettled,
@@ -1475,15 +1498,132 @@ export const MiddlemanProvider = ({ children }) => {
                 outstandingAmount: newOutstanding,
                 status: newStatus,
                 paymentMode: extra.paymentMode || item.paymentMode || 'NEFT / RTGS',
-                referenceNo: extra.referenceNo || extra.transactionId || item.referenceNo,
+                referenceNo: refCode,
                 description: extra.notes
                   ? `${item.description || ''} | ${extra.paymentMode || 'Settlement'}: ${extra.notes}`
                   : item.description,
+                paymentHistory: [installment, ...(item.paymentHistory || [])],
               };
             }
             return item;
           })
         );
+
+        // Synchronously update purchases/sales and party dues in frontend state
+        if (targetEntry) {
+          const txnId = targetEntry.transactionId;
+          const partyCat = targetEntry.partyCategory;
+          const partyId = targetEntry.partyId;
+          const pmtInst = {
+            id: generateId('PMT'),
+            paymentCode: `PAY-MM-${Date.now().toString().slice(-4)}`,
+            transactionId: txnId,
+            paymentAmount: amountNum,
+            paymentMode: extra.paymentMode || 'NEFT / RTGS',
+            referenceNo: refCode,
+            status: 'Successful',
+            notes: extra.notes || '',
+            paymentDate: nowIso,
+          };
+
+          if (partyCat === 'Farmer') {
+            if (txnId) {
+              setPurchases((prev) =>
+                prev.map((p) => {
+                  if (p.purchaseId === txnId || p.purchaseCode === txnId) {
+                    const total = Number(p.totalAmount) || 0;
+                    const newPaid = (Number(p.paidAmount) || 0) + amountNum;
+                    const newBal = Math.max(0, total - newPaid);
+                    return {
+                      ...p,
+                      paidAmount: newPaid,
+                      outstandingAmount: newBal,
+                      paymentStatus: calculatePaymentStatus(total, newPaid, newBal, p.status),
+                      paymentHistory: [{ ...pmtInst, balanceAfter: newBal }, ...(p.paymentHistory || [])],
+                    };
+                  }
+                  return p;
+                })
+              );
+            }
+            if (partyId) {
+              setFarmers((prev) =>
+                prev.map((f) => {
+                  if (f.farmerId === partyId || String(f.id) === partyId || f.name === targetEntry.partyName) {
+                    const newPayable = Math.max(0, (Number(f.outstandingPayables) || 0) - amountNum);
+                    const newPaid = (Number(f.totalPaid) || 0) + amountNum;
+                    return { ...f, outstandingPayables: newPayable, totalPaid: newPaid };
+                  }
+                  return f;
+                })
+              );
+            }
+          } else if (partyCat === 'Vendor') {
+            if (txnId) {
+              setVendorSales((prev) =>
+                prev.map((s) => {
+                  if (s.saleId === txnId) {
+                    const total = Number(s.totalAmount) || 0;
+                    const newPaid = (Number(s.paidAmount) || 0) + amountNum;
+                    const newBal = Math.max(0, total - newPaid);
+                    return {
+                      ...s,
+                      paidAmount: newPaid,
+                      outstandingAmount: newBal,
+                      paymentStatus: calculatePaymentStatus(total, newPaid, newBal, s.status),
+                      paymentHistory: [{ ...pmtInst, balanceAfter: newBal }, ...(s.paymentHistory || [])],
+                    };
+                  }
+                  return s;
+                })
+              );
+            }
+            if (partyId) {
+              setVendors((prev) =>
+                prev.map((v) => {
+                  if (v.vendorId === partyId || String(v.id) === partyId || v.businessName === targetEntry.partyName) {
+                    const newRec = Math.max(0, (Number(v.outstandingReceivables) || 0) - amountNum);
+                    const newReceived = (Number(v.totalReceived) || 0) + amountNum;
+                    return { ...v, outstandingReceivables: newRec, totalReceived: newReceived };
+                  }
+                  return v;
+                })
+              );
+            }
+          } else if (partyCat === 'Customer') {
+            if (txnId) {
+              setCustomerSales((prev) =>
+                prev.map((s) => {
+                  if (s.saleId === txnId) {
+                    const total = Number(s.finalAmount ?? s.totalAmount ?? 0);
+                    const newPaid = (Number(s.paidAmount) || 0) + amountNum;
+                    const newBal = Math.max(0, total - newPaid);
+                    return {
+                      ...s,
+                      paidAmount: newPaid,
+                      outstandingAmount: newBal,
+                      paymentStatus: calculatePaymentStatus(total, newPaid, newBal, s.status),
+                      paymentHistory: [{ ...pmtInst, balanceAfter: newBal }, ...(s.paymentHistory || [])],
+                    };
+                  }
+                  return s;
+                })
+              );
+            }
+            if (partyId) {
+              setCustomers((prev) =>
+                prev.map((c) => {
+                  if (c.customerId === partyId || String(c.id) === partyId || c.name === targetEntry.partyName) {
+                    const newRec = Math.max(0, (Number(c.outstandingReceivables) || 0) - amountNum);
+                    const newReceived = (Number(c.totalReceived) || 0) + amountNum;
+                    return { ...c, outstandingReceivables: newRec, totalReceived: newReceived };
+                  }
+                  return c;
+                })
+              );
+            }
+          }
+        }
 
         try {
           const saved = await settleMiddlemanLedgerApi(numericId || ledgerId, amountNum, {
@@ -1530,18 +1670,201 @@ export const MiddlemanProvider = ({ children }) => {
         refreshDashboard,
       ]);
 
+      // Live Reconciled Datasets with Payment Status, Outstandings, and History
+      const enrichedPurchases = useMemo(() => {
+        return purchases.map((p) => {
+          const total = Number(p.totalAmount) || 0;
+          const matchingLedgers = ledger.filter(
+            (l) => l.transactionId === p.purchaseId || l.transactionId === p.id || (p.purchaseCode && l.transactionId === p.purchaseCode)
+          );
+          const paidFromLedger = matchingLedgers.reduce((sum, l) => sum + (Number(l.settledAmount) || 0), 0);
+          const paid = Math.max(Number(p.paidAmount) || 0, paidFromLedger);
+          const outstanding = matchingLedgers.length > 0 && matchingLedgers[0].outstandingAmount !== undefined
+            ? Number(matchingLedgers[0].outstandingAmount)
+            : Math.max(0, total - paid);
+          const status = calculatePaymentStatus(total, paid, outstanding, p.status);
+          const paymentHistory = (matchingLedgers[0]?.paymentHistory && matchingLedgers[0].paymentHistory.length > 0)
+            ? matchingLedgers[0].paymentHistory
+            : (p.paymentHistory || []);
+
+          return {
+            ...p,
+            paidAmount: paid,
+            outstandingAmount: outstanding,
+            paymentStatus: status,
+            paymentHistory,
+          };
+        });
+      }, [purchases, ledger]);
+
+      const enrichedVendorSales = useMemo(() => {
+        return vendorSales.map((s) => {
+          const total = Number(s.totalAmount ?? s.finalAmount ?? 0);
+          const matchingLedgers = ledger.filter(
+            (l) => l.transactionId === s.saleId || l.transactionId === s.id
+          );
+          const paidFromLedger = matchingLedgers.reduce((sum, l) => sum + (Number(l.settledAmount) || 0), 0);
+          const paid = Math.max(Number(s.paidAmount) || 0, paidFromLedger);
+          const outstanding = matchingLedgers.length > 0 && matchingLedgers[0].outstandingAmount !== undefined
+            ? Number(matchingLedgers[0].outstandingAmount)
+            : Math.max(0, total - paid);
+          const status = calculatePaymentStatus(total, paid, outstanding, s.status);
+          const paymentHistory = (matchingLedgers[0]?.paymentHistory && matchingLedgers[0].paymentHistory.length > 0)
+            ? matchingLedgers[0].paymentHistory
+            : (s.paymentHistory || []);
+
+          return {
+            ...s,
+            paidAmount: paid,
+            outstandingAmount: outstanding,
+            paymentStatus: status,
+            paymentHistory,
+          };
+        });
+      }, [vendorSales, ledger]);
+
+      const enrichedCustomerSales = useMemo(() => {
+        return customerSales.map((s) => {
+          const total = Number(s.finalAmount ?? s.totalAmount ?? 0);
+          const matchingLedgers = ledger.filter(
+            (l) => l.transactionId === s.saleId || l.transactionId === s.id
+          );
+          const paidFromLedger = matchingLedgers.reduce((sum, l) => sum + (Number(l.settledAmount) || 0), 0);
+          const paid = Math.max(Number(s.paidAmount) || 0, paidFromLedger);
+          const outstanding = matchingLedgers.length > 0 && matchingLedgers[0].outstandingAmount !== undefined
+            ? Number(matchingLedgers[0].outstandingAmount)
+            : Math.max(0, total - paid);
+          const status = calculatePaymentStatus(total, paid, outstanding, s.status);
+          const paymentHistory = (matchingLedgers[0]?.paymentHistory && matchingLedgers[0].paymentHistory.length > 0)
+            ? matchingLedgers[0].paymentHistory
+            : (s.paymentHistory || []);
+
+          return {
+            ...s,
+            paidAmount: paid,
+            outstandingAmount: outstanding,
+            paymentStatus: status,
+            paymentHistory,
+          };
+        });
+      }, [customerSales, ledger]);
+
+      const enrichedFarmers = useMemo(() => {
+        return farmers.map((f) => {
+          const farmerPurchases = enrichedPurchases.filter(
+            (p) => p.farmerId === f.farmerId || (f.id && p.farmerId === String(f.id)) || p.farmerName === f.name
+          );
+          const totalCount = farmerPurchases.length || Number(f.totalPurchases || 0);
+          const totalQty = farmerPurchases.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0) || Number(f.totalQuantityPurchased || 0);
+          const totalVal = farmerPurchases.reduce((sum, p) => sum + (Number(p.totalAmount) || 0), 0) || Number(f.totalPurchaseValue || 0);
+          const totalPaid = farmerPurchases.reduce((sum, p) => sum + (Number(p.paidAmount) || 0), 0);
+
+          const farmerLedgers = ledger.filter(
+            (l) => (l.partyCategory === 'Farmer') && (l.partyId === f.farmerId || (f.id && l.partyId === String(f.id)) || l.partyName === f.name)
+          );
+          const dueFromLedger = farmerLedgers.reduce((sum, l) => sum + (Number(l.outstandingAmount) || 0), 0);
+          const dueFromPurchases = farmerPurchases.reduce((sum, p) => sum + (Number(p.outstandingAmount) || 0), 0);
+          const outstanding = farmerLedgers.length > 0 ? dueFromLedger : (farmerPurchases.length > 0 ? dueFromPurchases : Number(f.outstandingPayables || 0));
+
+          const unpaidCount = farmerPurchases.filter((p) => p.paymentStatus === 'Unpaid').length;
+          const partiallyPaidCount = farmerPurchases.filter((p) => p.paymentStatus === 'Partially Paid').length;
+          const paidCount = farmerPurchases.filter((p) => p.paymentStatus === 'Paid').length;
+
+          return {
+            ...f,
+            totalPurchases: totalCount,
+            totalQuantityPurchased: totalQty,
+            totalPurchaseValue: totalVal,
+            totalPaid,
+            outstandingPayables: outstanding,
+            unpaidCount,
+            partiallyPaidCount,
+            paidCount,
+            purchases: farmerPurchases,
+          };
+        });
+      }, [farmers, enrichedPurchases, ledger]);
+
+      const enrichedVendors = useMemo(() => {
+        return vendors.map((v) => {
+          const vSales = enrichedVendorSales.filter(
+            (s) => s.vendorId === v.vendorId || (v.id && s.vendorId === String(v.id)) || s.businessName === v.businessName
+          );
+          const totalCount = vSales.length || Number(v.totalPurchases || 0);
+          const totalVal = vSales.reduce((sum, s) => sum + (Number(s.totalAmount ?? s.finalAmount) || 0), 0) || Number(v.totalPurchaseValue || 0);
+          const totalRec = vSales.reduce((sum, s) => sum + (Number(s.paidAmount) || 0), 0);
+
+          const vLedgers = ledger.filter(
+            (l) => (l.partyCategory === 'Vendor') && (l.partyId === v.vendorId || (v.id && l.partyId === String(v.id)) || l.partyName === v.businessName)
+          );
+          const dueFromLedger = vLedgers.reduce((sum, l) => sum + (Number(l.outstandingAmount) || 0), 0);
+          const dueFromSales = vSales.reduce((sum, s) => sum + (Number(s.outstandingAmount) || 0), 0);
+          const outstanding = vLedgers.length > 0 ? dueFromLedger : (vSales.length > 0 ? dueFromSales : Number(v.outstandingReceivables || 0));
+
+          const unpaidCount = vSales.filter((s) => s.paymentStatus === 'Unpaid').length;
+          const partiallyPaidCount = vSales.filter((s) => s.paymentStatus === 'Partially Paid').length;
+          const paidCount = vSales.filter((s) => s.paymentStatus === 'Paid').length;
+
+          return {
+            ...v,
+            totalPurchases: totalCount,
+            totalPurchaseValue: totalVal,
+            totalReceived: totalRec,
+            outstandingReceivables: outstanding,
+            unpaidCount,
+            partiallyPaidCount,
+            paidCount,
+            sales: vSales,
+          };
+        });
+      }, [vendors, enrichedVendorSales, ledger]);
+
+      const enrichedCustomers = useMemo(() => {
+        return customers.map((c) => {
+          const cSales = enrichedCustomerSales.filter(
+            (s) => s.customerId === c.customerId || (c.id && s.customerId === String(c.id)) || s.customerName === c.name
+          );
+          const totalCount = cSales.length || Number(c.totalPurchases || 0);
+          const totalVal = cSales.reduce((sum, s) => sum + (Number(s.finalAmount ?? s.totalAmount) || 0), 0) || Number(c.totalPurchaseValue || 0);
+          const totalRec = cSales.reduce((sum, s) => sum + (Number(s.paidAmount) || 0), 0);
+
+          const cLedgers = ledger.filter(
+            (l) => (l.partyCategory === 'Customer') && (l.partyId === c.customerId || (c.id && l.partyId === String(c.id)) || l.partyName === c.name)
+          );
+          const dueFromLedger = cLedgers.reduce((sum, l) => sum + (Number(l.outstandingAmount) || 0), 0);
+          const dueFromSales = cSales.reduce((sum, s) => sum + (Number(s.outstandingAmount) || 0), 0);
+          const outstanding = cLedgers.length > 0 ? dueFromLedger : (cSales.length > 0 ? dueFromSales : Number(c.outstandingReceivables || 0));
+
+          const unpaidCount = cSales.filter((s) => s.paymentStatus === 'Unpaid').length;
+          const partiallyPaidCount = cSales.filter((s) => s.paymentStatus === 'Partially Paid').length;
+          const paidCount = cSales.filter((s) => s.paymentStatus === 'Paid').length;
+
+          return {
+            ...c,
+            totalPurchases: totalCount,
+            totalPurchaseValue: totalVal,
+            totalReceived: totalRec,
+            outstandingReceivables: outstanding,
+            unpaidCount,
+            partiallyPaidCount,
+            paidCount,
+            sales: cSales,
+          };
+        });
+      }, [customers, enrichedCustomerSales, ledger]);
+
       // Compute Live Dashboard Metrics
       const dashboardMetrics = useMemo(() => {
-        const totalFarmers = farmers.length;
-        const totalVendors = vendors.length;
-        const totalCustomers = customers.length;
+        const totalFarmers = enrichedFarmers.length;
+        const totalVendors = enrichedVendors.length;
+        const totalCustomers = enrichedCustomers.length;
 
-        const confirmedPurchases = purchases.filter((p) => p.otpStatus === 'Confirmed');
+        const confirmedPurchases = enrichedPurchases.filter((p) => p.otpStatus === 'Confirmed');
         const totalPurchasesCount = confirmedPurchases.length;
         const totalPurchaseValue = confirmedPurchases.reduce((acc, p) => acc + (Number(p.totalAmount) || 0), 0);
 
-        const confirmedVendorSales = vendorSales.filter((s) => s.otpStatus === 'Confirmed');
-        const confirmedCustomerSales = customerSales.filter((s) => s.otpStatus === 'Confirmed');
+        const confirmedVendorSales = enrichedVendorSales.filter((s) => s.otpStatus === 'Confirmed');
+        const confirmedCustomerSales = enrichedCustomerSales.filter((s) => s.otpStatus === 'Confirmed');
         const totalSalesCount = confirmedVendorSales.length + confirmedCustomerSales.length;
 
         const vendorSalesVal = confirmedVendorSales.reduce((acc, s) => acc + (Number(s.totalAmount) || 0), 0);
@@ -1561,6 +1884,10 @@ export const MiddlemanProvider = ({ children }) => {
 
         const amountReceived = ledger
           .filter((l) => l.partyCategory === 'Vendor' || l.partyCategory === 'Customer')
+          .reduce((acc, l) => acc + (Number(l.settledAmount) || 0), 0);
+
+        const amountPaid = ledger
+          .filter((l) => l.partyCategory === 'Farmer')
           .reduce((acc, l) => acc + (Number(l.settledAmount) || 0), 0);
 
         // Cost of Goods Sold from confirmed sales
@@ -1584,12 +1911,13 @@ export const MiddlemanProvider = ({ children }) => {
           expectedReceivables: totalReceivables,
           expectedPayables: totalPayables,
           amountReceived,
+          amountPaid,
           grossProfit,
           marginPercentage,
           netOutstanding,
           totalCogs,
         };
-      }, [farmers, vendors, customers, purchases, vendorSales, customerSales, inventory, ledger]);
+      }, [enrichedFarmers, enrichedVendors, enrichedCustomers, enrichedPurchases, enrichedVendorSales, enrichedCustomerSales, inventory, ledger]);
 
       // Reset to initial demo dataset
       const resetToDemoData = useCallback(() => {
@@ -1624,25 +1952,31 @@ export const MiddlemanProvider = ({ children }) => {
         refreshProfile,
         dashboardData,
         refreshDashboard,
-        farmers,
+        farmers: enrichedFarmers,
+        rawFarmers: farmers,
         refreshFarmers,
         addFarmer,
         updateFarmer,
-        vendors,
+        vendors: enrichedVendors,
+        rawVendors: vendors,
         refreshVendors,
         addVendor,
         updateVendor,
-        customers,
+        customers: enrichedCustomers,
+        rawCustomers: customers,
         refreshCustomers,
         addCustomer,
         updateCustomer,
-        purchases,
+        purchases: enrichedPurchases,
+        rawPurchases: purchases,
         refreshPurchases,
         createPurchase,
-        vendorSales,
+        vendorSales: enrichedVendorSales,
+        rawVendorSales: vendorSales,
         refreshVendorSales,
         createVendorSale,
-        customerSales,
+        customerSales: enrichedCustomerSales,
+        rawCustomerSales: customerSales,
         refreshCustomerSales,
         createCustomerSale,
         inventory,
@@ -1665,7 +1999,6 @@ export const MiddlemanProvider = ({ children }) => {
         deleteNotification,
         refreshNotifications,
         dashboardMetrics,
-        refreshDashboard,
         resetToDemoData,
       };
 

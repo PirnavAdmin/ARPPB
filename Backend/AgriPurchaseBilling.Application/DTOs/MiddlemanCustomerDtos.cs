@@ -17,7 +17,11 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string? PinCode { get; set; }
         public int TotalPurchases { get; set; }
         public decimal TotalPurchaseValue { get; set; }
+        public decimal TotalReceived { get; set; }
         public decimal OutstandingReceivables { get; set; }
+        public int UnpaidCount { get; set; }
+        public int PartiallyPaidCount { get; set; }
+        public int PaidCount { get; set; }
         public string Status { get; set; } = "Active";
         public string? Notes { get; set; }
 

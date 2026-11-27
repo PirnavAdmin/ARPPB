@@ -961,6 +961,82 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             }
             catch { }
 
+            try
+            {
+                var txnIds = baseline
+                    .Select(t => t.TxnId ?? t.TransactionId ?? t.PurchaseId ?? t.SaleId ?? string.Empty)
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                var ledgers = await _context.MiddlemanLedgers
+                    .AsNoTracking()
+                    .Where(l => txnIds.Contains(l.TransactionId ?? string.Empty))
+                    .ToListAsync();
+
+                var ledgerMap = ledgers
+                    .Where(l => !string.IsNullOrWhiteSpace(l.TransactionId))
+                    .GroupBy(l => l.TransactionId!.Trim(), StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+                var payments = await _context.MiddlemanPayments
+                    .AsNoTracking()
+                    .Where(p => txnIds.Contains(p.TransactionId ?? string.Empty))
+                    .OrderBy(p => p.PaymentDate)
+                    .ToListAsync();
+
+                var paymentMap = payments
+                    .Where(p => !string.IsNullOrWhiteSpace(p.TransactionId))
+                    .GroupBy(p => p.TransactionId!.Trim(), StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+                foreach (var t in baseline)
+                {
+                    var code = (t.TxnId ?? t.TransactionId ?? t.PurchaseId ?? t.SaleId ?? string.Empty).Trim();
+                    var total = t.TotalAmount > 0 ? t.TotalAmount : (t.FinalAmount > 0 ? t.FinalAmount : t.Amount);
+
+                    if (ledgerMap.TryGetValue(code, out var led))
+                    {
+                        t.PaidAmount = led.SettledAmount;
+                        t.OutstandingAmount = Math.Max(0, total - led.SettledAmount);
+                        t.PaymentStatus = t.OutstandingAmount <= 0.001m && total > 0
+                            ? "Paid"
+                            : (t.PaidAmount > 0 ? "Partially Paid" : "Unpaid");
+                    }
+                    else
+                    {
+                        t.PaidAmount = 0m;
+                        t.OutstandingAmount = total;
+                        t.PaymentStatus = total > 0 ? "Unpaid" : "Paid";
+                    }
+
+                    if (paymentMap.TryGetValue(code, out var pmts))
+                    {
+                        t.PaymentHistory = pmts.Select(p => new MiddlemanPaymentDto
+                        {
+                            Id = p.Id,
+                            PaymentCode = p.PaymentCode,
+                            LedgerId = p.LedgerId,
+                            TransactionId = p.TransactionId,
+                            PartyCategory = p.PartyCategory,
+                            PartyId = p.PartyId,
+                            PartyName = p.PartyName,
+                            PaymentDirection = p.PaymentDirection,
+                            OriginalAmount = p.OriginalAmount,
+                            PaymentAmount = p.PaymentAmount,
+                            TotalPaidAfter = p.TotalPaidAfter,
+                            BalanceAfter = p.BalanceAfter,
+                            PaymentMode = p.PaymentMode,
+                            ReferenceNo = p.ReferenceNo,
+                            Status = p.Status,
+                            Notes = p.Notes,
+                            PaymentDate = p.PaymentDate.ToString("yyyy-MM-dd HH:mm")
+                        }).ToList();
+                    }
+                }
+            }
+            catch { }
+
             return baseline
                 .OrderByDescending(t => t.TransactionDate)
                 .ThenByDescending(t => t.Id)

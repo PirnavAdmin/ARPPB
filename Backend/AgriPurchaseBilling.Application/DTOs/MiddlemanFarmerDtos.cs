@@ -30,7 +30,11 @@ namespace AgriPurchaseBilling.Application.DTOs
         public int TotalPurchases { get; set; }
         public decimal TotalQuantityPurchased { get; set; }
         public decimal TotalPurchaseValue { get; set; }
+        public decimal TotalPaid { get; set; }
         public decimal OutstandingPayables { get; set; }
+        public int UnpaidCount { get; set; }
+        public int PartiallyPaidCount { get; set; }
+        public int PaidCount { get; set; }
         public int PendingConfirmations { get; set; }
 
         public string Status { get; set; } = "Active";

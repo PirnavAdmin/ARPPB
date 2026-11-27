@@ -5,23 +5,39 @@
 
 /**
  * Standardize payment status calculation
+ * Business Rules:
+ * - No successful payment -> 'Unpaid'
+ * - Some amount paid, balance remains -> 'Partially Paid'
+ * - Entire amount paid successfully -> 'Paid'
+ * - Payment awaiting confirmation / draft -> 'Pending' (if explicitly passed)
+ * - Payment failed -> 'Failed'
+ * - Transaction cancelled -> 'Cancelled'
+ * 
  * @param {number} totalAmount - Original transaction amount
  * @param {number} paidAmount - Total successful payments settled so far
  * @param {number} [outstandingAmount] - Optional explicit outstanding balance
- * @returns {'Paid' | 'Partially Paid' | 'Unpaid'}
+ * @param {string} [rawStatus] - Optional raw status from entity or transaction
+ * @returns {'Paid' | 'Partially Paid' | 'Unpaid' | 'Pending' | 'Failed' | 'Cancelled'}
  */
-export function calculatePaymentStatus(totalAmount = 0, paidAmount = 0, outstandingAmount = null) {
+export function calculatePaymentStatus(totalAmount = 0, paidAmount = 0, outstandingAmount = null, rawStatus = '') {
+  const raw = (rawStatus || '').toLowerCase().trim();
+  if (raw === 'failed') return 'Failed';
+  if (raw === 'cancelled' || raw === 'canceled') return 'Cancelled';
+
   const total = Number(totalAmount) || 0;
   const paid = Number(paidAmount) || 0;
   const outstanding = outstandingAmount !== null && outstandingAmount !== undefined
     ? Number(outstandingAmount)
     : Math.max(0, total - paid);
 
-  if (outstanding <= 0 && total > 0) {
+  if (total > 0 && outstanding <= 0.001) {
     return 'Paid';
   }
-  if (paid > 0 && outstanding > 0) {
+  if (paid > 0 && outstanding > 0.001) {
     return 'Partially Paid';
+  }
+  if (raw === 'pending' || raw === 'draft' || raw === 'pending confirmation') {
+    return 'Pending';
   }
   return 'Unpaid';
 }
@@ -39,8 +55,17 @@ export function getPaymentStatusBadgeClasses(status) {
   if (s === 'partially paid' || s === 'partial' || s === 'partiallypaid') {
     return 'bg-amber-50 text-amber-700 border border-amber-200 font-semibold';
   }
-  if (s === 'unpaid' || s === 'pending') {
+  if (s === 'unpaid') {
     return 'bg-rose-50 text-rose-700 border border-rose-200 font-semibold';
+  }
+  if (s === 'pending' || s === 'pending confirmation' || s === 'draft') {
+    return 'bg-amber-50 text-amber-600 border border-amber-200 font-semibold';
+  }
+  if (s === 'failed') {
+    return 'bg-red-50 text-red-700 border border-red-200 font-semibold';
+  }
+  if (s === 'cancelled' || s === 'canceled') {
+    return 'bg-slate-100 text-slate-700 border border-slate-300 font-semibold';
   }
   return 'bg-slate-50 text-slate-700 border border-slate-200';
 }

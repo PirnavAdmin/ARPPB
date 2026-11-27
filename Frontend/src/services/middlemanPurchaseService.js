@@ -31,6 +31,21 @@ export function mapMiddlemanPurchaseDto(dto = {}, existing = {}) {
   const totalAmount = Number(
     dto.totalAmount ?? subtotal + transportation + loading + otherCharges
   );
+  const paidAmount = Number(dto.paidAmount ?? existing.paidAmount ?? 0);
+  const outstandingAmount =
+    dto.outstandingAmount !== undefined && dto.outstandingAmount !== null
+      ? Number(dto.outstandingAmount)
+      : Math.max(0, totalAmount - paidAmount);
+  const paymentStatus =
+    dto.paymentStatus ||
+    (outstandingAmount <= 0.001 && totalAmount > 0
+      ? 'Paid'
+      : paidAmount > 0
+      ? 'Partially Paid'
+      : 'Unpaid');
+  const paymentHistory = Array.isArray(dto.paymentHistory)
+    ? dto.paymentHistory
+    : existing.paymentHistory || [];
 
   return {
     ...existing,
@@ -54,6 +69,10 @@ export function mapMiddlemanPurchaseDto(dto = {}, existing = {}) {
     loading,
     otherCharges,
     totalAmount,
+    paidAmount,
+    outstandingAmount,
+    paymentStatus,
+    paymentHistory,
     averageCostPerUnit:
       quantity > 0 ? Number((totalAmount / quantity).toFixed(2)) : rate,
     quality: dto.quality || dto.qualityGrade || existing.quality || 'Grade A',

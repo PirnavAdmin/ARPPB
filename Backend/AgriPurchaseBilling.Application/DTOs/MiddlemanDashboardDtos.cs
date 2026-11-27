@@ -528,6 +528,18 @@ namespace AgriPurchaseBilling.Application.DTOs
 
         [JsonPropertyName("action")]
         public string Action { get; set; } = "View";
+
+        [JsonPropertyName("paidAmount")]
+        public decimal PaidAmount { get; set; }
+
+        [JsonPropertyName("outstandingAmount")]
+        public decimal OutstandingAmount { get; set; }
+
+        [JsonPropertyName("paymentStatus")]
+        public string PaymentStatus { get; set; } = "Unpaid";
+
+        [JsonPropertyName("paymentHistory")]
+        public List<MiddlemanPaymentDto> PaymentHistory { get; set; } = new();
     }
 
     public class RecentTransactionDto

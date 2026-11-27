@@ -14,11 +14,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\ADMIN\\source\\repos\\ARPPB\\Backend\\AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj",
+      "projectUniqueName": "C:\\Users\\ADMIN\\Documents\\ARPPB\\Backend\\AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj",
       "projectName": "AgriPurchaseBilling.Domain",
-      "projectPath": "C:\\Users\\ADMIN\\source\\repos\\ARPPB\\Backend\\AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj",
+      "projectPath": "C:\\Users\\ADMIN\\Documents\\ARPPB\\Backend\\AgriPurchaseBilling.Domain\\AgriPurchaseBilling.Domain.csproj",
       "packagesPath": "C:\\Users\\ADMIN\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\ADMIN\\source\\repos\\ARPPB\\Backend\\AgriPurchaseBilling.Domain\\obj\\",
+      "outputPath": "C:\\Users\\ADMIN\\Documents\\ARPPB\\Backend\\AgriPurchaseBilling.Domain\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -69,6 +69,20 @@
         ],
         "assetTargetFallback": true,
         "warn": true,
+        "downloadDependencies": [
+          {
+            "name": "Microsoft.AspNetCore.App.Ref",
+            "version": "[8.0.31, 8.0.31]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Ref",
+            "version": "[8.0.31, 8.0.31]"
+          },
+          {
+            "name": "Microsoft.WindowsDesktop.App.Ref",
+            "version": "[8.0.31, 8.0.31]"
+          }
+        ],
         "frameworkReferences": {
           "Microsoft.NETCore.App": {
             "privateAssets": "all"

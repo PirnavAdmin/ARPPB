@@ -33,7 +33,7 @@ export const FarmerDetails = ({
         </div>
 
         {/* Financial & Metric Snapshot Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
           <div className="p-3 bg-teal-50/50 rounded-xl border border-teal-100">
             <span className="text-[11px] text-[#0F766E] font-medium block">Total Transactions</span>
             <span className="text-sm font-bold text-[#1F2937]">{farmer.totalPurchases || 0}</span>
@@ -53,6 +53,13 @@ export const FarmerDetails = ({
             </span>
           </div>
 
+          <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200">
+            <span className="text-[11px] text-emerald-700 font-medium block">Total Paid</span>
+            <span className="text-sm font-bold text-emerald-700">
+              {formatINR(farmer.totalPaid || Math.max(0, (Number(farmer.totalPurchaseValue) || 0) - (Number(farmer.outstandingPayables) || 0)))}
+            </span>
+          </div>
+
           <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200">
             <span className="text-[11px] text-[#D97706] font-medium block">Payables Due</span>
             <span className="text-sm font-bold text-[#D97706]">
@@ -60,6 +67,22 @@ export const FarmerDetails = ({
             </span>
           </div>
         </div>
+
+        {/* Transaction Payment Status Breakdown Pills */}
+        {(farmer.unpaidCount !== undefined || farmer.partiallyPaidCount !== undefined || farmer.paidCount !== undefined) && (
+          <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-[#E2E8F0] text-xs">
+            <span className="font-semibold text-[#64748B]">Payment Status Summary:</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+              Unpaid: {farmer.unpaidCount || 0}
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+              Partially Paid: {farmer.partiallyPaidCount || 0}
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Paid: {farmer.paidCount || 0}
+            </span>
+          </div>
+        )}
 
         {/* Contact & Address Details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">

@@ -139,16 +139,27 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 .Take(pageSize)
                 .ToList();
 
-            // Dynamically calculate real-time OutstandingPayables from MiddlemanLedgers
+            // Dynamically calculate real-time OutstandingPayables and transaction metrics from MiddlemanLedgers
             var farmerIds = items.Select(x => x.FarmerCode).Concat(items.Select(x => x.Id.ToString())).Distinct().ToList();
             var farmerNames = items.Select(x => x.Name).Distinct().ToList();
 
             var balances = await _context.MiddlemanLedgers
                 .AsNoTracking()
                 .Where(x => (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
-                            (farmerIds.Contains(x.PartyId) || farmerNames.Contains(x.PartyName)))
-                .GroupBy(x => !string.IsNullOrEmpty(x.PartyId) ? x.PartyId : x.PartyName)
-                .Select(g => new { Party = g.Key, Outstanding = g.Sum(x => x.OutstandingAmount) })
+                            x.PartyCategory == "Farmer" &&
+                            (farmerIds.Contains(x.PartyId ?? string.Empty) || farmerNames.Contains(x.PartyName ?? string.Empty)))
+                .GroupBy(x => !string.IsNullOrEmpty(x.PartyId) ? x.PartyId! : x.PartyName!)
+                .Select(g => new
+                {
+                    Party = g.Key,
+                    TotalCount = g.Count(),
+                    TotalValue = g.Sum(x => x.Credit),
+                    TotalPaid = g.Sum(x => x.SettledAmount),
+                    Outstanding = g.Sum(x => x.OutstandingAmount),
+                    Unpaid = g.Count(x => x.OutstandingAmount > 0 && x.SettledAmount == 0),
+                    Partial = g.Count(x => x.OutstandingAmount > 0 && x.SettledAmount > 0),
+                    Paid = g.Count(x => x.OutstandingAmount <= 0.001m && (x.Debit > 0 || x.Credit > 0))
+                })
                 .ToListAsync();
 
             foreach (var dto in items)
@@ -156,7 +167,13 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 var b = balances.FirstOrDefault(x => x.Party == dto.FarmerId || x.Party == dto.Name || x.Party == dto.Id.ToString());
                 if (b != null)
                 {
+                    if (b.TotalCount > 0) dto.TotalPurchases = b.TotalCount;
+                    if (b.TotalValue > 0) dto.TotalPurchaseValue = b.TotalValue;
+                    dto.TotalPaid = b.TotalPaid;
                     dto.OutstandingPayables = b.Outstanding;
+                    dto.UnpaidCount = b.Unpaid;
+                    dto.PartiallyPaidCount = b.Partial;
+                    dto.PaidCount = b.Paid;
                 }
             }
 

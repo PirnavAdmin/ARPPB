@@ -130,14 +130,30 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             var dues = await _context.MiddlemanLedgers.AsNoTracking()
                 .Where(l => l.PartyCategory == "Customer" && customerIds.Contains(l.PartyId ?? string.Empty))
                 .GroupBy(l => l.PartyId!)
-                .Select(g => new { PartyId = g.Key, TotalDue = g.Sum(x => x.OutstandingAmount) })
-                .ToDictionaryAsync(x => x.PartyId, x => x.TotalDue, StringComparer.OrdinalIgnoreCase);
+                .Select(g => new
+                {
+                    PartyId = g.Key,
+                    TotalCount = g.Count(),
+                    TotalValue = g.Sum(x => x.Debit),
+                    TotalReceived = g.Sum(x => x.SettledAmount),
+                    TotalDue = g.Sum(x => x.OutstandingAmount),
+                    Unpaid = g.Count(x => x.OutstandingAmount > 0 && x.SettledAmount == 0),
+                    Partial = g.Count(x => x.OutstandingAmount > 0 && x.SettledAmount > 0),
+                    Paid = g.Count(x => x.OutstandingAmount <= 0.001m && (x.Debit > 0 || x.Credit > 0))
+                })
+                .ToDictionaryAsync(x => x.PartyId, x => x, StringComparer.OrdinalIgnoreCase);
 
             foreach (var dto in items)
             {
-                if (dues.TryGetValue(dto.CustomerId, out var dueAmt))
+                if (dues.TryGetValue(dto.CustomerId, out var dueStat))
                 {
-                    dto.OutstandingReceivables = dueAmt;
+                    if (dueStat.TotalCount > 0) dto.TotalPurchases = dueStat.TotalCount;
+                    if (dueStat.TotalValue > 0) dto.TotalPurchaseValue = dueStat.TotalValue;
+                    dto.TotalReceived = dueStat.TotalReceived;
+                    dto.OutstandingReceivables = dueStat.TotalDue;
+                    dto.UnpaidCount = dueStat.Unpaid;
+                    dto.PartiallyPaidCount = dueStat.Partial;
+                    dto.PaidCount = dueStat.Paid;
                 }
             }
 

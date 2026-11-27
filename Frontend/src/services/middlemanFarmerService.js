@@ -56,6 +56,10 @@ export function mapMiddlemanFarmerDto(dto = {}, existing = {}) {
     outstandingPayables: Number(
       dto.outstandingPayables ?? dto.pendingPayables ?? existing.outstandingPayables ?? 0
     ),
+    totalPaid: Number(dto.totalPaid ?? dto.amountPaid ?? existing.totalPaid ?? 0),
+    unpaidCount: Number(dto.unpaidCount ?? existing.unpaidCount ?? 0),
+    partiallyPaidCount: Number(dto.partiallyPaidCount ?? existing.partiallyPaidCount ?? 0),
+    paidCount: Number(dto.paidCount ?? existing.paidCount ?? 0),
     pendingConfirmations: Number(dto.pendingConfirmations ?? existing.pendingConfirmations ?? 0),
     status: dto.status || (dto.isActive === false ? 'Inactive' : existing.status || 'Active'),
     notes: dto.notes ?? existing.notes ?? '',

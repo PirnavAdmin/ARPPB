@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Phone, Mail, MapPin, Edit2 } from 'lucide-react';
 import { formatINR } from '../../../../utils/middleman/formatters';
+import { getPaymentStatusBadgeClasses, calculatePaymentStatus } from '../../../../utils/middleman/paymentStatusHelpers';
 
 export const CustomerDetails = ({
   customer,
@@ -29,7 +30,7 @@ export const CustomerDetails = ({
         </div>
 
         {/* Snapshot Cards */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <div className="p-3 bg-teal-50/50 rounded-xl border border-teal-100">
             <span className="text-[11px] text-[#0F766E] font-medium block">Total Orders</span>
             <span className="text-sm font-bold text-[#1F2937]">{customer.totalPurchases || 0}</span>
@@ -40,11 +41,34 @@ export const CustomerDetails = ({
             <span className="text-sm font-bold text-[#1F2937]">{formatINR(customer.totalPurchaseValue || 0)}</span>
           </div>
 
+          <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200">
+            <span className="text-[11px] text-emerald-700 font-medium block">Total Received</span>
+            <span className="text-sm font-bold text-emerald-700">
+              {formatINR(customer.totalReceived || Math.max(0, (Number(customer.totalPurchaseValue) || 0) - (Number(customer.outstandingReceivables) || 0)))}
+            </span>
+          </div>
+
           <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200">
             <span className="text-[11px] text-[#D97706] font-medium block">Receivables Due</span>
             <span className="text-sm font-bold text-[#D97706]">{formatINR(customer.outstandingReceivables || 0)}</span>
           </div>
         </div>
+
+        {/* Order Payment Status Summary */}
+        {(customer.unpaidCount !== undefined || customer.partiallyPaidCount !== undefined || customer.paidCount !== undefined) && (
+          <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-[#E2E8F0] text-xs">
+            <span className="font-semibold text-[#64748B]">Order Payment Summary:</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+              Unpaid: {customer.unpaidCount || 0}
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+              Partially Paid: {customer.partiallyPaidCount || 0}
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Paid: {customer.paidCount || 0}
+            </span>
+          </div>
+        )}
 
         {/* Contact & Location Details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -76,15 +100,32 @@ export const CustomerDetails = ({
             <p className="text-xs text-[#64748B] py-3 text-center bg-slate-50 rounded-xl">No orders recorded yet.</p>
           ) : (
             <div className="divide-y divide-[#E2E8F0] border border-[#E2E8F0] rounded-xl overflow-hidden text-xs">
-              {sales.slice(0, 3).map((s) => (
-                <div key={s.saleId} className="p-2.5 flex items-center justify-between hover:bg-slate-50">
-                  <div>
-                    <span className="font-mono font-bold text-[#0F766E] mr-2">{s.saleId}</span>
-                    <span>{s.quantity} {s.unit} {s.cropName}</span>
+              {sales.slice(0, 4).map((s) => {
+                const total = Number(s.finalAmount ?? s.totalAmount ?? 0);
+                const received = Number(s.paidAmount ?? 0);
+                const due = s.outstandingAmount !== undefined && s.outstandingAmount !== null
+                  ? Number(s.outstandingAmount)
+                  : Math.max(0, total - received);
+                const payStatus = s.paymentStatus || calculatePaymentStatus(total, received, due, s.status);
+
+                return (
+                  <div key={s.saleId} className="p-2.5 flex items-center justify-between hover:bg-slate-50 gap-2">
+                    <div className="min-w-0">
+                      <span className="font-mono font-bold text-[#0F766E] mr-2">{s.saleId}</span>
+                      <span className="text-[#1F2937]">{s.quantity} {s.unit} {s.cropName}</span>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0 text-right">
+                      <div>
+                        <div className="font-bold text-[#1F2937]">{formatINR(total)}</div>
+                        <div className="text-[10px] text-emerald-600">Rec: {formatINR(received)} &bull; Due: {formatINR(due)}</div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] ${getPaymentStatusBadgeClasses(payStatus)}`}>
+                        {payStatus}
+                      </span>
+                    </div>
                   </div>
-                  <span className="font-bold text-[#1F2937]">{formatINR(s.finalAmount)}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

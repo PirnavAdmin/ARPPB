@@ -29,9 +29,13 @@ export function mapMiddlemanVendorDto(dto = {}, existing = {}) {
     district: dto.district || existing.district || '',
     state: dto.state || existing.state || 'Andhra Pradesh',
     pinCode: dto.pinCode ?? existing.pinCode ?? '',
-    totalPurchases: Number(dto.totalPurchases ?? dto.orders ?? existing.totalPurchases ?? 0),
+    totalPurchases: Number(dto.totalPurchases ?? dto.orders ?? dto.totalOrders ?? existing.totalPurchases ?? 0),
     totalPurchaseValue: Number(dto.totalPurchaseValue ?? dto.totalValue ?? existing.totalPurchaseValue ?? 0),
     outstandingReceivables: Number(dto.outstandingReceivables ?? existing.outstandingReceivables ?? 0),
+    totalReceived: Number(dto.totalReceived ?? dto.amountReceived ?? existing.totalReceived ?? 0),
+    unpaidCount: Number(dto.unpaidCount ?? existing.unpaidCount ?? 0),
+    partiallyPaidCount: Number(dto.partiallyPaidCount ?? existing.partiallyPaidCount ?? 0),
+    paidCount: Number(dto.paidCount ?? existing.paidCount ?? 0),
     status: dto.status || existing.status || 'Active',
     notes: dto.notes ?? existing.notes ?? '',
   };
@@ -45,6 +49,22 @@ export function mapMiddlemanVendorSaleRecordDto(dto = {}, existing = {}) {
   const transportation = Number(dto.transportation ?? dto.transportationCharges ?? existing.transportation ?? 0);
   const otherCharges = Number(dto.otherCharges ?? existing.otherCharges ?? 0);
   const totalAmount = Number(dto.totalAmount ?? subtotal + transportation + otherCharges);
+  const paidAmount = Number(dto.paidAmount ?? existing.paidAmount ?? 0);
+  const outstandingAmount =
+    dto.outstandingAmount !== undefined && dto.outstandingAmount !== null
+      ? Number(dto.outstandingAmount)
+      : Math.max(0, totalAmount - paidAmount);
+  const paymentStatus =
+    dto.paymentStatus ||
+    (outstandingAmount <= 0.001 && totalAmount > 0
+      ? 'Paid'
+      : paidAmount > 0
+      ? 'Partially Paid'
+      : 'Unpaid');
+  const paymentHistory = Array.isArray(dto.paymentHistory)
+    ? dto.paymentHistory
+    : existing.paymentHistory || [];
+
   return {
     ...existing,
     id: dto.id ?? existing.id ?? null,
@@ -65,6 +85,10 @@ export function mapMiddlemanVendorSaleRecordDto(dto = {}, existing = {}) {
     transportation,
     otherCharges,
     totalAmount,
+    paidAmount,
+    outstandingAmount,
+    paymentStatus,
+    paymentHistory,
     salesDate: dto.salesDate ? String(dto.salesDate).slice(0, 10) : existing.salesDate || new Date().toISOString().slice(0, 10),
     expectedDeliveryDate: dto.expectedDeliveryDate ? String(dto.expectedDeliveryDate).slice(0, 10) : existing.expectedDeliveryDate || '',
     expectedPaymentDate: dto.expectedPaymentDate ? String(dto.expectedPaymentDate).slice(0, 10) : existing.expectedPaymentDate || '',

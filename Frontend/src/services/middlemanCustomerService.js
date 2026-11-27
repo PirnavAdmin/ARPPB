@@ -18,9 +18,13 @@ export function mapMiddlemanCustomerDto(dto) {
     district: dto.district || '',
     state: dto.state || 'Andhra Pradesh',
     pinCode: dto.pinCode || '',
-    totalPurchases: dto.totalPurchases || 0,
-    totalPurchaseValue: dto.totalPurchaseValue || 0,
-    outstandingReceivables: dto.outstandingReceivables || 0,
+    totalPurchases: Number(dto.totalPurchases || dto.orders || dto.totalOrders || 0),
+    totalPurchaseValue: Number(dto.totalPurchaseValue || dto.totalValue || 0),
+    outstandingReceivables: Number(dto.outstandingReceivables || 0),
+    totalReceived: Number(dto.totalReceived || dto.amountReceived || 0),
+    unpaidCount: Number(dto.unpaidCount || 0),
+    partiallyPaidCount: Number(dto.partiallyPaidCount || 0),
+    paidCount: Number(dto.paidCount || 0),
     status: dto.status || 'Active',
     notes: dto.notes || '',
     createdAt: dto.createdAt || new Date().toISOString(),
@@ -29,6 +33,23 @@ export function mapMiddlemanCustomerDto(dto) {
 
 export function mapMiddlemanCustomerSaleDto(dto) {
   if (!dto) return null;
+  const finalAmount = Number(dto.finalAmount ?? dto.totalAmount ?? 0);
+  const paidAmount = Number(dto.paidAmount ?? 0);
+  const outstandingAmount =
+    dto.outstandingAmount !== undefined && dto.outstandingAmount !== null
+      ? Number(dto.outstandingAmount)
+      : Math.max(0, finalAmount - paidAmount);
+  const paymentStatus =
+    dto.paymentStatus ||
+    (outstandingAmount <= 0.001 && finalAmount > 0
+      ? 'Paid'
+      : paidAmount > 0
+      ? 'Partially Paid'
+      : 'Unpaid');
+  const paymentHistory = Array.isArray(dto.paymentHistory)
+    ? dto.paymentHistory
+    : [];
+
   return {
     id: dto.id || dto.saleId,
     saleId: dto.saleId || `CUS-SAL-${dto.id}`,
@@ -45,7 +66,12 @@ export function mapMiddlemanCustomerSaleDto(dto) {
     subtotal: Number(dto.subtotal) || 0,
     deliveryCharges: Number(dto.deliveryCharges) || 0,
     deliveryAddress: dto.deliveryAddress || '',
-    finalAmount: Number(dto.finalAmount) || 0,
+    finalAmount,
+    totalAmount: finalAmount,
+    paidAmount,
+    outstandingAmount,
+    paymentStatus,
+    paymentHistory,
     salesDate: dto.salesDate ? dto.salesDate.slice(0, 10) : new Date().toISOString().slice(0, 10),
     expectedPaymentDate: dto.expectedPaymentDate ? dto.expectedPaymentDate.slice(0, 10) : null,
     expectedDeliveryDate: dto.expectedDeliveryDate ? dto.expectedDeliveryDate.slice(0, 10) : null,
