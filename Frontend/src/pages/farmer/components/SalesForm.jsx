@@ -32,7 +32,7 @@ import {
 } from '../../../services/farmerContactService';
 
 function SalesForm({ initialCategory, onSaleCreated }) {
-  const { crops, profile, createSale, salesOptions, setActiveOtpRequest, pageParam, setPageParam } = useFarmer();
+  const { crops, profile, sales, createSale, salesOptions, setActiveOtpRequest, pageParam, setPageParam } = useFarmer();
 
   const options = salesOptions || DEFAULT_SALES_OPTIONS;
   const buyerCategories = options.buyerCategories?.length ? options.buyerCategories : DEFAULT_SALES_OPTIONS.buyerCategories;
@@ -113,7 +113,8 @@ function SalesForm({ initialCategory, onSaleCreated }) {
         const contacts = await fetchFarmerContactsApi({
           category: formData.buyerCategory,
           search: debouncedSearch,
-          userId: profile?.id,
+          userId: profile?.id || profile?.farmerId || 1,
+          sales,
         });
         if (isCurrent) {
           setMatchingContacts(contacts);
@@ -132,7 +133,7 @@ function SalesForm({ initialCategory, onSaleCreated }) {
     return () => {
       isCurrent = false;
     };
-  }, [debouncedSearch, formData.buyerCategory, profile?.id]);
+  }, [debouncedSearch, formData.buyerCategory, profile?.id, profile?.farmerId, sales]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -253,8 +254,9 @@ function SalesForm({ initialCategory, onSaleCreated }) {
       if (contact.id) {
         const fetched = await fetchFarmerContactByIdApi(
           contact.id,
-          profile?.id,
-          contact.category || formData.buyerCategory
+          profile?.id || profile?.farmerId || 1,
+          contact.category || formData.buyerCategory,
+          sales
         );
         if (fetched && typeof fetched === 'object') {
           // Merge safely: ONLY overwrite with non-empty, non-ID values
@@ -280,12 +282,21 @@ function SalesForm({ initialCategory, onSaleCreated }) {
     }
 
     // Determine clean display name: NEVER an ID like CNT-V001 or pure numbers
-    let chosenName = fullDetails.businessName || fullDetails.name || fullDetails.contactPerson || '';
+    let chosenName = fullDetails.name || fullDetails.businessName || fullDetails.contactPerson || '';
     if (!chosenName || chosenName.startsWith('CNT-') || /^\d+$/.test(chosenName)) {
       chosenName = fullDetails.contactPerson || fullDetails.businessName || 'Agricultural Buyer';
     }
 
-    const chosenMobile = fullDetails.mobile || '';
+    let chosenMobile = fullDetails.mobile || '';
+    if (!chosenMobile || chosenMobile.length !== 10) {
+      const match = (DEFAULT_FARMER_CONTACTS || []).find(
+        (c) => c.name?.toLowerCase() === chosenName.toLowerCase() || c.businessName?.toLowerCase() === chosenName.toLowerCase()
+      );
+      if (match?.mobile) {
+        chosenMobile = match.mobile;
+      }
+    }
+
     const chosenCategory = fullDetails.category || formData.buyerCategory;
 
     // Find matching crop in farmer crops if contact has a preferred/last crop
@@ -293,10 +304,10 @@ function SalesForm({ initialCategory, onSaleCreated }) {
       (c) => c.name.toLowerCase() === (fullDetails.cropName || '').toLowerCase()
     ) || selectedCrop;
 
-    const chosenQty = fullDetails.sellingQuantity || formData.sellingQuantity || '25';
-    const chosenRate = fullDetails.rate || matchingCrop?.expectedSellingPrice || formData.rate || '910.01';
+    const chosenQty = fullDetails.sellingQuantity || formData.sellingQuantity || (matchingCrop?.availableQuantity ? Math.min(25, matchingCrop.availableQuantity) : '25');
+    const chosenRate = fullDetails.rate || matchingCrop?.expectedSellingPrice || formData.rate || '910';
     const chosenGrade = fullDetails.qualityGrade || matchingCrop?.qualityGrade || formData.qualityGrade || 'Grade A';
-    const chosenLocation = fullDetails.pickupLocation || formData.pickupLocation;
+    const chosenLocation = fullDetails.pickupLocation || formData.pickupLocation || `${profile.farmName || 'Farmer Warehouse'}, ${profile.village || 'Farm'}${profile.district ? `, ${profile.district}` : ''}`;
 
     setFormData((prev) => ({
       ...prev,
@@ -652,6 +663,41 @@ function SalesForm({ initialCategory, onSaleCreated }) {
           </div>
 
           <form onSubmit={handleSubmit} autoComplete="off">
+            {/* Buyer Category Selector Tabs (Middleman, Vendor, Customer) */}
+            <div className="mb-5">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>Buyer Category *</span>
+                </label>
+                <span className="text-xs font-semibold text-slate-500">
+                  Selling to: <strong className="text-[#0F766E] font-bold">{formData.buyerCategory}</strong>
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200 shadow-inner">
+                {buyerCategories.map((cat) => {
+                  const isSelected = formData.buyerCategory.toLowerCase() === cat.code.toLowerCase();
+                  const Icon = cat.code === 'Vendor' ? Building2 : cat.code === 'Customer' ? Users : UserCheck;
+
+                  return (
+                    <button
+                      key={cat.code}
+                      type="button"
+                      onClick={() => handleCategoryChange(cat.code)}
+                      className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-white text-[#0F766E] shadow-sm border border-slate-200 ring-2 ring-[#0F766E]/20'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 ${isSelected ? 'text-[#0F766E]' : 'text-slate-400'}`} />
+                      <span>{cat.name || cat.code}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Buyer Name with Predictive Dropdown & Mobile Number with Live Validation */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               {/* Buyer Name Input with Autocomplete Dropdown */}
@@ -672,7 +718,13 @@ function SalesForm({ initialCategory, onSaleCreated }) {
                     ref={nameInputRef}
                     type="text"
                     name="buyerName"
-                    placeholder="e.g. Bhanu Prasad, Srinivasa Traders, ITC"
+                    placeholder={
+                      formData.buyerCategory === 'Vendor'
+                        ? 'e.g. harsha, Kaveri Rice Mill, Annapurna Spices, Bhanu Traders'
+                        : formData.buyerCategory === 'Customer'
+                        ? 'e.g. vardani, Raju Kirana, Balaji Grain, Sai Ram Feeds, Rajesh Kumar'
+                        : 'e.g. vardani, devi, Honey Traders, Bhanu Prasad, Sri Lakshmi Agencies'
+                    }
                     value={formData.buyerName}
                     onChange={handleNameChange}
                     onFocus={() => setIsDropdownOpen(true)}
@@ -734,8 +786,8 @@ function SalesForm({ initialCategory, onSaleCreated }) {
                             };
                             const isSelected = idx === activeDropdownIndex;
                             const query = (formData.buyerName || '').trim();
-                            const displayName = contact.businessName || contact.name || 'Agricultural Buyer';
-                            const contactPerson = contact.contactPerson && contact.contactPerson !== displayName ? contact.contactPerson : null;
+                            const displayName = contact.name || contact.businessName || 'Agricultural Buyer';
+                            const contactPerson = contact.contactPerson && contact.contactPerson !== displayName ? contact.contactPerson : (contact.businessName && contact.businessName !== displayName ? contact.businessName : null);
                             const initials = (displayName || 'AB').slice(0, 2).toUpperCase();
 
                             const renderHighlight = (text, q) => {

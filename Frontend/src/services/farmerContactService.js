@@ -88,6 +88,57 @@ export const DEFAULT_FARMER_CONTACTS = [
   // MIDDLEMEN (Mandi Commission Agents, Traders, Brokers)
   // =========================================================================
   {
+    id: 'CNT-M-VARDANI-1',
+    name: 'vardani',
+    businessName: 'vardani Mandi Commission Agency',
+    contactPerson: 'vardani',
+    mobile: '9989299514',
+    category: 'Middleman',
+    cropName: 'Paddy',
+    sellingQuantity: '179.76',
+    rate: '910',
+    qualityGrade: 'Grade A',
+    pickupLocation: 'Kurnool APMC Market Yard, Platform 3',
+    district: 'Kurnool',
+    state: 'Andhra Pradesh',
+    lastOrder: '23 Nov 2026',
+    totalPurchases: '₹1,63,583',
+  },
+  {
+    id: 'CNT-M-VARDANI-2',
+    name: 'vardani',
+    businessName: 'vardani Traders & Brokers',
+    contactPerson: 'vardani',
+    mobile: '8886114562',
+    category: 'Middleman',
+    cropName: 'Paddy',
+    sellingQuantity: '179.76',
+    rate: '910',
+    qualityGrade: 'Grade A',
+    pickupLocation: 'Kurnool APMC Yard, Shed 4',
+    district: 'Kurnool',
+    state: 'Andhra Pradesh',
+    lastOrder: '23 Nov 2026',
+    totalPurchases: '₹1,63,583',
+  },
+  {
+    id: 'CNT-M-DEVI',
+    name: 'devi',
+    businessName: 'devi Agri Commission Agent',
+    contactPerson: 'devi',
+    mobile: '8885237236',
+    category: 'Middleman',
+    cropName: 'Paddy',
+    sellingQuantity: '150',
+    rate: '910',
+    qualityGrade: 'Grade A',
+    pickupLocation: 'Kurnool APMC Yard, Gate 2',
+    district: 'Kurnool',
+    state: 'Andhra Pradesh',
+    lastOrder: '23 Nov 2026',
+    totalPurchases: '₹1,36,502',
+  },
+  {
     id: 'CNT-M001',
     name: 'Honey Traders',
     businessName: 'Honey Traders',
@@ -228,6 +279,74 @@ export const DEFAULT_FARMER_CONTACTS = [
   // VENDORS (Processing Mills, Food Factories, Aggregators, Exporters)
   // =========================================================================
   {
+    id: 'CNT-V-HARSHA',
+    name: 'harsha',
+    businessName: 'harsha Processing Mills & Exports',
+    contactPerson: 'harsha',
+    mobile: '8885237278',
+    category: 'Vendor',
+    cropName: 'Paddy',
+    sellingQuantity: '150',
+    rate: '911',
+    qualityGrade: 'Grade A',
+    pickupLocation: 'Industrial Estate, Tanuku, Guntur',
+    district: 'West Godavari',
+    state: 'Andhra Pradesh',
+    lastOrder: '23 Nov 2026',
+    totalPurchases: '₹1,36,652',
+  },
+  {
+    id: 'CNT-V-KAVERI',
+    name: 'Kaveri Modern Rice Millers Ltd',
+    businessName: 'Kaveri Modern Rice Millers Ltd',
+    contactPerson: 'V. Raghava Rao',
+    mobile: '9848112233',
+    category: 'Vendor',
+    cropName: 'Paddy',
+    sellingQuantity: '120',
+    rate: '910',
+    qualityGrade: 'Grade A',
+    pickupLocation: 'Industrial Development Area, Autonagar, Guntur',
+    district: 'Guntur',
+    state: 'Andhra Pradesh',
+    lastOrder: '20 Nov 2026',
+    totalPurchases: '₹24,50,000',
+  },
+  {
+    id: 'CNT-V-ANNAPURNA',
+    name: 'Annapurna Spices & Exports Corp',
+    businessName: 'Annapurna Spices & Exports Corp',
+    contactPerson: 'K. Subba Rao',
+    mobile: '9849223344',
+    category: 'Vendor',
+    cropName: 'Turmeric',
+    sellingQuantity: '60',
+    rate: '8400',
+    qualityGrade: 'Grade A',
+    pickupLocation: 'Chilli Market Yard Gate 2, Guntur',
+    district: 'Guntur',
+    state: 'Andhra Pradesh',
+    lastOrder: '18 Nov 2026',
+    totalPurchases: '₹31,80,000',
+  },
+  {
+    id: 'CNT-V-GODAVARI',
+    name: 'Godavari Feeds & Agro Commodities',
+    businessName: 'Godavari Feeds & Agro Commodities',
+    contactPerson: 'N. Prasad Reddy',
+    mobile: '9440334455',
+    category: 'Vendor',
+    cropName: 'Maize',
+    sellingQuantity: '80',
+    rate: '2250',
+    qualityGrade: 'Grade A',
+    pickupLocation: 'Plot 18, NH-65 Bypass, Suryapet',
+    district: 'Suryapet',
+    state: 'Telangana',
+    lastOrder: '15 Nov 2026',
+    totalPurchases: '₹12,20,000',
+  },
+  {
     id: 'CNT-V001',
     name: 'Bhanu Traders',
     businessName: 'Bhanu Traders & Processors',
@@ -350,6 +469,91 @@ export const DEFAULT_FARMER_CONTACTS = [
   // =========================================================================
   // CUSTOMERS (Retail Stores, Organic Consumers, Direct Buyers)
   // =========================================================================
+  {
+    id: 'CNT-C-VARDANI',
+    name: 'vardani',
+    businessName: 'vardani Direct Consumer Store',
+    contactPerson: 'vardani',
+    mobile: '8885237270',
+    category: 'Customer',
+    cropName: 'Paddy',
+    sellingQuantity: '170',
+    rate: '911',
+    qualityGrade: 'Grade A',
+    pickupLocation: 'Tanuku Delivery Hub, Guntur',
+    district: 'West Godavari',
+    state: 'Andhra Pradesh',
+    lastOrder: '23 Nov 2026',
+    totalPurchases: '₹1,54,872',
+  },
+  {
+    id: 'CNT-C-RAJU',
+    name: 'Raju Kirana & Agro Stores',
+    businessName: 'Raju Kirana & Agro Stores',
+    contactPerson: 'Raju',
+    mobile: '9849556677',
+    category: 'Customer',
+    cropName: 'Paddy',
+    sellingQuantity: '50',
+    rate: '915',
+    qualityGrade: 'Grade A',
+    pickupLocation: 'Shop No 14, Gandhi Chowk, Tenali',
+    district: 'Guntur',
+    state: 'Andhra Pradesh',
+    lastOrder: '22 Nov 2026',
+    totalPurchases: '₹3,20,000',
+  },
+  {
+    id: 'CNT-C-BALAJI',
+    name: 'Balaji Grain & Oil Mart',
+    businessName: 'Balaji Grain & Oil Mart',
+    contactPerson: 'Balaji',
+    mobile: '9440667788',
+    category: 'Customer',
+    cropName: 'Groundnut',
+    sellingQuantity: '40',
+    rate: '6100',
+    qualityGrade: 'Grade A',
+    pickupLocation: 'Near Old Bus Stand, Vijayawada',
+    district: 'NTR',
+    state: 'Andhra Pradesh',
+    lastOrder: '20 Nov 2026',
+    totalPurchases: '₹2,85,000',
+  },
+  {
+    id: 'CNT-C-SAIRAM',
+    name: 'Sai Ram Cattle & Poultry Feeds',
+    businessName: 'Sai Ram Cattle & Poultry Feeds',
+    contactPerson: 'Sai Ram',
+    mobile: '9989778899',
+    category: 'Customer',
+    cropName: 'Maize',
+    sellingQuantity: '60',
+    rate: '2240',
+    qualityGrade: 'Grade A',
+    pickupLocation: 'Ring Road, Miryalaguda',
+    district: 'Nalgonda',
+    state: 'Telangana',
+    lastOrder: '18 Nov 2026',
+    totalPurchases: '₹1,95,000',
+  },
+  {
+    id: 'CNT-C-KISAN',
+    name: 'Kisan Seed Stores & Organics',
+    businessName: 'Kisan Seed Stores & Organics',
+    contactPerson: 'Kisan Seeds',
+    mobile: '9701889900',
+    category: 'Customer',
+    cropName: 'Paddy',
+    sellingQuantity: '30',
+    rate: '920',
+    qualityGrade: 'Grade A',
+    pickupLocation: 'Station Road, Khammam',
+    district: 'Khammam',
+    state: 'Telangana',
+    lastOrder: '15 Nov 2026',
+    totalPurchases: '₹1,40,000',
+  },
   {
     id: 'CNT-C001',
     name: 'Rajesh Kumar',
@@ -635,31 +839,115 @@ export function saveContactToStorage(contact) {
 }
 
 /**
- * Returns merged offline fallback contacts for category
+ * Extracts buyer contact records dynamically from sales transactions (e.g. MySales or database records)
  */
-export function getFallbackContactsList(category = '') {
-  const local = getLocalSavedContacts();
-  const map = new Map();
+export function extractContactsFromSales(salesList = []) {
+  if (!Array.isArray(salesList) || salesList.length === 0) return [];
 
-  // 1. Defaults
-  DEFAULT_FARMER_CONTACTS.forEach((c) => {
-    map.set(c.id.toLowerCase(), c);
+  const contactMap = new Map();
+
+  salesList.forEach((s) => {
+    if (!s || typeof s !== 'object') return;
+    const name = String(s.buyerName || s.name || '').trim();
+    if (!name || name.startsWith('CNT-') || name.startsWith('BUYER-') || /^[0-9]+$/.test(name)) {
+      return;
+    }
+
+    const mobile = String(s.buyerMobile || s.mobile || s.phone || '').replace(/\D/g, '').slice(-10);
+    const rawCategory = s.buyerCategory || s.category || 'Middleman';
+    const category = mapBackendCategoryToFrontend(rawCategory);
+
+    // Composite key: name + mobile + category
+    const key = `${name.toLowerCase()}__${mobile}__${category.toLowerCase()}`;
+
+    if (!contactMap.has(key)) {
+      contactMap.set(key, {
+        id: `CNT-SALE-${name.replace(/\s+/g, '-').slice(0, 8)}-${mobile.slice(-4) || '0000'}`,
+        name,
+        businessName: name,
+        contactPerson: name,
+        mobile,
+        category,
+        cropName: s.cropName || '',
+        sellingQuantity: s.quantity ? String(s.quantity) : '25',
+        rate: s.rate ? String(s.rate) : '910',
+        qualityGrade: s.qualityGrade || 'Grade A',
+        pickupLocation: s.pickupLocation || '',
+        district: s.district || '',
+        state: s.state || 'Andhra Pradesh',
+        lastOrder: s.date || '',
+        totalPurchases: s.totalAmount ? `₹${Number(s.totalAmount).toLocaleString('en-IN')}` : '',
+      });
+    }
   });
 
-  // 2. Local saved modifications (only if valid and not an ID)
-  local.forEach((c) => {
+  return Array.from(contactMap.values());
+}
+
+/**
+ * Extracts buyer contacts from persisted sales state in localStorage
+ */
+export function getContactsFromPersistedSales() {
+  if (typeof window === 'undefined' || !window.localStorage) return [];
+  try {
+    const raw = localStorage.getItem('agri-farmer-portal-state-v1');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed?.sales)) {
+        return extractContactsFromSales(parsed.sales);
+      }
+    }
+  } catch (e) {
+    console.warn('Could not read persisted sales for contacts:', e);
+  }
+  return [];
+}
+
+/**
+ * Returns merged offline fallback contacts for category, combining default contacts,
+ * user-saved contacts, and contacts dynamically extracted from active/persisted sales.
+ */
+export function getFallbackContactsList(category = '', externalSales = []) {
+  const localSaved = getLocalSavedContacts();
+  const persistedSalesContacts = getContactsFromPersistedSales();
+  const currentSalesContacts = Array.isArray(externalSales) ? extractContactsFromSales(externalSales) : [];
+
+  const map = new Map();
+
+  // 1. Defaults (includes vardani, harsha, devi, and verified agribusiness buyers)
+  DEFAULT_FARMER_CONTACTS.forEach((c) => {
+    const key = `${(c.name || '').toLowerCase()}__${(c.mobile || '').slice(-10)}__${(c.category || '').toLowerCase()}`;
+    map.set(key, c);
+  });
+
+  // 2. Persisted sales contacts from localStorage
+  persistedSalesContacts.forEach((c) => {
+    const key = `${(c.name || '').toLowerCase()}__${(c.mobile || '').slice(-10)}__${(c.category || '').toLowerCase()}`;
+    const existing = map.get(key) || {};
+    map.set(key, { ...existing, ...c });
+  });
+
+  // 3. Active sales context (from MySales / useFarmer)
+  currentSalesContacts.forEach((c) => {
+    const key = `${(c.name || '').toLowerCase()}__${(c.mobile || '').slice(-10)}__${(c.category || '').toLowerCase()}`;
+    const existing = map.get(key) || {};
+    map.set(key, { ...existing, ...c });
+  });
+
+  // 4. Local saved modifications (only if valid and not an ID)
+  localSaved.forEach((c) => {
     if (c && c.name && !c.name.startsWith('CNT-') && c.mobile && c.mobile.length === 10) {
-      const key = (c.id || c.name).toLowerCase().trim();
+      const key = `${(c.name || '').toLowerCase()}__${(c.mobile || '').slice(-10)}__${(c.category || '').toLowerCase()}`;
       const existing = map.get(key) || {};
       map.set(key, { ...existing, ...c });
     }
   });
 
-  const all = Array.from(map.values());
+  let all = Array.from(map.values());
   if (!category) return all;
 
   const targetCategory = mapCategoryToBackend(category).toLowerCase();
-  return all.filter((c) => c.category.toLowerCase() === targetCategory);
+  return all.filter((c) => (c.category || '').toLowerCase() === targetCategory);
 }
 
 /**
@@ -673,8 +961,9 @@ export function getFallbackContactsList(category = '') {
  * - prefix: contact name or person name search prefix
  * - limit: max 10
  * - userId: optional authenticated farmer id
+ * - sales: optional active sales array from FarmerContext to merge recent buyers
  */
-export async function fetchFarmerContactsApi({ category = '', search = '', query = '', userId } = {}) {
+export async function fetchFarmerContactsApi({ category = '', search = '', query = '', userId, sales = [] } = {}) {
   const term = String(search || query || '').trim();
   const backendCategory = mapCategoryToBackend(category);
 
@@ -713,18 +1002,34 @@ export async function fetchFarmerContactsApi({ category = '', search = '', query
     }
   }
 
-  // 3. Process records from API or Fallback
-  let contacts = [];
-  if (Array.isArray(rawList) && rawList.length > 0) {
-    contacts = rawList.map(normalizeContactDto).filter(Boolean);
-  } else {
-    contacts = getFallbackContactsList(category);
-  }
+  // 3. Process records from API and merge with sales + directory contacts
+  const apiContacts = Array.isArray(rawList) ? rawList.map(normalizeContactDto).filter(Boolean) : [];
+  const fallbackContacts = getFallbackContactsList(category, sales);
+
+  // Merge map by composite key: name + mobile + category
+  const contactMap = new Map();
+
+  // Load fallback contacts first (includes vardani, harsha, devi, and recent transaction parties)
+  fallbackContacts.forEach((c) => {
+    if (!c) return;
+    const key = `${(c.name || '').toLowerCase()}__${(c.mobile || '').slice(-10)}__${(c.category || '').toLowerCase()}`;
+    contactMap.set(key, c);
+  });
+
+  // Overlay API contacts (or add new ones)
+  apiContacts.forEach((c) => {
+    if (!c) return;
+    const key = `${(c.name || '').toLowerCase()}__${(c.mobile || '').slice(-10)}__${(c.category || '').toLowerCase()}`;
+    const existing = contactMap.get(key) || {};
+    contactMap.set(key, { ...existing, ...c });
+  });
+
+  let contacts = Array.from(contactMap.values());
 
   // 4. Client-side Category Filtering (ensure only contacts matching selected category are returned)
   if (category) {
     const normalizedCat = mapCategoryToBackend(category).toLowerCase();
-    contacts = contacts.filter((c) => c.category.toLowerCase() === normalizedCat);
+    contacts = contacts.filter((c) => (c.category || '').toLowerCase() === normalizedCat);
   }
 
   // 5. Client-side Prefix & Substring Filtering
@@ -785,7 +1090,7 @@ export async function fetchFarmerContactsApi({ category = '', search = '', query
  * - Primary: GET /api/v1/farmer/contacts/{id}?category=...
  * - Fallback: GET /api/contacts/{id}?category=...
  */
-export async function fetchFarmerContactByIdApi(id, userId, category = '') {
+export async function fetchFarmerContactByIdApi(id, userId, category = '', sales = []) {
   if (!id) return null;
   const backendCategory = mapCategoryToBackend(category);
   const params = {};
@@ -832,7 +1137,7 @@ export async function fetchFarmerContactByIdApi(id, userId, category = '') {
   }
 
   // 3. Fallback to local directory matching id, name, businessName, contactPerson, or mobile
-  const allFallback = getFallbackContactsList(category);
+  const allFallback = getFallbackContactsList(category, sales);
   const idLower = idStr.toLowerCase();
 
   const found = allFallback.find((c) => {
@@ -850,7 +1155,7 @@ export async function fetchFarmerContactByIdApi(id, userId, category = '') {
   }
 
   // Also check without category constraint
-  const globalFallback = getFallbackContactsList();
+  const globalFallback = getFallbackContactsList('', sales);
   const globalFound = globalFallback.find((c) => {
     return (
       String(c.id).toLowerCase() === idLower ||
