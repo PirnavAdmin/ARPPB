@@ -97,11 +97,24 @@ export function mapMiddlemanLedgerDto(dto = {}, existing = {}) {
 
   const debit = Number(dto.debit ?? existing.debit ?? 0);
   const credit = Number(dto.credit ?? existing.credit ?? 0);
-  const totalAmount = debit > 0 ? debit : credit;
-  const settledAmount = Number(dto.settledAmount ?? dto.paidAmount ?? existing.settledAmount ?? 0);
-  const outstandingAmount = Number(
-    dto.outstandingAmount ?? dto.balanceAmount ?? Math.max(0, totalAmount - settledAmount)
+  const originalAmount = Number(
+    dto.originalAmount !== undefined && dto.originalAmount !== null
+      ? dto.originalAmount
+      : (debit > 0 ? debit : credit)
   );
+  const settledAmount = Number(dto.paidAmount ?? dto.settledAmount ?? existing.settledAmount ?? 0);
+  const outstandingAmount = Number(
+    dto.outstandingAmount !== undefined && dto.outstandingAmount !== null
+      ? dto.outstandingAmount
+      : Math.max(0, originalAmount - settledAmount)
+  );
+
+  const status =
+    outstandingAmount <= 0 && originalAmount > 0
+      ? 'Paid'
+      : settledAmount > 0
+        ? 'Partially Paid'
+        : 'Unpaid';
 
   return {
     ...existing,
@@ -118,18 +131,13 @@ export function mapMiddlemanLedgerDto(dto = {}, existing = {}) {
     partyCategory: dto.partyCategory || dto.partyType || existing.partyCategory || 'Farmer',
     debit,
     credit,
+    originalAmount,
+    paidAmount: settledAmount,
     runningBalance: Number(dto.runningBalance ?? existing.runningBalance ?? 0),
     expectedPaymentDate: dto.expectedPaymentDate
       ? String(dto.expectedPaymentDate).slice(0, 10)
       : existing.expectedPaymentDate || '',
-    status:
-      dto.status ||
-      existing.status ||
-      (outstandingAmount <= 0 && totalAmount > 0
-        ? 'Paid'
-        : settledAmount > 0
-          ? 'Partially Paid'
-          : 'Pending'),
+    status: dto.status || status,
     category: dto.category || existing.category || '',
     subLedgerGroup: dto.subLedgerGroup || existing.subLedgerGroup || '',
     balanceLabel: dto.balanceLabel || existing.balanceLabel || '',
@@ -137,6 +145,7 @@ export function mapMiddlemanLedgerDto(dto = {}, existing = {}) {
     referenceNo: dto.referenceNo || dto.referenceId || dto.transactionId || existing.referenceNo || '',
     settledAmount,
     outstandingAmount,
+    paymentHistory: Array.isArray(dto.paymentHistory) ? dto.paymentHistory : (existing.paymentHistory || []),
   };
 }
 
@@ -516,6 +525,7 @@ export async function fetchMiddlemanInventoryBatchByIdApi(id) {
       amount: Number(settledAmount) || 0,
       paymentMode: extra.paymentMode || 'NEFT / RTGS',
       notes: extra.notes || null,
+      referenceNo: extra.referenceNo || extra.referenceId || extra.transactionId || null,
       settlementDate: extra.date || new Date().toISOString().slice(0, 10),
     };
 
@@ -536,6 +546,18 @@ export async function fetchMiddlemanInventoryBatchByIdApi(id) {
       }
       console.warn('settleMiddlemanLedgerApi fallback:', firstErr?.message || firstErr);
       return null;
+    }
+  }
+
+  export async function fetchMiddlemanPaymentsApi(ledgerId) {
+    if (!ledgerId) return [];
+    try {
+      const cleanId = String(ledgerId).replace(/^LED-0*/i, '') || ledgerId;
+      const res = await api.get(`/api/v1/middleman/ledger/${cleanId}/payments`);
+      return res.data?.data ?? res.data ?? [];
+    } catch (err) {
+      console.warn('fetchMiddlemanPaymentsApi error:', err?.message || err);
+      return [];
     }
   }
 

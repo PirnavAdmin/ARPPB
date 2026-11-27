@@ -2,6 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { StatusBadge } from '../common/StatusBadge';
 import { formatINR, formatDate, formatQuantity } from '../../../../utils/middleman/formatters';
+import { getPaymentStatusBadgeClasses, calculatePaymentStatus } from '../../../../utils/middleman/paymentStatusHelpers';
 
 export const FarmerHistory = ({
   farmer,
@@ -12,7 +13,7 @@ export const FarmerHistory = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fadeIn">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-[#E2E8F0] p-6 space-y-4 max-h-[90vh] flex flex-col">
+      <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-[#E2E8F0] p-6 space-y-4 max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0]">
           <div>
@@ -20,7 +21,7 @@ export const FarmerHistory = ({
               Purchase History &bull; <span className="text-[#0F766E]">{farmer.name}</span>
             </h3>
             <p className="text-xs text-[#64748B]">
-              Farmer ID: {farmer.farmerId} &bull; {purchases.length} Recorded Transactions
+              Farmer ID: {farmer.farmerId} &bull; {purchases.length} Recorded Transactions &bull; Payables Due: <span className="font-bold text-amber-600">{formatINR(farmer.outstandingPayables || 0)}</span>
             </p>
           </div>
 
@@ -40,7 +41,7 @@ export const FarmerHistory = ({
               No purchase transactions recorded yet for this farmer.
             </p>
           ) : (
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs border-collapse min-w-[700px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-[#E2E8F0] text-[11px] font-semibold text-[#64748B]">
                   <th className="py-2.5 px-3">Purchase ID</th>
@@ -48,24 +49,39 @@ export const FarmerHistory = ({
                   <th className="py-2.5 px-3">Crop</th>
                   <th className="py-2.5 px-3">Quantity</th>
                   <th className="py-2.5 px-3">Rate</th>
-                  <th className="py-2.5 px-3 text-right">Total Amount</th>
-                  <th className="py-2.5 px-3">OTP Status</th>
+                  <th className="py-2.5 px-3 text-right">Total</th>
+                  <th className="py-2.5 px-3 text-right">Paid</th>
+                  <th className="py-2.5 px-3 text-right">Due Balance</th>
+                  <th className="py-2.5 px-3 text-center">Payment Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0]">
-                {purchases.map((p) => (
-                  <tr key={p.purchaseId} className="hover:bg-slate-50">
-                    <td className="py-2.5 px-3 font-mono font-bold text-[#0F766E]">{p.purchaseId}</td>
-                    <td className="py-2.5 px-3 text-[#64748B]">{formatDate(p.purchaseDate)}</td>
-                    <td className="py-2.5 px-3 font-medium">{p.cropName}</td>
-                    <td className="py-2.5 px-3">{formatQuantity(p.quantity, p.unit)}</td>
-                    <td className="py-2.5 px-3">{formatINR(p.rate)}</td>
-                    <td className="py-2.5 px-3 font-bold text-right">{formatINR(p.totalAmount)}</td>
-                    <td className="py-2.5 px-3">
-                      <StatusBadge status={p.otpStatus} size="sm" />
-                    </td>
-                  </tr>
-                ))}
+                {purchases.map((p) => {
+                  const total = Number(p.totalAmount) || 0;
+                  const paid = Number(p.paidAmount) || 0;
+                  const due = p.outstandingAmount !== undefined && p.outstandingAmount !== null
+                    ? Number(p.outstandingAmount)
+                    : Math.max(0, total - paid);
+                  const payStatus = p.paymentStatus || calculatePaymentStatus(total, paid, due);
+
+                  return (
+                    <tr key={p.purchaseId} className="hover:bg-slate-50">
+                      <td className="py-2.5 px-3 font-mono font-bold text-[#0F766E]">{p.purchaseId}</td>
+                      <td className="py-2.5 px-3 text-[#64748B]">{formatDate(p.purchaseDate)}</td>
+                      <td className="py-2.5 px-3 font-medium">{p.cropName}</td>
+                      <td className="py-2.5 px-3">{formatQuantity(p.quantity, p.unit)}</td>
+                      <td className="py-2.5 px-3">{formatINR(p.rate)}</td>
+                      <td className="py-2.5 px-3 font-bold text-right">{formatINR(total)}</td>
+                      <td className="py-2.5 px-3 font-bold text-emerald-600 text-right">{formatINR(paid)}</td>
+                      <td className="py-2.5 px-3 font-bold text-amber-600 text-right">{formatINR(due)}</td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${getPaymentStatusBadgeClasses(payStatus)}`}>
+                          {payStatus}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}

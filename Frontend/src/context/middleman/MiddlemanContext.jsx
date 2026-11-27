@@ -1434,12 +1434,27 @@ export const MiddlemanProvider = ({ children }) => {
         }
       }, []);
 
-      // Settle Ledger Entry (persisted directly to database)
-      const settleLedgerEntry = useCallback((ledgerId, settledAmount, extra = {}) => {
+      // Settle Ledger Entry (persisted directly to database with cross-screen synchronization)
+      const settleLedgerEntry = useCallback(async (ledgerId, settledAmount, extra = {}) => {
         let numericId = extra?.id ?? extra?.raw?.id ?? (typeof ledgerId === 'number' ? ledgerId : null);
         if (!numericId) {
           const match = ledger.find((l) => l.ledgerId === ledgerId || l.id === ledgerId);
           if (match?.id) numericId = match.id;
+        }
+
+        const amountNum = Number(settledAmount);
+        if (amountNum <= 0) {
+          throw new Error('Settlement amount must be greater than zero.');
+        }
+
+        const targetEntry = ledger.find((l) => l.ledgerId === ledgerId || l.id === ledgerId || (numericId && l.id === numericId));
+        if (targetEntry) {
+          const currentOutstanding = targetEntry.outstandingAmount > 0
+            ? Number(targetEntry.outstandingAmount)
+            : Math.max(0, (targetEntry.debit > 0 ? targetEntry.debit : targetEntry.credit) - (Number(targetEntry.settledAmount) || 0));
+          if (amountNum > currentOutstanding) {
+            throw new Error(`Settlement amount (₹${amountNum.toLocaleString('en-IN')}) cannot exceed current outstanding balance (₹${currentOutstanding.toLocaleString('en-IN')}).`);
+          }
         }
 
         setLedger((prev) =>
@@ -1449,13 +1464,14 @@ export const MiddlemanProvider = ({ children }) => {
               item.id === ledgerId ||
               (numericId && item.id === numericId)
             ) {
-              const total = item.debit > 0 ? item.debit : item.credit;
-              const newSettled = (item.settledAmount || 0) + Number(settledAmount);
+              const total = item.originalAmount ?? (item.debit > 0 ? item.debit : item.credit);
+              const newSettled = (Number(item.settledAmount) || 0) + amountNum;
               const newOutstanding = Math.max(0, total - newSettled);
               const newStatus = newOutstanding <= 0 ? 'Paid' : 'Partially Paid';
               return {
                 ...item,
                 settledAmount: newSettled,
+                paidAmount: newSettled,
                 outstandingAmount: newOutstanding,
                 status: newStatus,
                 paymentMode: extra.paymentMode || item.paymentMode || 'NEFT / RTGS',
@@ -1469,26 +1485,50 @@ export const MiddlemanProvider = ({ children }) => {
           })
         );
 
-        settleMiddlemanLedgerApi(numericId || ledgerId, settledAmount, {
-          ...extra,
-          id: numericId,
-        })
-          .then((saved) => {
-            if (saved && (saved.ledgerId || saved.id)) {
-              setLedger((prev) =>
-                prev.map((item) =>
-                  item.ledgerId === saved.ledgerId || (numericId && item.id === numericId)
-                    ? { ...item, ...saved }
-                    : item
-                )
-              );
-            }
-            if (typeof refreshLedger === 'function') {
-              refreshLedger();
-            }
-          })
-          .catch((err) => console.warn('settleMiddlemanLedgerApi error:', err));
-      }, [ledger, refreshLedger]);
+        try {
+          const saved = await settleMiddlemanLedgerApi(numericId || ledgerId, amountNum, {
+            ...extra,
+            id: numericId,
+          });
+
+          if (saved && (saved.ledgerId || saved.id)) {
+            setLedger((prev) =>
+              prev.map((item) =>
+                item.ledgerId === saved.ledgerId || (numericId && item.id === numericId)
+                  ? { ...item, ...saved }
+                  : item
+              )
+            );
+          }
+
+          // Trigger full cross-screen synchronization across all Middleman domain entities
+          await Promise.allSettled([
+            typeof refreshLedger === 'function' ? refreshLedger() : Promise.resolve(),
+            typeof refreshPurchases === 'function' ? refreshPurchases() : Promise.resolve(),
+            typeof refreshVendorSales === 'function' ? refreshVendorSales() : Promise.resolve(),
+            typeof refreshCustomerSales === 'function' ? refreshCustomerSales() : Promise.resolve(),
+            typeof refreshFarmers === 'function' ? refreshFarmers() : Promise.resolve(),
+            typeof refreshVendors === 'function' ? refreshVendors() : Promise.resolve(),
+            typeof refreshCustomers === 'function' ? refreshCustomers() : Promise.resolve(),
+            typeof refreshDashboard === 'function' ? refreshDashboard() : Promise.resolve(),
+          ]);
+
+          return { success: true, saved };
+        } catch (err) {
+          console.warn('settleMiddlemanLedgerApi error:', err);
+          throw err;
+        }
+      }, [
+        ledger,
+        refreshLedger,
+        refreshPurchases,
+        refreshVendorSales,
+        refreshCustomerSales,
+        refreshFarmers,
+        refreshVendors,
+        refreshCustomers,
+        refreshDashboard,
+      ]);
 
       // Compute Live Dashboard Metrics
       const dashboardMetrics = useMemo(() => {
@@ -1625,6 +1665,7 @@ export const MiddlemanProvider = ({ children }) => {
         deleteNotification,
         refreshNotifications,
         dashboardMetrics,
+        refreshDashboard,
         resetToDemoData,
       };
 

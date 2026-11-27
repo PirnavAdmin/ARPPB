@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using AgriPurchaseBilling.Domain.Entities;
 
 namespace AgriPurchaseBilling.Infrastructure.Data
@@ -41,6 +41,7 @@ namespace AgriPurchaseBilling.Infrastructure.Data
         public DbSet<MiddlemanPurchase> MiddlemanPurchases => Set<MiddlemanPurchase>();
         public DbSet<MiddlemanSale> MiddlemanSales => Set<MiddlemanSale>();
         public DbSet<MiddlemanNotification> MiddlemanNotifications => Set<MiddlemanNotification>();
+        public DbSet<MiddlemanPayment> MiddlemanPayments => Set<MiddlemanPayment>();
         public DbSet<FarmerCrop> FarmerCrops => Set<FarmerCrop>();
         public DbSet<FarmerCropYieldLog> FarmerCropYieldLogs => Set<FarmerCropYieldLog>();
         public DbSet<FarmerSale> FarmerSales => Set<FarmerSale>();

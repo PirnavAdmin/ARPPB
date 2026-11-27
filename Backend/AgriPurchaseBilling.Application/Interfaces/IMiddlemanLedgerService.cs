@@ -12,5 +12,6 @@ namespace AgriPurchaseBilling.Application.Interfaces
         Task<MiddlemanLedgerDto> CreateAsync(CreateLedgerEntryRequest request, long userId);
         Task<MiddlemanLedgerDto?> UpdateAsync(long id, UpdateLedgerEntryRequest request, long userId);
         Task<MiddlemanLedgerDto?> SettleAsync(long id, SettleLedgerRequest? request, long userId);
+        Task<List<MiddlemanPaymentDto>> GetPaymentHistoryAsync(long middlemanId, string? transactionId, long? ledgerId);
     }
 }

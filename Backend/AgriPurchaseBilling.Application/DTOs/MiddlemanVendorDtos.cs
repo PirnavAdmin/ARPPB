@@ -132,6 +132,11 @@ namespace AgriPurchaseBilling.Application.DTOs
         public DateTime? ConfirmationDate { get; set; }
         public string Status { get; set; } = "Pending Confirmation";
 
+        public decimal PaidAmount { get; set; }
+        public decimal OutstandingAmount { get; set; }
+        public string PaymentStatus { get; set; } = "Unpaid";
+        public List<MiddlemanPaymentDto> PaymentHistory { get; set; } = new();
+
         public string? AllocatedStockId { get; set; }
         public decimal Cogs { get; set; }
         public string? Notes { get; set; }

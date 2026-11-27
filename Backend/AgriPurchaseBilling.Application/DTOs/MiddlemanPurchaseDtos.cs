@@ -45,6 +45,11 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string Status { get; set; } = "Pending Confirmation";
         public string OtpStatus { get; set; } = "Pending OTP";
 
+        public decimal PaidAmount { get; set; }
+        public decimal OutstandingAmount { get; set; }
+        public string PaymentStatus { get; set; } = "Unpaid";
+        public List<MiddlemanPaymentDto> PaymentHistory { get; set; } = new();
+
         public string? Notes { get; set; }
 
         public DateTime CreatedAt { get; set; }

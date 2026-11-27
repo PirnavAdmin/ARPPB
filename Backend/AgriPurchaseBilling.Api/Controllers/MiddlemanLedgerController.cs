@@ -200,9 +200,29 @@ namespace AgriPurchaseBilling.Api.Controllers
             var userId = GetUserId();
             var numId = ResolveLedgerId(id);
             if (numId <= 0) return NotFound(new { success = false, message = $"Ledger entry '{id}' not found." });
+
+            if (request?.Amount.HasValue == true && request.Amount.Value <= 0)
+            {
+                return BadRequest(new { success = false, message = "Payment amount must be greater than zero." });
+            }
+
             var entry = await _ledgerService.SettleAsync(numId, request, userId);
             if (entry == null) return NotFound(new { success = false, message = $"Ledger entry '{id}' not found." });
             return Ok(new { success = true, message = "Ledger entry settled successfully.", data = entry });
+        }
+
+        /// <summary>
+        /// Get payment installment history for a specific ledger voucher or reference transaction ID.
+        /// GET /api/v1/middleman/ledger/{id}/payments
+        /// GET /api/v1/middleman/payments
+        /// </summary>
+        [HttpGet("{id}/payments")]
+        public async Task<IActionResult> GetPaymentsByEntry(string id)
+        {
+            var userId = GetUserId();
+            var numId = ResolveLedgerId(id);
+            var history = await _ledgerService.GetPaymentHistoryAsync(userId, id, numId > 0 ? numId : null);
+            return Ok(new { success = true, data = history });
         }
     }
 }

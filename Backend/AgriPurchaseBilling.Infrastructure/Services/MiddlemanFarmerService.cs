@@ -72,9 +72,31 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 .Take(pageSize)
                 .ToListAsync();
 
+            // Dynamically calculate real-time OutstandingPayables from MiddlemanLedgers
+            var farmerIds = items.Select(x => x.FarmerCode).Concat(items.Select(x => x.Id.ToString())).Distinct().ToList();
+            var farmerNames = items.Select(x => x.Name).Distinct().ToList();
+
+            var balances = await _context.MiddlemanLedgers
+                .AsNoTracking()
+                .Where(x => (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
+                            (farmerIds.Contains(x.PartyId) || farmerNames.Contains(x.PartyName)))
+                .GroupBy(x => !string.IsNullOrEmpty(x.PartyId) ? x.PartyId : x.PartyName)
+                .Select(g => new { Party = g.Key, Outstanding = g.Sum(x => x.OutstandingAmount) })
+                .ToListAsync();
+
+            var dtos = items.Select(MapToDto).ToList();
+            foreach (var dto in dtos)
+            {
+                var b = balances.FirstOrDefault(x => x.Party == dto.FarmerId || x.Party == dto.Name || x.Party == dto.Id.ToString());
+                if (b != null)
+                {
+                    dto.OutstandingPayables = b.Outstanding;
+                }
+            }
+
             return new MiddlemanFarmerPageDto
             {
-                Items = items.Select(MapToDto).ToList(),
+                Items = dtos,
                 TotalItems = totalItems,
                 ActiveSupplying = activeSupplying,
                 Page = page,
@@ -100,7 +122,19 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 entity = await queryable.FirstOrDefaultAsync(x => x.FarmerCode == farmerId);
             }
 
-            return entity != null ? MapToDto(entity) : null;
+            if (entity != null)
+            {
+                var dto = MapToDto(entity);
+                var outstanding = await _context.MiddlemanLedgers
+                    .AsNoTracking()
+                    .Where(x => (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
+                                (x.PartyId == dto.FarmerId || x.PartyId == dto.Id.ToString() || x.PartyName == dto.Name))
+                    .SumAsync(x => x.OutstandingAmount);
+                dto.OutstandingPayables = outstanding;
+                return dto;
+            }
+
+            return null;
         }
 
         public async Task<MiddlemanFarmerDto> RegisterFarmerAsync(long middlemanId, RegisterFarmerRequest request)
@@ -180,7 +214,33 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 .Where(x => (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
                             (x.FarmerId == farmerId || x.FarmerName == fName))
                 .OrderByDescending(x => x.PurchaseDate)
-                .Select(x => new MiddlemanPurchaseDto
+                .ToListAsync();
+
+            var purchaseCodes = purchases.Select(p => p.PurchaseCode).Distinct().ToList();
+            var ledgers = await _context.MiddlemanLedgers
+                .AsNoTracking()
+                .Where(x => (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
+                            (purchaseCodes.Contains(x.TransactionId) || x.PartyId == farmerId || x.PartyName == fName))
+                .ToListAsync();
+
+            var ledgerIds = ledgers.Select(l => l.Id).Distinct().ToList();
+            var payments = await _context.MiddlemanPayments
+                .AsNoTracking()
+                .Where(p => purchaseCodes.Contains(p.TransactionId) || (p.LedgerId.HasValue && ledgerIds.Contains(p.LedgerId.Value)))
+                .OrderByDescending(p => p.PaymentDate)
+                .ToListAsync();
+
+            var purchaseDtos = purchases.Select(x =>
+            {
+                var ledger = ledgers.FirstOrDefault(l => l.TransactionId == x.PurchaseCode);
+                var relPayments = payments.Where(p => p.TransactionId == x.PurchaseCode || (ledger != null && p.LedgerId == ledger.Id)).ToList();
+
+                decimal total = x.TotalAmount;
+                decimal paid = relPayments.Count > 0 ? relPayments.Sum(p => p.PaymentAmount) : (ledger != null ? ledger.SettledAmount : 0m);
+                decimal outstanding = ledger != null ? ledger.OutstandingAmount : Math.Max(0m, total - paid);
+                string paymentStatus = outstanding <= 0 ? "Paid" : (paid > 0 ? "Partially Paid" : "Unpaid");
+
+                return new MiddlemanPurchaseDto
                 {
                     Id = x.Id,
                     MiddlemanId = x.MiddlemanId,
@@ -207,43 +267,77 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                     Status = x.Status,
                     OtpStatus = x.OtpStatus,
                     Notes = x.Notes,
+                    PaidAmount = paid,
+                    OutstandingAmount = outstanding,
+                    PaymentStatus = paymentStatus,
+                    PaymentHistory = relPayments.Select(MapPaymentToDto).ToList(),
                     CreatedAt = x.CreatedAt,
                     UpdatedAt = x.UpdatedAt
-                })
-                .ToListAsync();
+                };
+            }).ToList();
 
-            var ledgerEntries = await _context.MiddlemanLedgers
-                .AsNoTracking()
-                .Where(x => (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
-                            (x.PartyId == farmerId || x.PartyName == fName))
+            var ledgerEntries = ledgers
                 .OrderByDescending(x => x.Date)
-                .Select(x => new MiddlemanLedgerDto
+                .Select(x =>
                 {
-                    Id = x.Id,
-                    LedgerId = x.LedgerCode,
-                    Date = x.Date.ToString("yyyy-MM-dd"),
-                    TransactionId = x.TransactionId,
-                    Category = x.Category,
-                    Description = x.Description,
-                    PartyId = x.PartyId,
-                    PartyName = x.PartyName,
-                    PartyCategory = x.PartyCategory,
-                    Debit = x.Debit,
-                    Credit = x.Credit,
-                    ProcessingExpenses = x.ProcessingExpenses,
-                    SettledAmount = x.SettledAmount,
-                    OutstandingAmount = x.OutstandingAmount,
-                    ExpectedPaymentDate = x.ExpectedPaymentDate.HasValue ? x.ExpectedPaymentDate.Value.ToString("yyyy-MM-dd") : null,
-                    Status = x.Status
+                    var relPayments = payments.Where(p => p.LedgerId == x.Id || (!string.IsNullOrEmpty(x.TransactionId) && p.TransactionId == x.TransactionId)).ToList();
+                    decimal paid = relPayments.Count > 0 ? relPayments.Sum(p => p.PaymentAmount) : x.SettledAmount;
+                    decimal outstanding = x.OutstandingAmount;
+                    string status = outstanding <= 0 ? "Paid" : (paid > 0 ? "Partially Paid" : "Unpaid");
+
+                    return new MiddlemanLedgerDto
+                    {
+                        Id = x.Id,
+                        LedgerId = x.LedgerCode,
+                        Date = x.Date.ToString("yyyy-MM-dd"),
+                        TransactionId = x.TransactionId,
+                        Category = x.Category,
+                        Description = x.Description,
+                        PartyId = x.PartyId,
+                        PartyName = x.PartyName,
+                        PartyCategory = x.PartyCategory,
+                        Debit = x.Debit,
+                        Credit = x.Credit,
+                        ProcessingExpenses = x.ProcessingExpenses,
+                        SettledAmount = x.SettledAmount,
+                        OutstandingAmount = x.OutstandingAmount,
+                        ExpectedPaymentDate = x.ExpectedPaymentDate.HasValue ? x.ExpectedPaymentDate.Value.ToString("yyyy-MM-dd") : null,
+                        Status = status,
+                        PaymentHistory = relPayments.Select(MapPaymentToDto).ToList()
+                    };
                 })
-                .ToListAsync();
+                .ToList();
 
             return new MiddlemanFarmerHistoryDto
             {
                 FarmerId = farmerId,
                 FarmerName = fName,
-                Purchases = purchases,
+                Purchases = purchaseDtos,
                 LedgerEntries = ledgerEntries
+            };
+        }
+
+        private static MiddlemanPaymentDto MapPaymentToDto(MiddlemanPayment p)
+        {
+            return new MiddlemanPaymentDto
+            {
+                Id = p.Id,
+                PaymentCode = p.PaymentCode,
+                LedgerId = p.LedgerId,
+                TransactionId = p.TransactionId,
+                PartyCategory = p.PartyCategory,
+                PartyId = p.PartyId,
+                PartyName = p.PartyName,
+                PaymentDirection = p.PaymentDirection,
+                OriginalAmount = p.OriginalAmount,
+                PaymentAmount = p.PaymentAmount,
+                TotalPaidAfter = p.TotalPaidAfter,
+                BalanceAfter = p.BalanceAfter,
+                PaymentMode = p.PaymentMode,
+                ReferenceNo = p.ReferenceNo,
+                Status = p.Status,
+                Notes = p.Notes,
+                PaymentDate = p.PaymentDate.ToString("yyyy-MM-dd HH:mm")
             };
         }
 

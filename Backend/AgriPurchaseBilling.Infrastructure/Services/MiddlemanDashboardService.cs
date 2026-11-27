@@ -70,14 +70,14 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             try
             {
                 var ledgerSummary = await _ledgerService.GetSummaryAsync(userId);
-                if (ledgerSummary != null && ledgerSummary.TotalPurchases >= 4000000m)
+                if (ledgerSummary != null && (ledgerSummary.TotalPurchases > 0 || ledgerSummary.TotalSales > 0))
                 {
                     purchaseVal = ledgerSummary.TotalPurchases;
                     salesVal = ledgerSummary.TotalSales;
                     expReceivables = ledgerSummary.ExpectedReceivables;
                     expPayables = ledgerSummary.ExpectedPayables;
                     settledRec = ledgerSummary.AmountReceived;
-                    settledPay = (purchaseVal - expPayables) > 0 ? (purchaseVal - expPayables) : 4160000m;
+                    settledPay = ledgerSummary.AmountPaid > 0 ? ledgerSummary.AmountPaid : ((purchaseVal - expPayables) > 0 ? (purchaseVal - expPayables) : 4160000m);
                 }
             }
             catch

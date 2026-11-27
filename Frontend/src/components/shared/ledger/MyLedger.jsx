@@ -105,6 +105,8 @@ export default function MyLedger({
   const [settleMode, setSettleMode] = useState('NEFT / RTGS');
   const [settleNotes, setSettleNotes] = useState('');
   const [settleRef, setSettleRef] = useState('');
+  const [isSubmittingSettle, setIsSubmittingSettle] = useState(false);
+  const [settleError, setSettleError] = useState(null);
 
   // Normalize entries without mutating source objects
   const normalizedEntries = useMemo(() => {
@@ -321,29 +323,34 @@ export default function MyLedger({
 
     if (isPaymentVoucher) {
       thisVoucherPayment = Math.max(
-        selectedVoucher.debit,
-        selectedVoucher.credit
+        Number(selectedVoucher.debit || 0),
+        Number(selectedVoucher.credit || 0)
       );
       originalAmount = linkedParent
-        ? Math.max(linkedParent.debit, linkedParent.credit)
-        : thisVoucherPayment;
+        ? Math.max(Number(linkedParent.debit || 0), Number(linkedParent.credit || 0))
+        : Number(selectedVoucher.raw?.originalAmount || thisVoucherPayment);
       totalPaidSoFar = linkedParent
-        ? linkedParent.settledAmount
-        : thisVoucherPayment;
+        ? Number(linkedParent.settledAmount || 0)
+        : Number(selectedVoucher.raw?.paidAmount || thisVoucherPayment);
       remainingBalance = linkedParent
-        ? linkedParent.outstandingAmount
+        ? Number(linkedParent.outstandingAmount || 0)
         : Math.max(0, originalAmount - totalPaidSoFar);
     } else {
-      originalAmount = Math.max(
-        selectedVoucher.debit,
-        selectedVoucher.credit
+      originalAmount = Number(
+        selectedVoucher.raw?.originalAmount !== undefined && selectedVoucher.raw?.originalAmount !== null
+          ? selectedVoucher.raw.originalAmount
+          : Math.max(Number(selectedVoucher.debit || 0), Number(selectedVoucher.credit || 0))
       );
-      totalPaidSoFar = selectedVoucher.settledAmount;
-      thisVoucherPayment = selectedVoucher.settledAmount;
+      totalPaidSoFar = Number(
+        selectedVoucher.raw?.paidAmount !== undefined && selectedVoucher.raw?.paidAmount !== null
+          ? selectedVoucher.raw.paidAmount
+          : (selectedVoucher.settledAmount || 0)
+      );
+      thisVoucherPayment = totalPaidSoFar;
       remainingBalance =
         selectedVoucher.outstandingAmount !== undefined &&
         selectedVoucher.outstandingAmount !== null
-          ? selectedVoucher.outstandingAmount
+          ? Number(selectedVoucher.outstandingAmount)
           : Math.max(0, originalAmount - totalPaidSoFar);
     }
 
@@ -382,6 +389,23 @@ export default function MyLedger({
 
   const linkedPayments = useMemo(() => {
     if (!selectedVoucher) return [];
+
+    // Prioritize direct payment installments history from backend
+    const rawHistory = selectedVoucher.raw?.paymentHistory || selectedVoucher.raw?.payments;
+    if (Array.isArray(rawHistory) && rawHistory.length > 0) {
+      return rawHistory.map((p, idx) => ({
+        id: p.paymentCode || (p.id ? `PAY-${p.id}` : `PAY-${idx + 1}`),
+        date: p.paymentDate || p.createdAt || selectedVoucher.date,
+        paymentMode: p.paymentMode || 'NEFT / RTGS',
+        referenceNo: p.referenceNo || p.transactionId || '—',
+        debit: Number(p.paymentAmount ?? p.amount ?? 0),
+        credit: 0,
+        paymentAmount: Number(p.paymentAmount ?? p.amount ?? 0),
+        balanceAfter: p.balanceAfter,
+        status: p.status || 'Settled',
+      }));
+    }
+
     const parentId = selectedVoucher.raw?.id || selectedVoucher.id;
     const parentTxId = selectedVoucher.transactionId;
     const targetParentId = selectedVoucher.raw?.relatedEntryId || parentId;
@@ -434,8 +458,10 @@ export default function MyLedger({
       return;
     }
     setSettlingEntry(row);
-    const origAmt = Math.max(Number(row.debit || 0), Number(row.credit || 0));
-    const paidAmt = Number(row.settledAmount || 0);
+    setSettleError(null);
+    setIsSubmittingSettle(false);
+    const origAmt = Number(row.raw?.originalAmount) || Math.max(Number(row.debit || 0), Number(row.credit || 0));
+    const paidAmt = Number(row.raw?.paidAmount ?? row.settledAmount ?? 0);
     const defaultAmt =
       row.outstandingAmount > 0
         ? row.outstandingAmount
@@ -446,26 +472,44 @@ export default function MyLedger({
     setSettleNotes(`Settlement against ${row.transactionId}`);
   };
 
-  const handleConfirmBuiltInSettle = (e) => {
+  const handleConfirmBuiltInSettle = async (e) => {
     e.preventDefault();
-    if (!settlingEntry || !onQuickSettleRow) return;
+    if (!settlingEntry || !onQuickSettleRow || isSubmittingSettle) return;
     const amount = Number(settleAmount) || 0;
-    const origAmt = Math.max(
+    const origAmt = Number(settlingEntry.raw?.originalAmount) || Math.max(
       Number(settlingEntry.debit || 0),
       Number(settlingEntry.credit || 0)
     );
-    const paidAmt = Number(settlingEntry.settledAmount || 0);
+    const paidAmt = Number(settlingEntry.raw?.paidAmount ?? settlingEntry.settledAmount ?? 0);
     const maxAllowed =
       settlingEntry.outstandingAmount > 0
         ? settlingEntry.outstandingAmount
         : Math.max(0, origAmt - paidAmt);
-    if (amount <= 0 || amount > maxAllowed) return;
-    onQuickSettleRow(settlingEntry.raw || settlingEntry, amount, {
-      paymentMode: settleMode,
-      notes: settleNotes,
-      referenceNo: settleRef || settlingEntry.transactionId,
-    });
-    setSettlingEntry(null);
+    if (amount <= 0) {
+      setSettleError('Settlement amount must be greater than zero.');
+      return;
+    }
+    if (amount > maxAllowed) {
+      setSettleError(`Settlement amount cannot exceed current outstanding of ${formatCurrency(maxAllowed)}.`);
+      return;
+    }
+
+    try {
+      setIsSubmittingSettle(true);
+      setSettleError(null);
+      await Promise.resolve(
+        onQuickSettleRow(settlingEntry.raw || settlingEntry, amount, {
+          paymentMode: settleMode,
+          notes: settleNotes,
+          referenceNo: settleRef || settlingEntry.transactionId,
+        })
+      );
+      setSettlingEntry(null);
+    } catch (err) {
+      setSettleError(err?.message || 'Settlement failed. Please try again.');
+    } finally {
+      setIsSubmittingSettle(false);
+    }
   };
 
   const handleExportCSV = () => {
@@ -1347,11 +1391,11 @@ export default function MyLedger({
           size="md"
         >
           {settlingEntry && (() => {
-            const origAmt = Math.max(
+            const origAmt = Number(settlingEntry.raw?.originalAmount) || Math.max(
               Number(settlingEntry.debit || 0),
               Number(settlingEntry.credit || 0)
             );
-            const prevSettled = Number(settlingEntry.settledAmount || 0);
+            const prevSettled = Number(settlingEntry.raw?.paidAmount ?? settlingEntry.settledAmount ?? 0);
             const curOutstanding =
               settlingEntry.outstandingAmount > 0
                 ? Number(settlingEntry.outstandingAmount)
@@ -1359,13 +1403,20 @@ export default function MyLedger({
             const numEntered = Number(settleAmount) || 0;
             const updatedRemaining = Math.max(0, curOutstanding - numEntered);
             const isOverpaid = numEntered > curOutstanding;
-            const isInvalidAmount = numEntered <= 0 || isOverpaid;
+            const isInvalidAmount = numEntered <= 0 || isOverpaid || isSubmittingSettle;
+            const history = settlingEntry.raw?.paymentHistory || [];
 
             return (
               <form
                 onSubmit={handleConfirmBuiltInSettle}
                 className="space-y-4 text-xs"
               >
+                {settleError && (
+                  <div className="p-3 rounded-lg bg-brand-error-light/30 border border-brand-error/30 text-brand-error font-medium">
+                    {settleError}
+                  </div>
+                )}
+
                 {/* 3 Summary Cards: Original, Previously Paid, Outstanding */}
                 <div className="grid grid-cols-3 gap-2.5">
                   <div className="p-3 rounded-xl bg-brand-background border border-brand-border">
@@ -1395,6 +1446,39 @@ export default function MyLedger({
                     {settlingEntry.partyName} ({settlingEntry.partyCategory})
                   </span>
                 </div>
+
+                {/* Previous Payment History Installments Table if multi-installment */}
+                {history.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <span className="font-bold text-[11px] text-brand-text block">
+                      Previous Payment Installments ({history.length}):
+                    </span>
+                    <div className="max-h-28 overflow-y-auto rounded-lg border border-brand-border bg-brand-surface">
+                      <table className="w-full text-left text-[11px]">
+                        <thead className="bg-brand-background text-brand-muted border-b border-brand-border sticky top-0">
+                          <tr>
+                            <th className="px-2.5 py-1">Code</th>
+                            <th className="px-2.5 py-1">Date</th>
+                            <th className="px-2.5 py-1">Mode</th>
+                            <th className="px-2.5 py-1 text-right">Amount</th>
+                            <th className="px-2.5 py-1 text-right">Balance After</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-brand-border">
+                          {history.map((p, idx) => (
+                            <tr key={p.id || idx}>
+                              <td className="px-2.5 py-1 font-mono text-brand-primary">{p.paymentCode || `PAY-${idx + 1}`}</td>
+                              <td className="px-2.5 py-1 whitespace-nowrap">{String(p.paymentDate || p.createdAt || '').slice(0, 10)}</td>
+                              <td className="px-2.5 py-1">{p.paymentMode || 'NEFT'}</td>
+                              <td className="px-2.5 py-1 text-right font-bold text-brand-success">{formatCurrency(p.paymentAmount || p.amount)}</td>
+                              <td className="px-2.5 py-1 text-right font-medium">{formatCurrency(p.balanceAfter)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1502,6 +1586,7 @@ export default function MyLedger({
                   <button
                     type="button"
                     onClick={() => setSettlingEntry(null)}
+                    disabled={isSubmittingSettle}
                     className="px-4 py-2 rounded-lg text-xs font-semibold border border-brand-border text-brand-text hover:bg-brand-background cursor-pointer"
                   >
                     Cancel
@@ -1515,7 +1600,7 @@ export default function MyLedger({
                         : 'bg-brand-primary hover:bg-brand-secondary'
                     }`}
                   >
-                    Confirm & Post Settlement
+                    {isSubmittingSettle ? 'Posting Settlement...' : 'Confirm & Post Settlement'}
                   </button>
                 </div>
               </form>

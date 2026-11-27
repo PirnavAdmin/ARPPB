@@ -119,10 +119,10 @@ export const LedgerPage = () => {
     ];
   }, [dashboardMetrics]);
 
-  const handleQuickSettle = (entry, amount, extra = {}) => {
+  const handleQuickSettle = async (entry, amount, extra = {}) => {
     const id = entry.id ?? entry.raw?.id ?? entry.ledgerId;
     if (!id || !amount || amount <= 0) return;
-    settleLedgerEntry(id, amount, { ...extra, id: entry.id ?? entry.raw?.id });
+    return await settleLedgerEntry(id, amount, { ...extra, id: entry.id ?? entry.raw?.id });
   };
 
   return (

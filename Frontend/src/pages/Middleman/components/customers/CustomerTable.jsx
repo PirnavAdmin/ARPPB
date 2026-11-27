@@ -19,6 +19,7 @@ export const CustomerTable = ({
             <th className="py-3 px-3.5 text-[11px] font-semibold text-[#64748B] uppercase">District</th>
             <th className="py-3 px-3.5 text-[11px] font-semibold text-[#64748B] uppercase text-center">Orders</th>
             <th className="py-3 px-3.5 text-[11px] font-semibold text-[#64748B] uppercase text-right">Total Purchases</th>
+            <th className="py-3 px-3.5 text-[11px] font-semibold text-[#64748B] uppercase text-right">Receivables Due</th>
             <th className="py-3 px-3.5 text-[11px] font-semibold text-[#64748B] uppercase text-center">Actions</th>
           </tr>
         </thead>
@@ -34,6 +35,9 @@ export const CustomerTable = ({
               </td>
               <td className="py-3 px-3.5 font-bold text-right text-[#0F766E]">
                 {formatINR(c.totalPurchaseValue || 0)}
+              </td>
+              <td className="py-3 px-3.5 font-bold text-right text-amber-600">
+                {formatINR(c.outstandingReceivables || 0)}
               </td>
               <td className="py-3 px-3.5 text-center whitespace-nowrap">
                 <div className="flex items-center justify-center gap-1">

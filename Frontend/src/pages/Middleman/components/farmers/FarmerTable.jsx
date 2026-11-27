@@ -1,7 +1,7 @@
 import React from 'react';
 import { Eye, Edit2, ShoppingCart, BookOpen } from 'lucide-react';
 import { StatusBadge } from '../common/StatusBadge';
-import { formatIndianNumber } from '../../../../utils/middleman/formatters';
+import { formatIndianNumber, formatINR } from '../../../../utils/middleman/formatters';
 
 export const FarmerTable = ({
   farmers = [],
@@ -12,7 +12,7 @@ export const FarmerTable = ({
 }) => {
   return (
     <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0] bg-white">
-      <table className="w-full text-left border-collapse min-w-[760px]">
+      <table className="w-full text-left border-collapse min-w-[850px]">
         <thead>
           <tr className="bg-slate-50/80 border-b border-[#E2E8F0]">
             <th className="py-3 px-3.5 text-[11px] font-semibold text-[#64748B] uppercase">Farmer ID</th>
@@ -22,6 +22,7 @@ export const FarmerTable = ({
             <th className="py-3 px-3.5 text-[11px] font-semibold text-[#64748B] uppercase">District</th>
             <th className="py-3 px-3.5 text-[11px] font-semibold text-[#64748B] uppercase">Available Crops</th>
             <th className="py-3 px-3.5 text-[11px] font-semibold text-[#64748B] uppercase text-center">Purchases</th>
+            <th className="py-3 px-3.5 text-[11px] font-semibold text-[#64748B] uppercase text-right">Payables Due</th>
             <th className="py-3 px-3.5 text-[11px] font-semibold text-[#64748B] uppercase">Status</th>
             <th className="py-3 px-3.5 text-[11px] font-semibold text-[#64748B] uppercase text-center">Actions</th>
           </tr>
@@ -48,6 +49,9 @@ export const FarmerTable = ({
               </td>
               <td className="py-3 px-3.5 text-center font-bold text-[#1F2937]">
                 {formatIndianNumber(farmer.totalPurchases || 0)}
+              </td>
+              <td className="py-3 px-3.5 text-right font-bold text-amber-600">
+                {formatINR(farmer.outstandingPayables || 0)}
               </td>
               <td className="py-3 px-3.5">
                 <StatusBadge status={farmer.status || 'Active'} size="sm" />

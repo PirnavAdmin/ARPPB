@@ -58,12 +58,28 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             var page = query.Page <= 0 ? 1 : query.Page;
             var pageSize = query.PageSize <= 0 ? 1000 : query.PageSize;
 
-            var items = await queryable
+            var vendorList = await queryable
                 .OrderByDescending(x => x.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(x => MapToDto(x))
                 .ToListAsync();
+
+            var vendorIds = vendorList.Select(x => x.VendorId).ToList();
+            var dues = await _context.MiddlemanLedgers.AsNoTracking()
+                .Where(l => l.PartyCategory == "Vendor" && vendorIds.Contains(l.PartyId ?? string.Empty))
+                .GroupBy(l => l.PartyId!)
+                .Select(g => new { PartyId = g.Key, TotalDue = g.Sum(x => x.OutstandingAmount) })
+                .ToDictionaryAsync(x => x.PartyId, x => x.TotalDue, StringComparer.OrdinalIgnoreCase);
+
+            var items = vendorList.Select(v =>
+            {
+                var dto = MapToDto(v);
+                if (dues.TryGetValue(v.VendorId, out var dueAmt))
+                {
+                    dto.OutstandingReceivables = dueAmt;
+                }
+                return dto;
+            }).ToList();
 
             return new MiddlemanVendorPageDto
             {
@@ -84,7 +100,14 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                     (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
                     (x.VendorId == vendorId || x.Id.ToString() == vendorId));
 
-            return vendor != null ? MapToDto(vendor) : null;
+            if (vendor == null) return null;
+
+            var dto = MapToDto(vendor);
+            var due = await _context.MiddlemanLedgers.AsNoTracking()
+                .Where(l => l.PartyCategory == "Vendor" && (l.PartyId == vendor.VendorId || l.PartyName == vendor.BusinessName))
+                .SumAsync(l => l.OutstandingAmount);
+            dto.OutstandingReceivables = due;
+            return dto;
         }
 
         public async Task<MiddlemanVendorDto> RegisterVendorAsync(long middlemanId, RegisterVendorRequest request)
@@ -190,13 +213,56 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             var page = query.Page <= 0 ? 1 : query.Page;
             var pageSize = query.PageSize <= 0 ? 1000 : query.PageSize;
 
-            var items = await queryable
+            var rawSales = await queryable
                 .OrderByDescending(x => x.SalesDate)
                 .ThenByDescending(x => x.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(x => MapSaleToDto(x))
                 .ToListAsync();
+
+            var saleIds = rawSales.Select(x => x.SaleId).ToList();
+            var ledgers = await _context.MiddlemanLedgers.AsNoTracking()
+                .Where(l => saleIds.Contains(l.TransactionId ?? string.Empty))
+                .ToListAsync();
+            var ledgerMap = ledgers
+                .Where(l => !string.IsNullOrWhiteSpace(l.TransactionId))
+                .GroupBy(l => l.TransactionId!.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+            var payments = await _context.MiddlemanPayments.AsNoTracking()
+                .Where(p => saleIds.Contains(p.TransactionId))
+                .OrderBy(p => p.PaymentDate)
+                .ToListAsync();
+            var paymentMap = payments
+                .Where(p => !string.IsNullOrWhiteSpace(p.TransactionId))
+                .GroupBy(p => p.TransactionId.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+            var items = rawSales.Select(s =>
+            {
+                var dto = MapSaleToDto(s);
+                if (ledgerMap.TryGetValue(s.SaleId.Trim(), out var led))
+                {
+                    dto.PaidAmount = led.SettledAmount;
+                    dto.OutstandingAmount = Math.Max(0, dto.TotalAmount - led.SettledAmount);
+                    dto.PaymentStatus = dto.OutstandingAmount <= 0 && dto.TotalAmount > 0
+                        ? "Paid"
+                        : (dto.PaidAmount > 0 ? "Partially Paid" : "Unpaid");
+                }
+                else
+                {
+                    dto.PaidAmount = 0;
+                    dto.OutstandingAmount = dto.TotalAmount;
+                    dto.PaymentStatus = dto.TotalAmount > 0 ? "Unpaid" : "Paid";
+                }
+
+                if (paymentMap.TryGetValue(s.SaleId.Trim(), out var pmts))
+                {
+                    dto.PaymentHistory = pmts.Select(MapPaymentToDto).ToList();
+                }
+
+                return dto;
+            }).ToList();
 
             return new MiddlemanVendorSalePageDto
             {
@@ -215,7 +281,33 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                     (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
                     (x.SaleId == saleId || x.Id.ToString() == saleId));
 
-            return sale != null ? MapSaleToDto(sale) : null;
+            if (sale == null) return null;
+
+            var dto = MapSaleToDto(sale);
+            var led = await _context.MiddlemanLedgers.AsNoTracking()
+                .FirstOrDefaultAsync(l => l.TransactionId == sale.SaleId);
+            if (led != null)
+            {
+                dto.PaidAmount = led.SettledAmount;
+                dto.OutstandingAmount = Math.Max(0, dto.TotalAmount - led.SettledAmount);
+                dto.PaymentStatus = dto.OutstandingAmount <= 0 && dto.TotalAmount > 0
+                    ? "Paid"
+                    : (dto.PaidAmount > 0 ? "Partially Paid" : "Unpaid");
+            }
+            else
+            {
+                dto.PaidAmount = 0;
+                dto.OutstandingAmount = dto.TotalAmount;
+                dto.PaymentStatus = dto.TotalAmount > 0 ? "Unpaid" : "Paid";
+            }
+
+            var pmts = await _context.MiddlemanPayments.AsNoTracking()
+                .Where(p => p.TransactionId == sale.SaleId)
+                .OrderBy(p => p.PaymentDate)
+                .ToListAsync();
+            dto.PaymentHistory = pmts.Select(MapPaymentToDto).ToList();
+
+            return dto;
         }
 
         public async Task<MiddlemanVendorSaleDto> CreateVendorSaleAsync(long middlemanId, CreateMiddlemanVendorSaleRequest request)
@@ -463,6 +555,30 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 Notes = x.Notes,
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt,
+            };
+        }
+
+        private static MiddlemanPaymentDto MapPaymentToDto(MiddlemanPayment p)
+        {
+            return new MiddlemanPaymentDto
+            {
+                Id = p.Id,
+                PaymentCode = p.PaymentCode,
+                LedgerId = p.LedgerId,
+                TransactionId = p.TransactionId,
+                PartyCategory = p.PartyCategory,
+                PartyId = p.PartyId,
+                PartyName = p.PartyName,
+                PaymentDirection = p.PaymentDirection,
+                OriginalAmount = p.OriginalAmount,
+                PaymentAmount = p.PaymentAmount,
+                TotalPaidAfter = p.TotalPaidAfter,
+                BalanceAfter = p.BalanceAfter,
+                PaymentMode = p.PaymentMode,
+                ReferenceNo = p.ReferenceNo,
+                Status = p.Status,
+                Notes = p.Notes,
+                PaymentDate = p.PaymentDate.ToString("yyyy-MM-dd HH:mm")
             };
         }
 

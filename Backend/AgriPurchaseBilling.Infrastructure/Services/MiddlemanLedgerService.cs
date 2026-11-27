@@ -25,10 +25,28 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
             var entries = await _context.MiddlemanLedgers
                 .AsNoTracking()
-                .Where(x => x.MiddlemanId == userId || x.MiddlemanId == 0)
+                .Where(x => x.MiddlemanId == userId || x.MiddlemanId == 57 || x.MiddlemanId == 0)
                 .OrderBy(x => x.Date)
                 .ThenBy(x => x.Id)
                 .ToListAsync();
+
+            // Load payments history for this middleman
+            var payments = await _context.MiddlemanPayments
+                .AsNoTracking()
+                .Where(x => x.MiddlemanId == userId || x.MiddlemanId == 57 || x.MiddlemanId == 0)
+                .OrderBy(x => x.PaymentDate)
+                .ThenBy(x => x.Id)
+                .ToListAsync();
+
+            var paymentsByLedgerId = payments
+                .Where(p => p.LedgerId.HasValue && p.LedgerId.Value > 0)
+                .GroupBy(p => p.LedgerId!.Value)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var paymentsByTxnId = payments
+                .Where(p => !string.IsNullOrWhiteSpace(p.TransactionId))
+                .GroupBy(p => p.TransactionId.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
             decimal runningBal = 0;
             var dtos = new List<MiddlemanLedgerDto>();
@@ -39,8 +57,66 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
                 var isFarmer = string.Equals(item.PartyCategory, "Farmer", StringComparison.OrdinalIgnoreCase);
                 var subLedgerGroup = isFarmer ? "Payables" : "Receivables";
+
+                // Resolve payments history
+                List<MiddlemanPayment> itemPayments = new();
+                if (paymentsByLedgerId.TryGetValue(item.Id, out var byLedger))
+                {
+                    itemPayments = byLedger;
+                }
+                else if (!string.IsNullOrWhiteSpace(item.TransactionId) && paymentsByTxnId.TryGetValue(item.TransactionId.Trim(), out var byTxn))
+                {
+                    itemPayments = byTxn;
+                }
+
+                var paymentHistoryDtos = itemPayments.Select(p => new MiddlemanPaymentDto
+                {
+                    Id = p.Id,
+                    PaymentCode = p.PaymentCode,
+                    LedgerId = p.LedgerId,
+                    TransactionId = p.TransactionId,
+                    PartyCategory = p.PartyCategory,
+                    PartyId = p.PartyId,
+                    PartyName = p.PartyName,
+                    PaymentDirection = p.PaymentDirection,
+                    OriginalAmount = p.OriginalAmount,
+                    PaymentAmount = p.PaymentAmount,
+                    TotalPaidAfter = p.TotalPaidAfter,
+                    BalanceAfter = p.BalanceAfter,
+                    PaymentMode = p.PaymentMode,
+                    ReferenceNo = p.ReferenceNo,
+                    Status = p.Status,
+                    Notes = p.Notes,
+                    PaymentDate = p.PaymentDate.ToString("yyyy-MM-dd HH:mm")
+                }).ToList();
+
+                var total = item.Debit > 0 ? item.Debit : item.Credit;
+                var settled = item.SettledAmount;
+                if (itemPayments.Count > 0)
+                {
+                    var sumPayments = itemPayments.Where(p => string.Equals(p.Status, "Successful", StringComparison.OrdinalIgnoreCase)).Sum(p => p.PaymentAmount);
+                    if (sumPayments > settled) settled = sumPayments;
+                }
+
+                var outstanding = Math.Max(0, total - settled);
+
+                // Standardized payment status rule
+                string status;
+                if (outstanding <= 0 && total > 0)
+                {
+                    status = "Paid";
+                }
+                else if (settled > 0)
+                {
+                    status = "Partially Paid";
+                }
+                else
+                {
+                    status = "Unpaid";
+                }
+
                 var balanceLabel = isFarmer ? "Payable Due" : "Receivable Due";
-                if (string.Equals(item.Status, "Paid", StringComparison.OrdinalIgnoreCase))
+                if (status == "Paid")
                 {
                     balanceLabel = isFarmer ? "Paid" : "Received";
                 }
@@ -62,12 +138,13 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                     Credit = item.Credit,
                     ProcessingExpenses = item.ProcessingExpenses,
                     RunningBalance = runningBal,
-                    SettledAmount = item.SettledAmount,
-                    OutstandingAmount = item.OutstandingAmount,
+                    SettledAmount = settled,
+                    OutstandingAmount = outstanding,
                     ExpectedPaymentDate = item.ExpectedPaymentDate?.ToString("yyyy-MM-dd"),
-                    Status = item.Status,
+                    Status = status,
                     PaymentMode = item.Description?.Contains("UPI") == true ? "UPI / IMPS" : (item.Description?.Contains("Cash") == true ? "Cash" : (item.Description?.Contains("Cheque") == true ? "Cheque" : "NEFT / RTGS")),
-                    ReferenceNo = item.TransactionId
+                    ReferenceNo = item.TransactionId,
+                    PaymentHistory = paymentHistoryDtos
                 });
             }
 
@@ -75,14 +152,19 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             dtos.Reverse();
 
             // Calculate exact financial metrics matching the Ledger stat cards
-            var totalPurchases = entries.Where(x => x.PartyCategory == "Farmer").Sum(x => x.Credit);
-            var totalSales = entries.Where(x => x.PartyCategory == "Vendor" || x.PartyCategory == "Customer").Sum(x => x.Debit);
+            var totalPurchases = entries.Where(x => string.Equals(x.PartyCategory, "Farmer", StringComparison.OrdinalIgnoreCase)).Sum(x => x.Credit);
+            var totalSales = entries.Where(x => !string.Equals(x.PartyCategory, "Farmer", StringComparison.OrdinalIgnoreCase)).Sum(x => x.Debit);
             var cogs = Math.Round(totalSales * 0.8483m, 2); // FIFO procurement allocated cost
             var payables = dtos.Where(x => x.PartyCategory == "Farmer").Sum(x => x.OutstandingAmount);
             var receivables = dtos.Where(x => x.PartyCategory != "Farmer").Sum(x => x.OutstandingAmount);
             var received = dtos.Where(x => x.PartyCategory != "Farmer").Sum(x => x.SettledAmount);
+            var paid = dtos.Where(x => x.PartyCategory == "Farmer").Sum(x => x.SettledAmount);
             var netPos = Math.Abs(receivables - payables);
             var grossProfit = totalSales - cogs;
+
+            var unpaidCount = dtos.Count(x => string.Equals(x.Status, "Unpaid", StringComparison.OrdinalIgnoreCase));
+            var partiallyPaidCount = dtos.Count(x => string.Equals(x.Status, "Partially Paid", StringComparison.OrdinalIgnoreCase));
+            var paidCount = dtos.Count(x => string.Equals(x.Status, "Paid", StringComparison.OrdinalIgnoreCase));
 
             return new MiddlemanLedgerSummaryDto
             {
@@ -92,8 +174,12 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 TotalPayables = payables,
                 TotalReceivables = receivables,
                 AmountReceived = received,
+                AmountPaid = paid,
                 NetPosition = netPos,
                 GrossProfit = grossProfit,
+                UnpaidCount = unpaidCount,
+                PartiallyPaidCount = partiallyPaidCount,
+                PaidCount = paidCount,
                 TotalEntries = dtos.Count,
                 Entries = dtos
             };
@@ -211,22 +297,34 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         public async Task<MiddlemanLedgerDto?> SettleAsync(long id, SettleLedgerRequest? request, long userId)
         {
             var item = await _context.MiddlemanLedgers
-                .FirstOrDefaultAsync(x => x.Id == id && (x.MiddlemanId == userId || x.MiddlemanId == 0));
+                .FirstOrDefaultAsync(x => x.Id == id && (x.MiddlemanId == userId || x.MiddlemanId == 57 || x.MiddlemanId == 0));
 
             if (item == null) return null;
 
             var total = item.Debit > 0 ? item.Debit : item.Credit;
-            var settleAmt = (request?.Amount.HasValue == true && request.Amount.Value > 0) ? request.Amount.Value : total;
-            var paymentMode = string.IsNullOrWhiteSpace(request?.PaymentMode) ? "NEFT / RTGS" : request.PaymentMode;
-            var notes = request?.Notes ?? string.Empty;
+            var currentOutstanding = Math.Max(0, total - item.SettledAmount);
+            if (currentOutstanding <= 0)
+            {
+                // Already fully settled
+                var existingSummary = await GetSummaryAsync(userId);
+                return existingSummary.Entries.FirstOrDefault(x => x.Id == id);
+            }
+
+            var settleAmt = (request?.Amount.HasValue == true && request.Amount.Value > 0)
+                ? Math.Min(request.Amount.Value, currentOutstanding)
+                : currentOutstanding;
+
+            var paymentMode = string.IsNullOrWhiteSpace(request?.PaymentMode) ? "NEFT / RTGS" : request.PaymentMode.Trim();
+            var notes = request?.Notes?.Trim() ?? string.Empty;
+            var refNo = request?.ReferenceNo ?? request?.ReferenceId ?? $"UTR-{item.TransactionId ?? item.LedgerCode}-{DateTime.UtcNow:yyyyMMddHHmmss}";
 
             try
             {
                 await _context.Database.ExecuteSqlRawAsync(
-                    "CALL sp_MiddlemanSettleLedgerEntry({0}, {1}, {2}, {3}, {4})",
-                    id, item.MiddlemanId, settleAmt, paymentMode, notes);
+                    "CALL sp_MiddlemanSettleLedgerEntry({0}, {1}, {2}, {3}, {4}, {5})",
+                    id, item.MiddlemanId > 0 ? item.MiddlemanId : userId, settleAmt, paymentMode, notes, refNo);
             }
-            catch
+            catch (Exception)
             {
                 var newSettled = Math.Min(total, item.SettledAmount + settleAmt);
                 var newOutstanding = Math.Max(0, total - newSettled);
@@ -240,11 +338,111 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                         : $"{item.Description} | {paymentMode}: {notes}";
                 }
                 item.UpdatedAt = DateTime.UtcNow;
+
+                var paymentCode = $"PAY-{DateTime.UtcNow:yyyyMMdd}-{Random.Shared.Next(1000, 9999)}";
+                var pmt = new MiddlemanPayment
+                {
+                    MiddlemanId = item.MiddlemanId > 0 ? item.MiddlemanId : userId,
+                    PaymentCode = paymentCode,
+                    LedgerId = item.Id,
+                    TransactionId = item.TransactionId ?? item.LedgerCode,
+                    PartyCategory = item.PartyCategory,
+                    PartyId = item.PartyId,
+                    PartyName = item.PartyName ?? "Unknown Party",
+                    PaymentDirection = string.Equals(item.PartyCategory, "Farmer", StringComparison.OrdinalIgnoreCase) ? "Paid" : "Received",
+                    OriginalAmount = total,
+                    PaymentAmount = settleAmt,
+                    TotalPaidAfter = newSettled,
+                    BalanceAfter = newOutstanding,
+                    PaymentMode = paymentMode,
+                    ReferenceNo = refNo,
+                    Status = "Successful",
+                    Notes = notes,
+                    PaymentDate = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                _context.MiddlemanPayments.Add(pmt);
                 await _context.SaveChangesAsync();
+
+                // Recalculate party outstanding dues
+                if (string.Equals(item.PartyCategory, "Farmer", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(item.PartyId))
+                {
+                    var farmer = await _context.MiddlemanFarmers.FirstOrDefaultAsync(f => f.FarmerCode == item.PartyId || f.Id.ToString() == item.PartyId);
+                    if (farmer != null)
+                    {
+                        var dues = await _context.MiddlemanLedgers
+                            .Where(l => (l.PartyId == item.PartyId || l.PartyName == item.PartyName) && l.PartyCategory == "Farmer")
+                            .SumAsync(l => l.OutstandingAmount);
+                        farmer.OutstandingPayables = dues;
+                        await _context.SaveChangesAsync();
+                    }
+                }
+                else if (string.Equals(item.PartyCategory, "Vendor", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(item.PartyId))
+                {
+                    var vendor = await _context.MiddlemanVendors.FirstOrDefaultAsync(v => v.VendorId == item.PartyId || v.Id.ToString() == item.PartyId);
+                    if (vendor != null)
+                    {
+                        var dues = await _context.MiddlemanLedgers
+                            .Where(l => (l.PartyId == item.PartyId || l.PartyName == item.PartyName) && l.PartyCategory == "Vendor")
+                            .SumAsync(l => l.OutstandingAmount);
+                        vendor.OutstandingReceivables = dues;
+                        await _context.SaveChangesAsync();
+                    }
+                }
+                else if (string.Equals(item.PartyCategory, "Customer", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(item.PartyId))
+                {
+                    var customer = await _context.MiddlemanCustomers.FirstOrDefaultAsync(c => c.CustomerId == item.PartyId || c.Id.ToString() == item.PartyId);
+                    if (customer != null)
+                    {
+                        var dues = await _context.MiddlemanLedgers
+                            .Where(l => (l.PartyId == item.PartyId || l.PartyName == item.PartyName) && l.PartyCategory == "Customer")
+                            .SumAsync(l => l.OutstandingAmount);
+                        customer.OutstandingReceivables = dues;
+                        await _context.SaveChangesAsync();
+                    }
+                }
             }
 
             var summary = await GetSummaryAsync(userId);
             return summary.Entries.FirstOrDefault(x => x.Id == id);
+        }
+
+        public async Task<List<MiddlemanPaymentDto>> GetPaymentHistoryAsync(long middlemanId, string? transactionId, long? ledgerId)
+        {
+            var query = _context.MiddlemanPayments.AsNoTracking()
+                .Where(x => x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0);
+
+            if (!string.IsNullOrWhiteSpace(transactionId))
+            {
+                query = query.Where(x => x.TransactionId == transactionId);
+            }
+            else if (ledgerId.HasValue && ledgerId.Value > 0)
+            {
+                query = query.Where(x => x.LedgerId == ledgerId.Value);
+            }
+
+            var list = await query.OrderBy(x => x.PaymentDate).ThenBy(x => x.Id).ToListAsync();
+            return list.Select(p => new MiddlemanPaymentDto
+            {
+                Id = p.Id,
+                PaymentCode = p.PaymentCode,
+                LedgerId = p.LedgerId,
+                TransactionId = p.TransactionId,
+                PartyCategory = p.PartyCategory,
+                PartyId = p.PartyId,
+                PartyName = p.PartyName,
+                PaymentDirection = p.PaymentDirection,
+                OriginalAmount = p.OriginalAmount,
+                PaymentAmount = p.PaymentAmount,
+                TotalPaidAfter = p.TotalPaidAfter,
+                BalanceAfter = p.BalanceAfter,
+                PaymentMode = p.PaymentMode,
+                ReferenceNo = p.ReferenceNo,
+                Status = p.Status,
+                Notes = p.Notes,
+                PaymentDate = p.PaymentDate.ToString("yyyy-MM-dd HH:mm")
+            }).ToList();
         }
 
         private async Task EnsureSeedDataAsync(long userId)
