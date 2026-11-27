@@ -108,35 +108,64 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
-        /// Retrieves cross-portal Farmer Sell Product listings (farmer produce available for middleman procurement).
+        /// Retrieves produce purchases made by THIS Middleman from Farmers,
+        /// as well as active farmer produce listings targeted/open for Middleman procurement.
+        /// Strictly hides all direct transactions between Farmers and other parties (Vendors or Customers).
         /// GET /api/v1/middleman/central/farmer-purchases
         /// </summary>
         [HttpGet("farmer-purchases")]
-        [ProducesResponseType(typeof(ApiResponse<UnifiedPagedResultDto<SellOrderResponseDto>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<UnifiedPagedResultDto<UnifiedFarmerPurchaseItemDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetFarmerPurchases([FromQuery] UnifiedPortalQueryDto query, CancellationToken ct)
         {
             var userId = GetUserId();
-            var result = await _centralService.GetFarmerSellProductsAsync(userId, query, ct);
-            return Ok(ApiResponse<UnifiedPagedResultDto<SellOrderResponseDto>>.Ok(result, "Farmer produce listings retrieved successfully."));
+            var result = await _centralService.GetFarmerPurchasesAsync(userId, query, ct);
+            return Ok(ApiResponse<UnifiedPagedResultDto<UnifiedFarmerPurchaseItemDto>>.Ok(result, "Farmer produce purchases retrieved successfully."));
         }
 
         /// <summary>
-        /// Retrieves purchases made from the Middleman by Customers and Vendors.
-        /// Strictly includes transactions conducted through the Middleman (Middleman as seller).
-        /// Supports search, status, buyer type filter (Source: 'Customer', 'Vendor', or 'ALL'), and pagination.
+        /// Retrieves purchases made from the Middleman by Customers (retail/consumer orders).
+        /// Strictly includes transactions where Customer buys from THIS Middleman (middleman_sales).
+        /// Never includes Vendors or external vendor-to-customer transactions.
         /// GET /api/v1/middleman/central/customer-orders
-        /// GET /api/v1/middleman/central/buyer-orders
-        /// GET /api/v1/middleman/central/sales-orders
         /// </summary>
         [HttpGet("customer-orders")]
-        [HttpGet("buyer-orders")]
-        [HttpGet("sales-orders")]
         [ProducesResponseType(typeof(ApiResponse<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetCustomerOrders([FromQuery] UnifiedPortalQueryDto query, CancellationToken ct)
         {
             var userId = GetUserId();
             var result = await _centralService.GetCustomerOrdersAsync(userId, query, ct);
-            return Ok(ApiResponse<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>>.Ok(result, "Middleman buyer purchases and sales orders retrieved successfully."));
+            return Ok(ApiResponse<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>>.Ok(result, "Customer orders retrieved successfully."));
+        }
+
+        /// <summary>
+        /// Retrieves wholesale purchases made from the Middleman by Commercial Vendors.
+        /// Strictly includes transactions where Vendor buys from THIS Middleman (middleman_vendor_sales).
+        /// Never includes Customers or external vendor-to-customer transactions.
+        /// GET /api/v1/middleman/central/vendor-orders
+        /// </summary>
+        [HttpGet("vendor-orders")]
+        [ProducesResponseType(typeof(ApiResponse<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetVendorOrders([FromQuery] UnifiedPortalQueryDto query, CancellationToken ct)
+        {
+            var userId = GetUserId();
+            var result = await _centralService.GetVendorOrdersAsync(userId, query, ct);
+            return Ok(ApiResponse<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>>.Ok(result, "Vendor wholesale orders retrieved successfully."));
+        }
+
+        /// <summary>
+        /// Retrieves all outbound buyer sales orders (both Customers and Vendors) sold by THIS Middleman.
+        /// Supports filtering by Buyer Type via query parameter: ?Source=Customer, ?Source=Vendor, or ?Source=ALL.
+        /// GET /api/v1/middleman/central/sales-orders
+        /// GET /api/v1/middleman/central/buyer-orders
+        /// </summary>
+        [HttpGet("sales-orders")]
+        [HttpGet("buyer-orders")]
+        [ProducesResponseType(typeof(ApiResponse<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetSalesOrders([FromQuery] UnifiedPortalQueryDto query, CancellationToken ct)
+        {
+            var userId = GetUserId();
+            var result = await _centralService.GetBuyerOrdersAsync(userId, query, ct);
+            return Ok(ApiResponse<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>>.Ok(result, "All middleman sales orders retrieved successfully."));
         }
     }
 }

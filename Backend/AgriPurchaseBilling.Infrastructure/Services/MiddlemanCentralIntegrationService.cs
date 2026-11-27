@@ -626,7 +626,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             };
         }
 
-        public async Task<UnifiedPagedResultDto<SellOrderResponseDto>> GetFarmerSellProductsAsync(
+        public async Task<UnifiedPagedResultDto<UnifiedFarmerPurchaseItemDto>> GetFarmerPurchasesAsync(
             long middlemanId,
             UnifiedPortalQueryDto query,
             CancellationToken ct = default)
@@ -636,76 +636,133 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             var mmMobile = middlemanUser?.Mobile?.Trim() ?? string.Empty;
             var mmName = middlemanUser?.FullName?.Trim() ?? string.Empty;
 
-            // STRICT DATA ISOLATION:
-            // Middleman can ONLY view transactions where Middleman is involved.
-            // Transactions between two other parties (Farmer <-> Vendor or Farmer <-> Customer) are completely hidden.
-            var baseQuery = _context.FarmerSellProducts
+            var list = new List<UnifiedFarmerPurchaseItemDto>();
+
+            // 1. Retrieve purchases made BY this Middleman from Farmers (middleman_purchases)
+            var purchases = await _context.MiddlemanPurchases
                 .AsNoTracking()
-                .Where(x => x.BuyerCategory.ToLower() == "middleman");
+                .Where(p => p.MiddlemanId == effectiveMiddlemanId)
+                .ToListAsync(ct);
 
-            // Middleman can only view listings/orders where he himself is involved or open for middlemen generally
-            if (!string.IsNullOrWhiteSpace(mmMobile))
+            foreach (var p in purchases)
             {
-                baseQuery = baseQuery.Where(x =>
-                    x.BuyerMobile == mmMobile ||
-                    x.BuyerMobile == "" ||
-                    x.BuyerMobile == null ||
-                    x.BuyerName == mmName ||
-                    x.BuyerName.ToLower() == "middleman" ||
-                    x.BuyerName.ToLower() == "open");
+                list.Add(new UnifiedFarmerPurchaseItemDto
+                {
+                    Id = p.Id,
+                    PurchaseCode = p.PurchaseCode,
+                    FarmerUserId = 0,
+                    FarmerId = p.FarmerId,
+                    FarmerName = p.FarmerName,
+                    FarmerMobile = p.FarmerMobile,
+                    CropName = p.CropName,
+                    Variety = p.Variety,
+                    QualityGrade = p.QualityGrade,
+                    Quantity = p.Quantity,
+                    Unit = p.Unit,
+                    Rate = p.Rate,
+                    Subtotal = p.Subtotal,
+                    TransportationCharges = p.TransportationCharges,
+                    TotalAmount = p.TotalAmount,
+                    PurchaseDate = p.PurchaseDate,
+                    ExpectedPaymentDate = p.ExpectedPaymentDate,
+                    DeliveryDate = p.DeliveryDate,
+                    PickupLocation = p.PickupLocation,
+                    Status = p.Status,
+                    PaymentStatus = p.Status == "Completed" ? "Paid" : "Pending Payment",
+                    OtpStatus = p.OtpStatus,
+                    Notes = p.Notes,
+                    BuyerCategory = "Middleman",
+                    BuyerName = mmName,
+                    BuyerMobile = mmMobile,
+                    MiddlemanId = p.MiddlemanId,
+                    Source = "Middleman Direct Purchase"
+                });
             }
 
-            if (!string.IsNullOrWhiteSpace(query.Search))
+            // 2. Retrieve Farmer produce listings targeted or open for Middleman procurement (farmer_sell_products)
+            // STRICT ISOLATION: Exclude direct sales where Farmer sells to Vendor or Customer
+            var farmerListings = await _context.FarmerSellProducts
+                .AsNoTracking()
+                .Where(f => f.BuyerCategory.ToLower() == "middleman")
+                .ToListAsync(ct);
+
+            foreach (var f in farmerListings)
             {
-                var s = query.Search.Trim().ToLower();
-                baseQuery = baseQuery.Where(x =>
-                    x.CropName.ToLower().Contains(s) ||
-                    x.SaleCode.ToLower().Contains(s) ||
-                    x.BuyerName.ToLower().Contains(s) ||
-                    x.BuyerMobile.Contains(s) ||
-                    x.PickupLocation.ToLower().Contains(s));
+                if (!string.IsNullOrWhiteSpace(mmMobile) &&
+                    !string.IsNullOrWhiteSpace(f.BuyerMobile) &&
+                    !f.BuyerMobile.Equals(mmMobile, StringComparison.OrdinalIgnoreCase) &&
+                    !f.BuyerMobile.Equals("all", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue; // Skip if reserved for a different specific middleman
+                }
+
+                list.Add(new UnifiedFarmerPurchaseItemDto
+                {
+                    Id = f.Id,
+                    PurchaseCode = f.SaleCode,
+                    FarmerUserId = f.FarmerId,
+                    FarmerId = $"FARM-{f.FarmerId:D4}",
+                    FarmerName = f.BuyerName,
+                    FarmerMobile = f.BuyerMobile,
+                    CropName = f.CropName,
+                    Variety = f.CropVariety,
+                    QualityGrade = f.QualityGrade ?? "Standard",
+                    Quantity = f.SellingQuantity,
+                    Unit = f.Unit,
+                    Rate = f.PricePerUnit,
+                    Subtotal = f.SellingQuantity * f.PricePerUnit,
+                    TransportationCharges = 0m,
+                    TotalAmount = f.TotalAmount,
+                    PurchaseDate = f.CreatedAt,
+                    ExpectedPaymentDate = null,
+                    DeliveryDate = f.ExpectedPickupDate,
+                    PickupLocation = f.PickupLocation,
+                    Status = f.Status,
+                    PaymentStatus = "Pending Confirmation",
+                    OtpStatus = f.OtpStatus,
+                    Notes = f.Notes,
+                    BuyerCategory = f.BuyerCategory,
+                    BuyerName = f.BuyerName,
+                    BuyerMobile = f.BuyerMobile,
+                    MiddlemanId = effectiveMiddlemanId,
+                    Source = "Farmer Portal Produce Listing"
+                });
             }
 
+            var filtered = list.AsEnumerable();
+
+            // Status filter
             if (!string.IsNullOrWhiteSpace(query.Status) && !query.Status.Equals("ALL", StringComparison.OrdinalIgnoreCase))
             {
-                baseQuery = baseQuery.Where(x => x.Status == query.Status);
+                filtered = filtered.Where(x =>
+                    string.Equals(x.Status, query.Status, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(x.OtpStatus, query.Status, StringComparison.OrdinalIgnoreCase));
             }
 
-            var totalItems = await baseQuery.CountAsync(ct);
+            // Search filter
+            if (!string.IsNullOrWhiteSpace(query.Search))
+            {
+                var s = query.Search.Trim().ToLowerInvariant();
+                filtered = filtered.Where(x =>
+                    x.PurchaseCode.ToLowerInvariant().Contains(s) ||
+                    x.FarmerName.ToLowerInvariant().Contains(s) ||
+                    (x.FarmerMobile != null && x.FarmerMobile.Contains(s)) ||
+                    x.CropName.ToLowerInvariant().Contains(s) ||
+                    (x.PickupLocation != null && x.PickupLocation.ToLowerInvariant().Contains(s)));
+            }
+
+            var totalItems = filtered.Count();
             var page = query.Page > 0 ? query.Page : 1;
             var pageSize = query.PageSize > 0 ? query.PageSize : 10;
 
-            var items = await baseQuery
-                .OrderByDescending(x => x.CreatedAt)
+            var items = filtered
+                .OrderByDescending(x => x.PurchaseDate)
+                .ThenByDescending(x => x.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(x => new SellOrderResponseDto
-                {
-                    Id = x.Id,
-                    SaleCode = x.SaleCode,
-                    FarmerId = x.FarmerId,
-                    CropId = x.CropId,
-                    BuyerCategory = x.BuyerCategory,
-                    BuyerName = x.BuyerName,
-                    BuyerMobile = x.BuyerMobile,
-                    CropName = x.CropName,
-                    CropVariety = x.CropVariety,
-                    QualityGrade = x.QualityGrade,
-                    SellingQuantity = x.SellingQuantity,
-                    Unit = x.Unit,
-                    PricePerUnit = x.PricePerUnit,
-                    TotalAmount = x.TotalAmount,
-                    PickupLocation = x.PickupLocation,
-                    ExpectedPickupDate = x.ExpectedPickupDate,
-                    Notes = x.Notes,
-                    Status = x.Status,
-                    OtpStatus = x.OtpStatus,
-                    ConfirmedAt = x.ConfirmedAt,
-                    CreatedAt = x.CreatedAt
-                })
-                .ToListAsync(ct);
+                .ToList();
 
-            return new UnifiedPagedResultDto<SellOrderResponseDto>
+            return new UnifiedPagedResultDto<UnifiedFarmerPurchaseItemDto>
             {
                 Items = items,
                 TotalItems = totalItems,
@@ -714,12 +771,219 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             };
         }
 
+        public async Task<UnifiedPagedResultDto<SellOrderResponseDto>> GetFarmerSellProductsAsync(
+            long middlemanId,
+            UnifiedPortalQueryDto query,
+            CancellationToken ct = default)
+        {
+            var res = await GetFarmerPurchasesAsync(middlemanId, query, ct);
+            var mapped = res.Items.Select(x => new SellOrderResponseDto
+            {
+                Id = x.Id,
+                SaleCode = x.PurchaseCode,
+                FarmerId = x.FarmerUserId,
+                CropId = 0,
+                BuyerCategory = x.BuyerCategory,
+                BuyerName = x.FarmerName,
+                BuyerMobile = x.FarmerMobile ?? string.Empty,
+                CropName = x.CropName,
+                CropVariety = x.Variety,
+                QualityGrade = x.QualityGrade,
+                SellingQuantity = x.Quantity,
+                Unit = x.Unit,
+                PricePerUnit = x.Rate,
+                TotalAmount = x.TotalAmount,
+                PickupLocation = x.PickupLocation ?? "Mandi / Farm Gate",
+                ExpectedPickupDate = x.DeliveryDate,
+                Notes = x.Notes,
+                Status = x.Status,
+                OtpStatus = x.OtpStatus ?? "Pending",
+                ConfirmedAt = x.PurchaseDate,
+                CreatedAt = x.PurchaseDate
+            }).ToList();
+
+            return new UnifiedPagedResultDto<SellOrderResponseDto>
+            {
+                Items = mapped,
+                TotalItems = res.TotalItems,
+                Page = res.Page,
+                PageSize = res.PageSize
+            };
+        }
+
         public async Task<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>> GetCustomerOrdersAsync(
             long middlemanId,
             UnifiedPortalQueryDto query,
             CancellationToken ct = default)
         {
-            return await GetBuyerOrdersAsync(middlemanId, query, ct);
+            var effectiveMiddlemanId = middlemanId > 0 ? middlemanId : 57;
+
+            // STRICT: ONLY Customer purchases from THIS Middleman (middleman_sales where BuyerType == Customer)
+            // NEVER includes Vendors. NEVER includes Vendor-to-Customer direct transactions.
+            var customerSales = await _context.MiddlemanSales
+                .AsNoTracking()
+                .Where(s => s.MiddlemanId == effectiveMiddlemanId && s.BuyerType == "Customer")
+                .ToListAsync(ct);
+
+            var list = customerSales.Select(s => new UnifiedMiddlemanBuyerOrderDto
+            {
+                Id = s.Id,
+                SaleCode = s.SaleCode,
+                OrderId = s.SaleCode,
+                TransactionId = s.SaleCode,
+                BuyerType = "Customer",
+                BuyerId = s.BuyerId,
+                BuyerName = s.BuyerName,
+                BuyerMobile = s.BuyerMobile,
+                BusinessName = null,
+                CropName = s.CropName,
+                Product = s.CropName,
+                Category = "Customer Direct Purchase",
+                Variety = s.Variety,
+                QualityGrade = s.QualityGrade,
+                Quantity = s.Quantity,
+                Unit = s.Unit,
+                Rate = s.PricePerUnit,
+                PricePerUnit = s.PricePerUnit,
+                Subtotal = s.Subtotal,
+                TotalAmount = s.TotalAmount,
+                SalesDate = s.SaleDate,
+                OrderDate = s.SaleDate,
+                Status = s.Status,
+                OrderStatus = s.Status,
+                OtpStatus = s.OtpStatus,
+                DeliveryLocation = s.DeliveryAddress,
+                DeliveryAddress = s.DeliveryAddress,
+                ExpectedDeliveryDate = s.ExpectedDeliveryDate,
+                ExpectedPaymentDate = s.ExpectedPaymentDate,
+                MiddlemanId = s.MiddlemanId
+            }).AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(query.Status) && !query.Status.Equals("ALL", StringComparison.OrdinalIgnoreCase))
+            {
+                var st = query.Status.Trim();
+                list = list.Where(x =>
+                    string.Equals(x.Status, st, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(x.OtpStatus, st, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(query.Search))
+            {
+                var s = query.Search.Trim().ToLowerInvariant();
+                list = list.Where(x =>
+                    x.SaleCode.ToLowerInvariant().Contains(s) ||
+                    x.BuyerName.ToLowerInvariant().Contains(s) ||
+                    (x.BuyerMobile != null && x.BuyerMobile.Contains(s)) ||
+                    x.CropName.ToLowerInvariant().Contains(s) ||
+                    (x.DeliveryLocation != null && x.DeliveryLocation.ToLowerInvariant().Contains(s)));
+            }
+
+            var totalItems = list.Count();
+            var page = query.Page > 0 ? query.Page : 1;
+            var pageSize = query.PageSize > 0 ? query.PageSize : 10;
+
+            var items = list
+                .OrderByDescending(x => x.SalesDate)
+                .ThenByDescending(x => x.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return new UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>
+            {
+                Items = items,
+                TotalItems = totalItems,
+                Page = page,
+                PageSize = pageSize
+            };
+        }
+
+        public async Task<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>> GetVendorOrdersAsync(
+            long middlemanId,
+            UnifiedPortalQueryDto query,
+            CancellationToken ct = default)
+        {
+            var effectiveMiddlemanId = middlemanId > 0 ? middlemanId : 57;
+
+            // STRICT: ONLY Commercial Vendor purchases from THIS Middleman (middleman_vendor_sales)
+            // NEVER includes Customers. NEVER includes Vendor-to-Customer direct transactions.
+            var vendorSales = await _context.MiddlemanVendorSales
+                .AsNoTracking()
+                .Where(v => v.MiddlemanId == effectiveMiddlemanId)
+                .ToListAsync(ct);
+
+            var list = vendorSales.Select(v => new UnifiedMiddlemanBuyerOrderDto
+            {
+                Id = v.Id,
+                SaleCode = v.SaleId,
+                OrderId = v.SaleId,
+                TransactionId = v.SaleId,
+                BuyerType = "Vendor",
+                BuyerId = v.VendorId,
+                BuyerName = !string.IsNullOrWhiteSpace(v.VendorName) ? v.VendorName : (v.OwnerName ?? string.Empty),
+                BuyerMobile = v.Mobile,
+                BusinessName = v.BusinessName,
+                CropName = v.CropName,
+                Product = v.CropName,
+                Category = "Vendor Wholesale Purchase",
+                Variety = v.Variety,
+                QualityGrade = v.QualityGrade,
+                Quantity = v.Quantity,
+                Unit = v.Unit,
+                Rate = v.Rate,
+                PricePerUnit = v.Rate,
+                Subtotal = v.Subtotal,
+                TotalAmount = v.TotalAmount,
+                SalesDate = v.SalesDate,
+                OrderDate = v.SalesDate,
+                Status = v.Status,
+                OrderStatus = v.Status,
+                OtpStatus = v.OtpStatus,
+                DeliveryLocation = v.DeliveryLocation,
+                DeliveryAddress = v.DeliveryLocation,
+                ExpectedDeliveryDate = v.ExpectedDeliveryDate,
+                ExpectedPaymentDate = v.ExpectedPaymentDate,
+                MiddlemanId = v.MiddlemanId
+            }).AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(query.Status) && !query.Status.Equals("ALL", StringComparison.OrdinalIgnoreCase))
+            {
+                var st = query.Status.Trim();
+                list = list.Where(x =>
+                    string.Equals(x.Status, st, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(x.OtpStatus, st, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(query.Search))
+            {
+                var s = query.Search.Trim().ToLowerInvariant();
+                list = list.Where(x =>
+                    x.SaleCode.ToLowerInvariant().Contains(s) ||
+                    x.BuyerName.ToLowerInvariant().Contains(s) ||
+                    (x.BuyerMobile != null && x.BuyerMobile.Contains(s)) ||
+                    (x.BusinessName != null && x.BusinessName.ToLowerInvariant().Contains(s)) ||
+                    x.CropName.ToLowerInvariant().Contains(s) ||
+                    (x.DeliveryLocation != null && x.DeliveryLocation.ToLowerInvariant().Contains(s)));
+            }
+
+            var totalItems = list.Count();
+            var page = query.Page > 0 ? query.Page : 1;
+            var pageSize = query.PageSize > 0 ? query.PageSize : 10;
+
+            var items = list
+                .OrderByDescending(x => x.SalesDate)
+                .ThenByDescending(x => x.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return new UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>
+            {
+                Items = items,
+                TotalItems = totalItems,
+                Page = page,
+                PageSize = pageSize
+            };
         }
 
         public async Task<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>> GetBuyerOrdersAsync(
@@ -744,7 +1008,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             {
                 var customerSales = await _context.MiddlemanSales
                     .AsNoTracking()
-                    .Where(s => s.MiddlemanId == effectiveMiddlemanId)
+                    .Where(s => s.MiddlemanId == effectiveMiddlemanId && s.BuyerType == "Customer")
                     .ToListAsync(ct);
 
                 foreach (var s in customerSales)
@@ -755,7 +1019,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                         SaleCode = s.SaleCode,
                         OrderId = s.SaleCode,
                         TransactionId = s.SaleCode,
-                        BuyerType = !string.IsNullOrWhiteSpace(s.BuyerType) ? s.BuyerType : "Customer",
+                        BuyerType = "Customer",
                         BuyerId = s.BuyerId,
                         BuyerName = s.BuyerName,
                         BuyerMobile = s.BuyerMobile,

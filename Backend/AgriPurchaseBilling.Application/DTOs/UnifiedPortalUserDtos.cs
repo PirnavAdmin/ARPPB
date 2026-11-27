@@ -185,4 +185,50 @@ namespace AgriPurchaseBilling.Application.DTOs
         public DateTime? ExpectedPaymentDate { get; set; }
         public long MiddlemanId { get; set; }
     }
+
+    /// <summary>
+    /// Unified representation of a produce purchase made by the Middleman from a Farmer,
+    /// or an active farmer produce listing open for Middleman procurement.
+    /// Strictly contains transactions where the Middleman is the buyer.
+    /// </summary>
+    public class UnifiedFarmerPurchaseItemDto
+    {
+        public long Id { get; set; }
+        public string PurchaseCode { get; set; } = string.Empty;
+        public string SaleCode => PurchaseCode;
+        public string OrderId => PurchaseCode;
+        public string? TransactionId => PurchaseCode;
+        public long FarmerUserId { get; set; }
+        public string FarmerId { get; set; } = string.Empty;
+        public string FarmerName { get; set; } = string.Empty;
+        public string? FarmerMobile { get; set; }
+        public string CropName { get; set; } = string.Empty;
+        public string Product => CropName;
+        public string Variety { get; set; } = "Standard";
+        public string CropVariety => Variety;
+        public string QualityGrade { get; set; } = "Grade A";
+        public decimal Quantity { get; set; }
+        public decimal SellingQuantity => Quantity;
+        public string Unit { get; set; } = "Quintal";
+        public decimal Rate { get; set; }
+        public decimal PricePerUnit => Rate;
+        public decimal Subtotal { get; set; }
+        public decimal TransportationCharges { get; set; }
+        public decimal TotalAmount { get; set; }
+        public DateTime PurchaseDate { get; set; }
+        public DateTime CreatedAt => PurchaseDate;
+        public DateTime? ExpectedPaymentDate { get; set; }
+        public DateTime? DeliveryDate { get; set; }
+        public DateTime? ExpectedPickupDate => DeliveryDate;
+        public string? PickupLocation { get; set; }
+        public string Status { get; set; } = "Completed";
+        public string? PaymentStatus { get; set; } = "Unpaid";
+        public string? OtpStatus { get; set; } = "Confirmed";
+        public string? Notes { get; set; }
+        public string BuyerCategory { get; set; } = "Middleman";
+        public string BuyerName { get; set; } = string.Empty;
+        public string BuyerMobile { get; set; } = string.Empty;
+        public long MiddlemanId { get; set; }
+        public string Source { get; set; } = "Middleman Direct Purchase";
+    }
 }

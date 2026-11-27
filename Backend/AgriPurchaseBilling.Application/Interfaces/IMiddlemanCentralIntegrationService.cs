@@ -11,8 +11,10 @@ namespace AgriPurchaseBilling.Application.Interfaces
         Task<UnifiedPagedResultDto<UnifiedVendorItemDto>> GetVendorsAsync(long middlemanId, UnifiedPortalQueryDto query, CancellationToken ct = default);
         Task<UnifiedPagedResultDto<UnifiedCustomerItemDto>> GetCustomersAsync(long middlemanId, UnifiedPortalQueryDto query, CancellationToken ct = default);
         Task<UnifiedPagedResultDto<UnifiedMiddlemanItemDto>> GetMiddlemenAsync(long middlemanId, UnifiedPortalQueryDto query, CancellationToken ct = default);
+        Task<UnifiedPagedResultDto<UnifiedFarmerPurchaseItemDto>> GetFarmerPurchasesAsync(long middlemanId, UnifiedPortalQueryDto query, CancellationToken ct = default);
         Task<UnifiedPagedResultDto<SellOrderResponseDto>> GetFarmerSellProductsAsync(long middlemanId, UnifiedPortalQueryDto query, CancellationToken ct = default);
         Task<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>> GetCustomerOrdersAsync(long middlemanId, UnifiedPortalQueryDto query, CancellationToken ct = default);
+        Task<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>> GetVendorOrdersAsync(long middlemanId, UnifiedPortalQueryDto query, CancellationToken ct = default);
         Task<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>> GetBuyerOrdersAsync(long middlemanId, UnifiedPortalQueryDto query, CancellationToken ct = default);
     }
 }
