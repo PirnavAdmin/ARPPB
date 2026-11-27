@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AgriPurchaseBilling.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2b2eff81ac48a5cd7129f3836e2d565a8e4a477e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dbd9dd849805c0bcd0d3bd94bc7f870a4dcdb999")]
 [assembly: System.Reflection.AssemblyProductAttribute("AgriPurchaseBilling.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AgriPurchaseBilling.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -1416,12 +1416,40 @@ export function VendorProvider({ children }) {
           otpRecord.rawId || otpRecord.id,
           cleanedInput
         ),
-      ]).then(() => {
-        fetchVendorLedgerApi().then((freshLedger) => {
+      ]).then(async () => {
+        try {
+          const [freshLedger, freshConfirms, freshPurchases, freshSales] = await Promise.all([
+            fetchVendorLedgerApi().catch(() => null),
+            fetchVendorConfirmationsApi().catch(() => null),
+            fetchVendorPurchasesApi().catch(() => null),
+            fetchVendorSalesApi().catch(() => null),
+          ]);
           if (Array.isArray(freshLedger) && freshLedger.length > 0) {
             updateStateAndStorage(setLedger, STORAGE_KEYS.LEDGER, freshLedger);
           }
-        });
+          if (Array.isArray(freshConfirms) && freshConfirms.length > 0) {
+            updateStateAndStorage(setConfirmations, STORAGE_KEYS.CONFIRMATIONS, (prev) => {
+              const freshMap = new Map((freshConfirms || []).map((c) => [String(c.id || c.rawId || c.transactionId), c]));
+              return (prev || []).map((c) => {
+                const fresh = freshMap.get(String(c.id)) || freshMap.get(String(c.rawId)) || freshMap.get(String(c.transactionId));
+                if (!fresh) return c;
+                return {
+                  ...c,
+                  ...fresh,
+                  otpStatus: fresh.otpStatus || 'Verified',
+                };
+              });
+            });
+          }
+          if (Array.isArray(freshPurchases) && freshPurchases.length > 0) {
+            updateStateAndStorage(setPurchases, STORAGE_KEYS.PURCHASES, freshPurchases);
+          }
+          if (Array.isArray(freshSales) && freshSales.length > 0) {
+            updateStateAndStorage(setSales, STORAGE_KEYS.SALES, freshSales);
+          }
+        } catch {
+          // ignore
+        }
       });
 
       // CASE A: FARMER OR MIDDLEMAN PURCHASE CONFIRMATION

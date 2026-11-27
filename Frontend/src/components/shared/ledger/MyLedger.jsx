@@ -1132,7 +1132,7 @@ export default function MyLedger({
 
               <div className="p-3.5 rounded-xl border border-brand-border bg-brand-light/20 shadow-2xs">
                 <span className="text-[11px] font-semibold text-brand-primary block">
-                  2. Voucher Payment
+                  {selectedVoucherFinancials.isPaymentVoucher ? '2. Voucher Payment' : '2. Paid Amount (To Date)'}
                 </span>
                 <span className="text-base font-extrabold text-brand-primary block mt-0.5">
                   {formatCurrency(selectedVoucherFinancials.thisVoucherPayment)}
@@ -1140,7 +1140,7 @@ export default function MyLedger({
                 <span className="text-[10px] text-brand-muted">
                   {selectedVoucherFinancials.isPaymentVoucher
                     ? 'Payment amount on voucher'
-                    : 'Disbursed / paid amount'}
+                    : 'Disbursed / paid amount to date'}
                 </span>
               </div>
 

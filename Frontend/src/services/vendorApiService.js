@@ -685,14 +685,18 @@ export function mapVendorLedgerDto(dto = {}, existing = {}) {
         : existing.outstandingAmount ?? 0)
   );
 
-  const status =
-    dto.status ||
-    existing.status ||
-    (outstandingAmount <= 0 && totalAmount > 0
-      ? 'Paid'
-      : settledAmount > 0
-      ? 'Partially Paid'
-      : 'Unpaid');
+  let status = dto.status || existing.status;
+  if (totalAmount > 0) {
+    if (outstandingAmount <= 0) {
+      status = 'Paid';
+    } else if (settledAmount > 0) {
+      status = 'Partially Paid';
+    } else {
+      status = 'Unpaid';
+    }
+  } else if (!status) {
+    status = 'Paid';
+  }
 
   return {
     ...existing,
