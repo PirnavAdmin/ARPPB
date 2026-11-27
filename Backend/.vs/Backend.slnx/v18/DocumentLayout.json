@@ -3,12 +3,12 @@
   "WorkspaceRootPath": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\dtos\\authdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\dtos\\authdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|solutionrelative:agripurchasebilling.api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.application\\dtos\\authdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{47B6C2FE-1CC3-3ED2-147A-973C5C970330}|AgriPurchaseBilling.Application\\AgriPurchaseBilling.Application.csproj|solutionrelative:agripurchasebilling.application\\dtos\\authdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{5ADA2BB6-BD8A-FBBA-631C-E748BB1D8E69}|Backend.csproj|c:\\users\\admin\\music\\arppb_b\\backend\\agripurchasebilling.api\\controllers\\roleaccesscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -347,7 +347,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 6,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Bookmark",
@@ -368,7 +368,6 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-12T05:39:10.064Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
@@ -382,12 +381,11 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
               "WhenOpened": "2026-11-23T04:53:35.43Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "AuthController.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Api\\Controllers\\AuthController.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Api\\Controllers\\AuthController.cs",
@@ -410,12 +408,11 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAANAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-12T06:17:18.439Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "AuthDtos.cs",
               "DocumentMoniker": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Application\\DTOs\\AuthDtos.cs",
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Application\\DTOs\\AuthDtos.cs",
@@ -424,7 +421,6 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAIkAAAAIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-12T05:42:26.884Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
@@ -438,7 +434,6 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAALAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-26T07:55:21.38Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
@@ -449,7 +444,7 @@
               "RelativeDocumentMoniker": "AgriPurchaseBilling.Infrastructure\\Repositories\\UserRepository.cs",
               "ToolTip": "C:\\Users\\ADMIN\\Music\\ARPPB_B\\Backend\\AgriPurchaseBilling.Infrastructure\\Repositories\\UserRepository.cs",
               "RelativeToolTip": "AgriPurchaseBilling.Infrastructure\\Repositories\\UserRepository.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAuAAAAAAAAAA==",
+              "ViewState": "AgIAAFEAAAAAAAAAAIBQwAQAAAAuAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-12T06:06:30.04Z",
               "EditorCaption": "",
@@ -466,7 +461,6 @@
               "ViewState": "AgIAAFIAAAAAAAAAAAAswAgAAAALAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-26T07:53:46.76Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
@@ -480,7 +474,6 @@
               "ViewState": "AgIAAFoAAAAAAAAAAAAAAA4AAAAlAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-11T11:24:31.878Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
@@ -494,7 +487,6 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-14T16:24:40.454Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
@@ -508,7 +500,6 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAjAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-14T19:36:40.76Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
@@ -522,7 +513,6 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-14T16:23:51.373Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
@@ -536,7 +526,6 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-14T16:23:35.553Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
@@ -550,7 +539,6 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-13T07:29:28.667Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
@@ -564,7 +552,6 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-14T16:22:52.869Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
@@ -578,7 +565,6 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-12T05:38:20.209Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
@@ -592,7 +578,6 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-14T16:19:07.188Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
@@ -606,7 +591,6 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-18T10:21:03.213Z",
-              "EditorCaption": "",
               "OwnerCaption": "%2"
             },
             {
