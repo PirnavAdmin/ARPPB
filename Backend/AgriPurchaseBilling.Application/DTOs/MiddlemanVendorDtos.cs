@@ -36,6 +36,11 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string Status { get; set; } = "Active";
         public string? Notes { get; set; }
 
+        public string Role { get; set; } = "Vendor";
+        public string UserType { get; set; } = "Vendor";
+        public DateTime RegistrationDate => CreatedAt;
+        public string SourcePortal { get; set; } = "Portal";
+
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }

@@ -23,15 +23,82 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             await EnsureSeedDataAsync(middlemanId);
 
-            var queryable = _context.MiddlemanFarmers
+            // Fetch portal registered farmers
+            var portalFarmers = await _context.Users
                 .AsNoTracking()
-                .Where(x => x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0);
+                .Include(u => u.Farmer)
+                .Where(u => u.Role == AgriPurchaseBilling.Domain.Enums.UserRole.Farmer)
+                .ToListAsync();
+
+            // Fetch offline Middleman farmers
+            var offlineFarmers = await _context.MiddlemanFarmers
+                .AsNoTracking()
+                .Where(x => x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0)
+                .ToListAsync();
+
+            var list = new List<MiddlemanFarmerDto>();
+            var seenMobiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var u in portalFarmers)
+            {
+                var mob = u.Mobile ?? string.Empty;
+                seenMobiles.Add(mob);
+
+                var cropsList = !string.IsNullOrWhiteSpace(u.Farmer?.PrimaryCrops)
+                    ? u.Farmer.PrimaryCrops.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(c => c.Trim()).ToList()
+                    : new List<string> { "Paddy", "Chilli" };
+
+                list.Add(new MiddlemanFarmerDto
+                {
+                    Id = u.Id,
+                    MiddlemanId = middlemanId,
+                    FarmerId = u.Farmer?.FarmerCode ?? $"FAR-{u.Id:D4}",
+                    Name = u.FullName,
+                    Mobile = mob,
+                    Email = u.Email,
+                    Village = u.Farmer?.Village ?? string.Empty,
+                    Mandal = u.Farmer?.Mandal,
+                    District = u.Farmer?.District ?? string.Empty,
+                    State = u.Farmer?.State ?? "Andhra Pradesh",
+                    PinCode = u.Farmer?.PinCode,
+                    CompleteAddress = u.Farmer?.Address ?? $"{u.Farmer?.Village}, {u.Farmer?.Mandal}, {u.Farmer?.District}",
+                    Crops = cropsList,
+                    Notes = u.Farmer != null && !string.IsNullOrWhiteSpace(u.Farmer.FarmName) ? $"Farm: {u.Farmer.FarmName}, Land: {u.Farmer.TotalLandArea}" : null,
+                    TotalPurchases = 0,
+                    TotalQuantityPurchased = 0m,
+                    TotalPurchaseValue = 0m,
+                    OutstandingPayables = 0m,
+                    PendingConfirmations = 0,
+                    Status = u.IsActive ? "Active" : "Inactive",
+                    Role = "Farmer",
+                    UserType = "Farmer",
+                    SourcePortal = "Farmer Portal",
+                    CreatedAt = u.CreatedAt,
+                    UpdatedAt = u.UpdatedAt
+                });
+            }
+
+            foreach (var x in offlineFarmers)
+            {
+                var mob = x.Mobile ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(mob) && seenMobiles.Contains(mob))
+                {
+                    continue; // Skip duplicate, portal registration takes precedence
+                }
+                seenMobiles.Add(mob);
+
+                var dto = MapToDto(x);
+                dto.SourcePortal = "Middleman Offline";
+                list.Add(dto);
+            }
+
+            var queryable = list.AsEnumerable();
 
             // Filter: Crop
             if (!string.IsNullOrWhiteSpace(query.Crop) && !string.Equals(query.Crop, "ALL", StringComparison.OrdinalIgnoreCase))
             {
                 var c = query.Crop.Trim().ToLower();
-                queryable = queryable.Where(x => x.Crops.ToLower().Contains(c));
+                queryable = queryable.Where(x => x.Crops != null && x.Crops.Any(crop => crop.ToLower().Contains(c)));
             }
 
             // Filter: District
@@ -60,17 +127,17 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                     x.District.ToLower().Contains(s));
             }
 
-            var totalItems = await queryable.CountAsync();
-            var activeSupplying = await queryable.CountAsync(x => x.Status == "Active");
+            var totalItems = queryable.Count();
+            var activeSupplying = queryable.Count(x => string.Equals(x.Status, "Active", StringComparison.OrdinalIgnoreCase));
 
             var page = query.Page > 0 ? query.Page : 1;
             var pageSize = query.PageSize > 0 ? query.PageSize : 1000;
 
-            var items = await queryable
-                .OrderByDescending(x => x.Id)
+            var items = queryable
+                .OrderByDescending(x => x.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToListAsync();
+                .ToList();
 
             // Dynamically calculate real-time OutstandingPayables from MiddlemanLedgers
             var farmerIds = items.Select(x => x.FarmerCode).Concat(items.Select(x => x.Id.ToString())).Distinct().ToList();
@@ -84,8 +151,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 .Select(g => new { Party = g.Key, Outstanding = g.Sum(x => x.OutstandingAmount) })
                 .ToListAsync();
 
-            var dtos = items.Select(MapToDto).ToList();
-            foreach (var dto in dtos)
+            foreach (var dto in items)
             {
                 var b = balances.FirstOrDefault(x => x.Party == dto.FarmerId || x.Party == dto.Name || x.Party == dto.Id.ToString());
                 if (b != null)
@@ -96,7 +162,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
             return new MiddlemanFarmerPageDto
             {
-                Items = dtos,
+                Items = items,
                 TotalItems = totalItems,
                 ActiveSupplying = activeSupplying,
                 Page = page,
@@ -108,6 +174,77 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             await EnsureSeedDataAsync(middlemanId);
 
+            // 1. Check in Portal Farmers
+            if (long.TryParse(farmerId, out var uid))
+            {
+                var portalUser = await _context.Users
+                    .AsNoTracking()
+                    .Include(u => u.Farmer)
+                    .FirstOrDefaultAsync(u => u.Role == AgriPurchaseBilling.Domain.Enums.UserRole.Farmer && (u.Id == uid || (u.Farmer != null && u.Farmer.FarmerCode == farmerId)));
+                if (portalUser != null)
+                {
+                    return new MiddlemanFarmerDto
+                    {
+                        Id = portalUser.Id,
+                        MiddlemanId = middlemanId,
+                        FarmerId = portalUser.Farmer?.FarmerCode ?? $"FAR-{portalUser.Id:D4}",
+                        Name = portalUser.FullName,
+                        Mobile = portalUser.Mobile,
+                        Email = portalUser.Email,
+                        Village = portalUser.Farmer?.Village ?? string.Empty,
+                        Mandal = portalUser.Farmer?.Mandal,
+                        District = portalUser.Farmer?.District ?? string.Empty,
+                        State = portalUser.Farmer?.State ?? "Andhra Pradesh",
+                        PinCode = portalUser.Farmer?.PinCode,
+                        CompleteAddress = portalUser.Farmer?.Address ?? $"{portalUser.Farmer?.Village}, {portalUser.Farmer?.Mandal}, {portalUser.Farmer?.District}",
+                        Crops = !string.IsNullOrWhiteSpace(portalUser.Farmer?.PrimaryCrops)
+                            ? portalUser.Farmer.PrimaryCrops.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(c => c.Trim()).ToList()
+                            : new List<string> { "Paddy", "Chilli" },
+                        Status = portalUser.IsActive ? "Active" : "Inactive",
+                        Role = "Farmer",
+                        UserType = "Farmer",
+                        SourcePortal = "Farmer Portal",
+                        CreatedAt = portalUser.CreatedAt,
+                        UpdatedAt = portalUser.UpdatedAt
+                    };
+                }
+            }
+            else
+            {
+                var portalUser = await _context.Users
+                    .AsNoTracking()
+                    .Include(u => u.Farmer)
+                    .FirstOrDefaultAsync(u => u.Role == AgriPurchaseBilling.Domain.Enums.UserRole.Farmer && u.Farmer != null && u.Farmer.FarmerCode == farmerId);
+                if (portalUser != null)
+                {
+                    return new MiddlemanFarmerDto
+                    {
+                        Id = portalUser.Id,
+                        MiddlemanId = middlemanId,
+                        FarmerId = portalUser.Farmer?.FarmerCode ?? $"FAR-{portalUser.Id:D4}",
+                        Name = portalUser.FullName,
+                        Mobile = portalUser.Mobile,
+                        Email = portalUser.Email,
+                        Village = portalUser.Farmer?.Village ?? string.Empty,
+                        Mandal = portalUser.Farmer?.Mandal,
+                        District = portalUser.Farmer?.District ?? string.Empty,
+                        State = portalUser.Farmer?.State ?? "Andhra Pradesh",
+                        PinCode = portalUser.Farmer?.PinCode,
+                        CompleteAddress = portalUser.Farmer?.Address ?? $"{portalUser.Farmer?.Village}, {portalUser.Farmer?.Mandal}, {portalUser.Farmer?.District}",
+                        Crops = !string.IsNullOrWhiteSpace(portalUser.Farmer?.PrimaryCrops)
+                            ? portalUser.Farmer.PrimaryCrops.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(c => c.Trim()).ToList()
+                            : new List<string> { "Paddy", "Chilli" },
+                        Status = portalUser.IsActive ? "Active" : "Inactive",
+                        Role = "Farmer",
+                        UserType = "Farmer",
+                        SourcePortal = "Farmer Portal",
+                        CreatedAt = portalUser.CreatedAt,
+                        UpdatedAt = portalUser.UpdatedAt
+                    };
+                }
+            }
+
+            // 2. Check offline Middleman farmers
             var queryable = _context.MiddlemanFarmers
                 .AsNoTracking()
                 .Where(x => x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0);

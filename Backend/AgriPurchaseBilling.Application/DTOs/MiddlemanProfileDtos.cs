@@ -24,8 +24,32 @@ namespace AgriPurchaseBilling.Application.DTOs
         public string? AccountNumber { get; set; }
         public string? IfscCode { get; set; }
         public string? BranchName { get; set; }
+        public string Name => OwnerName;
+        public string Role => "Middleman";
+        public string UserType => "Middleman";
+        public string Status { get; set; } = "Active";
+        public DateTime RegistrationDate => CreatedAt;
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+    }
+
+    public class MiddlemanProfileQueryDto
+    {
+        public string? Search { get; set; }
+        public string? District { get; set; } = "ALL";
+        public string? State { get; set; } = "ALL";
+        public string? Status { get; set; } = "ALL";
+        public int Page { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+    }
+
+    public class MiddlemanProfilePageDto
+    {
+        public List<MiddlemanProfileDto> Items { get; set; } = new();
+        public int TotalItems { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalItems / PageSize) : 0;
     }
 
     public class UpdateMiddlemanProfileRequest

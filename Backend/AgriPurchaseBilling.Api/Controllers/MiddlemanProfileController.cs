@@ -106,6 +106,98 @@ namespace Backend.AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
+        /// Retrieves paginated list of all registered Middlemen with search and district filters.
+        /// GET /api/v1/middleman/middlemen
+        /// GET /api/v1/middleman-management
+        /// GET /api/v1/middleman-profile/all
+        /// GET /api/v1/middleman/profile/all
+        /// </summary>
+        [HttpGet("all")]
+        [HttpGet("/api/v1/middleman/middlemen")]
+        [HttpGet("/api/v1/middleman-management")]
+        [ProducesResponseType(typeof(ApiResponse<MiddlemanProfilePageDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllMiddlemen([FromQuery] MiddlemanProfileQueryDto query, CancellationToken ct)
+        {
+            var usersQuery = _context.Users
+                .AsNoTracking()
+                .Include(u => u.Middleman)
+                .Include(u => u.MiddlemanProfile)
+                .Where(u => u.Role == global::AgriPurchaseBilling.Domain.Enums.UserRole.Middleman);
+
+            if (!string.IsNullOrWhiteSpace(query.Status) && !query.Status.Equals("ALL", StringComparison.OrdinalIgnoreCase))
+            {
+                bool active = query.Status.Equals("Active", StringComparison.OrdinalIgnoreCase);
+                usersQuery = usersQuery.Where(u => u.IsActive == active);
+            }
+
+            if (!string.IsNullOrWhiteSpace(query.District) && !query.District.Equals("ALL", StringComparison.OrdinalIgnoreCase))
+            {
+                usersQuery = usersQuery.Where(u => u.MiddlemanProfile != null && u.MiddlemanProfile.District == query.District);
+            }
+
+            if (!string.IsNullOrWhiteSpace(query.Search))
+            {
+                var s = query.Search.Trim().ToLower();
+                usersQuery = usersQuery.Where(u =>
+                    u.FullName.ToLower().Contains(s) ||
+                    u.Mobile.Contains(s) ||
+                    (u.Email != null && u.Email.ToLower().Contains(s)) ||
+                    (u.Middleman != null && u.Middleman.MiddlemanPortalId.ToLower().Contains(s)) ||
+                    (u.MiddlemanProfile != null && (
+                        u.MiddlemanProfile.RegisteredBusinessName.ToLower().Contains(s) ||
+                        (u.MiddlemanProfile.District != null && u.MiddlemanProfile.District.ToLower().Contains(s)))));
+            }
+
+            var totalItems = await usersQuery.CountAsync(ct);
+            var page = query.Page > 0 ? query.Page : 1;
+            var pageSize = query.PageSize > 0 ? query.PageSize : 10;
+
+            var items = await usersQuery
+                .OrderByDescending(u => u.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(u => new MiddlemanProfileDto
+                {
+                    Id = u.MiddlemanProfile != null ? u.MiddlemanProfile.Id : u.Id,
+                    UserId = u.Id,
+                    MiddlemanPortalId = u.Middleman != null ? u.Middleman.MiddlemanPortalId : (u.MiddlemanProfile != null ? u.MiddlemanProfile.MiddlemanPortalId : $"MID-{u.Id:D4}"),
+                    BusinessLogoUrl = u.MiddlemanProfile != null ? u.MiddlemanProfile.BusinessLogoUrl : null,
+                    RegisteredBusinessName = u.MiddlemanProfile != null && !string.IsNullOrWhiteSpace(u.MiddlemanProfile.RegisteredBusinessName)
+                        ? u.MiddlemanProfile.RegisteredBusinessName
+                        : u.FullName,
+                    RegistrationLicenseNo = u.MiddlemanProfile != null ? u.MiddlemanProfile.RegistrationLicenseNo : null,
+                    Gstin = u.MiddlemanProfile != null ? u.MiddlemanProfile.Gstin : null,
+                    OwnerName = u.MiddlemanProfile != null ? u.MiddlemanProfile.OwnerName : u.FullName,
+                    Mobile = u.Mobile,
+                    Email = u.Email,
+                    PremisesAddress = u.MiddlemanProfile != null ? u.MiddlemanProfile.PremisesAddress : null,
+                    VillageArea = u.MiddlemanProfile != null ? u.MiddlemanProfile.VillageArea : null,
+                    District = u.MiddlemanProfile != null ? u.MiddlemanProfile.District : null,
+                    State = u.MiddlemanProfile != null ? u.MiddlemanProfile.State : "Andhra Pradesh",
+                    PinCode = u.MiddlemanProfile != null ? u.MiddlemanProfile.PinCode : null,
+                    AccountHolderName = u.MiddlemanProfile != null ? u.MiddlemanProfile.AccountHolderName : null,
+                    BankName = u.MiddlemanProfile != null ? u.MiddlemanProfile.BankName : null,
+                    AccountNumber = u.MiddlemanProfile != null ? u.MiddlemanProfile.AccountNumber : null,
+                    IfscCode = u.MiddlemanProfile != null ? u.MiddlemanProfile.IfscCode : null,
+                    BranchName = u.MiddlemanProfile != null ? u.MiddlemanProfile.BranchName : null,
+                    Status = u.IsActive ? "Active" : "Inactive",
+                    CreatedAt = u.CreatedAt,
+                    UpdatedAt = u.UpdatedAt
+                })
+                .ToListAsync(ct);
+
+            var pageResult = new MiddlemanProfilePageDto
+            {
+                Items = items,
+                TotalItems = totalItems,
+                Page = page,
+                PageSize = pageSize
+            };
+
+            return Ok(ApiResponse<MiddlemanProfilePageDto>.Ok(pageResult, "Middlemen list retrieved successfully."));
+        }
+
+        /// <summary>
         /// Send an OTP to a new mobile number.
         /// The endpoint is protected by the current Middleman's JWT. 
         /// </summary>

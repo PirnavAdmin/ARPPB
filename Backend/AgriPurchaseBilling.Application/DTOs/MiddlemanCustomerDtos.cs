@@ -20,6 +20,12 @@ namespace AgriPurchaseBilling.Application.DTOs
         public decimal OutstandingReceivables { get; set; }
         public string Status { get; set; } = "Active";
         public string? Notes { get; set; }
+
+        public string Role { get; set; } = "Customer";
+        public string UserType { get; set; } = "Customer";
+        public DateTime RegistrationDate => CreatedAt;
+        public string SourcePortal { get; set; } = "Portal";
+
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }

@@ -23,15 +23,83 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             await EnsureSeedDataAsync(middlemanId);
 
-            var queryable = _context.MiddlemanVendors
+            // Fetch portal registered vendors
+            var portalVendors = await _context.Users
                 .AsNoTracking()
-                .Where(x => x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0);
+                .Include(u => u.Vendor)
+                .Where(u => u.Role == AgriPurchaseBilling.Domain.Enums.UserRole.Vendor)
+                .ToListAsync();
+
+            var vendorProfiles = await _context.VendorProfiles
+                .AsNoTracking()
+                .ToListAsync();
+
+            var profilesByMobile = vendorProfiles.ToDictionary(p => p.Mobile, StringComparer.OrdinalIgnoreCase);
+
+            // Fetch offline Middleman vendors
+            var offlineVendors = await _context.MiddlemanVendors
+                .AsNoTracking()
+                .Where(x => x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0)
+                .ToListAsync();
+
+            var list = new List<MiddlemanVendorDto>();
+            var seenMobiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var u in portalVendors)
+            {
+                var mob = u.Mobile ?? string.Empty;
+                seenMobiles.Add(mob);
+
+                profilesByMobile.TryGetValue(mob, out var profile);
+
+                list.Add(new MiddlemanVendorDto
+                {
+                    Id = u.Id,
+                    MiddlemanId = middlemanId,
+                    VendorId = u.Vendor?.VendorCode ?? profile?.VendorCode ?? $"VEN-{u.Id:D4}",
+                    BusinessName = profile?.BusinessName ?? u.FullName,
+                    OwnerName = profile?.OwnerName ?? u.FullName,
+                    Mobile = mob,
+                    Email = u.Email,
+                    BusinessType = profile?.BusinessType ?? "Wholesaler",
+                    GstNumber = profile?.Gstin,
+                    Address = profile?.BusinessAddress,
+                    District = profile?.District ?? string.Empty,
+                    State = profile?.State ?? "Andhra Pradesh",
+                    PinCode = profile?.PinCode,
+                    TotalPurchases = 0,
+                    TotalPurchaseValue = 0m,
+                    OutstandingReceivables = 0m,
+                    Status = u.IsActive ? "Active" : "Inactive",
+                    Role = "Vendor",
+                    UserType = "Vendor",
+                    SourcePortal = "Vendor Portal",
+                    CreatedAt = u.CreatedAt,
+                    UpdatedAt = u.UpdatedAt
+                });
+            }
+
+            foreach (var mv in offlineVendors)
+            {
+                var mob = mv.Mobile ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(mob) && seenMobiles.Contains(mob))
+                {
+                    continue; // Skip duplicate, portal registration takes precedence
+                }
+                seenMobiles.Add(mob);
+
+                var dto = MapToDto(mv);
+                dto.SourcePortal = "Middleman Offline";
+                list.Add(dto);
+            }
+
+            var queryable = list.AsEnumerable();
 
             // Filter: Business Type
             if (!string.IsNullOrWhiteSpace(query.Type) && !string.Equals(query.Type, "ALL", StringComparison.OrdinalIgnoreCase))
             {
                 var t = query.Type.Trim().ToLower();
-                queryable = queryable.Where(x => x.BusinessType.ToLower() == t);
+                queryable = queryable.Where(x => x.BusinessType != null && x.BusinessType.ToLower() == t);
             }
 
             // Filter: District
@@ -54,32 +122,30 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                     x.District.ToLower().Contains(s));
             }
 
-            var totalItems = await queryable.CountAsync();
+            var totalItems = queryable.Count();
             var page = query.Page <= 0 ? 1 : query.Page;
             var pageSize = query.PageSize <= 0 ? 1000 : query.PageSize;
 
-            var vendorList = await queryable
-                .OrderByDescending(x => x.Id)
+            var items = queryable
+                .OrderByDescending(x => x.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToListAsync();
+                .ToList();
 
-            var vendorIds = vendorList.Select(x => x.VendorId).ToList();
+            var vendorIds = items.Select(x => x.VendorId).ToList();
             var dues = await _context.MiddlemanLedgers.AsNoTracking()
                 .Where(l => l.PartyCategory == "Vendor" && vendorIds.Contains(l.PartyId ?? string.Empty))
                 .GroupBy(l => l.PartyId!)
                 .Select(g => new { PartyId = g.Key, TotalDue = g.Sum(x => x.OutstandingAmount) })
                 .ToDictionaryAsync(x => x.PartyId, x => x.TotalDue, StringComparer.OrdinalIgnoreCase);
 
-            var items = vendorList.Select(v =>
+            foreach (var dto in items)
             {
-                var dto = MapToDto(v);
-                if (dues.TryGetValue(v.VendorId, out var dueAmt))
+                if (dues.TryGetValue(dto.VendorId, out var dueAmt))
                 {
                     dto.OutstandingReceivables = dueAmt;
                 }
-                return dto;
-            }).ToList();
+            }
 
             return new MiddlemanVendorPageDto
             {
@@ -94,6 +160,75 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             await EnsureSeedDataAsync(middlemanId);
 
+            // 1. Check in Portal Vendors
+            if (long.TryParse(vendorId, out var uid))
+            {
+                var portalUser = await _context.Users
+                    .AsNoTracking()
+                    .Include(u => u.Vendor)
+                    .FirstOrDefaultAsync(u => u.Role == AgriPurchaseBilling.Domain.Enums.UserRole.Vendor && (u.Id == uid || (u.Vendor != null && u.Vendor.VendorCode == vendorId)));
+                if (portalUser != null)
+                {
+                    var profile = await _context.VendorProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.Mobile == portalUser.Mobile);
+                    return new MiddlemanVendorDto
+                    {
+                        Id = portalUser.Id,
+                        MiddlemanId = middlemanId,
+                        VendorId = portalUser.Vendor?.VendorCode ?? profile?.VendorCode ?? $"VEN-{portalUser.Id:D4}",
+                        BusinessName = profile?.BusinessName ?? portalUser.FullName,
+                        OwnerName = profile?.OwnerName ?? portalUser.FullName,
+                        Mobile = portalUser.Mobile,
+                        Email = portalUser.Email,
+                        BusinessType = profile?.BusinessType ?? "Wholesaler",
+                        GstNumber = profile?.Gstin,
+                        Address = profile?.BusinessAddress,
+                        District = profile?.District ?? string.Empty,
+                        State = profile?.State ?? "Andhra Pradesh",
+                        PinCode = profile?.PinCode,
+                        Status = portalUser.IsActive ? "Active" : "Inactive",
+                        Role = "Vendor",
+                        UserType = "Vendor",
+                        SourcePortal = "Vendor Portal",
+                        CreatedAt = portalUser.CreatedAt,
+                        UpdatedAt = portalUser.UpdatedAt
+                    };
+                }
+            }
+            else
+            {
+                var portalUser = await _context.Users
+                    .AsNoTracking()
+                    .Include(u => u.Vendor)
+                    .FirstOrDefaultAsync(u => u.Role == AgriPurchaseBilling.Domain.Enums.UserRole.Vendor && u.Vendor != null && u.Vendor.VendorCode == vendorId);
+                if (portalUser != null)
+                {
+                    var profile = await _context.VendorProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.Mobile == portalUser.Mobile);
+                    return new MiddlemanVendorDto
+                    {
+                        Id = portalUser.Id,
+                        MiddlemanId = middlemanId,
+                        VendorId = portalUser.Vendor?.VendorCode ?? profile?.VendorCode ?? $"VEN-{portalUser.Id:D4}",
+                        BusinessName = profile?.BusinessName ?? portalUser.FullName,
+                        OwnerName = profile?.OwnerName ?? portalUser.FullName,
+                        Mobile = portalUser.Mobile,
+                        Email = portalUser.Email,
+                        BusinessType = profile?.BusinessType ?? "Wholesaler",
+                        GstNumber = profile?.Gstin,
+                        Address = profile?.BusinessAddress,
+                        District = profile?.District ?? string.Empty,
+                        State = profile?.State ?? "Andhra Pradesh",
+                        PinCode = profile?.PinCode,
+                        Status = portalUser.IsActive ? "Active" : "Inactive",
+                        Role = "Vendor",
+                        UserType = "Vendor",
+                        SourcePortal = "Vendor Portal",
+                        CreatedAt = portalUser.CreatedAt,
+                        UpdatedAt = portalUser.UpdatedAt
+                    };
+                }
+            }
+
+            // 2. Check offline Middleman vendors
             var vendor = await _context.MiddlemanVendors
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x =>

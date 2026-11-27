@@ -167,3 +167,15 @@ C:\Users\ADMIN\Music\ARPPB_B\Backend\AgriPurchaseBilling.Domain\obj\Debug\net8.0
 C:\Users\ADMIN\Music\ARPPB_B\Backend\AgriPurchaseBilling.Domain\obj\Debug\net8.0\AgriPurchaseBilling.Domain.pdb
 C:\Users\ADMIN\Music\ARPPB_B\Backend\AgriPurchaseBilling.Domain\obj\Debug\net8.0\ref\AgriPurchaseBilling.Domain.dll
 C:\Users\ADMIN\Music\ARPPB_B\Backend\AgriPurchaseBilling.Domain\obj\Debug\net8.0\AgriPurc.7859964A.Up2Date
+C:\Users\ADMIN\source\repos\ARPPB\Backend\AgriPurchaseBilling.Domain\bin\Debug\net8.0\AgriPurchaseBilling.Domain.deps.json
+C:\Users\ADMIN\source\repos\ARPPB\Backend\AgriPurchaseBilling.Domain\bin\Debug\net8.0\AgriPurchaseBilling.Domain.dll
+C:\Users\ADMIN\source\repos\ARPPB\Backend\AgriPurchaseBilling.Domain\bin\Debug\net8.0\AgriPurchaseBilling.Domain.pdb
+C:\Users\ADMIN\source\repos\ARPPB\Backend\AgriPurchaseBilling.Domain\obj\Debug\net8.0\AgriPurchaseBilling.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\ADMIN\source\repos\ARPPB\Backend\AgriPurchaseBilling.Domain\obj\Debug\net8.0\AgriPurchaseBilling.Domain.AssemblyInfoInputs.cache
+C:\Users\ADMIN\source\repos\ARPPB\Backend\AgriPurchaseBilling.Domain\obj\Debug\net8.0\AgriPurchaseBilling.Domain.AssemblyInfo.cs
+C:\Users\ADMIN\source\repos\ARPPB\Backend\AgriPurchaseBilling.Domain\obj\Debug\net8.0\AgriPurchaseBilling.Domain.csproj.CoreCompileInputs.cache
+C:\Users\ADMIN\source\repos\ARPPB\Backend\AgriPurchaseBilling.Domain\obj\Debug\net8.0\AgriPurchaseBilling.Domain.sourcelink.json
+C:\Users\ADMIN\source\repos\ARPPB\Backend\AgriPurchaseBilling.Domain\obj\Debug\net8.0\AgriPurchaseBilling.Domain.dll
+C:\Users\ADMIN\source\repos\ARPPB\Backend\AgriPurchaseBilling.Domain\obj\Debug\net8.0\refint\AgriPurchaseBilling.Domain.dll
+C:\Users\ADMIN\source\repos\ARPPB\Backend\AgriPurchaseBilling.Domain\obj\Debug\net8.0\AgriPurchaseBilling.Domain.pdb
+C:\Users\ADMIN\source\repos\ARPPB\Backend\AgriPurchaseBilling.Domain\obj\Debug\net8.0\ref\AgriPurchaseBilling.Domain.dll

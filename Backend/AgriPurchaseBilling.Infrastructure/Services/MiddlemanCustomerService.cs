@@ -23,9 +23,72 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             await EnsureCustomerSeedDataAsync(middlemanId);
 
-            var queryable = _context.MiddlemanCustomers
+            // Fetch portal registered customers
+            var portalCustomers = await _context.Users
                 .AsNoTracking()
-                .Where(x => x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0);
+                .Include(u => u.Customer)
+                .Where(u => u.Role == AgriPurchaseBilling.Domain.Enums.UserRole.Customer)
+                .ToListAsync();
+
+            var customerProfiles = await _context.CustomerProfiles
+                .AsNoTracking()
+                .ToDictionaryAsync(p => p.UserId);
+
+            // Fetch offline Middleman customers
+            var offlineCustomers = await _context.MiddlemanCustomers
+                .AsNoTracking()
+                .Where(x => x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0)
+                .ToListAsync();
+
+            var list = new List<MiddlemanCustomerDto>();
+            var seenMobiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var u in portalCustomers)
+            {
+                var mob = u.Mobile ?? string.Empty;
+                seenMobiles.Add(mob);
+
+                customerProfiles.TryGetValue(u.Id, out var profile);
+
+                list.Add(new MiddlemanCustomerDto
+                {
+                    Id = u.Id,
+                    MiddlemanId = middlemanId,
+                    CustomerId = u.Customer?.CustomerCode ?? $"CUST-{u.Id:D4}",
+                    Name = u.FullName,
+                    Mobile = mob,
+                    Email = u.Email,
+                    Address = profile?.Address,
+                    District = profile?.District ?? string.Empty,
+                    State = profile?.State ?? "Andhra Pradesh",
+                    PinCode = profile?.PinCode,
+                    TotalPurchases = 0,
+                    TotalPurchaseValue = 0m,
+                    OutstandingReceivables = 0m,
+                    Status = u.IsActive ? "Active" : "Inactive",
+                    Role = "Customer",
+                    UserType = "Customer",
+                    SourcePortal = "Customer Portal",
+                    CreatedAt = u.CreatedAt,
+                    UpdatedAt = u.UpdatedAt
+                });
+            }
+
+            foreach (var mc in offlineCustomers)
+            {
+                var mob = mc.Mobile ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(mob) && seenMobiles.Contains(mob))
+                {
+                    continue; // Skip duplicate, prefer portal registered
+                }
+                seenMobiles.Add(mob);
+
+                var dto = MapToCustomerDto(mc);
+                dto.SourcePortal = "Middleman Offline";
+                list.Add(dto);
+            }
+
+            var queryable = list.AsEnumerable();
 
             // Filter: District
             if (!string.IsNullOrWhiteSpace(query.District) && !string.Equals(query.District, "ALL", StringComparison.OrdinalIgnoreCase))
@@ -53,32 +116,30 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                     x.District.ToLower().Contains(s));
             }
 
-            var totalItems = await queryable.CountAsync();
+            var totalItems = queryable.Count();
             var page = query.Page <= 0 ? 1 : query.Page;
             var pageSize = query.PageSize <= 0 ? 1000 : query.PageSize;
 
-            var custList = await queryable
-                .OrderByDescending(x => x.Id)
+            var items = queryable
+                .OrderByDescending(x => x.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToListAsync();
+                .ToList();
 
-            var customerIds = custList.Select(x => x.CustomerId).ToList();
+            var customerIds = items.Select(x => x.CustomerId).ToList();
             var dues = await _context.MiddlemanLedgers.AsNoTracking()
                 .Where(l => l.PartyCategory == "Customer" && customerIds.Contains(l.PartyId ?? string.Empty))
                 .GroupBy(l => l.PartyId!)
                 .Select(g => new { PartyId = g.Key, TotalDue = g.Sum(x => x.OutstandingAmount) })
                 .ToDictionaryAsync(x => x.PartyId, x => x.TotalDue, StringComparer.OrdinalIgnoreCase);
 
-            var items = custList.Select(c =>
+            foreach (var dto in items)
             {
-                var dto = MapToCustomerDto(c);
-                if (dues.TryGetValue(c.CustomerId, out var dueAmt))
+                if (dues.TryGetValue(dto.CustomerId, out var dueAmt))
                 {
                     dto.OutstandingReceivables = dueAmt;
                 }
-                return dto;
-            }).ToList();
+            }
 
             return new MiddlemanCustomerPageDto
             {
@@ -93,6 +154,69 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             await EnsureCustomerSeedDataAsync(middlemanId);
 
+            // 1. Check in Portal Customers
+            if (long.TryParse(customerId, out var uid))
+            {
+                var portalUser = await _context.Users
+                    .AsNoTracking()
+                    .Include(u => u.Customer)
+                    .FirstOrDefaultAsync(u => u.Role == AgriPurchaseBilling.Domain.Enums.UserRole.Customer && (u.Id == uid || (u.Customer != null && u.Customer.CustomerCode == customerId)));
+                if (portalUser != null)
+                {
+                    var profile = await _context.CustomerProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == portalUser.Id);
+                    return new MiddlemanCustomerDto
+                    {
+                        Id = portalUser.Id,
+                        MiddlemanId = middlemanId,
+                        CustomerId = portalUser.Customer?.CustomerCode ?? $"CUST-{portalUser.Id:D4}",
+                        Name = portalUser.FullName,
+                        Mobile = portalUser.Mobile,
+                        Email = portalUser.Email,
+                        Address = profile?.Address,
+                        District = profile?.District ?? string.Empty,
+                        State = profile?.State ?? "Andhra Pradesh",
+                        PinCode = profile?.PinCode,
+                        Status = portalUser.IsActive ? "Active" : "Inactive",
+                        Role = "Customer",
+                        UserType = "Customer",
+                        SourcePortal = "Customer Portal",
+                        CreatedAt = portalUser.CreatedAt,
+                        UpdatedAt = portalUser.UpdatedAt
+                    };
+                }
+            }
+            else
+            {
+                var portalUser = await _context.Users
+                    .AsNoTracking()
+                    .Include(u => u.Customer)
+                    .FirstOrDefaultAsync(u => u.Role == AgriPurchaseBilling.Domain.Enums.UserRole.Customer && u.Customer != null && u.Customer.CustomerCode == customerId);
+                if (portalUser != null)
+                {
+                    var profile = await _context.CustomerProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == portalUser.Id);
+                    return new MiddlemanCustomerDto
+                    {
+                        Id = portalUser.Id,
+                        MiddlemanId = middlemanId,
+                        CustomerId = portalUser.Customer?.CustomerCode ?? $"CUST-{portalUser.Id:D4}",
+                        Name = portalUser.FullName,
+                        Mobile = portalUser.Mobile,
+                        Email = portalUser.Email,
+                        Address = profile?.Address,
+                        District = profile?.District ?? string.Empty,
+                        State = profile?.State ?? "Andhra Pradesh",
+                        PinCode = profile?.PinCode,
+                        Status = portalUser.IsActive ? "Active" : "Inactive",
+                        Role = "Customer",
+                        UserType = "Customer",
+                        SourcePortal = "Customer Portal",
+                        CreatedAt = portalUser.CreatedAt,
+                        UpdatedAt = portalUser.UpdatedAt
+                    };
+                }
+            }
+
+            // 2. Check offline Middleman customers
             var customer = await _context.MiddlemanCustomers
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x =>
