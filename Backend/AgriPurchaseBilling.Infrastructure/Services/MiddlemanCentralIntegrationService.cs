@@ -47,6 +47,8 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             UnifiedPortalQueryDto query,
             CancellationToken ct = default)
         {
+            var effectiveMiddlemanId = middlemanId > 0 ? middlemanId : 57;
+
             // 1. Fetch portal registered farmers
             var portalFarmers = await _context.Users
                 .AsNoTracking()
@@ -54,15 +56,16 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 .Where(u => u.Role == UserRole.Farmer)
                 .ToListAsync(ct);
 
-            // 2. Fetch offline Middleman farmers
+            // 2. Fetch offline Middleman farmers strictly for this middleman
             var offlineFarmers = await _context.MiddlemanFarmers
                 .AsNoTracking()
+                .Where(f => f.MiddlemanId == effectiveMiddlemanId)
                 .ToListAsync(ct);
 
-            // 3. Trade metrics from middleman_purchases
+            // 3. Trade metrics strictly from this middleman's purchases
             var purchaseStats = await _context.MiddlemanPurchases
                 .AsNoTracking()
-                .Where(p => p.FarmerMobile != null && p.FarmerMobile != "")
+                .Where(p => p.MiddlemanId == effectiveMiddlemanId && p.FarmerMobile != null && p.FarmerMobile != "")
                 .GroupBy(p => p.FarmerMobile!)
                 .Select(g => new
                 {
@@ -218,6 +221,8 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             UnifiedPortalQueryDto query,
             CancellationToken ct = default)
         {
+            var effectiveMiddlemanId = middlemanId > 0 ? middlemanId : 57;
+
             // 1. Fetch portal registered vendors
             var portalVendors = await _context.Users
                 .AsNoTracking()
@@ -231,15 +236,16 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
             var profilesByUserId = vendorProfiles.ToDictionary(p => p.Mobile, StringComparer.OrdinalIgnoreCase);
 
-            // 2. Fetch offline Middleman vendors
+            // 2. Fetch offline Middleman vendors strictly for this middleman
             var offlineVendors = await _context.MiddlemanVendors
                 .AsNoTracking()
+                .Where(v => v.MiddlemanId == effectiveMiddlemanId)
                 .ToListAsync(ct);
 
-            // 3. Trade metrics from middleman_vendor_sales
+            // 3. Trade metrics strictly from this middleman's vendor sales
             var salesStats = await _context.MiddlemanVendorSales
                 .AsNoTracking()
-                .Where(s => s.Mobile != null && s.Mobile != "")
+                .Where(s => s.MiddlemanId == effectiveMiddlemanId && s.Mobile != null && s.Mobile != "")
                 .GroupBy(s => s.Mobile!)
                 .Select(g => new
                 {
@@ -382,6 +388,8 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             UnifiedPortalQueryDto query,
             CancellationToken ct = default)
         {
+            var effectiveMiddlemanId = middlemanId > 0 ? middlemanId : 57;
+
             // 1. Fetch portal registered customers
             var portalCustomers = await _context.Users
                 .AsNoTracking()
@@ -393,15 +401,16 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 .AsNoTracking()
                 .ToDictionaryAsync(p => p.UserId, ct);
 
-            // 2. Fetch offline Middleman customers
+            // 2. Fetch offline Middleman customers strictly for this middleman
             var offlineCustomers = await _context.MiddlemanCustomers
                 .AsNoTracking()
+                .Where(c => c.MiddlemanId == effectiveMiddlemanId)
                 .ToListAsync(ct);
 
-            // 3. Trade metrics from middleman_sales
+            // 3. Trade metrics strictly from this middleman's customer sales
             var salesStats = await _context.MiddlemanSales
                 .AsNoTracking()
-                .Where(s => s.BuyerMobile != null && s.BuyerMobile != "")
+                .Where(s => s.MiddlemanId == effectiveMiddlemanId && s.BuyerMobile != null && s.BuyerMobile != "")
                 .GroupBy(s => s.BuyerMobile!)
                 .Select(g => new
                 {
@@ -622,8 +631,29 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             UnifiedPortalQueryDto query,
             CancellationToken ct = default)
         {
+            var effectiveMiddlemanId = middlemanId > 0 ? middlemanId : 57;
+            var middlemanUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == effectiveMiddlemanId, ct);
+            var mmMobile = middlemanUser?.Mobile?.Trim() ?? string.Empty;
+            var mmName = middlemanUser?.FullName?.Trim() ?? string.Empty;
+
+            // STRICT DATA ISOLATION:
+            // Middleman can ONLY view transactions where Middleman is involved.
+            // Transactions between two other parties (Farmer <-> Vendor or Farmer <-> Customer) are completely hidden.
             var baseQuery = _context.FarmerSellProducts
-                .AsNoTracking();
+                .AsNoTracking()
+                .Where(x => x.BuyerCategory.ToLower() == "middleman");
+
+            // Middleman can only view listings/orders where he himself is involved or open for middlemen generally
+            if (!string.IsNullOrWhiteSpace(mmMobile))
+            {
+                baseQuery = baseQuery.Where(x =>
+                    x.BuyerMobile == mmMobile ||
+                    x.BuyerMobile == "" ||
+                    x.BuyerMobile == null ||
+                    x.BuyerName == mmName ||
+                    x.BuyerName.ToLower() == "middleman" ||
+                    x.BuyerName.ToLower() == "open");
+            }
 
             if (!string.IsNullOrWhiteSpace(query.Search))
             {
@@ -697,6 +727,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             UnifiedPortalQueryDto query,
             CancellationToken ct = default)
         {
+            var effectiveMiddlemanId = middlemanId > 0 ? middlemanId : 57;
             var sourceFilter = query.Source?.Trim() ?? "ALL";
             var includeCustomers = string.Equals(sourceFilter, "ALL", StringComparison.OrdinalIgnoreCase) ||
                                    string.Equals(sourceFilter, "Customer", StringComparison.OrdinalIgnoreCase) ||
@@ -708,12 +739,12 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
             var combinedList = new List<UnifiedMiddlemanBuyerOrderDto>();
 
-            // 1. Customer purchases from Middleman (from middleman_sales)
+            // 1. Customer purchases from THIS Middleman (middleman_sales)
             if (includeCustomers)
             {
                 var customerSales = await _context.MiddlemanSales
                     .AsNoTracking()
-                    .Where(s => s.MiddlemanId == middlemanId || middlemanId == 57 || middlemanId == 0 || s.MiddlemanId == 57)
+                    .Where(s => s.MiddlemanId == effectiveMiddlemanId)
                     .ToListAsync(ct);
 
                 foreach (var s in customerSales)
@@ -754,12 +785,12 @@ namespace AgriPurchaseBilling.Infrastructure.Services
                 }
             }
 
-            // 2. Vendor purchases from Middleman (from middleman_vendor_sales)
+            // 2. Vendor purchases from THIS Middleman (middleman_vendor_sales)
             if (includeVendors)
             {
                 var vendorSales = await _context.MiddlemanVendorSales
                     .AsNoTracking()
-                    .Where(v => v.MiddlemanId == middlemanId || middlemanId == 57 || middlemanId == 0 || v.MiddlemanId == 57)
+                    .Where(v => v.MiddlemanId == effectiveMiddlemanId)
                     .ToListAsync(ct);
 
                 foreach (var v in vendorSales)

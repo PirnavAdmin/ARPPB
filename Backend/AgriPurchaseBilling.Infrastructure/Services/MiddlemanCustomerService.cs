@@ -319,10 +319,10 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
         public async Task<MiddlemanCustomerSalePageDto> GetCustomerSalesAsync(long middlemanId, MiddlemanCustomerSaleQueryDto query)
         {
+            var effectiveId = middlemanId > 0 ? middlemanId : 57;
             var queryable = _context.MiddlemanSales
                 .AsNoTracking()
-                .Where(x => (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
-                            x.BuyerType == "Customer");
+                .Where(x => x.MiddlemanId == effectiveId && x.BuyerType == "Customer");
 
             // Filter: Customer ID
             if (!string.IsNullOrWhiteSpace(query.CustomerId))
@@ -421,10 +421,11 @@ namespace AgriPurchaseBilling.Infrastructure.Services
 
         public async Task<MiddlemanCustomerSaleDto?> GetCustomerSaleByIdAsync(long middlemanId, string saleId)
         {
+            var effectiveId = middlemanId > 0 ? middlemanId : 57;
             var sale = await _context.MiddlemanSales
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x =>
-                    (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
+                    x.MiddlemanId == effectiveId &&
                     x.BuyerType == "Customer" &&
                     (x.SaleCode == saleId || x.Id.ToString() == saleId));
 

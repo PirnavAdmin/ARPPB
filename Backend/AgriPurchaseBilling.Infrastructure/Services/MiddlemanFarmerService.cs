@@ -363,9 +363,10 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             var farmer = await GetFarmerByIdAsync(middlemanId, farmerId);
             var fName = farmer?.Name ?? "Farmer";
 
+            var effectiveId = middlemanId > 0 ? middlemanId : 57;
             var purchases = await _context.MiddlemanPurchases
                 .AsNoTracking()
-                .Where(x => (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
+                .Where(x => x.MiddlemanId == effectiveId &&
                             (x.FarmerId == farmerId || x.FarmerName == fName))
                 .OrderByDescending(x => x.PurchaseDate)
                 .ToListAsync();
@@ -373,7 +374,7 @@ namespace AgriPurchaseBilling.Infrastructure.Services
             var purchaseCodes = purchases.Select(p => p.PurchaseCode).Distinct().ToList();
             var ledgers = await _context.MiddlemanLedgers
                 .AsNoTracking()
-                .Where(x => (x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0) &&
+                .Where(x => x.MiddlemanId == effectiveId &&
                             (purchaseCodes.Contains(x.TransactionId) || x.PartyId == farmerId || x.PartyName == fName))
                 .ToListAsync();
 

@@ -23,9 +23,10 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             await EnsureSeedPurchasesAsync(middlemanId);
 
+            var effectiveId = middlemanId > 0 ? middlemanId : 57;
             var queryable = _context.MiddlemanPurchases
                 .AsNoTracking()
-                .Where(x => x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0);
+                .Where(x => x.MiddlemanId == effectiveId);
 
             // Filter: Status
             if (!string.IsNullOrWhiteSpace(query.Status) && !string.Equals(query.Status, "ALL", StringComparison.OrdinalIgnoreCase))
@@ -113,9 +114,10 @@ namespace AgriPurchaseBilling.Infrastructure.Services
         {
             await EnsureSeedPurchasesAsync(middlemanId);
 
+            var effectiveId = middlemanId > 0 ? middlemanId : 57;
             var queryable = _context.MiddlemanPurchases
                 .AsNoTracking()
-                .Where(x => x.MiddlemanId == middlemanId || x.MiddlemanId == 57 || x.MiddlemanId == 0);
+                .Where(x => x.MiddlemanId == effectiveId);
 
             MiddlemanPurchase? entity = null;
             if (long.TryParse(purchaseId, out var id))
