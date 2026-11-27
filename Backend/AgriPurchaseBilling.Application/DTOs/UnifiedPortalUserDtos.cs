@@ -147,4 +147,42 @@ namespace AgriPurchaseBilling.Application.DTOs
         public int PageSize { get; set; }
         public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalItems / PageSize) : 0;
     }
+
+    /// <summary>
+    /// Unified representation of a purchase order placed with the Middleman by a Customer or Commercial Vendor.
+    /// Strictly contains transactions where the Middleman is the seller.
+    /// </summary>
+    public class UnifiedMiddlemanBuyerOrderDto
+    {
+        public long Id { get; set; }
+        public string SaleCode { get; set; } = string.Empty;
+        public string OrderId { get; set; } = string.Empty;
+        public string? TransactionId { get; set; }
+        public string BuyerType { get; set; } = "Customer"; // "Customer" or "Vendor"
+        public string BuyerId { get; set; } = string.Empty;
+        public string BuyerName { get; set; } = string.Empty;
+        public string? BuyerMobile { get; set; }
+        public string? BusinessName { get; set; }
+        public string CropName { get; set; } = string.Empty;
+        public string Product { get; set; } = string.Empty;
+        public string? Category { get; set; }
+        public string Variety { get; set; } = "Standard";
+        public string QualityGrade { get; set; } = "Grade A";
+        public decimal Quantity { get; set; }
+        public string Unit { get; set; } = "Quintal";
+        public decimal Rate { get; set; }
+        public decimal PricePerUnit { get; set; }
+        public decimal Subtotal { get; set; }
+        public decimal TotalAmount { get; set; }
+        public DateTime SalesDate { get; set; }
+        public DateTime OrderDate { get; set; }
+        public string Status { get; set; } = "Pending Confirmation";
+        public string OrderStatus { get; set; } = "Pending Confirmation";
+        public string OtpStatus { get; set; } = "Pending OTP";
+        public string? DeliveryLocation { get; set; }
+        public string? DeliveryAddress { get; set; }
+        public DateTime? ExpectedDeliveryDate { get; set; }
+        public DateTime? ExpectedPaymentDate { get; set; }
+        public long MiddlemanId { get; set; }
+    }
 }
