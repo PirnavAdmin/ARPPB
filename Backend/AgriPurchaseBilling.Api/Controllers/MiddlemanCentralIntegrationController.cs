@@ -153,13 +153,11 @@ namespace AgriPurchaseBilling.Api.Controllers
         }
 
         /// <summary>
-        /// Retrieves all outbound buyer sales orders (both Customers and Vendors) sold by THIS Middleman.
+        /// Retrieves all outbound sales orders (both Customers and Vendors) sold by THIS Middleman.
         /// Supports filtering by Buyer Type via query parameter: ?Source=Customer, ?Source=Vendor, or ?Source=ALL.
         /// GET /api/v1/middleman/central/sales-orders
-        /// GET /api/v1/middleman/central/buyer-orders
         /// </summary>
         [HttpGet("sales-orders")]
-        [HttpGet("buyer-orders")]
         [ProducesResponseType(typeof(ApiResponse<UnifiedPagedResultDto<UnifiedMiddlemanBuyerOrderDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetSalesOrders([FromQuery] UnifiedPortalQueryDto query, CancellationToken ct)
         {
