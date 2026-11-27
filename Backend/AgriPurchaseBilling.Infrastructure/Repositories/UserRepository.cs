@@ -73,10 +73,17 @@ namespace AgriPurchaseBilling.Infrastructure.Repositories
         }
 
         // Creates the central User record and role-specific identity records in one transaction.
-        public async Task<(User User, string EntityCode)> CreateUserWithProfileAsync(
+        public Task<(User User, string EntityCode)> CreateUserWithProfileAsync(
             User user,
             UserRole role,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default) =>
+            _context.Database.CreateExecutionStrategy().ExecuteAsync(
+                () => CreateUserWithProfileCoreAsync(user, role, cancellationToken));
+
+        private async Task<(User User, string EntityCode)> CreateUserWithProfileCoreAsync(
+            User user,
+            UserRole role,
+            CancellationToken cancellationToken)
         {
             user.Role = role;
 

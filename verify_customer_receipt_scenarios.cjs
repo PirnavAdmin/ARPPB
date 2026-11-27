@@ -63,7 +63,7 @@ async function runCustomerSaleScenarios() {
 
     console.log(`[1] Creating customer sale with 10 units @ ₹${unitPrice} = ₹${totalAmount}...`);
     const [saleRes] = await connection.query(
-      `CALL sp_vp_sale_save(?, NULL, ?, 0.00, 0.00, 0.00, 0.00, '2026-12-01', '2026-12-15', 'Net 15', 'Test customer sale', 1, 'MOCK_OTP_HASH', 15, ?)`,
+      `CALL sp_vp_sale_save(?, NULL, ?, NULL, 0.00, 0.00, 0.00, 0.00, '2026-12-01', '2026-12-15', 'Net 15', 'Test customer sale', ?, 1, 'MOCK_OTP_HASH', 15)`,
       [vendorId, cust.Id, saleItemsJson]
     );
 
