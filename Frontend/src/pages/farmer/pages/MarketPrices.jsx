@@ -22,6 +22,8 @@ import {
   ArrowRight,
   ShoppingBag,
   ExternalLink,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFarmer } from '../context/FarmerContext';
@@ -348,11 +350,15 @@ export default function MarketPrices() {
 
   const [pricesData, setPricesData] = useState(INITIAL_MANDI_PRICES);
   const [internalSearch, setInternalSearch] = useState('');
+  const [selectedCropCategory, setSelectedCropCategory] = useState('All');
   const [selectedCategory, setSelectedCategory] = useState('All Commodities');
   const [selectedState, setSelectedState] = useState('All');
   const [trendFilter, setTrendFilter] = useState('All'); // 'All' | 'up' | 'down'
-  const [sortBy, setSortBy] = useState('highest-price'); // 'highest-price' | 'lowest-price' | 'top-gainers' | 'recently-updated'
   const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
 
   const [selectedCropDetail, setSelectedCropDetail] = useState(null);
   const [isLiveActive, setIsLiveActive] = useState(true);
@@ -361,6 +367,11 @@ export default function MarketPrices() {
   const [flashingCropId, setFlashingCropId] = useState(null);
 
   const effectiveSearch = (globalSearch || internalSearch).trim().toLowerCase();
+
+  // Reset to page 1 whenever any filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [internalSearch, globalSearch, selectedCropCategory, selectedCategory, selectedState, trendFilter, pageSize]);
 
   // Simulated Live Fluctuations
   const simulateLiveTick = (showNotification = false) => {
@@ -421,40 +432,44 @@ export default function MarketPrices() {
     return () => clearInterval(interval);
   }, [isLiveActive]);
 
-  // Filter & Sort Logic
+  // Filter Logic with Specific Crop / Commodity Category Selection (Chilli, Turmeric, Paddy, etc.)
   const filteredAndSortedPrices = useMemo(() => {
-    return pricesData
-      .filter((item) => {
-        const matchSearch =
-          !effectiveSearch ||
-          item.crop.toLowerCase().includes(effectiveSearch) ||
-          item.variety.toLowerCase().includes(effectiveSearch) ||
-          item.market.toLowerCase().includes(effectiveSearch) ||
-          item.district.toLowerCase().includes(effectiveSearch) ||
-          item.state.toLowerCase().includes(effectiveSearch);
+    return pricesData.filter((item) => {
+      const matchSearch =
+        !effectiveSearch ||
+        item.crop.toLowerCase().includes(effectiveSearch) ||
+        item.variety.toLowerCase().includes(effectiveSearch) ||
+        item.market.toLowerCase().includes(effectiveSearch) ||
+        item.district.toLowerCase().includes(effectiveSearch) ||
+        item.state.toLowerCase().includes(effectiveSearch);
 
-        const matchCat =
-          selectedCategory === 'All Commodities' || item.category === selectedCategory;
+      // Commodity / Crop Category Filter (matches Chilli, Turmeric, Paddy, etc. or broad category)
+      const matchCropCategory =
+        selectedCropCategory === 'All' ||
+        item.crop.toLowerCase().includes(selectedCropCategory.toLowerCase()) ||
+        item.category.toLowerCase() === selectedCropCategory.toLowerCase();
 
-        const matchState =
-          selectedState === 'All' || item.state === selectedState;
+      // Category Pills Filter
+      const matchCat =
+        selectedCategory === 'All Commodities' || item.category === selectedCategory;
 
-        const matchTrend =
-          trendFilter === 'All' || item.trend === trendFilter;
+      const matchState =
+        selectedState === 'All' || item.state === selectedState;
 
-        return matchSearch && matchCat && matchState && matchTrend;
-      })
-      .sort((a, b) => {
-        if (sortBy === 'highest-price') return b.todayPrice - a.todayPrice;
-        if (sortBy === 'lowest-price') return a.todayPrice - b.todayPrice;
-        if (sortBy === 'top-gainers') {
-          const aVal = parseFloat(a.change) || 0;
-          const bVal = parseFloat(b.change) || 0;
-          return bVal - aVal;
-        }
-        return b.id.localeCompare(a.id);
-      });
-  }, [pricesData, effectiveSearch, selectedCategory, selectedState, trendFilter, sortBy]);
+      const matchTrend =
+        trendFilter === 'All' || item.trend === trendFilter;
+
+      return matchSearch && matchCropCategory && matchCat && matchState && matchTrend;
+    });
+  }, [pricesData, effectiveSearch, selectedCropCategory, selectedCategory, selectedState, trendFilter]);
+
+  // Pagination Calculations
+  const totalItems = filteredAndSortedPrices.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const paginatedPrices = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredAndSortedPrices.slice(startIndex, startIndex + pageSize);
+  }, [filteredAndSortedPrices, currentPage, pageSize]);
 
   // Key KPI metrics
   const kpis = useMemo(() => {
@@ -561,39 +576,62 @@ export default function MarketPrices() {
         }
       />
 
-      {/* Real-Time Live Ticker Strip */}
-      <div className="bg-[#0F766E] text-white rounded-2xl p-3 px-4 shadow-sm flex items-center justify-between gap-4 overflow-hidden">
-        <div className="flex items-center gap-2 shrink-0 font-bold text-xs uppercase tracking-wider text-[#A3E6B4]">
+      {/* Real-Time Live Ticker Strip (No scrollbar, continuous live stock market flow) */}
+      <style>{`
+        @keyframes mandiStockFlow {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .mandi-ticker-track {
+          display: flex;
+          width: max-content;
+          animation: mandiStockFlow 32s linear infinite;
+        }
+        .mandi-ticker-track:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+      <div className="bg-[#0F766E] text-white rounded-2xl p-2.5 px-4 shadow-sm flex items-center justify-between gap-3 overflow-hidden relative">
+        <div className="flex items-center gap-2 shrink-0 font-bold text-xs uppercase tracking-wider text-[#A3E6B4] z-20 bg-[#0F766E] pr-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
-          <span>Live Ticks</span>
+          <span>Live Ticker</span>
         </div>
 
-        <div className="flex items-center gap-6 overflow-x-auto no-scrollbar text-xs font-medium py-0.5">
-          {pricesData.slice(0, 7).map((p) => {
-            const isUp = p.trend === 'up';
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setSelectedCropDetail(p)}
-                className="inline-flex items-center gap-2 whitespace-nowrap hover:opacity-80 transition-opacity cursor-pointer shrink-0"
-              >
-                <span className="font-semibold text-slate-100">{p.crop.split(' ')[0]}</span>
-                <span className="font-extrabold text-white font-mono">{formatCurrency(p.todayPrice)}</span>
-                <span
-                  className={`inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
-                    isUp ? 'bg-emerald-500/30 text-emerald-200' : 'bg-rose-500/30 text-rose-200'
-                  }`}
+        {/* Gradient edge masks for smooth fade */}
+        <div className="pointer-events-none absolute left-28 top-0 bottom-0 w-8 bg-gradient-to-r from-[#0F766E] to-transparent z-10 hidden sm:block" />
+        <div className="pointer-events-none absolute right-36 top-0 bottom-0 w-8 bg-gradient-to-l from-[#0F766E] to-transparent z-10 hidden md:block" />
+
+        {/* Continuous Flowing Marquee Track */}
+        <div className="flex-1 overflow-hidden relative py-0.5">
+          <div className="mandi-ticker-track items-center gap-7 text-xs font-medium">
+            {[...pricesData, ...pricesData].map((p, idx) => {
+              const isUp = p.trend === 'up';
+              return (
+                <button
+                  key={`${p.id}-${idx}`}
+                  type="button"
+                  onClick={() => setSelectedCropDetail(p)}
+                  className="inline-flex items-center gap-2 whitespace-nowrap hover:opacity-80 transition-opacity cursor-pointer shrink-0"
+                  title={`Click to view ${p.crop} market depth`}
                 >
-                  {isUp ? '▲' : '▼'} {p.change}
-                </span>
-              </button>
-            );
-          })}
+                  <span className="font-semibold text-slate-100">{p.crop.split(' ')[0]}</span>
+                  <span className="font-extrabold text-white font-mono">{formatCurrency(p.todayPrice)}</span>
+                  <span
+                    className={`inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                      isUp ? 'bg-emerald-500/30 text-emerald-200' : 'bg-rose-500/30 text-rose-200'
+                    }`}
+                  >
+                    {isUp ? '▲' : '▼'} {p.change}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="text-[11px] text-teal-200 shrink-0 hidden md:block">
-          Synced: {lastSyncedTime.toLocaleTimeString('en-IN')}
+        <div className="text-[11px] text-teal-200 shrink-0 hidden md:flex items-center gap-1.5 z-20 bg-[#0F766E] pl-2 font-mono">
+          <Clock className="w-3 h-3 text-[#A3E6B4]" />
+          <span>Synced: {lastSyncedTime.toLocaleTimeString('en-IN')}</span>
         </div>
       </div>
 
@@ -678,15 +716,36 @@ export default function MarketPrices() {
               <option value="down">Decliners Only (▼)</option>
             </select>
 
-            {/* Sort Dropdown */}
+            {/* Commodity / Crop Category Dropdown Filter (Chilli, Turmeric, Paddy, etc.) */}
             <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 text-xs bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] focus:bg-white transition-all cursor-pointer font-medium"
+              value={selectedCropCategory}
+              onChange={(e) => {
+                setSelectedCropCategory(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 text-xs bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] focus:bg-white transition-all cursor-pointer font-semibold"
             >
-              <option value="highest-price">Sort: Highest Rate First</option>
-              <option value="lowest-price">Sort: Lowest Rate First</option>
-              <option value="top-gainers">Sort: Top Bullish %</option>
+              <option value="All">All Commodities &amp; Crops</option>
+              <optgroup label="Crops / Commodities">
+                <option value="Chilli">Chilli (Mirchi)</option>
+                <option value="Turmeric">Turmeric (Pasupu)</option>
+                <option value="Paddy">Paddy (Rice / Dhan)</option>
+                <option value="Groundnut">Groundnut (Verusenaga)</option>
+                <option value="Cotton">Cotton (Kapas / Prathi)</option>
+                <option value="Maize">Maize (Mokka Jonna)</option>
+                <option value="Bengal Gram">Bengal Gram (Chana / Senagalu)</option>
+                <option value="Red Gram">Red Gram (Tur Dal / Kandulu)</option>
+                <option value="Sunflower">Sunflower (Produtirugudu)</option>
+                <option value="Soybean">Soybean</option>
+                <option value="Wheat">Wheat (Godhumalu)</option>
+              </optgroup>
+              <optgroup label="Broad Categories">
+                <option value="Spices">Spices (Chilli, Turmeric)</option>
+                <option value="Cereal">Cereal (Paddy, Maize, Wheat)</option>
+                <option value="Oilseed">Oilseed (Groundnut, Sunflower, Soybean)</option>
+                <option value="Pulses">Pulses (Bengal Gram, Red Gram)</option>
+                <option value="Commercial">Commercial (Cotton)</option>
+              </optgroup>
             </select>
 
             {/* View Mode Toggle */}
@@ -732,7 +791,11 @@ export default function MarketPrices() {
               <button
                 key={cat}
                 type="button"
-                onClick={() => setSelectedCategory(cat)}
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  setSelectedCropCategory('All');
+                  setCurrentPage(1);
+                }}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   isActive
                     ? 'bg-[#0F766E] text-white shadow-xs'
@@ -753,15 +816,15 @@ export default function MarketPrices() {
         </div>
       </div>
 
-      {/* Main Content: Cards Grid View OR Table View */}
+      {/* Main Content: Compact Cards Grid View OR Detailed Table View */}
       {viewMode === 'cards' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
           {filteredAndSortedPrices.length === 0 ? (
             <div className="col-span-full py-12 text-center bg-white rounded-2xl border border-[#E2E8F0] p-8 text-xs text-[#64748B]">
               No mandi commodities match your search or filters.
             </div>
           ) : (
-            filteredAndSortedPrices.map((item) => {
+            paginatedPrices.map((item) => {
               const isUp = item.trend === 'up';
               const isFlashing = flashingCropId === item.id;
               const mspDiff = item.todayPrice - item.msp;
@@ -770,73 +833,71 @@ export default function MarketPrices() {
               return (
                 <div
                   key={item.id}
-                  className={`bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-xs hover:border-[#14B8A6] hover:shadow-md transition-all duration-200 flex flex-col justify-between ${
+                  className={`bg-white rounded-xl border border-[#E2E8F0] p-3.5 shadow-2xs hover:border-[#14B8A6] hover:shadow-md transition-all duration-200 flex flex-col justify-between ${
                     isFlashing ? (isUp ? 'ring-2 ring-emerald-400 bg-emerald-50/20' : 'ring-2 ring-rose-400 bg-rose-50/20') : ''
                   }`}
                 >
-                  {/* Card Header: Crop Name, Variety, Category Badge */}
                   <div>
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-sm sm:text-base text-[#0F172A] tracking-tight">
-                            {item.crop}
-                          </h3>
-                        </div>
-                        <span className="text-xs text-[#64748B] font-medium block mt-0.5">
+                    {/* Compact Card Header */}
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-xs sm:text-sm text-[#0F172A] tracking-tight truncate" title={item.crop}>
+                          {item.crop}
+                        </h3>
+                        <span className="text-[10px] text-[#64748B] font-medium block truncate">
                           {item.variety} • {item.quality}
                         </span>
                       </div>
 
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F766E] shrink-0">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F0FDFA] border border-[#CCFBF1] text-[#0F766E] shrink-0">
                         {item.category}
                       </span>
                     </div>
 
                     {/* Mandi & Location */}
-                    <div className="flex items-center gap-1.5 text-xs text-[#64748B] mb-4">
-                      <MapPin className="w-3.5 h-3.5 text-[#0F766E] shrink-0" />
+                    <div className="flex items-center gap-1 text-[11px] text-[#64748B] mb-2 truncate">
+                      <MapPin className="w-3 h-3 text-[#0F766E] shrink-0" />
                       <span className="font-semibold text-[#0F172A] truncate">{item.market}</span>
-                      <span className="text-[11px]">({item.location})</span>
+                      <span className="text-[10px] text-slate-400 shrink-0">({item.location})</span>
                     </div>
 
                     {/* Spot Rate & Daily Change Box */}
-                    <div className="bg-linear-to-br from-[#F8FAFC] to-[#F1F5F9] p-3.5 rounded-xl border border-[#E2E8F0] mb-4">
+                    <div className="bg-[#F8FAFC] p-2.5 rounded-xl border border-[#E2E8F0] mb-2">
                       <div className="flex items-baseline justify-between gap-2">
                         <div>
-                          <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block">
+                          <span className="text-[9px] font-bold text-[#64748B] uppercase tracking-wider block">
                             Today&apos;s Spot Rate
                           </span>
-                          <div className="text-2xl font-black text-[#0F766E] tracking-tight mt-0.5">
+                          <div className="text-lg font-black text-[#0F766E] font-mono tracking-tight">
                             {formatCurrency(item.todayPrice)}
-                            <span className="text-xs font-semibold text-[#64748B] ml-1">/ qtl</span>
+                            <span className="text-[10px] font-normal text-[#64748B] ml-1">/ qtl</span>
                           </div>
                         </div>
 
                         <div className="text-right">
                           <span
-                            className={`inline-flex items-center gap-1 text-xs font-extrabold px-2.5 py-1 rounded-lg ${
+                            className={`inline-flex items-center gap-1 text-[11px] font-extrabold px-2 py-0.5 rounded-md ${
                               isUp
                                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                                 : 'bg-rose-100 text-rose-800 border border-rose-200'
                             }`}
                           >
-                            {isUp ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                            {isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                             <span>{item.change}</span>
                           </span>
-                          <span className="text-[10px] text-[#64748B] block mt-1 font-mono">
+                          <span className="text-[9px] text-[#64748B] block mt-0.5 font-mono">
                             {item.changeAmount} vs prev
                           </span>
                         </div>
                       </div>
 
                       {/* Govt MSP Comparison Pill */}
-                      <div className="mt-3 pt-2.5 border-t border-[#E2E8F0]/80 flex items-center justify-between text-xs">
-                        <span className="text-[#64748B] text-[11px]">
-                          Govt MSP: <strong className="text-[#0F172A]">{formatCurrency(item.msp)}</strong>
+                      <div className="mt-1.5 pt-1.5 border-t border-[#E2E8F0]/80 flex items-center justify-between text-[10px]">
+                        <span className="text-[#64748B]">
+                          MSP: <strong className="text-[#0F172A]">{formatCurrency(item.msp)}</strong>
                         </span>
                         <span
-                          className={`text-[11px] font-bold ${
+                          className={`font-bold ${
                             isAboveMsp ? 'text-emerald-700' : 'text-amber-700'
                           }`}
                         >
@@ -847,16 +908,15 @@ export default function MarketPrices() {
                       </div>
                     </div>
 
-                    {/* Price Range & Mini Sparkline Bar Chart */}
-                    <div className="space-y-1.5 mb-4">
-                      <div className="flex justify-between text-[11px] text-[#64748B] font-medium">
+                    {/* Compact 7-Day Sparkline mini bars */}
+                    <div className="mb-2">
+                      <div className="flex justify-between text-[9px] text-[#64748B] font-medium mb-1">
                         <span>Min: {formatCurrency(item.minPrice)}</span>
-                        <span>Avg: {formatCurrency(item.avgPrice)}</span>
+                        <span className="text-[#0F766E] font-bold">7D Trend</span>
                         <span>Max: {formatCurrency(item.maxPrice)}</span>
                       </div>
 
-                      {/* 7-Day Sparkline mini bars */}
-                      <div className="flex items-end gap-1.5 h-12 pt-1 pb-1 px-1 bg-slate-50 rounded-lg border border-slate-100">
+                      <div className="flex items-end gap-1 h-7 pt-0.5 pb-0.5 px-1 bg-slate-50 rounded-md border border-slate-100">
                         {item.history.map((val, idx) => {
                           const minH = Math.min(...item.history);
                           const maxH = Math.max(...item.history);
@@ -867,11 +927,12 @@ export default function MarketPrices() {
                           return (
                             <div
                               key={idx}
-                              className="flex-1 flex flex-col items-center justify-end h-full group/bar relative"
+                              className="flex-1 flex flex-col items-center justify-end h-full"
+                              title={`Day ${idx + 1}: ${formatCurrency(val)}`}
                             >
                               <div
                                 style={{ height: `${pct}%` }}
-                                className={`w-full rounded-t-xs transition-all duration-300 ${
+                                className={`w-full rounded-t-xs transition-all duration-200 ${
                                   isLast
                                     ? isUp ? 'bg-[#0F766E]' : 'bg-rose-500'
                                     : 'bg-[#A3E6B4] hover:bg-[#14B8A6]'
@@ -881,28 +942,24 @@ export default function MarketPrices() {
                           );
                         })}
                       </div>
-                      <div className="flex justify-between text-[10px] text-slate-400">
-                        <span>7 Days Ago</span>
-                        <span>Today</span>
-                      </div>
                     </div>
 
-                    {/* Arrivals & Moisture */}
-                    <div className="flex items-center justify-between text-[11px] text-[#64748B] pb-3 border-b border-[#F1F5F9]">
+                    {/* Compact Arrivals & Moisture Strip */}
+                    <div className="flex items-center justify-between text-[10px] text-[#64748B] pb-2 border-b border-[#F1F5F9]">
                       <span>Arrivals: <strong className="text-[#0F172A]">{item.arrivals}</strong></span>
-                      <span>Moisture: <strong className="text-[#0F172A]">{item.moistureAvg}</strong></span>
-                      <span>Active Bids: <strong className="text-[#0F766E]">{item.bidsCount}</strong></span>
+                      <span>Moist: <strong className="text-[#0F172A]">{item.moistureAvg}</strong></span>
+                      <span>Bids: <strong className="text-[#0F766E]">{item.bidsCount}</strong></span>
                     </div>
                   </div>
 
-                  {/* Actions: View Depth Modal & Sell at this Rate */}
-                  <div className="pt-3 flex items-center gap-2">
+                  {/* Compact Actions */}
+                  <div className="pt-2 flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setSelectedCropDetail(item)}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 h-8.5 rounded-xl text-xs font-semibold bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] hover:bg-[#0F766E] hover:text-white hover:border-[#0F766E] transition-all cursor-pointer shadow-xs"
+                      className="flex-1 inline-flex items-center justify-center gap-1 h-7.5 rounded-lg text-[11px] font-semibold bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] hover:bg-[#0F766E] hover:text-white hover:border-[#0F766E] transition-all cursor-pointer shadow-2xs"
                     >
-                      <Info className="w-3.5 h-3.5" />
+                      <Info className="w-3 h-3" />
                       <span>Market Depth</span>
                     </button>
 
@@ -912,10 +969,10 @@ export default function MarketPrices() {
                         toast.success(`Redirecting to sell ${item.crop} at Mandi rate of ${formatCurrency(item.todayPrice)}.`);
                         if (navigateTo) navigateTo('sell');
                       }}
-                      className="inline-flex items-center justify-center gap-1.5 h-8.5 px-3 rounded-xl text-xs font-bold bg-[#0F766E] text-white hover:bg-[#115E59] transition-all cursor-pointer shadow-xs"
+                      className="inline-flex items-center justify-center gap-1 h-7.5 px-3 rounded-lg text-[11px] font-bold bg-[#0F766E] text-white hover:bg-[#115E59] transition-all cursor-pointer shadow-2xs"
                       title="Create a sale order at this rate"
                     >
-                      <ShoppingBag className="w-3.5 h-3.5 stroke-[2]" />
+                      <ShoppingBag className="w-3 h-3 stroke-[2]" />
                       <span>Sell</span>
                     </button>
                   </div>
@@ -950,7 +1007,7 @@ export default function MarketPrices() {
                     </td>
                   </tr>
                 ) : (
-                  filteredAndSortedPrices.map((item) => {
+                  paginatedPrices.map((item) => {
                     const isUp = item.trend === 'up';
 
                     return (
@@ -958,23 +1015,23 @@ export default function MarketPrices() {
                         key={item.id}
                         className="hover:bg-[#CCFBF1]/20 transition-colors"
                       >
-                        <td className="py-3.5 px-4">
+                        <td className="py-3 px-4">
                           <strong className="text-sm text-[#0F172A] block">{item.crop}</strong>
                           <span className="text-[11px] text-[#64748B]">{item.variety} • {item.category}</span>
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-3 px-4">
                           <span className="font-semibold text-[#0F172A] block">{item.market}</span>
                           <span className="text-[11px] text-[#64748B] flex items-center gap-1">
                             <MapPin className="w-3 h-3 text-[#0F766E]" /> {item.location}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 whitespace-nowrap">
+                        <td className="py-3 px-4 whitespace-nowrap">
                           <strong className="text-sm font-extrabold text-[#0F766E] block font-mono">
                             {formatCurrency(item.todayPrice)}
                           </strong>
                           <span className="text-[10px] text-[#64748B]">per quintal</span>
                         </td>
-                        <td className="py-3.5 px-4 whitespace-nowrap">
+                        <td className="py-3 px-4 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
                               isUp
@@ -986,23 +1043,23 @@ export default function MarketPrices() {
                           </span>
                           <span className="text-[10px] text-[#64748B] block mt-0.5">{item.changeAmount}</span>
                         </td>
-                        <td className="py-3.5 px-4 text-[#64748B] whitespace-nowrap">
+                        <td className="py-3 px-4 text-[#64748B] whitespace-nowrap">
                           <span className="font-semibold text-[#0F172A]">{formatCurrency(item.msp)}</span>
                           <span className="text-[10px] block text-emerald-700 font-medium">
                             +{formatCurrency(item.todayPrice - item.msp)}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 text-[#64748B] whitespace-nowrap text-[11px]">
+                        <td className="py-3 px-4 text-[#64748B] whitespace-nowrap text-[11px]">
                           {formatCurrency(item.minPrice)} – {formatCurrency(item.maxPrice)}
                         </td>
-                        <td className="py-3.5 px-4 text-[#0F172A] font-semibold whitespace-nowrap">
+                        <td className="py-3 px-4 text-[#0F172A] font-semibold whitespace-nowrap">
                           {item.arrivals}
                         </td>
-                        <td className="py-3.5 px-4 whitespace-nowrap">
+                        <td className="py-3 px-4 whitespace-nowrap">
                           <div className="text-[#0F172A] font-medium">{item.quality}</div>
                           <div className="text-[10px] text-[#64748B]">Moisture: {item.moistureAvg}</div>
                         </td>
-                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               type="button"
@@ -1029,6 +1086,77 @@ export default function MarketPrices() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {filteredAndSortedPrices.length > 0 && (
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-3.5 sm:px-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+          <div className="text-xs text-[#64748B]">
+            Showing <strong className="text-[#0F172A]">{(currentPage - 1) * pageSize + 1}</strong> to{' '}
+            <strong className="text-[#0F172A]">{Math.min(currentPage * pageSize, filteredAndSortedPrices.length)}</strong> of{' '}
+            <strong className="text-[#0F172A]">{filteredAndSortedPrices.length}</strong> commodities
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap justify-center">
+            {/* Records per page selector */}
+            <div className="flex items-center gap-1.5 text-xs text-[#64748B] mr-2">
+              <span>Per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="px-2 py-1 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-xs font-semibold text-[#0F172A] cursor-pointer"
+              >
+                <option value={4}>4</option>
+                <option value={8}>8</option>
+                <option value={12}>12</option>
+                <option value={16}>16</option>
+              </select>
+            </div>
+
+            {/* Previous Button */}
+            <button
+              type="button"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Prev</span>
+            </button>
+
+            {/* Page Number Buttons */}
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    currentPage === page
+                      ? 'bg-[#0F766E] text-white shadow-xs'
+                      : 'bg-[#F8FAFC] border border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+
+            {/* Next Button */}
+            <button
+              type="button"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            >
+              <span>Next</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       )}

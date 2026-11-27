@@ -38,6 +38,9 @@ function FarmerLayoutContent() {
       case 'prices':
         return <MarketPrices />;
       case 'sell':
+      case 'sell-middleman':
+      case 'sell-vendor':
+      case 'sell-customer':
         return <SellProducts />;
       case 'sales':
         return <MySales />;

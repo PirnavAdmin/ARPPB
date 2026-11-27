@@ -279,7 +279,8 @@ export function FarmerProvider({ children }) {
     setPageParam(param);
     setIsMobileDrawerOpen(false);
     if (typeof window !== 'undefined') {
-      window.history.pushState(null, '', `#${nextKey}`);
+      const hash = param && nextKey === 'sell' ? `#sell-${String(param).toLowerCase()}` : `#${nextKey}`;
+      window.history.pushState(null, '', hash);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, []);
@@ -288,8 +289,18 @@ export function FarmerProvider({ children }) {
     if (typeof window === 'undefined') return;
 
     const syncFromHash = () => {
-      const nextPage = window.location.hash.replace(/^#\/?/, '').trim() || 'dashboard';
-      setActivePage((current) => (current === nextPage ? current : nextPage));
+      const rawHash = window.location.hash.replace(/^#\/?/, '').trim() || 'dashboard';
+      if (rawHash.startsWith('sell-')) {
+        const sub = rawHash.replace('sell-', '').toLowerCase();
+        const categoryMap = { middleman: 'Middleman', vendor: 'Vendor', customer: 'Customer' };
+        setActivePage('sell');
+        setPageParam(categoryMap[sub] || 'Middleman');
+      } else if (rawHash === 'sell') {
+        setActivePage('sell');
+        setPageParam((prev) => prev || 'Middleman');
+      } else {
+        setActivePage((current) => (current === rawHash ? current : rawHash));
+      }
     };
 
     syncFromHash();

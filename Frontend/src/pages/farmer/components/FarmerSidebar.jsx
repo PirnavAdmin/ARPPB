@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -9,6 +9,8 @@ import {
   ShieldCheck,
   Bell,
   UserCheck,
+  Building2,
+  Users,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -30,7 +32,17 @@ const FARMER_NAV_GROUPS = [
     items: [
       { key: 'crops', label: 'My Crops', icon: Sprout },
       { key: 'prices', label: 'Daily Market Prices', icon: TrendingUp },
-      { key: 'sell', label: 'Sell Products', icon: ShoppingBag },
+      {
+        key: 'sell',
+        label: 'Sell Products',
+        icon: ShoppingBag,
+        hasSubmenu: true,
+        subItems: [
+          { key: 'Middleman', label: 'Middleman', category: 'Middleman', icon: UserCheck },
+          { key: 'Vendor', label: 'Vendor', category: 'Vendor', icon: Building2 },
+          { key: 'Customer', label: 'Customer', category: 'Customer', icon: Users },
+        ],
+      },
       { key: 'sales', label: 'My Sales', icon: Receipt },
     ],
   },
@@ -59,6 +71,7 @@ export function FarmerSidebar({
   const { logout } = useAuth();
   const {
     activePage,
+    pageParam,
     navigateTo,
     pendingOtpCount,
     unreadNotificationsCount,
@@ -70,6 +83,15 @@ export function FarmerSidebar({
     'Security & Alerts': true,
     Account: true,
   });
+
+  const [isSellSubmenuOpen, setIsSellSubmenuOpen] = useState(true);
+
+  // Automatically ensure Sell Products submenu is expanded when user is on Sell Products
+  useEffect(() => {
+    if (activePage === 'sell') {
+      setIsSellSubmenuOpen(true);
+    }
+  }, [activePage]);
 
   const toggleGroup = (groupName) => {
     if (isCollapsed) return;
@@ -85,8 +107,8 @@ export function FarmerSidebar({
     return 0;
   };
 
-  const handleNavClick = (pageKey, mobileView) => {
-    navigateTo(pageKey);
+  const handleNavClick = (pageKey, mobileView, param = null) => {
+    navigateTo(pageKey, param);
     if (mobileView && onCloseMobile) {
       onCloseMobile();
     }
@@ -184,12 +206,95 @@ export function FarmerSidebar({
                         const IconComponent = item.icon;
                         const badgeCount = item.badgeKey ? getBadgeValue(item.badgeKey) : 0;
                         const isActive = activePage === item.key;
+                        const hasSubmenu = Boolean(item.hasSubmenu && item.subItems?.length);
+
+                        if (hasSubmenu && !collapsed) {
+                          const isSellItemActive = activePage === 'sell';
+                          const isSubmenuVisible = isSellSubmenuOpen;
+
+                          return (
+                            <div key={item.key} className="space-y-1">
+                              <div
+                                className={`w-full relative group flex items-center justify-between px-3 py-2 rounded-xl !text-xs sm:!text-sm !font-medium transition-all duration-150 select-none ${
+                                  isSellItemActive
+                                    ? 'bg-[#14B8A6]/25 text-white !font-bold'
+                                    : 'text-white bg-transparent hover:bg-[#14B8A6]/20 hover:text-white'
+                                }`}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsSellSubmenuOpen(true);
+                                    handleNavClick('sell', mobileView, pageParam || 'Middleman');
+                                  }}
+                                  className="flex-1 flex items-center gap-3 text-left cursor-pointer min-w-0"
+                                >
+                                  <IconComponent
+                                    className={`shrink-0 transition-colors w-4 h-4 ${
+                                      isSellItemActive ? 'text-white' : 'text-[#CCFBF1] group-hover:text-white'
+                                    }`}
+                                  />
+                                  <span className="truncate leading-snug">{item.label}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsSellSubmenuOpen((prev) => !prev);
+                                  }}
+                                  title={isSubmenuVisible ? 'Collapse categories' : 'Expand categories'}
+                                  aria-label={isSubmenuVisible ? 'Collapse categories' : 'Expand categories'}
+                                  className="p-1 rounded-md text-[#CCFBF1] hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0 ml-1"
+                                >
+                                  {isSubmenuVisible ? (
+                                    <ChevronDown className="w-3.5 h-3.5 transition-transform" />
+                                  ) : (
+                                    <ChevronRight className="w-3.5 h-3.5 transition-transform" />
+                                  )}
+                                </button>
+                              </div>
+
+                              {/* Sub components: Middleman, Vendor, Customer */}
+                              {isSubmenuVisible && (
+                                <div className="space-y-1 pl-3 pr-1 py-0.5 border-l-2 border-[#14B8A6]/40 ml-4">
+                                  {item.subItems.map((sub) => {
+                                    const SubIcon = sub.icon;
+                                    const isSubActive =
+                                      activePage === 'sell' &&
+                                      (pageParam || 'Middleman').toLowerCase() === sub.category.toLowerCase();
+
+                                    return (
+                                      <button
+                                        key={sub.category}
+                                        type="button"
+                                        onClick={() => handleNavClick('sell', mobileView, sub.category)}
+                                        className={`w-full group flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs transition-all duration-150 select-none cursor-pointer text-left ${
+                                          isSubActive
+                                            ? 'bg-[#CCFBF1] text-[#0F766E] !font-bold shadow-xs border-l-3 border-[#0F766E]'
+                                            : 'text-[#CCFBF1] hover:text-white hover:bg-white/10 font-medium'
+                                        }`}
+                                      >
+                                        <SubIcon
+                                          className={`w-3.5 h-3.5 shrink-0 transition-colors ${
+                                            isSubActive ? 'text-[#0F766E]' : 'text-[#CCFBF1] group-hover:text-white'
+                                          }`}
+                                        />
+                                        <span className="truncate">{sub.label}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
 
                         return (
                           <button
                             key={item.key}
                             type="button"
-                            onClick={() => handleNavClick(item.key, mobileView)}
+                            onClick={() => handleNavClick(item.key, mobileView, item.hasSubmenu ? (pageParam || 'Middleman') : null)}
                             title={
                               collapsed
                                 ? `${item.label}${badgeCount ? ` (${badgeCount})` : ''}`

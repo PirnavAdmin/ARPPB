@@ -47,6 +47,7 @@ export function FarmerNavbar({ onOpenMobileSidebar, onToggleDesktopSidebar }) {
   const { logout } = useAuth();
   const {
     activePage,
+    pageParam,
     navigateTo,
     profile,
     notifications,
@@ -183,7 +184,7 @@ export function FarmerNavbar({ onOpenMobileSidebar, onToggleDesktopSidebar }) {
           </button>
           <ChevronRight className="w-3.5 h-3.5 text-[#94A3B8] shrink-0" />
           <span className="font-semibold text-[#0F172A] truncate">
-            {PAGE_NAMES[activePage] || 'Farmer Portal'}
+            {activePage === 'sell' && pageParam ? `Sell Products > ${pageParam}` : (PAGE_NAMES[activePage] || 'Farmer Portal')}
           </span>
         </nav>
       </div>

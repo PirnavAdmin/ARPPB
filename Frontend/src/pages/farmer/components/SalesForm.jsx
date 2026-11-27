@@ -3,7 +3,10 @@ import {
   Check,
   Phone,
   User,
+  UserCheck,
+  Users,
   Building2,
+  ShieldCheck,
   Sparkles,
   AlertCircle,
   History,
@@ -24,18 +27,21 @@ import {
   fetchFarmerContactsApi,
   fetchFarmerContactByIdApi,
   saveContactToStorage,
+  sanitizeAndCleanSavedContacts,
   DEFAULT_FARMER_CONTACTS,
 } from '../../../services/farmerContactService';
 
-function SalesForm({ onSaleCreated }) {
-  const { crops, profile, createSale, salesOptions, setActiveOtpRequest } = useFarmer();
+function SalesForm({ initialCategory, onSaleCreated }) {
+  const { crops, profile, createSale, salesOptions, setActiveOtpRequest, pageParam, setPageParam } = useFarmer();
 
   const options = salesOptions || DEFAULT_SALES_OPTIONS;
   const buyerCategories = options.buyerCategories?.length ? options.buyerCategories : DEFAULT_SALES_OPTIONS.buyerCategories;
   const qualityGrades = options.qualityGrades?.length ? options.qualityGrades : DEFAULT_SALES_OPTIONS.qualityGrades;
 
+  const resolvedInitialCategory = initialCategory || pageParam || buyerCategories[0]?.code || 'Middleman';
+
   const [formData, setFormData] = useState({
-    buyerCategory: buyerCategories[0]?.code || 'Middleman',
+    buyerCategory: resolvedInitialCategory,
     buyerName: '',
     buyerMobile: '',
     cropId: crops[0]?.id || '',
@@ -53,6 +59,27 @@ function SalesForm({ onSaleCreated }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
+  // Synchronize category when initialCategory or pageParam changes from navigation/sidebar
+  useEffect(() => {
+    const targetCat = initialCategory || pageParam;
+    if (targetCat && ['Middleman', 'Vendor', 'Customer'].includes(targetCat)) {
+      if (formData.buyerCategory.toLowerCase() !== targetCat.toLowerCase()) {
+        setFormData((prev) => ({
+          ...prev,
+          buyerCategory: targetCat,
+          buyerName: '',
+          buyerMobile: '',
+        }));
+        setErrors((prev) => ({
+          ...prev,
+          buyerName: '',
+          buyerMobile: '',
+        }));
+        setAutoFillNotice(null);
+      }
+    }
+  }, [initialCategory, pageParam]);
+
   // Predictive Contact Auto-Complete States (with 300ms debounce & Farmer Contacts API)
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [matchingContacts, setMatchingContacts] = useState([]);
@@ -63,6 +90,11 @@ function SalesForm({ onSaleCreated }) {
   const [autoFillNotice, setAutoFillNotice] = useState(null);
   const dropdownRef = useRef(null);
   const nameInputRef = useRef(null);
+
+  // Purge any corrupted records from local storage on mount
+  useEffect(() => {
+    sanitizeAndCleanSavedContacts();
+  }, []);
 
   // 300ms Debounce on Buyer Name Input
   useEffect(() => {
@@ -139,9 +171,9 @@ function SalesForm({ onSaleCreated }) {
     if (trimmed.length < 2) {
       return 'Name must be at least 2 characters long.';
     }
-    // Only letters, spaces, dots, ampersand, apostrophe, hyphens allowed
-    if (!/^[a-zA-Z\s.&'-]+$/.test(name)) {
-      return "Name should only contain letters, spaces, dots and '&' (e.g., Bhanu Prasad, Srinivasa Traders).";
+    // Only letters, numbers, spaces, dots, ampersand, apostrophe, hyphens, and parentheses allowed
+    if (!/^[a-zA-Z0-9\s.&'()-]+$/.test(name)) {
+      return "Name should only contain letters, numbers, spaces, dots, '&' and '-' (e.g., Bhanu Prasad, Srinivasa Traders).";
     }
     return '';
   };
@@ -189,16 +221,56 @@ function SalesForm({ onSaleCreated }) {
     if (submitError) setSubmitError(null);
   };
 
+  const handleCategoryChange = (newCategory) => {
+    if (newCategory === formData.buyerCategory) return;
+    if (setPageParam) {
+      setPageParam(newCategory);
+    }
+    setFormData((prev) => ({
+      ...prev,
+      buyerCategory: newCategory,
+      buyerName: '',
+      buyerMobile: '',
+    }));
+    setErrors((prev) => ({
+      ...prev,
+      buyerName: '',
+      buyerMobile: '',
+    }));
+    setAutoFillNotice(null);
+    setIsDropdownOpen(true);
+    if (nameInputRef.current) {
+      nameInputRef.current.focus();
+    }
+  };
+
   const handleSelectContact = async (contact) => {
     setIsLoadingContactDetails(true);
-    let fullDetails = contact;
+    let fullDetails = { ...contact };
 
-    // Contact Details API Integration: GET /api/v1/farmer/contacts/{id} (or fallback /api/contacts/{id})
+    // Contact Details API Integration: GET /api/v1/farmer/contacts/{id}?category=...
     try {
       if (contact.id) {
-        const fetched = await fetchFarmerContactByIdApi(contact.id, profile?.id);
-        if (fetched) {
-          fullDetails = { ...contact, ...fetched };
+        const fetched = await fetchFarmerContactByIdApi(
+          contact.id,
+          profile?.id,
+          contact.category || formData.buyerCategory
+        );
+        if (fetched && typeof fetched === 'object') {
+          // Merge safely: ONLY overwrite with non-empty, non-ID values
+          fullDetails = {
+            ...fullDetails,
+            ...(fetched.name && !fetched.name.startsWith('CNT-') && !/^\d+$/.test(fetched.name) ? { name: fetched.name } : {}),
+            ...(fetched.businessName && !fetched.businessName.startsWith('CNT-') ? { businessName: fetched.businessName } : {}),
+            ...(fetched.contactPerson && !fetched.contactPerson.startsWith('CNT-') ? { contactPerson: fetched.contactPerson } : {}),
+            ...(fetched.mobile && fetched.mobile.length === 10 ? { mobile: fetched.mobile } : {}),
+            ...(fetched.category ? { category: fetched.category } : {}),
+            ...(fetched.pickupLocation ? { pickupLocation: fetched.pickupLocation } : {}),
+            ...(fetched.cropName ? { cropName: fetched.cropName } : {}),
+            ...(fetched.sellingQuantity ? { sellingQuantity: fetched.sellingQuantity } : {}),
+            ...(fetched.rate ? { rate: fetched.rate } : {}),
+            ...(fetched.qualityGrade ? { qualityGrade: fetched.qualityGrade } : {}),
+          };
         }
       }
     } catch (err) {
@@ -207,26 +279,36 @@ function SalesForm({ onSaleCreated }) {
       setIsLoadingContactDetails(false);
     }
 
+    // Determine clean display name: NEVER an ID like CNT-V001 or pure numbers
+    let chosenName = fullDetails.businessName || fullDetails.name || fullDetails.contactPerson || '';
+    if (!chosenName || chosenName.startsWith('CNT-') || /^\d+$/.test(chosenName)) {
+      chosenName = fullDetails.contactPerson || fullDetails.businessName || 'Agricultural Buyer';
+    }
+
+    const chosenMobile = fullDetails.mobile || '';
+    const chosenCategory = fullDetails.category || formData.buyerCategory;
+
     // Find matching crop in farmer crops if contact has a preferred/last crop
     const matchingCrop = (crops || []).find(
       (c) => c.name.toLowerCase() === (fullDetails.cropName || '').toLowerCase()
     ) || selectedCrop;
 
-    const newQty = fullDetails.sellingQuantity && matchingCrop
-      ? Math.min(Number(fullDetails.sellingQuantity) || 10, Number(matchingCrop.availableQuantity) || 10)
-      : formData.sellingQuantity;
+    const chosenQty = fullDetails.sellingQuantity || formData.sellingQuantity || '25';
+    const chosenRate = fullDetails.rate || matchingCrop?.expectedSellingPrice || formData.rate || '910.01';
+    const chosenGrade = fullDetails.qualityGrade || matchingCrop?.qualityGrade || formData.qualityGrade || 'Grade A';
+    const chosenLocation = fullDetails.pickupLocation || formData.pickupLocation;
 
     setFormData((prev) => ({
       ...prev,
-      buyerName: fullDetails.name,
-      buyerMobile: fullDetails.mobile,
-      buyerCategory: fullDetails.category || prev.buyerCategory,
+      buyerName: chosenName,
+      buyerMobile: chosenMobile || prev.buyerMobile,
+      buyerCategory: chosenCategory,
       cropId: matchingCrop ? matchingCrop.id : prev.cropId,
       cropName: matchingCrop ? matchingCrop.name : prev.cropName,
-      sellingQuantity: newQty ? String(newQty) : prev.sellingQuantity,
-      rate: fullDetails.rate || matchingCrop?.expectedSellingPrice || prev.rate,
-      qualityGrade: fullDetails.qualityGrade || matchingCrop?.qualityGrade || prev.qualityGrade,
-      pickupLocation: fullDetails.pickupLocation || prev.pickupLocation,
+      sellingQuantity: String(chosenQty),
+      rate: String(chosenRate),
+      qualityGrade: chosenGrade,
+      pickupLocation: chosenLocation,
     }));
 
     setErrors((prev) => ({
@@ -236,16 +318,27 @@ function SalesForm({ onSaleCreated }) {
     }));
 
     setAutoFillNotice({
-      name: fullDetails.name,
-      mobile: fullDetails.mobile,
-      category: fullDetails.category,
-      crop: fullDetails.cropName || (matchingCrop ? matchingCrop.name : ''),
-      qty: newQty,
-      rate: fullDetails.rate,
-      location: fullDetails.pickupLocation,
+      name: chosenName,
+      person: fullDetails.contactPerson,
+      mobile: chosenMobile,
+      category: chosenCategory,
+      crop: matchingCrop?.name || fullDetails.cropName,
+      qty: chosenQty,
+      rate: chosenRate,
+      location: chosenLocation,
     });
 
-    saveContactToStorage(fullDetails);
+    saveContactToStorage({
+      ...fullDetails,
+      name: chosenName,
+      mobile: chosenMobile,
+      category: chosenCategory,
+      cropName: matchingCrop?.name || fullDetails.cropName,
+      sellingQuantity: chosenQty,
+      rate: chosenRate,
+      pickupLocation: chosenLocation,
+    });
+
     setIsDropdownOpen(false);
   };
 
@@ -313,20 +406,6 @@ function SalesForm({ onSaleCreated }) {
     return Object.keys(errs).length === 0;
   };
 
-  const saveBuyerToStorage = (buyerData) => {
-    try {
-      const raw = localStorage.getItem('farmer_saved_buyers');
-      const existing = raw ? JSON.parse(raw) : [];
-      const updated = [
-        buyerData,
-        ...existing.filter((b) => b.name.toLowerCase() !== buyerData.name.toLowerCase()),
-      ];
-      localStorage.setItem('farmer_saved_buyers', JSON.stringify(updated.slice(0, 50)));
-    } catch (e) {
-      console.warn('Could not persist buyer to storage:', e);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate() || isSubmitting) return;
@@ -340,9 +419,11 @@ function SalesForm({ onSaleCreated }) {
         setCreatedResult(result);
 
         // Save newly entered / updated buyer details to persistent memory
-        saveBuyerToStorage({
+        saveContactToStorage({
           id: `BUYER-${Date.now()}`,
           name: formData.buyerName.trim(),
+          businessName: formData.buyerName.trim(),
+          contactPerson: formData.buyerName.trim(),
           mobile: formData.buyerMobile.trim(),
           category: formData.buyerCategory,
           cropName: formData.cropName,
@@ -517,11 +598,15 @@ function SalesForm({ onSaleCreated }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>
-              Auto-filled saved details for <strong>{autoFillNotice.name}</strong> (Mobile:{' '}
+              Auto-filled saved details for <strong>{autoFillNotice.name}</strong>
+              {autoFillNotice.person && autoFillNotice.person !== autoFillNotice.name && (
+                <span style={{ color: '#047857' }}> (Contact: {autoFillNotice.person})</span>
+              )} • Mobile:{' '}
               <strong className="font-mono">{autoFillNotice.mobile}</strong> • Category:{' '}
               <span className="font-semibold">{autoFillNotice.category}</span>
               {autoFillNotice.crop && ` • Preferred Crop: ${autoFillNotice.crop}`}
-              {autoFillNotice.qty && ` ${autoFillNotice.qty} qtl`})
+              {autoFillNotice.qty && ` (${autoFillNotice.qty} qtl)`}
+              {autoFillNotice.rate && ` @ ₹${autoFillNotice.rate}`}
             </span>
           </div>
           <button
@@ -542,49 +627,39 @@ function SalesForm({ onSaleCreated }) {
       )}
 
       {/* Main Grid: Form on Left, Live Transaction Summary on Right */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.9fr', gap: 24 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Sales Form Card */}
-        <div className="farmer-card" style={{ padding: '24px' }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: '1.25rem' }}>Create Farmer Sale Order</h3>
+        <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7">
+          <div className="border-b border-slate-100 pb-4 mb-5 flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h3 className="text-xl font-bold text-slate-900 tracking-tight">Create Farmer Sale Order</h3>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#CCFBF1] text-[#0F766E] border border-[#14B8A6]/40 shadow-2xs">
+                  {formData.buyerCategory === 'Vendor' ? (
+                    <Building2 className="w-3.5 h-3.5" />
+                  ) : formData.buyerCategory === 'Customer' ? (
+                    <Users className="w-3.5 h-3.5" />
+                  ) : (
+                    <UserCheck className="w-3.5 h-3.5" />
+                  )}
+                  <span>Category: {formData.buyerCategory}</span>
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                Initiating sale order to <strong className="text-[#0F766E]">{formData.buyerCategory}</strong> parties with OTP stock deduction
+              </p>
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} autoComplete="off">
-            {/* Buyer Category Segmented Buttons */}
-            <div className="farmer-form-group">
-              <label>Buyer Category *</label>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${buyerCategories.length}, 1fr)`, gap: 10 }}>
-                {buyerCategories.map((cat) => (
-                  <button
-                    key={cat.code}
-                    type="button"
-                    onClick={() => setFormData((prev) => ({ ...prev, buyerCategory: cat.code }))}
-                    disabled={isSubmitting}
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: 10,
-                      border: formData.buyerCategory === cat.code ? '2px solid var(--farmer-primary)' : '1px solid var(--farmer-border)',
-                      backgroundColor: formData.buyerCategory === cat.code ? 'var(--farmer-light)' : '#FCFDFC',
-                      color: formData.buyerCategory === cat.code ? 'var(--farmer-dark)' : 'var(--farmer-text)',
-                      fontWeight: formData.buyerCategory === cat.code ? 700 : 500,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    {cat.code}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Buyer Name with Predictive Dropdown & Mobile Number with Live Validation */}
-            <div className="farmer-form-row">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               {/* Buyer Name Input with Autocomplete Dropdown */}
-              <div
-                className="farmer-form-group"
-                ref={dropdownRef}
-                style={{ position: 'relative' }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label>Buyer / Trading Firm Name *</label>
+              <div className="flex flex-col" ref={dropdownRef}>
+                <div className="flex items-center justify-between mb-1.5 min-h-[18px]">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Buyer / Trading Firm Name *
+                  </label>
                   {formData.buyerName.trim() && !errors.buyerName && (
                     <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
                       <Check className="w-3 h-3 stroke-[3]" /> Valid
@@ -592,25 +667,24 @@ function SalesForm({ onSaleCreated }) {
                   )}
                 </div>
 
-                <div style={{ position: 'relative' }}>
+                <div className="relative">
                   <input
                     ref={nameInputRef}
                     type="text"
                     name="buyerName"
-                    placeholder="e.g. Bhanu Prasad, Srinivasa Traders, ITC Agri Buy"
+                    placeholder="e.g. Bhanu Prasad, Srinivasa Traders, ITC"
                     value={formData.buyerName}
                     onChange={handleNameChange}
                     onFocus={() => setIsDropdownOpen(true)}
                     onKeyDown={handleKeyDown}
                     disabled={isSubmitting}
-                    style={{
-                      paddingRight: formData.buyerName ? '32px' : '14px',
-                      borderColor: errors.buyerName
-                        ? 'var(--farmer-danger)'
+                    className={`w-full h-11 px-3.5 pr-8 bg-white border rounded-xl text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 ${
+                      errors.buyerName
+                        ? 'border-rose-400 focus:border-rose-500'
                         : formData.buyerName.trim() && !errors.buyerName
-                        ? '#10B981'
-                        : undefined,
-                    }}
+                        ? 'border-emerald-500 focus:border-emerald-600'
+                        : 'border-slate-300 focus:border-[#0F766E]'
+                    }`}
                   />
                   {formData.buyerName && (
                     <button
@@ -620,215 +694,166 @@ function SalesForm({ onSaleCreated }) {
                         setErrors((prev) => ({ ...prev, buyerName: '' }));
                         setIsDropdownOpen(false);
                       }}
-                      style={{
-                        position: 'absolute',
-                        right: '10px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        color: '#94A3B8',
-                        cursor: 'pointer',
-                        padding: 0,
-                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      aria-label="Clear buyer name"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
+
+                  {/* Floating Predictive Dropdown with 300ms Debounce & Contacts API */}
+                  {isDropdownOpen && (
+                    <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 max-h-72 overflow-y-auto">
+                      <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-[#0F766E]" />
+                          <span>
+                            {formData.buyerCategory} Contacts ({matchingContacts.length})
+                          </span>
+                        </span>
+                        <span className="text-[10px] text-[#0F766E] normal-case">
+                          {isLoadingContacts ? 'Searching...' : 'Click to auto-fill'}
+                        </span>
+                      </div>
+
+                      {/* Loading State Spinner */}
+                      {isLoadingContacts && (
+                        <div className="p-4 text-center flex items-center justify-center gap-2 text-xs font-semibold text-slate-500">
+                          <div className="w-4 h-4 border-2 border-[#0F766E] border-t-transparent rounded-full animate-spin" />
+                          <span>Searching {formData.buyerCategory} contacts...</span>
+                        </div>
+                      )}
+
+                      {/* Contact Suggestions List */}
+                      {!isLoadingContacts && matchingContacts.length > 0 && (
+                        <div className="p-1.5 space-y-0.5">
+                          {matchingContacts.map((contact, idx) => {
+                            const style = buyerCategoryStyles[contact.category] || {
+                              bg: '#F1F5F9',
+                              color: '#475569',
+                            };
+                            const isSelected = idx === activeDropdownIndex;
+                            const query = (formData.buyerName || '').trim();
+                            const displayName = contact.businessName || contact.name || 'Agricultural Buyer';
+                            const contactPerson = contact.contactPerson && contact.contactPerson !== displayName ? contact.contactPerson : null;
+                            const initials = (displayName || 'AB').slice(0, 2).toUpperCase();
+
+                            const renderHighlight = (text, q) => {
+                              if (!text) return null;
+                              const queryStr = (q || '').trim().toLowerCase();
+                              if (!queryStr) return text;
+                              const lower = text.toLowerCase();
+                              const matchIdx = lower.indexOf(queryStr);
+                              if (matchIdx < 0) return text;
+                              return (
+                                <>
+                                  {text.slice(0, matchIdx)}
+                                  <span className="text-[#0F766E] bg-[#CCFBF1] font-bold px-0.5 rounded">
+                                    {text.slice(matchIdx, matchIdx + queryStr.length)}
+                                  </span>
+                                  {text.slice(matchIdx + queryStr.length)}
+                                </>
+                              );
+                            };
+
+                            return (
+                              <div
+                                key={contact.id || contact.name + idx}
+                                onClick={() => handleSelectContact(contact)}
+                                onMouseEnter={() => setActiveDropdownIndex(idx)}
+                                className={`p-2.5 rounded-xl cursor-pointer flex items-center justify-between gap-3 transition-colors ${
+                                  isSelected ? 'bg-[#CCFBF1]' : 'hover:bg-slate-50'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  <div
+                                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                                      isSelected ? 'bg-[#0F766E] text-white' : 'bg-teal-50 text-teal-700 border border-teal-200'
+                                    }`}
+                                  >
+                                    {initials}
+                                  </div>
+
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-sm font-bold text-slate-900 truncate">
+                                        {renderHighlight(displayName, query)}
+                                      </span>
+                                      {contactPerson && (
+                                        <span className="text-[11px] font-semibold text-[#0F766E] bg-teal-50 border border-teal-200 px-1.5 py-0.2 rounded-md inline-flex items-center gap-1">
+                                          👤 {renderHighlight(contactPerson, query)}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5 flex-wrap">
+                                      <span className="font-mono font-semibold text-slate-700 flex items-center gap-1">
+                                        <Phone className="w-2.5 h-2.5 text-[#0F766E]" /> {contact.mobile}
+                                      </span>
+                                      {contact.pickupLocation && (
+                                        <span className="truncate max-w-[130px]">
+                                          • {contact.pickupLocation.split(',')[0]}
+                                        </span>
+                                      )}
+                                      {contact.cropName && (
+                                        <span className="text-emerald-700 font-semibold truncate">
+                                          • {contact.cropName} ({contact.sellingQuantity || 25} qtl @ ₹{contact.rate})
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <span
+                                    className="px-2 py-0.5 rounded-md text-[11px] font-bold"
+                                    style={{ backgroundColor: style.bg, color: style.color }}
+                                  >
+                                    {contact.category}
+                                  </span>
+                                  <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Empty State */}
+                      {!isLoadingContacts && matchingContacts.length === 0 && (
+                        <div className="p-4 text-center">
+                          <p className="m-0 text-xs font-semibold text-slate-600">
+                            No {formData.buyerCategory} contacts found matching &quot;{formData.buyerName}&quot;
+                          </p>
+                          <p className="m-0 mt-1 text-[11px] text-slate-400">
+                            Manual entry enabled — continue typing buyer name &amp; mobile number.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {errors.buyerName && (
-                  <small style={{ color: 'var(--farmer-danger)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <AlertCircle className="w-3 h-3 shrink-0" />
-                    {errors.buyerName}
-                  </small>
-                )}
-
-                {/* Floating Predictive Dropdown with 300ms Debounce & Contacts API */}
-                {isDropdownOpen && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 4px)',
-                      left: 0,
-                      right: 0,
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: 14,
-                      boxShadow: '0 12px 30px -4px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(15, 23, 42, 0.08)',
-                      border: '1px solid #E2E8F0',
-                      zIndex: 60,
-                      maxHeight: '300px',
-                      overflowY: 'auto',
-                    }}
-                  >
-                    <div
-                      style={{
-                        padding: '8px 14px',
-                        backgroundColor: '#F8FAFC',
-                        borderBottom: '1px solid #E2E8F0',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        color: '#64748B',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5 text-[#0F766E]" />
-                        <span>
-                          {formData.buyerCategory} Contacts ({matchingContacts.length})
-                        </span>
-                      </span>
-                      <span style={{ fontSize: '10px', color: '#0F766E' }}>
-                        {isLoadingContacts ? '300ms Debounce...' : 'Click to auto-fill'}
-                      </span>
-                    </div>
-
-                    {/* Loading State Spinner */}
-                    {isLoadingContacts && (
-                      <div className="p-4 text-center flex items-center justify-center gap-2 text-xs font-semibold text-slate-500">
-                        <div className="w-4 h-4 border-2 border-[#0F766E] border-t-transparent rounded-full animate-spin" />
-                        <span>Searching {formData.buyerCategory} contacts...</span>
-                      </div>
-                    )}
-
-                    {/* Contact Suggestions List */}
-                    {!isLoadingContacts && matchingContacts.length > 0 && (
-                      <div style={{ padding: '4px' }}>
-                        {matchingContacts.map((contact, idx) => {
-                          const style = buyerCategoryStyles[contact.category] || {
-                            bg: '#F1F5F9',
-                            color: '#475569',
-                          };
-                          const isSelected = idx === activeDropdownIndex;
-
-                          // Match highlighting
-                          const query = formData.buyerName.trim().toLowerCase();
-                          const nameLower = contact.name.toLowerCase();
-                          const matchIndex = nameLower.indexOf(query);
-
-                          return (
-                            <div
-                              key={contact.id || contact.name + idx}
-                              onClick={() => handleSelectContact(contact)}
-                              onMouseEnter={() => setActiveDropdownIndex(idx)}
-                              style={{
-                                padding: '10px 12px',
-                                borderRadius: 10,
-                                cursor: 'pointer',
-                                backgroundColor: isSelected ? '#CCFBF1' : 'transparent',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: 10,
-                                transition: 'background-color 0.15s ease',
-                                borderBottom: idx === matchingContacts.length - 1 ? 'none' : '1px solid #F1F5F9',
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                                <div
-                                  style={{
-                                    width: 34,
-                                    height: 34,
-                                    borderRadius: 10,
-                                    backgroundColor: isSelected ? '#0F766E' : '#E0F2FE',
-                                    color: isSelected ? '#FFFFFF' : '#0369A1',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontWeight: 800,
-                                    fontSize: '0.78rem',
-                                    flexShrink: 0,
-                                    transition: 'all 0.15s',
-                                  }}
-                                >
-                                  {contact.name.slice(0, 2).toUpperCase()}
-                                </div>
-
-                                <div style={{ minWidth: 0 }}>
-                                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0F172A' }}>
-                                    {query && matchIndex >= 0 ? (
-                                      <>
-                                        {contact.name.slice(0, matchIndex)}
-                                        <span style={{ color: '#0F766E', textDecoration: 'underline' }}>
-                                          {contact.name.slice(matchIndex, matchIndex + query.length)}
-                                        </span>
-                                        {contact.name.slice(matchIndex + query.length)}
-                                      </>
-                                    ) : (
-                                      contact.name
-                                    )}
-                                  </div>
-                                  <div
-                                    style={{
-                                      fontSize: '0.75rem',
-                                      color: '#64748B',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: 8,
-                                      marginTop: 2,
-                                    }}
-                                  >
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'monospace' }}>
-                                      <Phone className="w-2.5 h-2.5 text-[#0F766E]" /> {contact.mobile}
-                                    </span>
-                                    {contact.pickupLocation && (
-                                      <span className="truncate max-w-[140px]">
-                                        • {contact.pickupLocation.split(',')[0]}
-                                      </span>
-                                    )}
-                                    {contact.cropName && (
-                                      <span>
-                                        • Pref: {contact.cropName} ({contact.sellingQuantity || 50} qtl)
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                                <span
-                                  style={{
-                                    padding: '2px 8px',
-                                    borderRadius: 6,
-                                    fontSize: '0.7rem',
-                                    fontWeight: 700,
-                                    backgroundColor: style.bg,
-                                    color: style.color,
-                                  }}
-                                >
-                                  {contact.category}
-                                </span>
-                                <ArrowRight className="w-3.5 h-3.5 text-[#64748B]" />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Empty State */}
-                    {!isLoadingContacts && matchingContacts.length === 0 && (
-                      <div style={{ padding: '16px', textAlign: 'center' }}>
-                        <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#475569' }}>
-                          No {formData.buyerCategory} contacts found matching &quot;{formData.buyerName}&quot;
-                        </p>
-                        <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#94A3B8' }}>
-                          Manual entry enabled — continue typing buyer name &amp; mobile number.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
+                <div className="min-h-[18px] mt-1.5 flex items-center text-xs">
+                  {errors.buyerName ? (
+                    <span className="text-rose-600 font-semibold flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      {errors.buyerName}
+                    </span>
+                  ) : (
+                    <span className="text-slate-500">
+                      Type letters to search {formData.buyerCategory} contacts
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Buyer Mobile Number with Real-Time Format & Digit Validation */}
-              <div className="farmer-form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label>Buyer Mobile Number (for OTP Delivery) *</label>
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-1.5 min-h-[18px]">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Buyer Mobile Number (For OTP) *
+                  </label>
                   <span
                     className={`text-[11px] font-bold font-mono px-2 py-0.5 rounded-md ${
                       formData.buyerMobile.length === 10 && /^[6-9]/.test(formData.buyerMobile)
@@ -844,21 +869,10 @@ function SalesForm({ onSaleCreated }) {
                   </span>
                 </div>
 
-                <div style={{ position: 'relative' }}>
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: '12px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      fontSize: '0.86rem',
-                      fontWeight: 700,
-                      color: '#64748B',
-                      fontFamily: 'monospace',
-                    }}
-                  >
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold font-mono text-slate-500 pointer-events-none">
                     +91
-                  </div>
+                  </span>
                   <input
                     type="tel"
                     inputMode="numeric"
@@ -868,54 +882,50 @@ function SalesForm({ onSaleCreated }) {
                     value={formData.buyerMobile}
                     onChange={handleMobileChange}
                     disabled={isSubmitting}
-                    style={{
-                      paddingLeft: '46px',
-                      fontFamily: 'monospace',
-                      fontWeight: 600,
-                      borderColor: errors.buyerMobile
-                        ? 'var(--farmer-danger)'
+                    className={`w-full h-11 pl-12 pr-10 bg-white border rounded-xl text-sm font-mono font-medium transition-all focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 ${
+                      errors.buyerMobile
+                        ? 'border-rose-400 focus:border-rose-500'
                         : formData.buyerMobile.length === 10 && /^[6-9]/.test(formData.buyerMobile)
-                        ? '#10B981'
-                        : undefined,
-                    }}
+                        ? 'border-emerald-500 focus:border-emerald-600'
+                        : 'border-slate-300 focus:border-[#0F766E]'
+                    }`}
                   />
                   {formData.buyerMobile.length === 10 && /^[6-9]/.test(formData.buyerMobile) && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        right: '12px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: '#10B981',
-                      }}
-                    >
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600 pointer-events-none">
                       <CheckCircle2 className="w-4 h-4" />
                     </div>
                   )}
                 </div>
 
-                {errors.buyerMobile ? (
-                  <small style={{ color: 'var(--farmer-danger)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <AlertCircle className="w-3 h-3 shrink-0" />
-                    {errors.buyerMobile}
-                  </small>
-                ) : (
-                  <small style={{ color: 'var(--farmer-secondary)' }}>
-                    OTP verification code will be sent to this number upon order creation.
-                  </small>
-                )}
+                <div className="min-h-[18px] mt-1.5 flex items-center text-xs">
+                  {errors.buyerMobile ? (
+                    <span className="text-rose-600 font-semibold flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      {errors.buyerMobile}
+                    </span>
+                  ) : (
+                    <span className="text-slate-500">
+                      OTP verification code sent to this mobile for stock delivery
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Crop Selection & Available Stock Notice */}
-            <div className="farmer-form-row">
-              <div className="farmer-form-group">
-                <label>Select Crop *</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-1.5 min-h-[18px]">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Select Crop *
+                  </label>
+                </div>
                 <select
                   name="cropName"
                   value={formData.cropName}
                   onChange={handleChange}
                   disabled={isSubmitting}
+                  className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/20"
                 >
                   {(crops || []).map((c) => (
                     <option key={c.id} value={c.name}>
@@ -923,20 +933,27 @@ function SalesForm({ onSaleCreated }) {
                     </option>
                   ))}
                 </select>
-                {selectedCrop && (
-                  <small style={{ color: selectedCrop.availableQuantity < 50 ? 'var(--farmer-warning)' : 'var(--farmer-primary)', fontWeight: 600 }}>
-                    Current Available Stock: {selectedCrop.availableQuantity} {selectedCrop.unit}
-                  </small>
-                )}
+                <div className="min-h-[18px] mt-1.5 flex items-center text-xs">
+                  {selectedCrop && (
+                    <span className={`font-semibold ${selectedCrop.availableQuantity < 50 ? 'text-amber-600' : 'text-teal-700'}`}>
+                      Current Available Stock: {selectedCrop.availableQuantity} {selectedCrop.unit}
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <div className="farmer-form-group">
-                <label>Quality Grade</label>
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-1.5 min-h-[18px]">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Quality Grade
+                  </label>
+                </div>
                 <select
                   name="qualityGrade"
                   value={formData.qualityGrade}
                   onChange={handleChange}
                   disabled={isSubmitting}
+                  className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/20"
                 >
                   {qualityGrades.map((g) => (
                     <option key={g.code} value={g.code}>
@@ -944,12 +961,20 @@ function SalesForm({ onSaleCreated }) {
                     </option>
                   ))}
                 </select>
+                <div className="min-h-[18px] mt-1.5 flex items-center text-xs text-slate-500">
+                  Standardized AGMARK / Mandi quality specifications
+                </div>
               </div>
             </div>
 
-            <div className="farmer-form-row">
-              <div className="farmer-form-group">
-                <label>Selling Quantity ({selectedCrop?.unit || 'qtl'}) *</label>
+            {/* Selling Quantity & Price */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-1.5 min-h-[18px]">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Selling Quantity ({selectedCrop?.unit || 'qtl'}) *
+                  </label>
+                </div>
                 <input
                   type="number"
                   step="0.01"
@@ -959,14 +984,27 @@ function SalesForm({ onSaleCreated }) {
                   value={formData.sellingQuantity}
                   onChange={handleChange}
                   disabled={isSubmitting}
+                  className={`w-full h-11 px-3.5 bg-white border rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 ${
+                    errors.sellingQuantity ? 'border-rose-400 focus:border-rose-500' : 'border-slate-300 focus:border-[#0F766E]'
+                  }`}
                 />
-                {errors.sellingQuantity && (
-                  <small style={{ color: 'var(--farmer-danger)' }}>{errors.sellingQuantity}</small>
-                )}
+                <div className="min-h-[18px] mt-1.5 flex items-center text-xs">
+                  {errors.sellingQuantity ? (
+                    <span className="text-rose-600 font-semibold">{errors.sellingQuantity}</span>
+                  ) : (
+                    <span className="text-slate-500">
+                      Maximum deductible from stock: {selectedCrop?.availableQuantity || 0} {selectedCrop?.unit || 'qtl'}
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <div className="farmer-form-group">
-                <label>Price per {selectedCrop?.unit || 'unit'} (₹) *</label>
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-1.5 min-h-[18px]">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Price per {selectedCrop?.unit || 'unit'} (₹) *
+                  </label>
+                </div>
                 <input
                   type="number"
                   step="1"
@@ -976,42 +1014,79 @@ function SalesForm({ onSaleCreated }) {
                   value={formData.rate}
                   onChange={handleChange}
                   disabled={isSubmitting}
+                  className={`w-full h-11 px-3.5 bg-white border rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 ${
+                    errors.rate ? 'border-rose-400 focus:border-rose-500' : 'border-slate-300 focus:border-[#0F766E]'
+                  }`}
                 />
-                {errors.rate && (
-                  <small style={{ color: 'var(--farmer-danger)' }}>{errors.rate}</small>
-                )}
+                <div className="min-h-[18px] mt-1.5 flex items-center text-xs">
+                  {errors.rate ? (
+                    <span className="text-rose-600 font-semibold">{errors.rate}</span>
+                  ) : (
+                    <span className="text-slate-500">
+                      Modal APMC yard benchmark rate
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="farmer-form-row">
-              <div className="farmer-form-group">
-                <label>Pickup / Loading Location *</label>
+            {/* Pickup Location & Expected Date */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-1.5 min-h-[18px]">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Pickup / Loading Location *
+                  </label>
+                </div>
                 <input
                   type="text"
                   name="pickupLocation"
+                  placeholder="Farm warehouse or aggregation point"
                   value={formData.pickupLocation}
                   onChange={handleChange}
                   disabled={isSubmitting}
+                  className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/20"
                 />
+                <div className="min-h-[18px] mt-1.5 flex items-center text-xs text-slate-500">
+                  Farm gate or primary collection center
+                </div>
               </div>
 
-              <div className="farmer-form-group">
-                <label>Expected Pickup Date *</label>
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-1.5 min-h-[18px]">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Expected Pickup Date *
+                  </label>
+                </div>
                 <input
                   type="date"
                   name="expectedPickupDate"
                   value={formData.expectedPickupDate}
                   onChange={handleChange}
                   disabled={isSubmitting}
+                  className={`w-full h-11 px-3.5 bg-white border rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 ${
+                    errors.expectedPickupDate ? 'border-rose-400 focus:border-rose-500' : 'border-slate-300 focus:border-[#0F766E]'
+                  }`}
                 />
-                {errors.expectedPickupDate && (
-                  <small style={{ color: 'var(--farmer-danger)' }}>{errors.expectedPickupDate}</small>
-                )}
+                <div className="min-h-[18px] mt-1.5 flex items-center text-xs">
+                  {errors.expectedPickupDate ? (
+                    <span className="text-rose-600 font-semibold">{errors.expectedPickupDate}</span>
+                  ) : (
+                    <span className="text-slate-500">
+                      Scheduled vehicle arrival window
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="farmer-form-group">
-              <label>Additional Terms / Dispatch Notes</label>
+            {/* Additional Terms / Dispatch Notes */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-1.5 min-h-[18px]">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Additional Terms / Dispatch Notes (Optional)
+                </label>
+              </div>
               <textarea
                 rows={2}
                 name="notes"
@@ -1019,132 +1094,110 @@ function SalesForm({ onSaleCreated }) {
                 value={formData.notes}
                 onChange={handleChange}
                 disabled={isSubmitting}
+                className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/20 resize-y"
               />
+              <div className="min-h-[18px] mt-1 flex items-center text-xs text-slate-500">
+                Included in the digital bill of loading and SMS verification dispatch note
+              </div>
             </div>
 
-            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
               <button
                 type="button"
-                className="farmer-btn farmer-btn-outline"
                 onClick={handleResetForm}
                 disabled={isSubmitting}
+                className="px-5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold text-sm hover:bg-slate-50 hover:border-slate-400 transition-colors cursor-pointer shadow-2xs"
               >
                 Clear Form
               </button>
               <button
                 type="submit"
-                className="farmer-btn farmer-btn-primary"
                 disabled={isSubmitting}
+                className="px-6 py-2.5 rounded-xl bg-[#0F766E] hover:bg-[#0D625C] text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-70"
               >
-                {isSubmitting ? 'Submitting Sale...' : '📤 Submit Sale & Send OTP Request'}
+                {isSubmitting ? 'Submitting Sale...' : 'Submit Sale & Send OTP Request'}
               </button>
             </div>
           </form>
         </div>
 
         {/* Live Transaction Preview & Calculation Card */}
-        <div>
-          <div
-            className="farmer-card"
-            style={{
-              padding: '24px',
-              position: 'sticky',
-              top: '90px',
-              backgroundColor: '#FFFFFF',
-              border: '2px solid #E8F5EC',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h4 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--farmer-dark)' }}>
+        <div className="lg:col-span-5 xl:col-span-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sticky top-24">
+            <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-slate-100">
+              <h4 className="text-base font-bold text-slate-900 tracking-tight">
                 Transaction Summary
               </h4>
-              <span
-                style={{
-                  background: 'var(--farmer-light)',
-                  color: 'var(--farmer-primary)',
-                  padding: '3px 8px',
-                  borderRadius: 6,
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                }}
-              >
+              <span className="bg-teal-50 text-teal-700 border border-teal-200/80 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
                 LIVE PREVIEW
               </span>
             </div>
 
             {/* Calculations Breakdown */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: '0.9rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--farmer-secondary)' }}>Crop Selected:</span>
-                <strong>{selectedCrop ? `${selectedCrop.name} (${selectedCrop.variety})` : '-'}</strong>
+            <div className="space-y-3 text-xs sm:text-sm">
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500 font-medium">Crop Selected:</span>
+                <span className="font-bold text-slate-900 text-right">
+                  {selectedCrop ? `${selectedCrop.name} (${selectedCrop.variety})` : '-'}
+                </span>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--farmer-secondary)' }}>Selling Quantity:</span>
-                <span>
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500 font-medium">Selling Quantity:</span>
+                <span className="font-bold text-slate-900">
                   {qty > 0 ? `${qty} ${selectedCrop?.unit || 'qtl'}` : '-'}
                 </span>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--farmer-secondary)' }}>Unit Rate:</span>
-                <span>{rate > 0 ? `${formatCurrency(rate)} / ${selectedCrop?.unit || 'qtl'}` : '-'}</span>
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500 font-medium">Unit Rate:</span>
+                <span className="font-bold text-slate-900">
+                  {rate > 0 ? `${formatCurrency(rate)} / ${selectedCrop?.unit || 'qtl'}` : '-'}
+                </span>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--farmer-secondary)' }}>Buyer:</span>
-                <span style={{ fontWeight: 600, color: formData.buyerName ? 'var(--farmer-dark)' : 'var(--farmer-secondary)' }}>
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500 font-medium">Buyer:</span>
+                <span className={`font-bold ${formData.buyerName ? 'text-slate-900' : 'text-slate-400'}`}>
                   {formData.buyerName || 'Not specified'}
                 </span>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--farmer-secondary)' }}>Buyer Mobile:</span>
-                <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500 font-medium">Buyer Mobile:</span>
+                <span className="font-mono font-bold text-slate-800">
                   {formData.buyerMobile ? `+91 ${formData.buyerMobile}` : '-'}
                 </span>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--farmer-secondary)' }}>Buyer Category:</span>
-                <span style={{ fontWeight: 600 }}>{formData.buyerCategory}</span>
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500 font-medium">Buyer Category:</span>
+                <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200">
+                  {formData.buyerCategory}
+                </span>
               </div>
 
               {/* Total Calculation Highlight Box */}
-              <div
-                style={{
-                  padding: '16px',
-                  background: 'linear-gradient(135deg, #E8F5EC 0%, #D8F2E1 100%)',
-                  borderRadius: 12,
-                  marginTop: 6,
-                  border: '1px solid #BFE8CF',
-                }}
-              >
-                <div style={{ fontSize: '0.8rem', color: 'var(--farmer-dark)', fontWeight: 600 }}>
-                  TOTAL TRANSACTION AMOUNT
-                </div>
-                <div style={{ fontSize: '1.9rem', fontWeight: 800, color: 'var(--farmer-dark)', letterSpacing: '-0.02em', margin: '4px 0' }}>
+              <div className="rounded-2xl p-4 bg-gradient-to-br from-emerald-50 to-teal-50/70 border border-emerald-200 shadow-2xs my-4">
+                <span className="text-[11px] font-bold text-emerald-800 tracking-wider uppercase block">
+                  Total Transaction Amount
+                </span>
+                <div className="text-3xl font-extrabold text-[#0F766E] tracking-tight my-1">
                   {formatCurrency(totalAmount)}
                 </div>
-                <small style={{ color: 'var(--farmer-secondary)', display: 'block' }}>
-                  Calculated as: {qty} {selectedCrop?.unit || 'qtl'} × {formatCurrency(rate)}
-                </small>
+                <span className="text-xs text-emerald-700/90 block">
+                  Calculated as: {qty || 0} {selectedCrop?.unit || 'qtl'} × {formatCurrency(rate)}
+                </span>
               </div>
 
-              <div
-                style={{
-                  padding: '12px',
-                  backgroundColor: '#F8FAF8',
-                  borderRadius: 10,
-                  fontSize: '0.82rem',
-                  color: 'var(--farmer-secondary)',
-                  border: '1px solid var(--farmer-border)',
-                }}
-              >
-                <strong style={{ color: 'var(--farmer-text)', display: 'block', marginBottom: 4 }}>
-                  🛡️ Security & Stock Guarantee
-                </strong>
-                Stock is deducted only after recipient inputs their 6-digit OTP code. Payment is credited to your registered bank account within 3 business days ({formatDate(expectedPayDate)}).
+              <div className="rounded-xl p-3.5 bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 mb-1">
+                  <ShieldCheck className="w-4 h-4 text-[#0F766E] shrink-0" />
+                  <span>Security &amp; Stock Guarantee</span>
+                </div>
+                <p className="m-0">
+                  Stock is deducted only after recipient inputs their 6-digit OTP code. Payment is credited to your registered bank account within 3 business days ({formatDate(expectedPayDate)}).
+                </p>
               </div>
             </div>
           </div>
